@@ -1,0 +1,42 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <link rel="stylesheet" href="popup.css">
+</head>
+<body>
+  <div class="header">
+    <div class="brand">
+      <div id="status-indicator" class="dot"></div>
+      <span>TURBO CHAT</span>
+    </div>
+    <div id="power-toggle" class="power-btn">⏻</div>
+  </div>
+
+  <div class="section-label">MESSAGE LIMIT</div>
+  <div class="grid">
+    <div class="pill" data-val="1">1</div>
+    <div class="pill" data-val="3">3</div>
+    <div class="pill" data-val="5">5</div>
+    <div class="pill" data-val="8">8</div>
+    <div class="pill" data-val="10">10</div>
+    <div class="pill" data-val="15">15</div>
+  </div>
+
+  <div class="settings-box">
+    <div class="input-group">
+      <label>Primary Accent</label>
+      <input type="text" id="primary-hex" placeholder="#F3BE7A">
+    </div>
+    <div class="input-group">
+      <label>Import Palette/Link</label>
+      <input type="text" id="palette-import" placeholder="Paste hex codes or link">
+    </div>
+  </div>
+
+  <div class="footer">
+    <a id="open-shortcuts">Shortcut: Ctrl+Alt+Shift+Q</a>
+  </div>
+
+  <script src="popup.js"></script>
+</body>
+</html>
