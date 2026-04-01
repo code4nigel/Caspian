@@ -1,62 +1,55 @@
-const primaryInput = document.getElementById('primary-hex');
-const paletteInput = document.getElementById('palette-import');
-const powerBtn = document.getElementById('power-toggle');
-const pills = document.querySelectorAll('.pill');
+const DEFAULTS = { accent: '#F3BE7A', limit: 5 };
 
-// Default setup
-chrome.storage.local.get(['enabled', 'limit', 'accent'], (data) => {
-  const isEnabled = data.enabled ?? true;
-  const accent = data.accent || '#F3BE7A';
-  const limit = data.limit || 5;
-
-  updateAccent(accent);
-  primaryInput.value = accent;
-  if (isEnabled) powerBtn.classList.add('active');
-  highlightPill(limit);
-});
-
-// Extract Hex codes from a string or link
-paletteInput.addEventListener('input', (e) => {
-  const input = e.target.value;
-  const hexMatch = input.match(/#([A-Fa-f0-9]{6}|[A-Fa-f0-9]{3})/g);
-  
-  if (hexMatch && hexMatch.length > 0) {
-    const newAccent = hexMatch[0]; // Takes the first hex found
-    updateAccent(newAccent);
-    primaryInput.value = newAccent;
-    chrome.storage.local.set({ accent: newAccent });
-    paletteInput.style.borderColor = 'var(--accent)';
-  }
-});
-
-primaryInput.addEventListener('input', (e) => {
-  if (/^#[0-9A-F]{6}$/i.test(e.target.value)) {
-    updateAccent(e.target.value);
-    chrome.storage.local.set({ accent: e.target.value });
-  }
-});
-
-function updateAccent(hex) {
+function updateTheme(hex) {
   document.documentElement.style.setProperty('--accent', hex);
 }
 
-function highlightPill(val) {
-  pills.forEach(p => p.classList.toggle('active', parseInt(p.dataset.val) === val));
+function loadSettings() {
+  chrome.storage.local.get(['enabled', 'limit', 'accent'], (data) => {
+    const isEnabled = data.enabled ?? true;
+    const accent = data.accent || DEFAULTS.accent;
+    const limit = data.limit || DEFAULTS.limit;
+
+    updateTheme(accent);
+    document.getElementById('primary-hex').value = accent;
+    
+    const powerBtn = document.getElementById('power-toggle');
+    powerBtn.classList.toggle('active', isEnabled);
+
+    document.querySelectorAll('.pill').forEach(p => {
+      p.classList.toggle('active', parseInt(p.dataset.val) === limit);
+    });
+  });
 }
 
-pills.forEach(p => {
+document.getElementById('palette-import').addEventListener('input', (e) => {
+  const hexMatch = e.target.value.match(/#([A-Fa-f0-9]{6})/g);
+  if (hexMatch) {
+    const newColor = hexMatch[0];
+    chrome.storage.local.set({ accent: newColor }, loadSettings);
+  }
+});
+
+document.getElementById('primary-hex').addEventListener('input', (e) => {
+  if (/^#[0-9A-F]{6}$/i.test(e.target.value)) {
+    chrome.storage.local.set({ accent: e.target.value }, loadSettings);
+  }
+});
+
+document.querySelectorAll('.pill').forEach(p => {
   p.addEventListener('click', () => {
-    const val = parseInt(p.dataset.val);
-    chrome.storage.local.set({ limit: val });
-    highlightPill(val);
+    chrome.storage.local.set({ limit: parseInt(p.dataset.val) }, loadSettings);
   });
 });
 
-powerBtn.addEventListener('click', () => {
-  const isActive = powerBtn.classList.toggle('active');
-  chrome.storage.local.set({ enabled: isActive });
+document.getElementById('power-toggle').addEventListener('click', () => {
+  chrome.storage.local.get('enabled', (data) => {
+    chrome.storage.local.set({ enabled: !(data.enabled ?? true) }, loadSettings);
+  });
 });
 
-document.getElementById('open-shortcuts').addEventListener('click', () => {
-  chrome.tabs.create({ url: 'chrome://extensions/shortcuts' });
+document.getElementById('reset-link').addEventListener('click', () => {
+  chrome.storage.local.set(DEFAULTS, loadSettings);
 });
+
+loadSettings();

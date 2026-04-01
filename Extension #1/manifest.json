@@ -1,8 +1,8 @@
 {
   "manifest_version": 3,
   "name": "ChatGPT Turbo UI",
-  "version": "4.0",
-  "permissions": ["storage", "tabs"],
+  "version": "4.2",
+  "permissions": ["storage"],
   "action": {
     "default_popup": "popup.html"
   },
@@ -18,10 +18,12 @@
   ],
   "commands": {
     "toggle-feature": {
-      "suggested_key": {
-        "default": "Ctrl+Shift+Alt+Q"
-      },
+      "suggested_key": { "default": "Ctrl+Shift+Alt+K" },
       "description": "Toggle Lag Fixer"
+    },
+    "reset-colors": {
+      "suggested_key": { "default": "Ctrl+Shift+Alt+R" },
+      "description": "Reset UI Colors"
     }
   }
 }
