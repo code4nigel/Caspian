@@ -8,11 +8,11 @@
 
 | Engine Control Center | Site Access & Shortcut Guide |
 | :---: | :---: |
-| ![Caspian Main UI](Extension%20%231/images/caspian_mainUI.png) | ![Caspian Site Control](Extension%20%231/images/caspian_siteUI.png) |
+| ![Caspian Main UI](Caspian/images/caspian_mainUI.png) | ![Caspian Site Control](Caspian/images/caspian_siteUI.png) |
 
 | Theme & Aesthetics Manager | Dark Appearance Mode |
 | :---: | :---: |
-| ![Caspian Settings](Extension%20%231/images/caspian_settingsUI.png) | ![Caspian Dark Mode](Extension%20%231/images/Caspian_darkUI.png) |
+| ![Caspian Settings](Caspian/images/caspian_settingsUI.png) | ![Caspian Dark Mode](Caspian/images/Caspian_darkUI.png) |
 
 > 💡 **Dev Recommendation:** *While Dark Mode is fully supported, we recommend using **Light Mode** as Caspian's signature Ena gradient and glassmorphism look exceptionally crisp and vibrant in Light Mode!*
 
@@ -96,7 +96,7 @@ Caspian automatically detects active temporary chat sessions, letting you conver
    - **Brave**: `brave://extensions`
 3. Enable **Developer Mode** using the toggle switch in the top-right corner.
 4. Click **Load unpacked**.
-5. Select the [`Extension #1`](file:///d:/Projects/Chatgpt%20Pruner/Extension%20%231) directory from this project folder.
+5. Select the [`Caspian`](Caspian) directory from this project folder.
 6. Open [ChatGPT](https://chatgpt.com) or [Google Gemini](https://gemini.google.com) and click the **Caspian** sea wave icon!
 
 ---
@@ -106,22 +106,23 @@ Caspian automatically detects active temporary chat sessions, letting you conver
 ```
 Caspian/
 ├── README.md               # Complete documentation & user guide
-├── Extension #1/
-│   ├── manifest.json       # Extension Manifest V3 configuration
-│   ├── background.js       # Background service worker
-│   ├── content.js          # DOM observer, lag fixer, text extractor & restorer
-│   ├── popup.html          # Glassmorphic control panel interface
-│   ├── popup.css           # Design system tokens, glassmorphism & themes
-│   ├── popup.js            # Storage sync, multi-format exporter & preset manager
-│   ├── developer.png       # NigelWeb developer avatar
-│   ├── icon16.png          # Caspian wave toolbar icon (16x16)
-│   ├── icon48.png          # Caspian wave toolbar icon (48x48)
-│   ├── icon128.png         # Caspian wave toolbar icon (128x128)
-│   └── images/             # Documentation screenshots
-│       ├── caspian_mainUI.png
-│       ├── caspian_siteUI.png
-│       ├── caspian_settingsUI.png
-│       └── Caspian_darkUI.png
+├── LICENSE                 # GNU General Public License v3.0 (GNU GPLv3)
+└── Caspian/                # Chrome / Chromium Extension Directory
+    ├── manifest.json       # Extension Manifest V3 configuration
+    ├── background.js       # Background service worker
+    ├── content.js          # DOM observer, lag fixer, text extractor & restorer
+    ├── popup.html          # Glassmorphic control panel interface
+    ├── popup.css           # Design system tokens, glassmorphism & themes
+    ├── popup.js            # Storage sync, multi-format exporter & preset manager
+    ├── developer.png       # NigelWeb developer avatar
+    ├── icon16.png          # Caspian wave toolbar icon (16x16)
+    ├── icon48.png          # Caspian wave toolbar icon (48x48)
+    ├── icon128.png         # Caspian wave toolbar icon (128x128)
+    └── images/             # Documentation screenshots
+        ├── caspian_mainUI.png
+        ├── caspian_siteUI.png
+        ├── caspian_settingsUI.png
+        └── Caspian_darkUI.png
 ```
 
 ---
@@ -133,6 +134,9 @@ Created with ❤️ by **NigelWeb** ([github.com/code4nigel](https://github.com/
 
 ---
 
-## 📄 License
+## 📄 License & Copyleft Guarantee
 
-Distributed under the **MIT License**. See `LICENSE` for more information.
+Distributed under the **GNU General Public License v3.0 (GNU GPLv3)**.  
+*This software is free, copyleft, and open-source forever. Anyone is free to inspect, modify, and redistribute it under the condition that all derivative works remain free, open-source, and credit the original author (**NigelWeb**). Commercial reselling without attribution or locking down the source code is strictly prohibited by law.*
+
+See [`LICENSE`](LICENSE) for full license details.
