@@ -1,10 +1,16 @@
 chrome.commands.onCommand.addListener((command) => {
   if (command === "toggle-feature") {
     chrome.storage.local.get('enabled', (data) => {
-      chrome.storage.local.set({ enabled: !data.enabled });
+      const current = data.enabled ?? true;
+      chrome.storage.local.set({ enabled: !current });
     });
   }
   if (command === "reset-colors") {
-    chrome.storage.local.set({ accent: '#F3BE7A', limit: 5 });
+    chrome.storage.local.set({
+      mode: 'light',
+      accent: '#A2A9A9',
+      secondary: '#1B4264',
+      limit: 5
+    });
   }
 });

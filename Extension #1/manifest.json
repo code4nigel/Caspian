@@ -1,28 +1,52 @@
 {
   "manifest_version": 3,
-  "name": "ChatGPT Turbo UI",
-  "version": "4.2",
-  "permissions": ["storage"],
+  "name": "Caspian - AI Chat Pruner",
+  "version": "5.0",
+  "description": "Lag-free DOM pruner, temporary chat converter, and UI optimizer for ChatGPT and Gemini.",
+  "permissions": ["storage", "tabs", "downloads", "scripting", "activeTab"],
+  "host_permissions": [
+    "*://chatgpt.com/*",
+    "*://*.chatgpt.com/*",
+    "*://gemini.google.com/*"
+  ],
   "action": {
-    "default_popup": "popup.html"
+    "default_popup": "popup.html",
+    "default_icon": {
+      "16": "icon16.png",
+      "48": "icon48.png",
+      "128": "icon128.png"
+    }
+  },
+  "icons": {
+    "16": "icon16.png",
+    "48": "icon48.png",
+    "128": "icon128.png"
   },
   "background": {
     "service_worker": "background.js"
   },
   "content_scripts": [
     {
-      "matches": ["*://chatgpt.com/*", "*://*.chatgpt.com/*"],
+      "matches": [
+        "*://chatgpt.com/*",
+        "*://*.chatgpt.com/*",
+        "*://gemini.google.com/*"
+      ],
       "js": ["content.js"],
       "run_at": "document_end"
     }
   ],
   "commands": {
     "toggle-feature": {
-      "suggested_key": { "default": "Ctrl+Shift+Alt+K" },
-      "description": "Toggle Lag Fixer"
+      "suggested_key": {
+        "default": "Ctrl+Shift+X"
+      },
+      "description": "Toggle Chat Pruning"
     },
     "reset-colors": {
-      "suggested_key": { "default": "Ctrl+Shift+Alt+R" },
+      "suggested_key": {
+        "default": "Ctrl+Shift+R"
+      },
       "description": "Reset UI Colors"
     }
   }
