@@ -376,7 +376,7 @@ function initTempChatVault() {
             dot.style.boxShadow = '0 0 10px var(--accent-glow)';
           }
         } else {
-          if (vaultTitle) vaultTitle.textContent = 'Conversation Saver';
+          if (vaultTitle) vaultTitle.textContent = 'Temporary Chat Saver';
           if (vaultDesc) vaultDesc.textContent = 'Export or copy this conversation transcript anytime.';
           if (dot) {
             dot.style.background = 'var(--accent)';

@@ -329,6 +329,7 @@ html[data-theme="light"] .status-card {
   background: var(--bg-glass);
   position: relative;
   overflow: visible;
+  z-index: 100;
   transition: all 0.3s ease;
 }
 
@@ -436,6 +437,7 @@ html[data-theme="light"] .temp-vault-card {
   flex: 1;
   display: flex;
   align-items: stretch;
+  z-index: 101;
 }
 
 .export-dropdown-wrapper .temp-act-btn {
@@ -448,13 +450,13 @@ html[data-theme="light"] .temp-vault-card {
   top: calc(100% + 4px);
   left: 50%;
   transform: translateX(-50%);
-  min-width: 140px;
+  min-width: 155px;
   background: #ffffff;
   border: 1px solid rgba(0, 0, 0, 0.12);
   border-radius: 10px;
-  box-shadow: 0 10px 28px rgba(0, 0, 0, 0.18);
+  box-shadow: 0 12px 32px rgba(0, 0, 0, 0.25);
   padding: 4px;
-  z-index: 9999;
+  z-index: 999999;
   display: none;
   flex-direction: column;
   gap: 2px;
