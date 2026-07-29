@@ -86,18 +86,24 @@ Caspian automatically detects active temporary chat sessions, letting you conver
 
 ## 📥 Installation Guide
 
-1. **Download/Clone the Repository**:
-   ```bash
-   git clone https://github.com/code4nigel/Caspian.git
-   ```
-2. Open your browser and navigate to the extensions page:
+### Option 1: Quick Release Download (Easiest & Recommended)
+1. Go to the [**Releases Page**](https://github.com/code4nigel/Caspian/releases) and download **`Caspian-v5.0.0.zip`**.
+2. Extract (unzip) `Caspian-v5.0.0.zip` to a folder on your computer.
+3. Open your browser and navigate to the extensions page:
    - **Chrome**: `chrome://extensions`
    - **Edge**: `edge://extensions`
    - **Brave**: `brave://extensions`
-3. Enable **Developer Mode** using the toggle switch in the top-right corner.
-4. Click **Load unpacked**.
-5. Select the [`Caspian`](Caspian) directory from this project folder.
-6. Open [ChatGPT](https://chatgpt.com) or [Google Gemini](https://gemini.google.com) and click the **Caspian** sea wave icon!
+4. Turn ON **Developer Mode** using the toggle switch in the top-right corner.
+5. Click **Load unpacked** and select the unzipped `Caspian` folder.
+6. Open [ChatGPT](https://chatgpt.com) or [Google Gemini](https://gemini.google.com) and click the **Caspian** icon!
+
+---
+
+### Option 2: Clone via Git (Developers)
+```bash
+git clone https://github.com/code4nigel/Caspian.git
+```
+Then select the [`Caspian`](Caspian) directory via **Load unpacked**.
 
 ---
 
