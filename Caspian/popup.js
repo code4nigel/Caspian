@@ -473,6 +473,8 @@ function initTempChatVault() {
           exportMarkdownFile(data);
         } else if (format === 'txt') {
           exportPlainTextFile(data);
+        } else if (format === 'doc') {
+          exportGoogleDocFile(data);
         } else if (format === 'pdf') {
           exportStyledPdfDocument(data);
         }
@@ -559,6 +561,91 @@ function exportPlainTextFile(data) {
   a.click();
   document.body.removeChild(a);
   URL.revokeObjectURL(url);
+}
+
+function exportGoogleDocFile(data) {
+  const title = data.title || 'Saved Conversation';
+  const safeTitle = (title || 'Caspian_Export').replace(/[^a-z0-9_-]/gi, '_');
+  const turns = data.turns || [];
+  const dateStr = new Date().toLocaleString();
+
+  let turnsHtml = '';
+  turns.forEach((t, i) => {
+    const isUser = t.role === 'User';
+    const roleName = isUser ? 'User' : 'ChatGPT';
+    const roleIcon = isUser ? '👤' : '🤖';
+    const turnHeader = `${roleIcon} ${roleName} (Turn ${i + 1})`;
+
+    const formattedContent = t.htmlContent && t.htmlContent.length > 5 ? t.htmlContent : parseMarkdownAndLaTeX(t.content);
+
+    turnsHtml += `
+      <div class="turn-container ${isUser ? 'user-turn' : 'assistant-turn'}" style="margin-bottom: 24px; padding: 14px 18px; border-radius: 8px; ${isUser ? 'background: #f8fafc; border-left: 4px solid #3b82f6;' : 'background: #ffffff; border-left: 4px solid #10b981;'}">
+        <h2 id="turn-${i + 1}" style="font-size: 16pt; font-weight: bold; color: ${isUser ? '#1d4ed8' : '#047857'}; margin-top: 0; margin-bottom: 10pt; font-family: 'Arial', sans-serif;">
+          ${turnHeader}
+        </h2>
+        <div class="turn-content" style="font-size: 11pt; line-height: 1.6; color: #1e293b;">
+          ${formattedContent}
+        </div>
+      </div>
+    `;
+  });
+
+  const docHtml = `
+    <html xmlns:o='urn:schemas-microsoft-com:office:office' xmlns:w='urn:schemas-microsoft-com:office:word' xmlns='http://www.w3.org/TR/REC-html40'>
+    <head>
+      <meta charset='utf-8'>
+      <title>${escapeHtml(title)}</title>
+      <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.8/dist/katex.min.css">
+      <style>
+        @page { size: A4; margin: 1in; }
+        body { font-family: 'Arial', 'Calibri', sans-serif; font-size: 11pt; line-height: 1.5; color: #1e293b; background: #ffffff; margin: 0; padding: 0; }
+        h1.doc-title { font-size: 22pt; font-weight: bold; color: #0f172a; margin-top: 0; margin-bottom: 6pt; border-bottom: 2px solid #cbd5e1; padding-bottom: 8pt; font-family: 'Arial', sans-serif; }
+        p.doc-meta { font-size: 9.5pt; font-style: italic; color: #64748b; margin-top: 0; margin-bottom: 20pt; }
+        h1, h2, h3, h4, h5, h6 { font-family: 'Arial', sans-serif; page-break-after: avoid; }
+        h2 { font-size: 16pt; font-weight: bold; color: #0f172a; margin-top: 14pt; margin-bottom: 6pt; }
+        h3 { font-size: 13pt; font-weight: bold; color: #334155; margin-top: 12pt; margin-bottom: 4pt; }
+        p { margin-top: 0; margin-bottom: 8pt; }
+        b, strong { font-weight: bold; color: #0f172a; }
+        pre { background: #f1f5f9; padding: 10px; border-radius: 6px; font-family: 'Courier New', monospace; font-size: 9.5pt; overflow-x: auto; white-space: pre-wrap; border: 1px solid #cbd5e1; margin-bottom: 10pt; }
+        code { font-family: 'Courier New', monospace; background: #f1f5f9; padding: 2px 5px; border-radius: 4px; font-size: 9.5pt; color: #0f172a; }
+        blockquote { border-left: 3px solid #94a3b8; padding-left: 12px; color: #475569; margin-left: 0; font-style: italic; }
+        table { border-collapse: collapse; width: 100%; margin-bottom: 12pt; }
+        th, td { border: 1px solid #cbd5e1; padding: 8px 12px; text-align: left; }
+        th { background-color: #f8fafc; font-weight: bold; color: #0f172a; }
+        .katex { font-size: 1.1em; }
+        .katex-display { display: block; margin: 1em 0; text-align: center; }
+      </style>
+    </head>
+    <body>
+      <h1 class="doc-title">${escapeHtml(title)}</h1>
+      <p class="doc-meta">Exported via Caspian on ${dateStr} &bull; ${data.isTemporary ? 'Temporary Chat Session' : 'Standard Session'}</p>
+      ${turnsHtml}
+    </body>
+    </html>
+  `;
+
+  const blob = new Blob(['\ufeff' + docHtml], { type: 'application/msword;charset=utf-8' });
+  const filename = `${safeTitle}_GoogleDoc.doc`;
+
+  if (chrome.downloads && typeof chrome.downloads.download === 'function') {
+    const url = URL.createObjectURL(blob);
+    chrome.downloads.download({
+      url: url,
+      filename: filename,
+      saveAs: true
+    }, () => {
+      URL.revokeObjectURL(url);
+    });
+  } else {
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = filename;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    URL.revokeObjectURL(url);
+  }
 }
 
 function exportStyledPdfDocument(data) {

@@ -38,6 +38,7 @@ Caspian automatically detects active temporary chat sessions, letting you conver
 - 📥 **Multi-Format Export Suite**:
   - 📄 **Markdown (`.md`)**: Formatted Markdown file with user prompts, AI responses, and fenced code blocks.
   - 📝 **Plain Text (`.txt`)**: Clean formatted transcript log.
+  - 📘 **Google Doc / Word (`.doc`)**: Editable document with heading structure (`<h1>`/`<h2>`), bold text, math equations, and automatic Google Docs mobile **Chapter Navigation Outline**.
   - 📕 **Document PDF (`.pdf`)**: Styled document with **KaTeX LaTeX math rendering** for math formulas and equations.
   - 📸 **Full Page Print PDF**: 1-click unhide and native webpage print preview.
 - ⚡ **Message Turn Limit Selection**: Choose visible turn limits: `1`, `3`, `5`, `8`, `15`, or `∞ Unlimited`.
@@ -112,6 +113,9 @@ Then select the [`Caspian`](Caspian) directory via **Load unpacked**.
 Caspian/
 ├── README.md               # Complete documentation & user guide
 ├── LICENSE                 # GNU General Public License v3.0 (GNU GPLv3)
+├── versions/               # Packaged release archives (.zip)
+│   ├── Caspian-v5.0.0.zip
+│   └── Caspian-v5.0.1.zip
 └── Caspian/                # Chrome / Chromium Extension Directory
     ├── manifest.json       # Extension Manifest V3 configuration
     ├── background.js       # Background service worker
