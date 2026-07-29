@@ -115,7 +115,8 @@ Caspian/
 ├── LICENSE                 # GNU General Public License v3.0 (GNU GPLv3)
 ├── versions/               # Packaged release archives (.zip)
 │   ├── Caspian-v5.0.0.zip
-│   └── Caspian-v5.0.1.zip
+│   ├── Caspian-v5.0.1.zip
+│   └── Caspian-v5.0.2.zip
 └── Caspian/                # Chrome / Chromium Extension Directory
     ├── manifest.json       # Extension Manifest V3 configuration
     ├── background.js       # Background service worker

@@ -442,6 +442,114 @@ function initTempChatVault() {
       const origBtnHtml = exportMenuBtn.innerHTML;
       exportMenuBtn.innerHTML = `<span>Exporting...</span>`;
 
+      if (format === 'webpdf') {
+        chrome.tabs.query({ active: true, currentWindow: true }, (tabs) => {
+          if (tabs && tabs[0]) {
+            chrome.scripting.executeScript({
+              target: { tabId: tabs[0].id },
+              func: () => {
+                let printStyle = document.getElementById('caspian-print-styles');
+                if (!printStyle) {
+                  printStyle = document.createElement('style');
+                  printStyle.id = 'caspian-print-styles';
+                  printStyle.innerHTML = `
+                    @media print {
+                      @page { margin: 1cm; size: auto; }
+                      body, html, main, div, article {
+                        overflow: visible !important;
+                        height: auto !important;
+                        max-height: none !important;
+                        min-height: 0 !important;
+                        position: static !important;
+                      }
+                      [data-testid^="conversation-turn"], article, main div.group {
+                        display: block !important;
+                        page-break-inside: avoid !important;
+                        break-inside: avoid !important;
+                        margin-bottom: 20px !important;
+                      }
+                      #caspian-print-loader, nav, header, [data-testid="sidebar"] {
+                        display: none !important;
+                      }
+                    }
+                  `;
+                  document.head.appendChild(printStyle);
+                }
+
+                const messages = document.querySelectorAll('[data-testid^="conversation-turn"], article, main div.group');
+                messages.forEach(msg => msg.style.setProperty('display', 'block', 'important'));
+
+                const scroller = document.querySelector('main div.overflow-y-auto') ||
+                                 document.querySelector('main') ||
+                                 document.documentElement ||
+                                 document.body;
+
+                const oldOverlay = document.getElementById('caspian-print-loader');
+                if (oldOverlay) oldOverlay.remove();
+
+                const overlay = document.createElement('div');
+                overlay.id = 'caspian-print-loader';
+                overlay.style.cssText = 'position:fixed;top:24px;left:50%;transform:translateX(-50%);z-index:9999999;background:linear-gradient(135deg, #0f172a, #1e293b);color:#ffffff;padding:12px 24px;border-radius:30px;font-family:system-ui,-apple-system,sans-serif;font-size:13px;font-weight:600;box-shadow:0 10px 30px rgba(0,0,0,0.4);border:1px solid rgba(255,255,255,0.15);pointer-events:none;';
+                overlay.innerHTML = '⚡ Caspian Loading Full Conversation... Please wait';
+                document.body.appendChild(overlay);
+
+                let currentY = 0;
+                const viewportH = window.innerHeight || 800;
+                const step = Math.max(300, Math.floor(viewportH * 0.7));
+
+                const scrollInterval = setInterval(() => {
+                  const totalH = Math.max(
+                    scroller.scrollHeight || 0,
+                    document.body.scrollHeight || 0,
+                    document.documentElement.scrollHeight || 0
+                  );
+                  const maxScroll = Math.max(1, totalH - viewportH);
+
+                  currentY += step;
+
+                  if (scroller && typeof scroller.scrollTo === 'function') {
+                    scroller.scrollTo(0, currentY);
+                  }
+                  if (scroller) scroller.scrollTop = currentY;
+                  window.scrollTo(0, currentY);
+
+                  if (scroller && typeof scroller.dispatchEvent === 'function') {
+                    scroller.dispatchEvent(new Event('scroll', { bubbles: true }));
+                  }
+                  window.dispatchEvent(new Event('scroll', { bubbles: true }));
+
+                  const progress = Math.min(100, Math.round((currentY / maxScroll) * 100));
+                  overlay.innerHTML = `⚡ Rendering Conversation Messages (${progress}%)...`;
+
+                  if (currentY >= totalH + step) {
+                    clearInterval(scrollInterval);
+
+                    const virtualHolders = document.querySelectorAll('main div[style*="height"], main div[style*="min-height"]');
+                    virtualHolders.forEach(div => {
+                      div.style.setProperty('height', 'auto', 'important');
+                      div.style.setProperty('min-height', '0px', 'important');
+                    });
+
+                    if (scroller && typeof scroller.scrollTo === 'function') scroller.scrollTo(0, 0);
+                    window.scrollTo(0, 0);
+                    overlay.innerHTML = '✨ All Pages Rendered! Launching Print View...';
+
+                    setTimeout(() => {
+                      if (overlay) overlay.remove();
+                      window.print();
+                    }, 500);
+                  }
+                }, 90);
+              }
+            }, () => {
+              exportMenuBtn.innerHTML = `<span>Exported!</span>`;
+              setTimeout(() => { exportMenuBtn.innerHTML = origBtnHtml; }, 1500);
+            });
+          }
+        });
+        return;
+      }
+
       fetchCurrentTabData((data) => {
         if (!data || !data.markdown || data.turnCount === 0) {
           alert('No conversation messages found to export on this page.');
@@ -457,8 +565,6 @@ function initTempChatVault() {
           exportGoogleDocFile(data);
         } else if (format === 'pdf') {
           exportStyledPdfDocument(data);
-        } else if (format === 'webpdf') {
-          exportFullPagePrintPdf(data);
         }
 
         exportMenuBtn.innerHTML = `<span>Exported!</span>`;
@@ -627,104 +733,7 @@ function exportGoogleDocFile(data) {
     a.click();
     document.body.removeChild(a);
     URL.revokeObjectURL(url);
-}
-
-function exportFullPagePrintPdf(data) {
-  const title = data.title || 'Saved Conversation';
-  const turns = data.turns || [];
-  const dateStr = new Date().toLocaleString();
-
-  let turnsHtml = '';
-  turns.forEach((t, i) => {
-    const isUser = t.role === 'User';
-    const roleName = isUser ? 'User' : 'ChatGPT';
-    const roleIcon = isUser ? '👤' : '🤖';
-    const formattedContent = t.htmlContent && t.htmlContent.length > 5 ? t.htmlContent : parseMarkdownAndLaTeX(t.content);
-
-    turnsHtml += `
-      <div class="print-turn ${isUser ? 'user-turn' : 'assistant-turn'}">
-        <div class="turn-header">
-          <span class="role-icon">${roleIcon}</span>
-          <span class="role-name">${roleName}</span>
-          <span class="turn-num">Turn #${i + 1}</span>
-        </div>
-        <div class="turn-body">
-          ${formattedContent}
-        </div>
-      </div>
-    `;
-  });
-
-  const fullPrintHtml = `
-    <!DOCTYPE html>
-    <html>
-    <head>
-      <meta charset="utf-8">
-      <title>${escapeHtml(title)}</title>
-      <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.8/dist/katex.min.css">
-      <style>
-        @page { size: A4; margin: 12mm; }
-        body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; color: #0f172a; background: #ffffff; margin: 0; padding: 0; font-size: 13px; line-height: 1.6; }
-        .print-header { border-bottom: 2px solid #cbd5e1; padding-bottom: 12px; margin-bottom: 20px; }
-        .print-title { font-size: 20px; font-weight: 700; color: #0f172a; margin: 0 0 6px 0; }
-        .print-meta { font-size: 11px; color: #64748b; margin: 0; font-style: italic; }
-        .print-turn { margin-bottom: 18px; padding: 14px 16px; border-radius: 8px; page-break-inside: avoid; }
-        .user-turn { background: #f8fafc; border: 1px solid #cbd5e1; border-left: 4px solid #3b82f6; }
-        .assistant-turn { background: #ffffff; border: 1px solid #cbd5e1; border-left: 4px solid #10b981; }
-        .turn-header { display: flex; align-items: center; gap: 8px; font-weight: 700; font-size: 13px; margin-bottom: 8px; color: #1e293b; border-bottom: 1px solid #f1f5f9; padding-bottom: 6px; }
-        .turn-num { margin-left: auto; font-size: 11px; color: #64748b; font-weight: 600; }
-        .turn-body { font-size: 13px; color: #1e293b; overflow-wrap: break-word; }
-        pre { background: #0f172a !important; color: #f8fafc !important; padding: 12px !important; border-radius: 6px !important; font-family: "Courier New", monospace !important; font-size: 11px !important; overflow-x: auto !important; white-space: pre-wrap !important; margin: 10px 0 !important; }
-        code { font-family: "Courier New", monospace !important; background: #f1f5f9; padding: 2px 6px; border-radius: 4px; font-size: 11px; color: #0f172a; }
-        table { border-collapse: collapse; width: 100%; margin: 12px 0; }
-        th, td { border: 1px solid #cbd5e1; padding: 8px 10px; text-align: left; }
-        th { background: #f8fafc; font-weight: 700; }
-        .katex { font-size: 1.1em; }
-        .katex-display { display: block; margin: 1em 0; text-align: center; }
-      </style>
-    </head>
-    <body>
-      <div class="print-header">
-        <h1 class="print-title">${escapeHtml(title)}</h1>
-        <p class="print-meta">Exported via Caspian on ${dateStr} &bull; ${data.isTemporary ? 'Temporary Chat Session' : 'Standard Session'}</p>
-      </div>
-      ${turnsHtml}
-    </body>
-    </html>
-  `;
-
-  chrome.tabs.query({ active: true, currentWindow: true }, (tabs) => {
-    if (tabs && tabs[0] && tabs[0].id) {
-      chrome.scripting.executeScript({
-        target: { tabId: tabs[0].id },
-        func: (htmlContent) => {
-          let iframe = document.getElementById('caspian-print-iframe');
-          if (iframe) iframe.remove();
-
-          iframe = document.createElement('iframe');
-          iframe.id = 'caspian-print-iframe';
-          iframe.style.position = 'fixed';
-          iframe.style.right = '0';
-          iframe.style.bottom = '0';
-          iframe.style.width = '0';
-          iframe.style.height = '0';
-          iframe.style.border = '0';
-          document.body.appendChild(iframe);
-
-          const doc = iframe.contentWindow.document;
-          doc.open();
-          doc.write(htmlContent);
-          doc.close();
-
-          iframe.contentWindow.focus();
-          setTimeout(() => {
-            iframe.contentWindow.print();
-          }, 300);
-        },
-        args: [fullPrintHtml]
-      });
-    }
-  });
+  }
 }
 
 function exportStyledPdfDocument(data) {

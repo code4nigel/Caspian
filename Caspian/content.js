@@ -321,16 +321,101 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
   }
 
   if (request.action === 'DO_WEBPDF') {
-    const messages = document.querySelectorAll('[data-testid^="conversation-turn"], article');
-    messages.forEach(msg => msg.style.setProperty('display', 'block', 'important'));
-    window.scrollTo({ top: 0, behavior: 'smooth' });
+    let printStyle = document.getElementById('caspian-print-styles');
+    if (!printStyle) {
+      printStyle = document.createElement('style');
+      printStyle.id = 'caspian-print-styles';
+      printStyle.innerHTML = `
+        @media print {
+          @page { margin: 1cm; size: auto; }
+          body, html, main, div, article {
+            overflow: visible !important;
+            height: auto !important;
+            max-height: none !important;
+            min-height: 0 !important;
+            position: static !important;
+          }
+          [data-testid^="conversation-turn"], article, main div.group {
+            display: block !important;
+            page-break-inside: avoid !important;
+            break-inside: avoid !important;
+            margin-bottom: 20px !important;
+          }
+          #caspian-print-loader, nav, header, [data-testid="sidebar"] {
+            display: none !important;
+          }
+        }
+      `;
+      document.head.appendChild(printStyle);
+    }
 
-    showCaspianToast('📸 Opening Full Page Print View...');
-    setTimeout(() => {
-      window.print();
-      applyTurbo();
-      sendResponse({ success: true });
-    }, 600);
+    const messages = document.querySelectorAll('[data-testid^="conversation-turn"], article, main div.group');
+    messages.forEach(msg => msg.style.setProperty('display', 'block', 'important'));
+
+    const scroller = document.querySelector('main div.overflow-y-auto') ||
+                     document.querySelector('main') ||
+                     document.documentElement ||
+                     document.body;
+
+    const oldOverlay = document.getElementById('caspian-print-loader');
+    if (oldOverlay) oldOverlay.remove();
+
+    const overlay = document.createElement('div');
+    overlay.id = 'caspian-print-loader';
+    overlay.style.cssText = 'position:fixed;top:24px;left:50%;transform:translateX(-50%);z-index:9999999;background:linear-gradient(135deg, #0f172a, #1e293b);color:#ffffff;padding:12px 24px;border-radius:30px;font-family:system-ui,-apple-system,sans-serif;font-size:13px;font-weight:600;box-shadow:0 10px 30px rgba(0,0,0,0.4);border:1px solid rgba(255,255,255,0.15);pointer-events:none;';
+    overlay.innerHTML = '⚡ Caspian Loading Full Conversation... Please wait';
+    document.body.appendChild(overlay);
+
+    let currentY = 0;
+    const viewportH = window.innerHeight || 800;
+    const step = Math.max(300, Math.floor(viewportH * 0.7));
+
+    const scrollInterval = setInterval(() => {
+      const totalH = Math.max(
+        scroller.scrollHeight || 0,
+        document.body.scrollHeight || 0,
+        document.documentElement.scrollHeight || 0
+      );
+      const maxScroll = Math.max(1, totalH - viewportH);
+
+      currentY += step;
+
+      if (scroller && typeof scroller.scrollTo === 'function') {
+        scroller.scrollTo(0, currentY);
+      }
+      if (scroller) scroller.scrollTop = currentY;
+      window.scrollTo(0, currentY);
+
+      if (scroller && typeof scroller.dispatchEvent === 'function') {
+        scroller.dispatchEvent(new Event('scroll', { bubbles: true }));
+      }
+      window.dispatchEvent(new Event('scroll', { bubbles: true }));
+
+      const progress = Math.min(100, Math.round((currentY / maxScroll) * 100));
+      overlay.innerHTML = `⚡ Rendering Conversation Messages (${progress}%)...`;
+
+      if (currentY >= totalH + step) {
+        clearInterval(scrollInterval);
+
+        const virtualHolders = document.querySelectorAll('main div[style*="height"], main div[style*="min-height"]');
+        virtualHolders.forEach(div => {
+          div.style.setProperty('height', 'auto', 'important');
+          div.style.setProperty('min-height', '0px', 'important');
+        });
+
+        if (scroller && typeof scroller.scrollTo === 'function') scroller.scrollTo(0, 0);
+        window.scrollTo(0, 0);
+        overlay.innerHTML = '✨ All Pages Rendered! Launching Print View...';
+
+        setTimeout(() => {
+          if (overlay) overlay.remove();
+          window.print();
+          applyTurbo();
+          sendResponse({ success: true });
+        }, 500);
+      }
+    }, 90);
+
     return true;
   }
 });
