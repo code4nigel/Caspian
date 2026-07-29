@@ -1,32 +1,40 @@
-# 🌊 Caspian - AI Chat Pruner & Temporary Chat Vault
+# 🌊 Caspian - Chromium Extension (AI Chat Pruner, Temporary Chat Saver & Multi-Format Exporter)
 
-> **Lag-free DOM pruner, temporary chat converter, multi-format exporter, and aesthetic UI control center for ChatGPT and Google Gemini.**
+> **Caspian is a lightweight, privacy-first Chromium Browser Extension (compatible with Chrome, Edge, Brave, and Opera) that eliminates typing lag in long AI conversations via DOM pruning, converts temporary chats into permanent account history, and exports multi-format transcripts (.md, .txt, .doc, .pdf) for offline reading without internet.**
 
 ---
 
 ## 📸 Interface Showcase
 
-| Engine Control Center | Site Access & Shortcut Guide |
+| Engine Control Center | Multi-Format Export Suite |
 | :---: | :---: |
-| ![Caspian Main UI](Caspian/images/caspian_mainUI.png) | ![Caspian Site Control](Caspian/images/caspian_siteUI.png) |
+| ![Caspian Main UI](Caspian/images/caspian_mainUI.png) | ![Caspian Export Options](Caspian/images/caspian_exportOptions.png) |
 
-| Theme & Aesthetics Manager | Dark Appearance Mode |
+| Site Access & Shortcut Guide | Theme & Aesthetics Manager |
 | :---: | :---: |
-| ![Caspian Settings](Caspian/images/caspian_settingsUI.png) | ![Caspian Dark Mode](Caspian/images/Caspian_darkUI.png) |
+| ![Caspian Site Control](Caspian/images/caspian_siteUI.png) | ![Caspian Settings](Caspian/images/caspian_settingsUI.png) |
 
 > 💡 **Dev Recommendation:** *While Dark Mode is fully supported, we recommend using **Light Mode** as Caspian's signature gradient and glassmorphism look exceptionally crisp and vibrant in Light Mode!*
 
 ---
 
-## 🌟 Overview & How It Works
+## 🌟 3 Core Pillars of Caspian
 
-### 🚀 DOM Pruning (Lag Fixer)
-When engaging in long conversation threads on **ChatGPT** or **Google Gemini**, browsers slow down and introduce typing latency due to thousands of rendered DOM elements. 
-**Caspian** dynamically prunes older conversation turns from the active browser viewport using high-performance CSS (`display: none !important`). This eliminates typing lag while retaining 100% of your chat history in memory.
+### 1. ⚡ DOM Pruning & Performance Booster (Lag Fixer)
+When engaging in long conversation threads on **ChatGPT** or **Google Gemini**, browsers slow down and introduce severe typing latency due to thousands of rendered DOM elements. 
+**Caspian** dynamically prunes older conversation turns from the active browser viewport using high-performance CSS (`display: none !important`). This eliminates typing lag instantly while retaining 100% of your chat history in memory. Choose from `1`, `3`, `5`, `8`, `15`, or `∞ Unlimited` visible turns!
 
-### 🛡️ Temporary Chat Vault & Exporter
+### 2. 🛡️ Temporary Chat Saver & Permanent Converter
 **Temporary Chats** in AI tools disappear forever once closed, risking data loss when a quick session evolves into an important conversation. 
-Caspian automatically detects active temporary chat sessions, letting you convert them into permanent saved chats or export them into multiple formats.
+Caspian automatically detects active temporary chat sessions, allowing you to convert temporary chats into permanent saved chats in your account history with 1-click!
+
+### 3. 📥 Multi-Format Export Suite (Offline Backup & Study Notes)
+Never lose your valuable chat transcripts! Caspian lets you export **both normal and temporary conversations** into 5 distinct formats. Perfect for offline reading when internet is unavailable, creating hardcopy prints, or saving study notes:
+- 📄 **Markdown (`.md`)**: Complete formatted Markdown file with code blocks, headings, and turn icons.
+- 📝 **Plain Text (`.txt`)**: Clean structured plain-text transcript log.
+- 📘 **Google Doc / Word (`.doc`)**: Editable document with heading structure (`<h1>`/`<h2>`), bold text, math equations, and automatic Google Docs mobile **Chapter Navigation Outline**.
+- 📕 **Document PDF (`.pdf`)**: Styled document with **KaTeX LaTeX math rendering** for formulas and math equations.
+- 📸 **Full Page Print PDF**: Progressive scroll sweep engine that unhides 100% of virtualized turns and launches native webpage print preview without missing pages or blank white gaps!
 
 ---
 
@@ -35,12 +43,12 @@ Caspian automatically detects active temporary chat sessions, letting you conver
 - 🚀 **Temporary Chat Converter**:
   - **Convert to Permanent Saved Chat**: Extracts full conversation history from a temporary session, opens a new normal session, and injects the transcript so your AI provider saves it to your account history.
   - 📋 **1-Click Copy**: Copies structured Markdown transcripts directly to your clipboard.
-- 📥 **Multi-Format Export Suite**:
-  - 📄 **Markdown (`.md`)**: Formatted Markdown file with user prompts, AI responses, and fenced code blocks.
-  - 📝 **Plain Text (`.txt`)**: Clean formatted transcript log.
-  - 📘 **Google Doc / Word (`.doc`)**: Editable document with heading structure (`<h1>`/`<h2>`), bold text, math equations, and automatic Google Docs mobile **Chapter Navigation Outline**.
-  - 📕 **Document PDF (`.pdf`)**: Styled document with **KaTeX LaTeX math rendering** for math formulas and equations.
-  - 📸 **Full Page Print PDF**: 1-click unhide and native webpage print preview.
+- 📥 **Multi-Format Export Suite (Normal & Temporary Chats)**:
+  - 📄 **Markdown (`.md`)**
+  - 📝 **Plain Text (`.txt`)**
+  - 📘 **Google Doc / Word (`.doc`)**
+  - 📕 **Document PDF (`.pdf`)**
+  - 📸 **Full Page Print PDF**
 - ⚡ **Message Turn Limit Selection**: Choose visible turn limits: `1`, `3`, `5`, `8`, `15`, or `∞ Unlimited`.
 - 🌐 **Supported Sites**:
   - **ChatGPT** (`chatgpt.com`) — Auto-enabled.
@@ -87,8 +95,8 @@ Caspian automatically detects active temporary chat sessions, letting you conver
 ## 📥 Installation Guide
 
 ### Option 1: Quick Release Download (Easiest & Recommended)
-1. Go to the [**Releases Page**](https://github.com/code4nigel/Caspian/releases) and download **`Caspian-v5.0.0.zip`**.
-2. Extract (unzip) `Caspian-v5.0.0.zip` to a folder on your computer.
+1. Go to the [**Releases Page**](https://github.com/code4nigel/Caspian/releases) and download **`Caspian-v5.0.2.zip`** (from `versions/` folder).
+2. Extract (unzip) `Caspian-v5.0.2.zip` to a folder on your computer.
 3. Open your browser and navigate to the extensions page:
    - **Chrome**: `chrome://extensions`
    - **Edge**: `edge://extensions`
@@ -130,6 +138,7 @@ Caspian/
     ├── icon128.png         # Caspian wave toolbar icon (128x128)
     └── images/             # Documentation screenshots
         ├── caspian_mainUI.png
+        ├── caspian_exportOptions.png
         ├── caspian_siteUI.png
         ├── caspian_settingsUI.png
         └── Caspian_darkUI.png
