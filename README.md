@@ -49,7 +49,6 @@ Caspian automatically detects active temporary chat sessions, letting you conver
   - Default **Caspian** gradient palette (`#A2A9A9` to `#1B4264`).
   - Dual custom hex color pickers & smart palette importer.
   - **Quick Preset Pinning System**: Pin your favorite gradient combinations directly to your dashboard.
-- 👨‍💻 **Developer Profile & Facts**: Integrated NigelWeb profile card with interactive facts.
 
 ---
 
