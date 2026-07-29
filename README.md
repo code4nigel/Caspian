@@ -14,7 +14,7 @@
 | :---: | :---: |
 | ![Caspian Settings](Caspian/images/caspian_settingsUI.png) | ![Caspian Dark Mode](Caspian/images/Caspian_darkUI.png) |
 
-> 💡 **Dev Recommendation:** *While Dark Mode is fully supported, we recommend using **Light Mode** as Caspian's signature Ena gradient and glassmorphism look exceptionally crisp and vibrant in Light Mode!*
+> 💡 **Dev Recommendation:** *While Dark Mode is fully supported, we recommend using **Light Mode** as Caspian's signature gradient and glassmorphism look exceptionally crisp and vibrant in Light Mode!*
 
 ---
 
@@ -46,7 +46,7 @@ Caspian automatically detects active temporary chat sessions, letting you conver
   - **Google Gemini** (`gemini.google.com`) — Auto-enabled.
   - Per-site toggles available in the **Sites** tab.
 - 🎨 **Aesthetics & Custom Gradient Engine**:
-  - Default **Ena** gradient palette (`#A2A9A9` to `#1B4264`).
+  - Default **Caspian** gradient palette (`#A2A9A9` to `#1B4264`).
   - Dual custom hex color pickers & smart palette importer.
   - **Quick Preset Pinning System**: Pin your favorite gradient combinations directly to your dashboard.
 - 👨‍💻 **Developer Profile & Facts**: Integrated NigelWeb profile card with interactive facts.

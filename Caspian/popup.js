@@ -10,10 +10,10 @@ const DEFAULTS = {
 };
 
 const DEFAULT_PRESETS = [
-  { id: 'ena', name: 'Ena', accent: '#A2A9A9', secondary: '#1B4264' },
+  { id: 'caspian', name: 'Caspian', accent: '#A2A9A9', secondary: '#1B4264' },
   { id: 'cyan', name: 'Cyan', accent: '#00f2fe', secondary: '#4facfe' },
   { id: 'violet', name: 'Violet', accent: '#a855f7', secondary: '#ec4899' },
-  { id: 'caspian', name: 'Caspian', accent: '#38bdf8', secondary: '#0284c7' },
+  { id: 'azure', name: 'Azure', accent: '#38bdf8', secondary: '#0284c7' },
   { id: 'emerald', name: 'Emerald', accent: '#10b981', secondary: '#34d399' }
 ];
 
