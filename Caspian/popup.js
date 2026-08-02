@@ -37,65 +37,153 @@ function escapeHtml(text) {
     .replace(/'/g, '&#039;');
 }
 
+function renderTableHtml(tableLines) {
+  if (tableLines.length < 2) return tableLines.join('\n');
+
+  const formatCell = (cStr) => {
+    let c = escapeHtml(cStr);
+    c = c.replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>');
+    c = c.replace(/\*(.*?)\*/g, '<em>$1</em>');
+    c = c.replace(/`([^`]+)`/g, '<code class="inline-code">$1</code>');
+    return c;
+  };
+
+  const parseRow = (rowStr) => {
+    return rowStr.split('|').slice(1, -1).map(cell => cell.trim());
+  };
+
+  const headers = parseRow(tableLines[0]);
+  let startIdx = 1;
+  if (tableLines.length > 1 && tableLines[1].includes('---')) {
+    startIdx = 2;
+  }
+
+  let html = `<div class="table-wrapper" style="overflow-x: auto; margin: 16px 0; page-break-inside: avoid; break-inside: avoid;"><table style="width: 100%; border-collapse: collapse; margin: 12px 0; font-size: 13.5px; border: 1px solid #cbd5e1; page-break-inside: avoid;">`;
+  
+  html += `<thead style="background-color: #f8fafc; border-bottom: 2px solid #cbd5e1;"><tr>`;
+  headers.forEach(h => {
+    html += `<th style="padding: 10px 14px; text-align: left; font-weight: 700; color: #0f172a; border: 1px solid #cbd5e1;">${formatCell(h)}</th>`;
+  });
+  html += `</tr></thead>`;
+
+  html += `<tbody>`;
+  for (let i = startIdx; i < tableLines.length; i++) {
+    const cells = parseRow(tableLines[i]);
+    const rowBg = i % 2 === 0 ? '#ffffff' : '#f8fafc';
+    html += `<tr style="background-color: ${rowBg}; page-break-inside: avoid; break-inside: avoid;">`;
+    cells.forEach(c => {
+      html += `<td style="padding: 8px 14px; color: #334155; border: 1px solid #cbd5e1;">${formatCell(c)}</td>`;
+    });
+    html += `</tr>`;
+  }
+  html += `</tbody></table></div>`;
+
+  return html;
+}
+
+function parseMarkdownTables(text) {
+  const lines = text.split('\n');
+  let inTable = false;
+  let tableLines = [];
+  let result = [];
+
+  for (let i = 0; i < lines.length; i++) {
+    const line = lines[i].trim();
+    if (line.startsWith('|') && line.endsWith('|')) {
+      inTable = true;
+      tableLines.push(line);
+    } else {
+      if (inTable) {
+        result.push(renderTableHtml(tableLines));
+        inTable = false;
+        tableLines = [];
+      }
+      result.push(lines[i]);
+    }
+  }
+  if (inTable && tableLines.length > 0) {
+    result.push(renderTableHtml(tableLines));
+  }
+  return result.join('\n');
+}
+
 function parseMarkdownAndLaTeX(mdText) {
   if (!mdText) return '';
   let text = mdText;
 
-  // 1. Convert code blocks
+  // 1. Protect LaTeX math blocks BEFORE escapeHtml runs
+  const mathBlocks = [];
+  text = text.replace(/(\\\[[\s\S]*?\\\]|\$\$[\s\S]*?\$\$|\\\(.*?\\\))/g, (match) => {
+    const placeholder = `___MATH_BLOCK_${mathBlocks.length}___`;
+    mathBlocks.push(match);
+    return placeholder;
+  });
+
+  // 2. Protect Code blocks
   const codeBlocks = [];
   text = text.replace(/```(\w+)?\n([\s\S]*?)```/g, (match, lang, code) => {
     const langName = lang || 'code';
     const placeholder = `___CODE_BLOCK_${codeBlocks.length}___`;
     codeBlocks.push(`
-      <div class="code-block">
+      <div class="code-block" style="page-break-inside: avoid; break-inside: avoid;">
         <div class="code-header">
           <span>${escapeHtml(langName)}</span>
           <span>Copy code</span>
         </div>
-        <pre><code>${escapeHtml(code.trim())}</code></pre>
+        <pre style="page-break-inside: avoid; break-inside: avoid;"><code>${escapeHtml(code.trim())}</code></pre>
       </div>
     `);
     return placeholder;
   });
 
-  // 2. Escape HTML symbols outside code blocks
+  // 3. Parse Markdown Tables into HTML <table> elements
+  const tableBlocks = [];
+  text = text.replace(/(?:^|\n)(\|[^\n]+\|\n\|[-:\s|]+\|\n(?:\|[^\n]+\|\n?)+)/g, (match, tblStr) => {
+    const placeholder = `___TABLE_BLOCK_${tableBlocks.length}___`;
+    const lines = tblStr.trim().split('\n');
+    tableBlocks.push(renderTableHtml(lines));
+    return '\n' + placeholder + '\n';
+  });
+
+  // 4. Escape HTML symbols outside code blocks & tables
   text = escapeHtml(text);
 
-  // 3. Convert LaTeX bracket blocks: [ \text{...} ] or [ ... ] to KaTeX math block \[ ... \]
-  text = text.replace(/\[\s*(\\text\{[\s\S]*?)\s*\]/g, '\\[ $1 \\]');
-  text = text.replace(/\[\s*(\\boxed[\s\S]*?)\s*\]/g, '\\[ $1 \\]');
-  text = text.replace(/\[\s*(\\times[\s\S]*?)\s*\]/g, '\\[ $1 \\]');
+  // 5. Restore LaTeX math blocks safely
+  mathBlocks.forEach((mBlock, idx) => {
+    text = text.replace(`___MATH_BLOCK_${idx}___`, mBlock);
+  });
 
-  // 4. Convert Headings: # , ## , ### , ####
+  // 6. Convert Headings: # , ## , ### , ####
   text = text.replace(/^#### (.*$)/gim, '<h4>$1</h4>');
   text = text.replace(/^### (.*$)/gim, '<h3>$1</h3>');
   text = text.replace(/^## (.*$)/gim, '<h2>$1</h2>');
   text = text.replace(/^# (.*$)/gim, '<h1>$1</h1>');
 
-  // 5. Horizontal rules
+  // 7. Horizontal rules
   text = text.replace(/^---$/gim, '<hr>');
 
-  // 6. Bold & Italic
+  // 8. Bold & Italic
   text = text.replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>');
   text = text.replace(/\*(.*?)\*/g, '<em>$1</em>');
 
-  // 7. Inline code
+  // 9. Inline code
   text = text.replace(/`([^`]+)`/g, '<code class="inline-code">$1</code>');
 
-  // 8. Bullet lists
+  // 10. Bullet & Numbered lists
   text = text.replace(/^\s*[\-\*]\s+(.*$)/gim, '<li>$1</li>');
   text = text.replace(/(<li>.*<\/li>)/gis, '<ul>$1</ul>');
-
-  // 9. Numbered lists
   text = text.replace(/^\s*(\d+)\.\s+(.*$)/gim, '<li><span class="list-num">$1.</span> $2</li>');
 
-  // 10. Restore code blocks
+  // 11. Restore code blocks & table blocks
   codeBlocks.forEach((block, idx) => {
     text = text.replace(`___CODE_BLOCK_${idx}___`, block);
   });
+  tableBlocks.forEach((tBlock, idx) => {
+    text = text.replace(`___TABLE_BLOCK_${idx}___`, tBlock);
+  });
 
-  // 11. Newlines to breaks
-  text = text.replace(/\n\n/g, '<br><br>').replace(/\n/g, '<br>');
+  // 12. Clean spacing
+  text = text.replace(/\n\n/g, '<br>').replace(/\n/g, '<br>');
 
   return text;
 }
@@ -221,61 +309,159 @@ function pinCurrentGradient() {
 // ------------------------------------------
 // BULLETPROOF DIRECT DOM EXTRACTION IN POPUP
 // ------------------------------------------
-function extractPageConversationPayload() {
+async function extractPageConversationPayload() {
   try {
+    console.log('==========================================');
+    console.log('🌊 CASPIAN API EXTRACTION DEBUGGER INITIALIZED');
+    console.log('==========================================');
+
     const isUrlTemp = window.location.href.includes('temporary-chat=true');
     const isDomTemp = !!document.querySelector('[data-testid="temporary-chat-indicator"]') ||
-                      !!document.querySelector('button[aria-label*="Temporary"]') ||
-                      (document.body && document.body.innerText && document.body.innerText.toLowerCase().includes('temporary chat'));
+      !!document.querySelector('button[aria-label*="Temporary"]') ||
+      (document.body && document.body.innerText && document.body.innerText.toLowerCase().includes('temporary chat'));
     const isTemporary = isUrlTemp || isDomTemp;
 
-    const turns = [];
-    const processedTexts = new Set();
+    const titleEl = document.querySelector('title') || document.querySelector('h1');
+    let title = titleEl ? titleEl.textContent.replace(/ - (ChatGPT|Gemini)$/i, '').replace(/^(ChatGPT|Gemini) - /i, '').trim() : 'Saved Conversation';
+    if (!title || title === 'ChatGPT') title = 'Saved Conversation';
 
-    let turnNodes = Array.from(document.querySelectorAll('[data-message-author-role]'));
-    
-    if (!turnNodes || turnNodes.length === 0) {
-      turnNodes = Array.from(document.querySelectorAll('[data-testid^="conversation-turn"], article, main div.group'));
-    }
+    const url = window.location.href;
+    console.log('Caspian API Debug: Page URL =', url);
 
-    turnNodes.forEach((el, idx) => {
-      const roleAttr = el.getAttribute('data-message-author-role');
-      const isUser = roleAttr === 'user' ||
-                     !!el.querySelector('[data-message-author-role="user"]') ||
-                     (el.innerText && el.innerText.includes('You said:'));
-      const role = isUser ? 'User' : 'ChatGPT';
+    const match = url.match(/\/c\/([a-f0-9-]+)/i);
+    const conversationId = match ? match[1] : null;
+    console.log('Caspian API Debug: Extracted Conversation ID =', conversationId);
 
-      const bodyEl = el.querySelector('.markdown') || el;
-      const text = bodyEl && bodyEl.innerText ? bodyEl.innerText.trim() : '';
-      const html = bodyEl ? bodyEl.innerHTML : '';
+    let turns = [];
 
-      if (text && text.length > 1 && !processedTexts.has(text)) {
-        processedTexts.add(text);
-        turns.push({ role, content: text, htmlContent: html, index: turns.length + 1 });
+    // LAYER A: Fetch directly from ChatGPT internal Backend API
+    if (conversationId) {
+      let token = null;
+
+      // Token Path 1: Check window.__NEXT_DATA__
+      try {
+        if (window.__NEXT_DATA__ && window.__NEXT_DATA__.props && window.__NEXT_DATA__.props.pageProps) {
+          token = window.__NEXT_DATA__.props.pageProps.accessToken;
+          if (token) console.log('Caspian API Debug: Access token retrieved from __NEXT_DATA__');
+        }
+      } catch (e) {}
+
+      // Token Path 2: Fetch /api/auth/session
+      if (!token) {
+        try {
+          console.log('Caspian API Debug: Fetching /api/auth/session...');
+          const sResp = await fetch('https://chatgpt.com/api/auth/session', { credentials: 'include' });
+          console.log('Caspian API Debug: /api/auth/session HTTP status =', sResp.status);
+          if (sResp.ok) {
+            const sJson = await sResp.json();
+            if (sJson && sJson.accessToken) {
+              token = sJson.accessToken;
+              console.log('Caspian API Debug: Access token retrieved from session endpoint');
+            }
+          }
+        } catch (se) {
+          console.error('Caspian API Debug: Session fetch exception:', se);
+        }
       }
-    });
+
+      console.log('Caspian API Debug: Final Bearer Token Present =', !!token);
+
+      const headers = { 'Accept': 'application/json' };
+      if (token) headers['Authorization'] = `Bearer ${token}`;
+
+      console.log(`Caspian API Debug: Requesting https://chatgpt.com/backend-api/conversation/${conversationId}...`);
+
+      try {
+        const resp = await fetch(`https://chatgpt.com/backend-api/conversation/${conversationId}`, {
+          headers,
+          credentials: 'include'
+        });
+
+        console.log('Caspian API Debug: Backend API HTTP Status =', resp.status);
+
+        if (resp.ok) {
+          const json = await resp.json();
+          console.log('Caspian API Debug: API JSON payload received successfully!');
+          console.log('Caspian API Debug: current_node =', json.current_node);
+          console.log('Caspian API Debug: Total mapping nodes =', json.mapping ? Object.keys(json.mapping).length : 0);
+
+          if (json && json.mapping && json.current_node) {
+            const mapping = json.mapping;
+            let currId = json.current_node;
+            const activeNodes = [];
+
+            while (currId && mapping[currId]) {
+              const node = mapping[currId];
+              if (node.message && node.message.content && node.message.content.parts) {
+                const author = node.message.author ? node.message.author.role : 'assistant';
+                if (author === 'user' || author === 'assistant') {
+                  const textParts = node.message.content.parts.filter(p => typeof p === 'string').join('\n').trim();
+                  if (textParts && textParts.length > 0) {
+                    activeNodes.unshift({
+                      id: node.id,
+                      role: author === 'user' ? 'User' : 'ChatGPT',
+                      content: textParts
+                    });
+                  }
+                }
+              }
+              currId = node.parent;
+            }
+
+            console.log('Caspian API Debug: Parent chain traversed! Total active turns =', activeNodes.length);
+
+            const processedTexts = new Set();
+            activeNodes.forEach(node => {
+              if (!processedTexts.has(node.content)) {
+                processedTexts.add(node.content);
+                turns.push({
+                  role: node.role,
+                  content: node.content,
+                  htmlContent: '',
+                  index: turns.length + 1
+                });
+              }
+            });
+
+            console.log('Caspian API Debug: 🎉 SUCCESS! Extracted', turns.length, 'turns strictly via API method!');
+          } else {
+            console.warn('Caspian API Debug: JSON mapping or current_node was missing in response!');
+          }
+        } else {
+          const errBody = await resp.text();
+          console.error('Caspian API Debug: Backend API failed with status', resp.status, 'Error Body:', errBody.substring(0, 300));
+        }
+      } catch (fe) {
+        console.error('Caspian API Debug: Backend API fetch exception:', fe);
+      }
+    } else {
+      console.warn('Caspian API Debug: No Conversation ID found in URL!');
+    }
 
     if (turns.length === 0) {
-      const main = document.querySelector('main');
-      if (main) {
-        const textBlocks = main.querySelectorAll('.whitespace-pre-wrap, .markdown');
-        textBlocks.forEach((tb, i) => {
-          const t = tb.innerText ? tb.innerText.trim() : '';
-          const html = tb ? tb.innerHTML : '';
-          if (t && !processedTexts.has(t)) {
-            processedTexts.add(t);
-            turns.push({ role: i % 2 === 0 ? 'User' : 'ChatGPT', content: t, htmlContent: html, index: turns.length + 1 });
-          }
-        });
-      }
-    }
+      console.log('Caspian API Debug: Falling back to DOM query for temporary/unsaved session...');
+      const turnElements = document.querySelectorAll('[data-testid^="conversation-turn"], article, main div.group');
+      turnElements.forEach((el, idx) => {
+        const isUser = el.querySelector('[data-message-author-role="user"]') || el.textContent.includes('User') || idx % 2 === 0;
+        const role = isUser ? 'User' : 'ChatGPT';
 
-    const titleEl = document.querySelector('title');
-    let title = titleEl ? titleEl.textContent.replace(/ - (ChatGPT|Gemini)$/i, '').trim() : 'Saved Conversation';
+        const contentEl = el.querySelector('.markdown') || el.querySelector('[data-message-author-role]') || el;
+        const textContent = (contentEl.innerText || contentEl.textContent || '').trim();
+
+        if (textContent && textContent.length > 0) {
+          turns.push({
+            role,
+            content: textContent,
+            htmlContent: contentEl.innerHTML || '',
+            index: turns.length + 1
+          });
+        }
+      });
+      console.log('Caspian API Debug: DOM Fallback Extracted', turns.length, 'turns!');
+    }
 
     const isGemini = window.location.hostname.includes('gemini');
     const site = isGemini ? 'gemini' : 'chatgpt';
-    const url = window.location.href;
 
     const dateStr = new Date().toLocaleString();
     let markdown = `# ${title}\n\n`;
@@ -297,6 +483,7 @@ function extractPageConversationPayload() {
       url
     };
   } catch (err) {
+    console.error('Caspian API Debug: Global extraction error:', err);
     return { title: 'Error', isTemporary: false, turnCount: 0, turns: [], markdown: '', site: 'chatgpt', url: '' };
   }
 }
@@ -443,109 +630,27 @@ function initTempChatVault() {
       exportMenuBtn.innerHTML = `<span>Exporting...</span>`;
 
       if (format === 'webpdf') {
-        chrome.tabs.query({ active: true, currentWindow: true }, (tabs) => {
-          if (tabs && tabs[0]) {
-            chrome.scripting.executeScript({
-              target: { tabId: tabs[0].id },
-              func: () => {
-                let printStyle = document.getElementById('caspian-print-styles');
-                if (!printStyle) {
-                  printStyle = document.createElement('style');
-                  printStyle.id = 'caspian-print-styles';
-                  printStyle.innerHTML = `
-                    @media print {
-                      @page { margin: 1cm; size: auto; }
-                      body, html, main, div, article {
-                        overflow: visible !important;
-                        height: auto !important;
-                        max-height: none !important;
-                        min-height: 0 !important;
-                        position: static !important;
-                      }
-                      [data-testid^="conversation-turn"], article, main div.group {
-                        display: block !important;
-                        page-break-inside: avoid !important;
-                        break-inside: avoid !important;
-                        margin-bottom: 20px !important;
-                      }
-                      #caspian-print-loader, nav, header, [data-testid="sidebar"] {
-                        display: none !important;
-                      }
-                    }
-                  `;
-                  document.head.appendChild(printStyle);
-                }
-
-                const messages = document.querySelectorAll('[data-testid^="conversation-turn"], article, main div.group');
-                messages.forEach(msg => msg.style.setProperty('display', 'block', 'important'));
-
-                const scroller = document.querySelector('main div.overflow-y-auto') ||
-                                 document.querySelector('main') ||
-                                 document.documentElement ||
-                                 document.body;
-
-                const oldOverlay = document.getElementById('caspian-print-loader');
-                if (oldOverlay) oldOverlay.remove();
-
-                const overlay = document.createElement('div');
-                overlay.id = 'caspian-print-loader';
-                overlay.style.cssText = 'position:fixed;top:24px;left:50%;transform:translateX(-50%);z-index:9999999;background:linear-gradient(135deg, #0f172a, #1e293b);color:#ffffff;padding:12px 24px;border-radius:30px;font-family:system-ui,-apple-system,sans-serif;font-size:13px;font-weight:600;box-shadow:0 10px 30px rgba(0,0,0,0.4);border:1px solid rgba(255,255,255,0.15);pointer-events:none;';
-                overlay.innerHTML = '⚡ Caspian Loading Full Conversation... Please wait';
-                document.body.appendChild(overlay);
-
-                let currentY = 0;
-                const viewportH = window.innerHeight || 800;
-                const step = Math.max(300, Math.floor(viewportH * 0.7));
-
-                const scrollInterval = setInterval(() => {
-                  const totalH = Math.max(
-                    scroller.scrollHeight || 0,
-                    document.body.scrollHeight || 0,
-                    document.documentElement.scrollHeight || 0
-                  );
-                  const maxScroll = Math.max(1, totalH - viewportH);
-
-                  currentY += step;
-
-                  if (scroller && typeof scroller.scrollTo === 'function') {
-                    scroller.scrollTo(0, currentY);
-                  }
-                  if (scroller) scroller.scrollTop = currentY;
-                  window.scrollTo(0, currentY);
-
-                  if (scroller && typeof scroller.dispatchEvent === 'function') {
-                    scroller.dispatchEvent(new Event('scroll', { bubbles: true }));
-                  }
-                  window.dispatchEvent(new Event('scroll', { bubbles: true }));
-
-                  const progress = Math.min(100, Math.round((currentY / maxScroll) * 100));
-                  overlay.innerHTML = `⚡ Rendering Conversation Messages (${progress}%)...`;
-
-                  if (currentY >= totalH + step) {
-                    clearInterval(scrollInterval);
-
-                    const virtualHolders = document.querySelectorAll('main div[style*="height"], main div[style*="min-height"]');
-                    virtualHolders.forEach(div => {
-                      div.style.setProperty('height', 'auto', 'important');
-                      div.style.setProperty('min-height', '0px', 'important');
-                    });
-
-                    if (scroller && typeof scroller.scrollTo === 'function') scroller.scrollTo(0, 0);
-                    window.scrollTo(0, 0);
-                    overlay.innerHTML = '✨ All Pages Rendered! Launching Print View...';
-
-                    setTimeout(() => {
-                      if (overlay) overlay.remove();
-                      window.print();
-                    }, 500);
-                  }
-                }, 90);
-              }
-            }, () => {
-              exportMenuBtn.innerHTML = `<span>Exported!</span>`;
-              setTimeout(() => { exportMenuBtn.innerHTML = origBtnHtml; }, 1500);
-            });
+        fetchCurrentTabData((data) => {
+          if (!data || !data.turns || data.turnCount === 0) {
+            alert('No conversation messages found to print on this page.');
+            exportMenuBtn.innerHTML = origBtnHtml;
+            return;
           }
+          exportStyledPdfDocument(data);
+          exportMenuBtn.innerHTML = `<span>Exported!</span>`;
+          setTimeout(() => { exportMenuBtn.innerHTML = origBtnHtml; }, 1500);
+        });
+        return;
+      } else if (format === 'pdf') {
+        fetchCurrentTabData((data) => {
+          if (!data || !data.turns || data.turnCount === 0) {
+            alert('No conversation messages found to print on this page.');
+            exportMenuBtn.innerHTML = origBtnHtml;
+            return;
+          }
+          exportNativePdfDocument(data);
+          exportMenuBtn.innerHTML = `<span>Exported!</span>`;
+          setTimeout(() => { exportMenuBtn.innerHTML = origBtnHtml; }, 1500);
         });
         return;
       }
@@ -563,8 +668,6 @@ function initTempChatVault() {
           exportPlainTextFile(data);
         } else if (format === 'doc') {
           exportGoogleDocFile(data);
-        } else if (format === 'pdf') {
-          exportStyledPdfDocument(data);
         }
 
         exportMenuBtn.innerHTML = `<span>Exported!</span>`;
@@ -612,11 +715,11 @@ function initTempChatVault() {
 function exportMarkdownFile(data) {
   const blob = new Blob([data.markdown], { type: 'text/markdown;charset=utf-8' });
   const url = URL.createObjectURL(blob);
-  const safeTitle = (data.title || 'ChatGPT_Export').replace(/[^a-z0-9_-]/gi, '_');
+  const safeTitle = (data.title || 'ChatGPT_Export').trim();
 
   const a = document.createElement('a');
   a.href = url;
-  a.download = `${safeTitle}.md`;
+  a.download = `${safeTitle} Caspian_Exported.md`;
   document.body.appendChild(a);
   a.click();
   document.body.removeChild(a);
@@ -640,11 +743,11 @@ function exportPlainTextFile(data) {
 
   const blob = new Blob([text], { type: 'text/plain;charset=utf-8' });
   const url = URL.createObjectURL(blob);
-  const safeTitle = (title || 'ChatGPT_Export').replace(/[^a-z0-9_-]/gi, '_');
+  const safeTitle = (title || 'ChatGPT_Export').trim();
 
   const a = document.createElement('a');
   a.href = url;
-  a.download = `${safeTitle}.txt`;
+  a.download = `${safeTitle} Caspian_Exported.txt`;
   document.body.appendChild(a);
   a.click();
   document.body.removeChild(a);
@@ -653,7 +756,7 @@ function exportPlainTextFile(data) {
 
 function exportGoogleDocFile(data) {
   const title = data.title || 'Saved Conversation';
-  const safeTitle = (title || 'Caspian_Export').replace(/[^a-z0-9_-]/gi, '_');
+  const safeTitle = (title || 'ChatGPT_Export').trim();
   const turns = data.turns || [];
   const dateStr = new Date().toLocaleString();
 
@@ -713,7 +816,7 @@ function exportGoogleDocFile(data) {
   `;
 
   const blob = new Blob(['\ufeff' + docHtml], { type: 'application/msword;charset=utf-8' });
-  const filename = `${safeTitle}_GoogleDoc.doc`;
+  const filename = `${safeTitle} Caspian_Exported.doc`;
 
   if (chrome.downloads && typeof chrome.downloads.download === 'function') {
     const url = URL.createObjectURL(blob);
@@ -736,6 +839,285 @@ function exportGoogleDocFile(data) {
   }
 }
 
+function formatMathSymbols(mathStr) {
+  return mathStr
+    .replace(/\\boxed\{([\s\S]*?)\}/gi, '$1')
+    .replace(/\\Sigma/g, 'Σ')
+    .replace(/\\delta/g, 'δ')
+    .replace(/\\epsilon/g, 'ε')
+    .replace(/\\in/g, '∈')
+    .replace(/\\notin/g, '∉')
+    .replace(/\\cup/g, '∪')
+    .replace(/\\cap/g, '∩')
+    .replace(/\\rightarrow/g, '→')
+    .replace(/\\leftarrow/g, '←')
+    .replace(/\\emptyset/g, '∅')
+    .replace(/\\times/g, '×')
+    .replace(/\\text\{([\s\S]*?)\}/g, '$1')
+    .replace(/q_0/g, 'q₀')
+    .replace(/2\^n/g, '2ⁿ')
+    .replace(/q_(\d+)/g, 'q$1');
+}
+
+function parseMarkdownAndLaTeX(mdText) {
+  if (!mdText) return '';
+  let text = mdText;
+
+  // 1. Process LaTeX boxed & display equations into mathBlocks placeholders
+  const mathBlocks = [];
+
+  text = text.replace(/\\\[\s*\\boxed\{([\s\S]*?)\}\s*\\\]/gi, (match, inner) => {
+    const formatted = formatMathSymbols(inner);
+    const placeholder = `___MATH_BLOCK_${mathBlocks.length}___`;
+    mathBlocks.push(`<div class="katex-display-box" style="text-align: center; margin: 18px 0; page-break-inside: avoid; break-inside: avoid;"><span style="display: inline-block; border: 1.5px solid #0f172a; padding: 6px 18px; border-radius: 4px; font-family: 'Times New Roman', Times, serif; font-size: 16.5px; font-style: italic; background: #ffffff; box-shadow: 0 1px 3px rgba(0,0,0,0.05); color: #0f172a;">${formatted}</span></div>`);
+    return placeholder;
+  });
+
+  text = text.replace(/\\\[\s*([\s\S]*?)\s*\\\]/gi, (match, inner) => {
+    const formatted = formatMathSymbols(inner);
+    const placeholder = `___MATH_BLOCK_${mathBlocks.length}___`;
+    mathBlocks.push(`<div class="katex-display-box" style="text-align: center; margin: 16px 0; font-family: 'Times New Roman', Times, serif; font-size: 16.5px; font-style: italic; color: #0f172a; page-break-inside: avoid; break-inside: avoid;">${formatted}</div>`);
+    return placeholder;
+  });
+
+  text = text.replace(/\\boxed\{([\s\S]*?)\}/gi, (match, inner) => {
+    const formatted = formatMathSymbols(inner);
+    const placeholder = `___MATH_BLOCK_${mathBlocks.length}___`;
+    mathBlocks.push(`<span style="display: inline-block; border: 1.5px solid #0f172a; padding: 2px 8px; border-radius: 3px; font-family: 'Times New Roman', Times, serif; font-size: 15px; font-style: italic; background: #ffffff;">${formatted}</span>`);
+    return placeholder;
+  });
+
+  // 2. Protect Code blocks
+  const codeBlocks = [];
+  text = text.replace(/```(\w+)?\n([\s\S]*?)```/g, (match, lang, code) => {
+    const langName = lang || 'code';
+    const placeholder = `___CODE_BLOCK_${codeBlocks.length}___`;
+    codeBlocks.push(`
+      <div class="code-block" style="page-break-inside: avoid; break-inside: avoid;">
+        <div class="code-header">
+          <span>${escapeHtml(langName)}</span>
+          <span>Copy code</span>
+        </div>
+        <pre style="page-break-inside: avoid; break-inside: avoid;"><code>${escapeHtml(code.trim())}</code></pre>
+      </div>
+    `);
+    return placeholder;
+  });
+
+  // 3. Parse Markdown Tables into HTML <table> elements
+  const tableBlocks = [];
+  text = text.replace(/(?:^|\n)(\|[^\n]+\|\n\|[-:\s|]+\|\n(?:\|[^\n]+\|\n?)+)/g, (match, tblStr) => {
+    const placeholder = `___TABLE_BLOCK_${tableBlocks.length}___`;
+    const lines = tblStr.trim().split('\n');
+    tableBlocks.push(renderTableHtml(lines));
+    return '\n' + placeholder + '\n';
+  });
+
+  // 4. Escape HTML symbols outside code blocks, math blocks & tables
+  text = escapeHtml(text);
+
+  // 5. Restore LaTeX math blocks safely (AFTER escapeHtml)
+  mathBlocks.forEach((mBlock, idx) => {
+    text = text.replace(`___MATH_BLOCK_${idx}___`, mBlock);
+  });
+
+  // 6. Convert Headings: # , ## , ### , ####
+  text = text.replace(/^#### (.*$)/gim, '<h4>$1</h4>');
+  text = text.replace(/^### (.*$)/gim, '<h3>$1</h3>');
+  text = text.replace(/^## (.*$)/gim, '<h2>$1</h2>');
+  text = text.replace(/^# (.*$)/gim, '<h1>$1</h1>');
+
+  // 7. Horizontal rules
+  text = text.replace(/^---$/gim, '<hr>');
+
+  // 8. Bold & Italic
+  text = text.replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>');
+  text = text.replace(/\*(.*?)\*/g, '<em>$1</em>');
+
+  // 9. Inline code
+  text = text.replace(/`([^`]+)`/g, '<code class="inline-code">$1</code>');
+
+  // 10. Bullet & Numbered lists
+  text = text.replace(/^\s*[\-\*]\s+(.*$)/gim, '<li>$1</li>');
+  text = text.replace(/(<li>.*<\/li>)/gis, '<ul>$1</ul>');
+  text = text.replace(/^\s*(\d+)\.\s+(.*$)/gim, '<li><span class="list-num">$1.</span> $2</li>');
+
+  // 11. Restore code blocks & table blocks
+  codeBlocks.forEach((block, idx) => {
+    text = text.replace(`___CODE_BLOCK_${idx}___`, block);
+  });
+  tableBlocks.forEach((tBlock, idx) => {
+    text = text.replace(`___TABLE_BLOCK_${idx}___`, tBlock);
+  });
+
+  // 12. Clean spacing
+  text = text.replace(/\n\n/g, '<br>').replace(/\n/g, '<br>');
+
+  return text;
+}
+
+function exportNativePdfDocument(data) {
+  const title = data.title || 'ChatGPT Conversation';
+  const turns = data.turns || [];
+  const dateStr = new Date().toLocaleString();
+
+  let turnsHtml = '';
+  turns.forEach((t) => {
+    const isUser = t.role === 'User';
+    const roleName = isUser ? 'User' : 'ChatGPT';
+
+    const formattedContent = t.htmlContent && t.htmlContent.length > 5
+      ? t.htmlContent
+      : parseMarkdownAndLaTeX(t.content);
+
+    turnsHtml += `
+      <div class="native-turn-row" style="padding: 20px 0; border-bottom: 1px solid #f1f5f9; page-break-inside: avoid; break-inside: avoid;">
+        <div style="font-weight: 700; font-size: 14px; color: ${isUser ? '#1d4ed8' : '#047857'}; margin-bottom: 8px; font-family: system-ui, -apple-system, sans-serif;">
+          ${roleName}
+        </div>
+        <div class="turn-body" style="color: #0f172a; font-size: 14.5px; line-height: 1.7; word-break: break-word;">
+          ${formattedContent}
+        </div>
+      </div>
+    `;
+  });
+
+  const fullHtml = `
+    <!DOCTYPE html>
+    <html lang="en">
+    <head>
+      <meta charset="utf-8">
+      <title>${escapeHtml(title)} Caspian_Exported</title>
+      <link rel="preconnect" href="https://fonts.googleapis.com">
+      <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+      <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+      <style>
+        * { box-sizing: border-box; }
+        body {
+          font-family: system-ui, -apple-system, 'Inter', sans-serif;
+          background: #ffffff;
+          color: #0f172a;
+          margin: 0;
+          padding: 32px 48px;
+          line-height: 1.7;
+          font-size: 14.5px;
+        }
+        .doc-header {
+          border-bottom: 2px solid #e2e8f0;
+          padding-bottom: 14px;
+          margin-bottom: 24px;
+        }
+        .doc-title {
+          font-size: 24px;
+          font-weight: 700;
+          color: #0f172a;
+          margin: 0 0 6px 0;
+        }
+        .doc-meta {
+          font-size: 12px;
+          color: #64748b;
+          font-style: italic;
+        }
+        p { margin: 0 0 10px 0; line-height: 1.7; }
+        h1, h2, h3, h4 { font-family: system-ui, -apple-system, sans-serif; margin-top: 18px; margin-bottom: 8px; font-weight: 700; color: #0f172a; }
+        h1 { font-size: 22px; }
+        h2 { font-size: 18px; }
+        h3 { font-size: 15.5px; }
+        h4 { font-size: 14px; }
+        ul, ol { padding-left: 22px; margin: 10px 0; }
+        li { margin-bottom: 6px; }
+        
+        .code-block {
+          background: #f8fafc;
+          color: #0f172a;
+          border: 1px solid #cbd5e1;
+          border-radius: 8px;
+          overflow: hidden;
+          margin: 14px 0;
+          font-family: 'JetBrains Mono', monospace;
+          page-break-inside: avoid !important;
+          break-inside: avoid !important;
+        }
+        .code-header {
+          background: #f1f5f9;
+          padding: 6px 14px;
+          font-size: 11px;
+          font-weight: 600;
+          color: #475569;
+          display: flex;
+          justify-content: space-between;
+          border-bottom: 1px solid #cbd5e1;
+          text-transform: uppercase;
+        }
+        pre {
+          margin: 0;
+          padding: 14px;
+          background: #f8fafc;
+          color: #0f172a;
+          overflow-x: auto;
+          font-size: 12.5px;
+          line-height: 1.5;
+          page-break-inside: avoid !important;
+          break-inside: avoid !important;
+        }
+        code { font-family: 'JetBrains Mono', monospace; }
+        .table-wrapper, table { width: 100%; border-collapse: collapse; margin: 14px 0; page-break-inside: avoid !important; break-inside: avoid !important; }
+        th, td { border: 1px solid #cbd5e1; padding: 8px 12px; text-align: left; }
+        th { background: #f8fafc; font-weight: 700; color: #0f172a; }
+        tr { page-break-inside: avoid !important; break-inside: avoid !important; }
+
+        @media print {
+          body { padding: 20px !important; background: #ffffff !important; }
+          .native-turn-row, .code-block, pre, .table-wrapper, table, tr {
+            page-break-inside: avoid !important;
+            break-inside: avoid !important;
+          }
+        }
+      </style>
+    </head>
+    <body>
+      <div id="pdf-export-container">
+        <div class="doc-header">
+          <h1 class="doc-title">${escapeHtml(title)}</h1>
+          <div class="doc-meta">Full Conversation Transcript &bull; Exported via <a href="https://github.com/code4nigel/Caspian.git" target="_blank" style="color: #2563eb; text-decoration: underline; font-weight: 600;">Caspian</a> on ${dateStr}</div>
+        </div>
+        ${turnsHtml}
+      </div>
+    </body>
+    </html>
+  `;
+
+  chrome.tabs.query({ active: true, currentWindow: true }, (tabs) => {
+    if (tabs && tabs[0]) {
+      chrome.scripting.executeScript({
+        target: { tabId: tabs[0].id },
+        func: (htmlData) => {
+          const iframe = document.createElement('iframe');
+          iframe.style.position = 'fixed';
+          iframe.style.right = '0';
+          iframe.style.bottom = '0';
+          iframe.style.width = '0';
+          iframe.style.height = '0';
+          iframe.style.border = '0';
+          document.body.appendChild(iframe);
+
+          const doc = iframe.contentWindow.document;
+          doc.open();
+          doc.write(htmlData);
+          doc.close();
+
+          setTimeout(() => {
+            iframe.contentWindow.focus();
+            iframe.contentWindow.print();
+            setTimeout(() => iframe.remove(), 2500);
+          }, 400);
+        },
+        args: [fullHtml]
+      });
+    }
+  });
+}
+
 function exportStyledPdfDocument(data) {
   const title = data.title || 'ChatGPT Conversation';
   const safeTitle = (title || 'ChatGPT_Export').replace(/[^a-z0-9_-]/gi, '_');
@@ -743,7 +1125,7 @@ function exportStyledPdfDocument(data) {
   const dateStr = new Date().toLocaleString();
 
   let turnsHtml = '';
-  turns.forEach((t) => {
+  turns.forEach((t, i) => {
     const isUser = t.role === 'User';
     const roleName = isUser ? 'User' : 'ChatGPT';
     const roleIcon = isUser ? '👤' : '🤖';
@@ -754,7 +1136,9 @@ function exportStyledPdfDocument(data) {
       <div class="turn-container ${isUser ? 'user-turn' : 'assistant-turn'}">
         <div class="turn-header">
           <div class="avatar ${isUser ? 'user-avatar' : 'ai-avatar'}">${roleIcon}</div>
-          <span class="role-name">${roleName}</span>
+          <span class="role-name" style="color: ${isUser ? '#1d4ed8' : '#047857'}; font-weight: 700;">
+            ${roleName} <span style="font-size: 11px; color: #94a3b8; font-weight: 500;">(Turn ${i + 1})</span>
+          </span>
         </div>
         <div class="turn-body">${formattedContent}</div>
       </div>
@@ -766,7 +1150,7 @@ function exportStyledPdfDocument(data) {
     <html lang="en">
     <head>
       <meta charset="utf-8">
-      <title>${escapeHtml(title)}</title>
+      <title>${escapeHtml(title)} Caspian_Special_Exported</title>
       
       <link rel="preconnect" href="https://fonts.googleapis.com">
       <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -787,35 +1171,35 @@ function exportStyledPdfDocument(data) {
 
         .doc-header {
           border-bottom: 2px solid #ececf1;
-          padding-bottom: 18px;
-          margin-bottom: 28px;
+          padding-bottom: 14px;
+          margin-bottom: 24px;
         }
         .doc-title {
           font-size: 24px;
           font-weight: 700;
           color: #111827;
-          margin: 0 0 8px 0;
+          margin: 0 0 6px 0;
         }
         .doc-meta {
           font-size: 12px;
-          color: #6b7280;
-          display: flex;
-          gap: 16px;
+          color: #64748b;
+          font-style: italic;
         }
 
         .turn-container {
           margin-bottom: 22px;
-          padding: 20px 24px;
-          border-radius: 12px;
-          border: 1px solid #e5e7eb;
+          padding: 18px 22px;
+          border-radius: 10px;
+          border: 1px solid #e2e8f0;
           page-break-inside: avoid;
         }
         .user-turn {
-          background-color: #f9fafb;
-          border-color: #f3f4f6;
+          background-color: #f8fafc;
+          border-left: 4px solid #2563eb !important;
         }
         .assistant-turn {
           background-color: #ffffff;
+          border-left: 4px solid #10b981 !important;
           box-shadow: 0 1px 3px rgba(0,0,0,0.04);
         }
 
@@ -877,8 +1261,8 @@ function exportStyledPdfDocument(data) {
         }
 
         .inline-code {
-          background: #f3f4f6;
-          color: #1f2937;
+          background: #f1f5f9;
+          color: #0f172a;
           padding: 2px 6px;
           border-radius: 4px;
           font-family: 'JetBrains Mono', monospace;
@@ -886,35 +1270,46 @@ function exportStyledPdfDocument(data) {
         }
 
         .code-block {
-          background: #1e1e1e;
-          color: #d4d4d4;
+          background: #f8fafc;
+          color: #0f172a;
+          border: 1px solid #cbd5e1;
           border-radius: 8px;
           overflow: hidden;
           margin: 14px 0;
           font-family: 'JetBrains Mono', monospace;
+          page-break-inside: avoid !important;
+          break-inside: avoid !important;
         }
         .code-header {
-          background: #2d2d2d;
+          background: #f1f5f9;
           padding: 6px 14px;
           font-size: 11px;
-          color: #9cdcfe;
+          font-weight: 600;
+          color: #475569;
           display: flex;
           justify-content: space-between;
-          border-bottom: 1px solid #3c3c3c;
+          border-bottom: 1px solid #cbd5e1;
           text-transform: uppercase;
         }
         pre {
           margin: 0;
           padding: 14px;
+          background: #f8fafc;
+          color: #0f172a;
           overflow-x: auto;
           font-size: 12.5px;
           line-height: 1.5;
+          page-break-inside: avoid !important;
+          break-inside: avoid !important;
         }
         code { font-family: 'JetBrains Mono', monospace; }
 
         @media print {
           body { padding: 15px !important; background: #ffffff !important; }
-          .turn-container { page-break-inside: avoid; }
+          .turn-container, .code-block, pre, .table-wrapper, table, tr {
+            page-break-inside: avoid !important;
+            break-inside: avoid !important;
+          }
         }
       </style>
     </head>
@@ -922,11 +1317,7 @@ function exportStyledPdfDocument(data) {
       <div id="pdf-export-container">
         <div class="doc-header">
           <h1 class="doc-title">${escapeHtml(title)}</h1>
-          <div class="doc-meta">
-            <span>Exported via Caspian</span>
-            <span>Date: ${dateStr}</span>
-            <span>Mode: ${data.isTemporary ? 'Temporary Chat Session' : 'Standard Session'}</span>
-          </div>
+          <div class="doc-meta">Full Conversation Transcript &bull; Exported via <a href="https://github.com/code4nigel/Caspian.git" target="_blank" style="color: #2563eb; text-decoration: underline; font-weight: 600;">Caspian</a> on ${dateStr}</div>
         </div>
 
         ${turnsHtml}
@@ -941,6 +1332,8 @@ function exportStyledPdfDocument(data) {
               delimiters: [
                 {left: '$$', right: '$$', display: true},
                 {left: '$', right: '$', display: false},
+                {left: '\\\\(', right: '\\\\)', display: false},
+                {left: '\\\\[', right: '\\\\]', display: true},
                 {left: '\\(', right: '\\)', display: false},
                 {left: '\\[', right: '\\]', display: true},
                 {left: '[', right: ']', display: true}
@@ -957,7 +1350,7 @@ function exportStyledPdfDocument(data) {
   // 1. Direct formatted document file download via Chrome Extension API
   const blob = new Blob([fullHtml], { type: 'text/html;charset=utf-8' });
   const reader = new FileReader();
-  reader.onloadend = function() {
+  reader.onloadend = function () {
     chrome.downloads.download({
       url: reader.result,
       filename: `${safeTitle}_Formatted.html`,
@@ -1025,7 +1418,7 @@ function setupCardToggleHandlers() {
 // Sites Toggles Setup (ChatGPT & Gemini)
 function setupSiteToggles(disabledSites = []) {
   const domains = ['chatgpt.com', 'gemini.google.com'];
-  
+
   domains.forEach(domain => {
     const input = document.querySelector(`input[data-domain="${domain}"]`);
     if (!input) return;
@@ -1241,7 +1634,7 @@ if (paletteImportInput) {
   paletteImportInput.addEventListener('input', (e) => {
     const input = e.target.value;
     const hexMatch = input.match(/[A-Fa-f0-9]{6}/g);
-    
+
     if (hexMatch && hexMatch.length >= 2) {
       const palette = {
         accent: '#' + hexMatch[0],
@@ -1298,7 +1691,7 @@ if (factBubble && factText) {
       do {
         nextIndex = Math.floor(Math.random() * DEV_FACTS.length);
       } while (nextIndex === currentFactIndex && DEV_FACTS.length > 1);
-      
+
       currentFactIndex = nextIndex;
       factText.textContent = DEV_FACTS[currentFactIndex];
       factText.style.opacity = '1';

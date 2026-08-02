@@ -385,32 +385,33 @@ html[data-theme="light"] .temp-vault-card {
 
 .temp-action-row {
   display: flex;
-  align-items: stretch;
-  gap: 5px;
-  margin-top: 2px;
+  align-items: center;
+  gap: 6px;
+  margin-top: 4px;
 }
 
 .temp-act-btn {
   border: none;
   font-family: 'Outfit', sans-serif;
-  font-size: 10px;
+  font-size: 11px;
   font-weight: 600;
-  padding: 6px 8px;
-  border-radius: 8px;
+  padding: 8px 12px;
+  border-radius: 20px;
   cursor: pointer;
   display: flex;
   align-items: center;
   justify-content: center;
-  gap: 4px;
+  gap: 5px;
   transition: all 0.25s ease;
   outline: none;
 }
 
 .temp-act-btn.primary {
-  flex: 1.8;
+  flex: 1;
   background: var(--accent-gradient);
   color: #ffffff;
   box-shadow: 0 4px 12px var(--accent-glow);
+  border-radius: 20px;
 }
 
 .temp-act-btn.primary:hover {
@@ -419,10 +420,10 @@ html[data-theme="light"] .temp-vault-card {
 }
 
 .temp-act-btn.secondary {
-  flex: 1;
   background: var(--input-bg);
   border: 1px solid var(--border-glass);
   color: var(--text-main);
+  border-radius: 20px;
 }
 
 .temp-act-btn.secondary:hover {
@@ -431,7 +432,6 @@ html[data-theme="light"] .temp-vault-card {
   transform: translateY(-1px);
 }
 
-/* Export Multi-Format Dropdown Popover */
 .export-dropdown-wrapper {
   position: relative;
   flex: 1;
@@ -443,6 +443,17 @@ html[data-theme="light"] .temp-vault-card {
 .export-dropdown-wrapper .temp-act-btn {
   width: 100%;
   height: 100%;
+}
+
+.copy-icon-only-btn {
+  width: 34px;
+  height: 34px;
+  padding: 0;
+  border-radius: 20px;
+  flex: none;
+  display: flex;
+  align-items: center;
+  justify-content: center;
 }
 
 .export-dropdown-menu {

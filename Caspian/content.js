@@ -76,29 +76,91 @@ function getChatTitle() {
 }
 
 function extractConversationData() {
-  let turnEls = document.querySelectorAll('[data-testid^="conversation-turn"]');
-  if (!turnEls || turnEls.length === 0) turnEls = document.querySelectorAll('article');
-  if (!turnEls || turnEls.length === 0) turnEls = document.querySelectorAll('main [data-message-author-role], main div.group');
-
-  const turns = [];
-  turnEls.forEach((el, idx) => {
-    const isUser = !!el.querySelector('[data-message-author-role="user"]') ||
-                   el.getAttribute('data-message-author-role') === 'user' ||
-                   (el.innerText && el.innerText.includes('You said:'));
-    const role = isUser ? 'User' : 'ChatGPT';
-
-    const bodyEl = el.querySelector('.markdown') || el.querySelector('[data-message-author-role]') || el;
-    const text = bodyEl ? bodyEl.innerText.trim() : '';
-    const html = bodyEl ? bodyEl.innerHTML : '';
-
-    if (text) {
-      turns.push({ role, content: text, htmlContent: html, index: idx + 1 });
-    }
-  });
-
-  const title = getChatTitle();
-  const dateStr = new Date().toLocaleString();
   const isTemp = isTemporaryChat();
+  const title = getChatTitle();
+  const url = window.location.href;
+  const match = url.match(/\/c\/([a-f0-9-]+)/i);
+  const conversationId = match ? match[1] : null;
+
+  let turns = [];
+
+  // LAYER A: React Fiber State Tree Inspection (Instantaneous 0ms Memory Extract)
+  try {
+    const mainEl = document.querySelector('main') || document.body;
+    const fiberKey = Object.keys(mainEl).find(k => k.startsWith('__reactFiber$') || k.startsWith('__reactProps$'));
+    if (fiberKey && mainEl[fiberKey]) {
+      let curr = mainEl[fiberKey];
+      let foundMessages = null;
+      let depth = 0;
+
+      while (curr && depth < 40 && !foundMessages) {
+        depth++;
+        const props = curr.memoizedProps || curr.pendingProps;
+        if (props) {
+          if (Array.isArray(props.messages)) {
+            foundMessages = props.messages;
+          } else if (props.conversation && Array.isArray(props.conversation)) {
+            foundMessages = props.conversation;
+          }
+        }
+        curr = curr.child || curr.sibling;
+      }
+
+      if (foundMessages && Array.isArray(foundMessages)) {
+        const processedTexts = new Set();
+        foundMessages.forEach(msg => {
+          const role = (msg.author && msg.author.role === 'user') || msg.role === 'user' ? 'User' : 'ChatGPT';
+          let text = '';
+          if (typeof msg.content === 'string') text = msg.content;
+          else if (msg.content && Array.isArray(msg.content.parts)) {
+            text = msg.content.parts.filter(p => typeof p === 'string').join('\n');
+          } else if (msg.text) text = msg.text;
+
+          text = text ? text.trim() : '';
+          if (text && !processedTexts.has(text)) {
+            processedTexts.add(text);
+            turns.push({
+              role,
+              content: text,
+              htmlContent: '',
+              index: turns.length + 1
+            });
+          }
+        });
+      }
+    }
+  } catch (e) {
+    console.warn('Caspian: React Fiber inspection fallback:', e);
+  }
+
+  // LAYER B: DOM Query Fallback
+  if (turns.length === 0) {
+    const hiddenMsgs = document.querySelectorAll('[data-testid^="conversation-turn"], article, main div.group');
+    hiddenMsgs.forEach(msg => msg.style.setProperty('display', 'block', 'important'));
+
+    let turnEls = Array.from(document.querySelectorAll('[data-message-author-role], [data-testid^="conversation-turn"], article, main div.group'));
+    const processedTexts = new Set();
+
+    turnEls.forEach((el) => {
+      const isUser = !!el.querySelector('[data-message-author-role="user"]') ||
+                     el.getAttribute('data-message-author-role') === 'user' ||
+                     (el.innerText && el.innerText.includes('You said:'));
+      const role = isUser ? 'User' : 'ChatGPT';
+
+      const bodyEl = el.querySelector('.markdown') || el.querySelector('[data-message-author-role]') || el;
+      const text = bodyEl ? bodyEl.innerText.trim() : '';
+      const html = bodyEl ? bodyEl.innerHTML : '';
+
+      if (text && !processedTexts.has(text)) {
+        processedTexts.add(text);
+        turns.push({ role, content: text, htmlContent: html, index: turns.length + 1 });
+      }
+    });
+
+    applyTurbo();
+  }
+
+  const dateStr = new Date().toLocaleString();
 
   let markdown = `# ${title}\n\n`;
   markdown += `*Exported via Caspian on ${dateStr}*\n`;
@@ -320,11 +382,23 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
     return true;
   }
 
-  if (request.action === 'DO_WEBPDF') {
-    let printStyle = document.getElementById('caspian-print-styles');
+  if (request.action === 'DO_WEBPDF' || request.action === 'RERENDER_DOM_FOR_PRINT') {
+    const scrollers = Array.from(document.querySelectorAll('main div.overflow-y-auto, main div[class*="overflow"], main, div[data-projection-id]'));
+    if (scrollers.length === 0) scrollers.push(document.documentElement, document.body);
+
+    const oldOverlay = document.getElementById('caspian-print-loader');
+    if (oldOverlay) oldOverlay.remove();
+
+    const overlay = document.createElement('div');
+    overlay.id = 'caspian-print-loader';
+    overlay.style.cssText = 'position:fixed;top:24px;left:50%;transform:translateX(-50%);z-index:9999999;background:linear-gradient(135deg, #0f172a, #1e293b);color:#ffffff;padding:12px 24px;border-radius:30px;font-family:system-ui,-apple-system,sans-serif;font-size:13px;font-weight:600;box-shadow:0 10px 30px rgba(0,0,0,0.4);border:1px solid rgba(255,255,255,0.15);pointer-events:none;';
+    overlay.innerHTML = '⚡ Caspian Turbo-Loading 100% Messages into DOM... Please wait';
+    document.body.appendChild(overlay);
+
+    let printStyle = document.getElementById('caspian-native-print-styles');
     if (!printStyle) {
       printStyle = document.createElement('style');
-      printStyle.id = 'caspian-print-styles';
+      printStyle.id = 'caspian-native-print-styles';
       printStyle.innerHTML = `
         @media print {
           @page { margin: 1cm; size: auto; }
@@ -341,6 +415,15 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
             break-inside: avoid !important;
             margin-bottom: 20px !important;
           }
+          #caspian-native-header {
+            display: block !important;
+            margin-bottom: 20px !important;
+            padding-bottom: 10px !important;
+            border-bottom: 2px solid #e2e8f0 !important;
+            font-family: system-ui, -apple-system, sans-serif !important;
+            font-size: 12px !important;
+            color: #64748b !important;
+          }
           #caspian-print-loader, nav, header, [data-testid="sidebar"] {
             display: none !important;
           }
@@ -349,52 +432,49 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
       document.head.appendChild(printStyle);
     }
 
-    const messages = document.querySelectorAll('[data-testid^="conversation-turn"], article, main div.group');
-    messages.forEach(msg => msg.style.setProperty('display', 'block', 'important'));
-
-    const scroller = document.querySelector('main div.overflow-y-auto') ||
-                     document.querySelector('main') ||
-                     document.documentElement ||
-                     document.body;
-
-    const oldOverlay = document.getElementById('caspian-print-loader');
-    if (oldOverlay) oldOverlay.remove();
-
-    const overlay = document.createElement('div');
-    overlay.id = 'caspian-print-loader';
-    overlay.style.cssText = 'position:fixed;top:24px;left:50%;transform:translateX(-50%);z-index:9999999;background:linear-gradient(135deg, #0f172a, #1e293b);color:#ffffff;padding:12px 24px;border-radius:30px;font-family:system-ui,-apple-system,sans-serif;font-size:13px;font-weight:600;box-shadow:0 10px 30px rgba(0,0,0,0.4);border:1px solid rgba(255,255,255,0.15);pointer-events:none;';
-    overlay.innerHTML = '⚡ Caspian Loading Full Conversation... Please wait';
-    document.body.appendChild(overlay);
-
     let currentY = 0;
     const viewportH = window.innerHeight || 800;
-    const step = Math.max(300, Math.floor(viewportH * 0.7));
+    let maxScroll = 1;
+    scrollers.forEach(s => {
+      if (s.scrollHeight > maxScroll) maxScroll = s.scrollHeight;
+    });
+    maxScroll = Math.max(1, maxScroll - viewportH);
+
+    const step = 300;
+    let phase = 'down';
 
     const scrollInterval = setInterval(() => {
-      const totalH = Math.max(
-        scroller.scrollHeight || 0,
-        document.body.scrollHeight || 0,
-        document.documentElement.scrollHeight || 0
-      );
-      const maxScroll = Math.max(1, totalH - viewportH);
-
-      currentY += step;
-
-      if (scroller && typeof scroller.scrollTo === 'function') {
-        scroller.scrollTo(0, currentY);
+      if (phase === 'down') {
+        currentY += step;
+        if (currentY >= maxScroll + step) {
+          phase = 'up';
+          currentY = maxScroll;
+        }
+      } else if (phase === 'up') {
+        currentY -= step;
+        if (currentY <= 0) {
+          currentY = 0;
+          phase = 'print';
+        }
       }
-      if (scroller) scroller.scrollTop = currentY;
+
+      scrollers.forEach(s => {
+        s.scrollTop = currentY;
+        if (typeof s.scrollTo === 'function') s.scrollTo(0, currentY);
+        s.dispatchEvent(new Event('scroll', { bubbles: true }));
+      });
       window.scrollTo(0, currentY);
-
-      if (scroller && typeof scroller.dispatchEvent === 'function') {
-        scroller.dispatchEvent(new Event('scroll', { bubbles: true }));
-      }
       window.dispatchEvent(new Event('scroll', { bubbles: true }));
 
-      const progress = Math.min(100, Math.round((currentY / maxScroll) * 100));
-      overlay.innerHTML = `⚡ Rendering Conversation Messages (${progress}%)...`;
+      const msgNodes = document.querySelectorAll('[data-testid^="conversation-turn"], article, main div.group');
+      msgNodes.forEach(m => m.style.setProperty('display', 'block', 'important'));
 
-      if (currentY >= totalH + step) {
+      const progress = phase === 'down'
+        ? Math.min(50, Math.round((currentY / maxScroll) * 50))
+        : Math.min(100, 50 + Math.round(((maxScroll - currentY) / maxScroll) * 50));
+      overlay.innerHTML = `⚡ Turbo-Mounting DOM Messages (${progress}%)... [${msgNodes.length} Turns Loaded]`;
+
+      if (phase === 'print') {
         clearInterval(scrollInterval);
 
         const virtualHolders = document.querySelectorAll('main div[style*="height"], main div[style*="min-height"]');
@@ -403,22 +483,96 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
           div.style.setProperty('min-height', '0px', 'important');
         });
 
-        if (scroller && typeof scroller.scrollTo === 'function') scroller.scrollTo(0, 0);
+        const finalNodes = document.querySelectorAll('[data-testid^="conversation-turn"], article, main div.group');
+        finalNodes.forEach(m => m.style.setProperty('display', 'block', 'important'));
+
+        scrollers.forEach(s => { s.scrollTop = 0; });
         window.scrollTo(0, 0);
-        overlay.innerHTML = '✨ All Pages Rendered! Launching Print View...';
+
+        overlay.innerHTML = `✨ 100% Loaded (${finalNodes.length} Messages Mounted)! Opening Print Dialog...`;
+
+        const dateText = new Date().toLocaleString();
+        let header = document.getElementById('caspian-native-header');
+        if (!header) {
+          header = document.createElement('div');
+          header.id = 'caspian-native-header';
+          header.innerHTML = `Full Conversation Transcript &bull; Exported via <a href="https://github.com/code4nigel/Caspian.git" target="_blank" style="color: #2563eb; text-decoration: underline; font-weight: 600;">Caspian</a> on ${dateText}`;
+          const main = document.querySelector('main') || document.body;
+          main.insertBefore(header, main.firstChild);
+        }
 
         setTimeout(() => {
           if (overlay) overlay.remove();
           window.print();
-          applyTurbo();
-          sendResponse({ success: true });
+          setTimeout(() => {
+            if (header) header.remove();
+            applyTurbo();
+          }, 1500);
+          sendResponse({ success: true, count: finalNodes.length });
         }, 500);
       }
-    }, 90);
+    }, 25);
 
     return true;
   }
 });
+
+function checkAndRestoreTransferContext() {
+  chrome.storage.local.get('pendingTransferContext', (storageData) => {
+    const data = storageData.pendingTransferContext;
+    if (!data || !data.markdown) return;
+
+    chrome.storage.local.remove('pendingTransferContext');
+
+    const promptText = `This is the complete context from my previous temporary chat session. Please process this full context and continue our conversation seamlessly:\n\n--- START OF CONTEXT ---\n${data.markdown}\n--- END OF CONTEXT ---`;
+
+    let attempts = 0;
+    const maxAttempts = 30;
+
+    const fillPromptBox = setInterval(() => {
+      attempts++;
+      const promptEl = document.querySelector('#prompt-textarea') || document.querySelector('div[contenteditable="true"]');
+
+      if (promptEl) {
+        clearInterval(fillPromptBox);
+
+        promptEl.focus();
+
+        if (promptEl.tagName === 'TEXTAREA') {
+          promptEl.value = promptText;
+          promptEl.dispatchEvent(new Event('input', { bubbles: true }));
+        } else {
+          promptEl.innerText = promptText;
+          promptEl.dispatchEvent(new Event('input', { bubbles: true }));
+        }
+
+        const toast = document.createElement('div');
+        toast.style.cssText = `
+          position: fixed;
+          top: 20px;
+          left: 50%;
+          transform: translateX(-50%);
+          background: #0f172a;
+          color: #ffffff;
+          padding: 12px 24px;
+          border-radius: 30px;
+          font-family: system-ui, -apple-system, sans-serif;
+          font-size: 13.5px;
+          font-weight: 600;
+          z-index: 999999;
+          box-shadow: 0 10px 30px rgba(0,0,0,0.3);
+          border: 1px solid #334155;
+        `;
+        toast.innerHTML = `🚀 Caspian Context Restored! Press <b>Enter</b> to continue conversation.`;
+        document.body.appendChild(toast);
+
+        setTimeout(() => toast.remove(), 6000);
+      } else if (attempts >= maxAttempts) {
+        clearInterval(fillPromptBox);
+      }
+    }, 300);
+  });
+}
 
 if (document.readyState === 'complete' || document.readyState === 'interactive') {
   checkAndRestoreTransferContext();

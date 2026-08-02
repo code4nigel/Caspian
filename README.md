@@ -18,6 +18,19 @@
 
 ---
 
+## 🚀 What's New in v6.0.0 (Major Release)
+
+- **🛡️ DOM Extractor Fallback for Temporary & Unsaved Chats**: Automatically falls back to DOM extraction on temporary chats (`chatgpt.com/?temporary-chat=true`) where backend API conversation IDs do not exist, ensuring 100% message extraction on every chat session!
+- **🖨️ 100% Complete Native PDF Export (`📕 Document PDF (.pdf)`)**: Uses strict chronological turn array mapping (`data.turns`) to export 100% of all turns (168+ pages) with native ChatGPT styling, fonts, and code containers without duplicates or teleported turns.
+- **🌊 Caspian Special PDF Exporter (`🌊 Caspian PDF Format`)**: Beautiful styled PDF document with blue/green turn cards, KaTeX LaTeX math rendering ($$M = (Q, \Sigma, \delta, q_0, F)$$), and page-break avoidance for code blocks and tables.
+- **🏷️ Automated Export Filename Tagging**: Exported files now automatically append standard tags:
+  - Standard Exports (`.md`, `.txt`, `.doc`, `.pdf`): `[Chat Title] Caspian_Exported.[ext]`
+  - Caspian PDF Format (`.pdf`): `[Chat Title] Caspian_Special_Exported.pdf`
+- **🎨 Action Row UI Redesign**: Equal-width pill buttons (`🚀 Convert Chat`, `Export ▾`) and a compact icon-only pill button for `Copy`.
+- **🔧 Sites & Settings Layout Repair**: Fixed tab container scoping so visible turns limiter pills sit strictly inside the Engine tab, restoring clean top layout alignment on the `Sites` and `Settings` tabs.
+
+---
+
 ## 🌟 3 Core Pillars of Caspian
 
 ### 1. ⚡ DOM Pruning & Performance Booster (Lag Fixer)
@@ -30,11 +43,11 @@ Caspian automatically detects active temporary chat sessions, allowing you to co
 
 ### 3. 📥 Multi-Format Export Suite (Offline Backup & Study Notes)
 Never lose your valuable chat transcripts! Caspian lets you export **both normal and temporary conversations** into 5 distinct formats. Perfect for offline reading when internet is unavailable, creating hardcopy prints, or saving study notes:
-- 📄 **Markdown (`.md`)**: Complete formatted Markdown file with code blocks, headings, and turn icons.
-- 📝 **Plain Text (`.txt`)**: Clean structured plain-text transcript log.
-- 📘 **Google Doc / Word (`.doc`)**: Editable document with heading structure (`<h1>`/`<h2>`), bold text, math equations, and automatic Google Docs mobile **Chapter Navigation Outline**.
-- 📕 **Document PDF (`.pdf`)**: Styled document with **KaTeX LaTeX math rendering** for formulas and math equations.
-- 📸 **Full Page Print PDF**: Progressive scroll sweep engine that unhides 100% of virtualized turns and launches native webpage print preview without missing pages or blank white gaps!
+- 📄 **Markdown (`.md`)**: Complete formatted Markdown file tagged as `[Title] Caspian_Exported.md`.
+- 📝 **Plain Text (`.txt`)**: Clean structured plain-text transcript log tagged as `[Title] Caspian_Exported.txt`.
+- 📘 **Google Doc / Word (`.doc`)**: Editable document with heading structure (`<h1>`/`<h2>`), bold text, math equations, and automatic Google Docs mobile **Chapter Navigation Outline**, tagged as `[Title] Caspian_Exported.doc`.
+- 📕 **Document PDF (`.pdf`)**: Clean native ChatGPT document view tagged as `[Title] Caspian_Exported.pdf`.
+- 🌊 **Caspian PDF Format**: Styled document view with KaTeX LaTeX formula rendering, turn badges, and card formatting tagged as `[Title] Caspian_Special_Exported.pdf`.
 
 ---
 
@@ -48,7 +61,7 @@ Never lose your valuable chat transcripts! Caspian lets you export **both normal
   - 📝 **Plain Text (`.txt`)**
   - 📘 **Google Doc / Word (`.doc`)**
   - 📕 **Document PDF (`.pdf`)**
-  - 📸 **Full Page Print PDF**
+  - 🌊 **Caspian PDF Format**
 - ⚡ **Message Turn Limit Selection**: Choose visible turn limits: `1`, `3`, `5`, `8`, `15`, or `∞ Unlimited`.
 - 🌐 **Supported Sites**:
   - **ChatGPT** (`chatgpt.com`) — Auto-enabled.
@@ -95,8 +108,8 @@ Never lose your valuable chat transcripts! Caspian lets you export **both normal
 ## 📥 Installation Guide
 
 ### Option 1: Quick Release Download (Easiest & Recommended)
-1. Go to the [**Releases Page**](https://github.com/code4nigel/Caspian/releases) and download **`Caspian-v5.0.2.zip`** (from `versions/` folder).
-2. Extract (unzip) `Caspian-v5.0.2.zip` to a folder on your computer.
+1. Go to the [**Releases Page**](https://github.com/code4nigel/Caspian/releases) and download **`Caspian-v6.0.0.zip`** (from `versions/` folder).
+2. Extract (unzip) `Caspian-v6.0.0.zip` to a folder on your computer.
 3. Open your browser and navigate to the extensions page:
    - **Chrome**: `chrome://extensions`
    - **Edge**: `edge://extensions`
@@ -124,9 +137,10 @@ Caspian/
 ├── versions/               # Packaged release archives (.zip)
 │   ├── Caspian-v5.0.0.zip
 │   ├── Caspian-v5.0.1.zip
-│   └── Caspian-v5.0.2.zip
+│   ├── Caspian-v5.0.2.zip
+│   └── Caspian-v6.0.0.zip
 └── Caspian/                # Chrome / Chromium Extension Directory
-    ├── manifest.json       # Extension Manifest V3 configuration
+    ├── manifest.json       # Extension Manifest V3 configuration (v6.0.0)
     ├── background.js       # Background service worker
     ├── content.js          # DOM observer, lag fixer, text extractor & restorer
     ├── popup.html          # Glassmorphic control panel interface
