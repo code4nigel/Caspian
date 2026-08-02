@@ -866,6 +866,14 @@ function parseMarkdownAndLaTeX(mdText) {
   // 1. Process LaTeX boxed & display equations into mathBlocks placeholders
   const mathBlocks = [];
 
+  // Match bracketed display math blocks: [\n M=(Q,\Sigma,\delta,q_0,F) \n] or \[ ... \]
+  text = text.replace(/(?:^|\n)\s*\[\s*([\s\S]*?(?:\\Sigma|\\delta|\\epsilon|\\in|\\notin|\\cup|\\cap|\\rightarrow|\\leftarrow|\\emptyset|\\times|\\boxed|q_0|q_\d+)[\s\S]*?)\s*\]\s*(?:\n|$)/gi, (match, inner) => {
+    const formatted = formatMathSymbols(inner.trim());
+    const placeholder = `___MATH_BLOCK_${mathBlocks.length}___`;
+    mathBlocks.push(`<div class="katex-display-box" style="text-align: center; margin: 16px 0; page-break-inside: avoid; break-inside: avoid;"><span style="display: inline-block; border: 1.5px solid #0f172a; padding: 6px 18px; border-radius: 4px; font-family: 'Times New Roman', Times, serif; font-size: 16.5px; font-style: italic; background: #ffffff; box-shadow: 0 1px 3px rgba(0,0,0,0.05); color: #0f172a;">${formatted}</span></div>`);
+    return '\n' + placeholder + '\n';
+  });
+
   text = text.replace(/\\\[\s*\\boxed\{([\s\S]*?)\}\s*\\\]/gi, (match, inner) => {
     const formatted = formatMathSymbols(inner);
     const placeholder = `___MATH_BLOCK_${mathBlocks.length}___`;

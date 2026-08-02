@@ -10,17 +10,32 @@ function isSiteDisabled(disabledSites = []) {
   return disabledSites.some(d => host.includes(d));
 }
 
+let isObserverActive = false;
+const observer = new MutationObserver(applyTurbo);
+
 function applyTurbo() {
-  chrome.storage.local.get(['pruningEnabled', 'enabled', 'limit', 'disabledSites'], (data) => {
-    if (isSiteDisabled(data.disabledSites || [])) {
-      const messages = document.querySelectorAll('[data-testid^="conversation-turn"]');
+  chrome.storage.local.get(['globalActive', 'pruningEnabled', 'enabled', 'limit', 'disabledSites'], (data) => {
+    const globalActive = data.globalActive ?? true;
+    const isSiteOff = isSiteDisabled(data.disabledSites || []);
+
+    if (!globalActive || isSiteOff) {
+      if (isObserverActive) {
+        observer.disconnect();
+        isObserverActive = false;
+      }
+      const messages = document.querySelectorAll('[data-testid^="conversation-turn"], article, main div.group');
       messages.forEach(msg => msg.style.setProperty('display', 'block', 'important'));
       return;
     }
 
+    if (!isObserverActive) {
+      observer.observe(document.body, { childList: true, subtree: true });
+      isObserverActive = true;
+    }
+
     const isEnabled = data.pruningEnabled ?? (data.enabled ?? true);
     const limit = data.limit ?? 5;
-    const messages = document.querySelectorAll('[data-testid^="conversation-turn"]');
+    const messages = document.querySelectorAll('[data-testid^="conversation-turn"], article, main div.group');
 
     messages.forEach((msg, index) => {
       if (isEnabled && limit < 9999 && index < messages.length - limit) {
@@ -32,8 +47,6 @@ function applyTurbo() {
   });
 }
 
-const observer = new MutationObserver(applyTurbo);
-observer.observe(document.body, { childList: true, subtree: true });
 chrome.storage.onChanged.addListener(applyTurbo);
 applyTurbo();
 
