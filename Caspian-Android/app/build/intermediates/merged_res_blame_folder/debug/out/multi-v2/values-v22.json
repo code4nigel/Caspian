@@ -1,0 +1,20 @@
+{
+    "logs": [
+        {
+            "outputFile": "com.caspian.ai.app-mergeDebugResources-29:/values-v22/values-v22.xml",
+            "map": [
+                {
+                    "source": "C:\\Users\\sukhb\\.gradle\\caches\\9.1.0\\transforms\\8500ee0f57c79efc27e64f7a3d369fc8\\workspace\\transformed\\appcompat-1.6.1\\res\\values-v22\\values-v22.xml",
+                    "from": {
+                        "startLines": "2,3,4,9",
+                        "startColumns": "4,4,4,4",
+                        "startOffsets": "55,130,217,487",
+                        "endLines": "2,3,8,13",
+                        "endColumns": "74,86,12,12",
+                        "endOffsets": "125,212,482,764"
+                    }
+                }
+            ]
+        }
+    ]
+}

@@ -1,0 +1,126 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="light">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <title>Caspian Android Control Center</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@500;700&family=Outfit:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="mobile_control.css">
+</head>
+<body>
+
+  <!-- Floating One UI Action Pill Button (Always visible on mobile WebView) -->
+  <div id="caspian-floating-btn" class="caspian-floating-pill">
+    <div class="pill-wave-icon">
+      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+        <path d="M2 6c.6.5 1.2 1 2.5 1 2.5 0 2.5-2 5-2 2.5 0 2.5-2 5-2 1.3 0 1.9.5 2.5 1"></path>
+        <path d="M2 12c.6.5 1.2 1 2.5 1 2.5 0 2.5-2 5-2 2.5 0 2.5-2 5-2 1.3 0 1.9.5 2.5 1"></path>
+        <path d="M2 18c.6.5 1.2 1 2.5 1 2.5 0 2.5-2 5-2 2.5 0 2.5-2 5-2 1.3 0 1.9.5 2.5 1"></path>
+      </svg>
+    </div>
+    <span>🚀 Caspian Engine</span>
+  </div>
+
+  <!-- Slide-Up Glassmorphic Bottom Control Sheet Backdrop -->
+  <div id="sheet-backdrop" class="caspian-bottom-sheet-backdrop"></div>
+
+  <!-- Slide-Up Bottom Sheet (Samsung One UI + iOS Blur) -->
+  <div id="bottom-sheet" class="caspian-bottom-sheet">
+    <div class="sheet-drag-handle"></div>
+
+    <!-- Header -->
+    <div class="sheet-header">
+      <div class="sheet-brand">
+        <span class="sheet-brand-name">CASPIAN MOBILE</span>
+        <span class="sheet-brand-tag">V6.0.0</span>
+      </div>
+      <div class="header-icon-actions">
+        <button id="theme-toggle-btn" class="icon-btn" title="Toggle Theme">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"></path>
+          </svg>
+        </button>
+        <button id="power-toggle-btn" class="icon-btn" title="Master Power Switch">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2">
+            <path d="M18.36 6.64a9 9 0 1 1-12.73 0"></path>
+            <line x1="12" y1="2" x2="12" y2="12"></line>
+          </svg>
+        </button>
+      </div>
+    </div>
+
+    <!-- Chat Pruning Card -->
+    <div class="m3-card">
+      <div class="m3-card-row">
+        <div class="m3-card-left">
+          <div id="status-dot" class="status-dot active"></div>
+          <div>
+            <div id="status-title" class="m3-card-title">Chat Pruning Active</div>
+            <div id="status-sub" class="m3-card-sub">Lag Fixer & DOM Limit Active</div>
+          </div>
+        </div>
+        <span id="active-limit-badge" class="m3-badge">5 Turns</span>
+      </div>
+    </div>
+
+    <!-- Temporary Chat Saver Card -->
+    <div class="m3-card">
+      <div class="m3-card-row">
+        <div class="m3-card-left">
+          <div id="temp-dot" class="status-dot active"></div>
+          <div>
+            <div class="m3-card-title">Temporary Chat Saver</div>
+            <div id="temp-sub" class="m3-card-sub">Save or convert temporary mobile sessions anytime.</div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Action Row Pill Buttons -->
+      <div class="mobile-action-row" style="position: relative;">
+        <button id="convert-btn" class="oneui-pill-btn primary">
+          <span>🚀 Convert Chat</span>
+        </button>
+        
+        <div style="flex: 1; position: relative;">
+          <button id="export-dropdown-trigger" class="oneui-pill-btn secondary" style="width: 100%;">
+            <span>📥 Export ▾</span>
+          </button>
+          
+          <div id="export-menu" class="export-menu-overlay">
+            <button class="export-opt-btn" data-fmt="md">📄 Markdown (.md)</button>
+            <button class="export-opt-btn" data-fmt="txt">📝 Plain Text (.txt)</button>
+            <button class="export-opt-btn" data-fmt="doc">📘 Google Doc (.doc)</button>
+            <button class="export-opt-btn" data-fmt="nativepdf">📕 Document PDF (.pdf)</button>
+            <button class="export-opt-btn" data-fmt="styledpdf">🌊 Caspian PDF Format</button>
+          </div>
+        </div>
+
+        <button id="copy-btn" class="oneui-pill-btn icon-only" title="Copy Markdown Transcript">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect>
+            <path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path>
+          </svg>
+        </button>
+      </div>
+    </div>
+
+    <!-- Visible Message Turns Section -->
+    <div class="limit-section-title">
+      <span>Visible Message Turns</span>
+      <span>Auto-Prune Older</span>
+    </div>
+    <div class="pill-grid">
+      <button class="limit-pill" data-val="1">1</button>
+      <button class="limit-pill" data-val="3">3</button>
+      <button class="limit-pill active" data-val="5">5</button>
+      <button class="limit-pill" data-val="8">8</button>
+      <button class="limit-pill" data-val="15">15</button>
+      <button class="limit-pill" data-val="9999" title="Unlimited (Show All)">∞</button>
+    </div>
+  </div>
+
+  <script src="mobile_control.js"></script>
+</body>
+</html>

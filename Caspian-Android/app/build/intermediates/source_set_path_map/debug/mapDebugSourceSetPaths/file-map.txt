@@ -1,0 +1,34 @@
+com.caspian.ai.app-jetified-emoji2-views-helper-1.2.0-0 C:\Users\sukhb\.gradle\caches\9.1.0\transforms\157db1c27394698cb361edeb8803ccca\workspace\transformed\jetified-emoji2-views-helper-1.2.0\res
+com.caspian.ai.app-core-runtime-2.2.0-1 C:\Users\sukhb\.gradle\caches\9.1.0\transforms\1d9a3988ff1cc7713d73e99dde598e90\workspace\transformed\core-runtime-2.2.0\res
+com.caspian.ai.app-recyclerview-1.1.0-2 C:\Users\sukhb\.gradle\caches\9.1.0\transforms\2a559939b02e95277b7806d6eb5e4f17\workspace\transformed\recyclerview-1.1.0\res
+com.caspian.ai.app-jetified-savedstate-1.2.1-3 C:\Users\sukhb\.gradle\caches\9.1.0\transforms\2b537332530883a977ea241dc48fd11b\workspace\transformed\jetified-savedstate-1.2.1\res
+com.caspian.ai.app-jetified-activity-1.8.0-4 C:\Users\sukhb\.gradle\caches\9.1.0\transforms\2da188382d29a70989f0887f223f0d28\workspace\transformed\jetified-activity-1.8.0\res
+com.caspian.ai.app-jetified-lifecycle-viewmodel-savedstate-2.6.1-5 C:\Users\sukhb\.gradle\caches\9.1.0\transforms\3cf1dc04e104374bc20a7a71411bae18\workspace\transformed\jetified-lifecycle-viewmodel-savedstate-2.6.1\res
+com.caspian.ai.app-jetified-viewpager2-1.0.0-6 C:\Users\sukhb\.gradle\caches\9.1.0\transforms\3d1225f96498d8d8e68447d1d354cdb9\workspace\transformed\jetified-viewpager2-1.0.0\res
+com.caspian.ai.app-jetified-startup-runtime-1.1.1-7 C:\Users\sukhb\.gradle\caches\9.1.0\transforms\3e0b8c2ee96c8b26b643426081883c4f\workspace\transformed\jetified-startup-runtime-1.1.1\res
+com.caspian.ai.app-transition-1.2.0-8 C:\Users\sukhb\.gradle\caches\9.1.0\transforms\4c420a3c2e5af6756abf7207543998be\workspace\transformed\transition-1.2.0\res
+com.caspian.ai.app-constraintlayout-2.0.1-9 C:\Users\sukhb\.gradle\caches\9.1.0\transforms\599e7634737cfa0779faa284d1306ca3\workspace\transformed\constraintlayout-2.0.1\res
+com.caspian.ai.app-lifecycle-runtime-2.6.1-10 C:\Users\sukhb\.gradle\caches\9.1.0\transforms\60f150b5ae799b6ddb49d9efe942eee9\workspace\transformed\lifecycle-runtime-2.6.1\res
+com.caspian.ai.app-jetified-annotation-experimental-1.3.0-11 C:\Users\sukhb\.gradle\caches\9.1.0\transforms\625abc321bb5349010cd1a2299bbbb89\workspace\transformed\jetified-annotation-experimental-1.3.0\res
+com.caspian.ai.app-fragment-1.3.6-12 C:\Users\sukhb\.gradle\caches\9.1.0\transforms\67195f80aa9e462eb0af4fc9fceadb2d\workspace\transformed\fragment-1.3.6\res
+com.caspian.ai.app-material-1.11.0-13 C:\Users\sukhb\.gradle\caches\9.1.0\transforms\6944f31c7955495950fcb7a3a8800f89\workspace\transformed\material-1.11.0\res
+com.caspian.ai.app-coordinatorlayout-1.1.0-14 C:\Users\sukhb\.gradle\caches\9.1.0\transforms\730768a2edf2613322cbb734902e0ef8\workspace\transformed\coordinatorlayout-1.1.0\res
+com.caspian.ai.app-jetified-appcompat-resources-1.6.1-15 C:\Users\sukhb\.gradle\caches\9.1.0\transforms\7b47ef6ecfdf7136d084ab810865e83e\workspace\transformed\jetified-appcompat-resources-1.6.1\res
+com.caspian.ai.app-jetified-emoji2-1.2.0-16 C:\Users\sukhb\.gradle\caches\9.1.0\transforms\7b7cc0733a5a111d09757bfe02a6a5a1\workspace\transformed\jetified-emoji2-1.2.0\res
+com.caspian.ai.app-drawerlayout-1.1.1-17 C:\Users\sukhb\.gradle\caches\9.1.0\transforms\90f54b633af2b4d9c4ae147aa62bb350\workspace\transformed\drawerlayout-1.1.1\res
+com.caspian.ai.app-cardview-1.0.0-18 C:\Users\sukhb\.gradle\caches\9.1.0\transforms\a6091dbcb14fc408f16ae4d049b8b9e5\workspace\transformed\cardview-1.0.0\res
+com.caspian.ai.app-lifecycle-livedata-2.6.1-19 C:\Users\sukhb\.gradle\caches\9.1.0\transforms\c460af126753dede44950523ef200b87\workspace\transformed\lifecycle-livedata-2.6.1\res
+com.caspian.ai.app-appcompat-1.6.1-20 C:\Users\sukhb\.gradle\caches\9.1.0\transforms\d2678b0d2266604a2ed2cb3e9e4521b1\workspace\transformed\appcompat-1.6.1\res
+com.caspian.ai.app-lifecycle-livedata-core-2.6.1-21 C:\Users\sukhb\.gradle\caches\9.1.0\transforms\d5edb95c533913420cbb6f6937337766\workspace\transformed\lifecycle-livedata-core-2.6.1\res
+com.caspian.ai.app-jetified-profileinstaller-1.3.0-22 C:\Users\sukhb\.gradle\caches\9.1.0\transforms\e5096f28f03779ec24f06a06d17c3d91\workspace\transformed\jetified-profileinstaller-1.3.0\res
+com.caspian.ai.app-core-1.12.0-23 C:\Users\sukhb\.gradle\caches\9.1.0\transforms\eb337094723c90bb4fb64f4a3d7fc733\workspace\transformed\core-1.12.0\res
+com.caspian.ai.app-lifecycle-viewmodel-2.6.1-24 C:\Users\sukhb\.gradle\caches\9.1.0\transforms\f239a6bb5d96a394eb60b172607650fc\workspace\transformed\lifecycle-viewmodel-2.6.1\res
+com.caspian.ai.app-jetified-lifecycle-process-2.6.1-25 C:\Users\sukhb\.gradle\caches\9.1.0\transforms\f2c45203a861ca56fee13507fb4ccf4c\workspace\transformed\jetified-lifecycle-process-2.6.1\res
+com.caspian.ai.app-jetified-core-ktx-1.12.0-26 C:\Users\sukhb\.gradle\caches\9.1.0\transforms\fb28dad98fb3f6c58c695942058bdaea\workspace\transformed\jetified-core-ktx-1.12.0\res
+com.caspian.ai.app-pngs-27 D:\Projects\Chatgpt Pruner\Caspian-Android\app\build\generated\res\pngs\debug
+com.caspian.ai.app-resValues-28 D:\Projects\Chatgpt Pruner\Caspian-Android\app\build\generated\res\resValues\debug
+com.caspian.ai.app-packageDebugResources-29 D:\Projects\Chatgpt Pruner\Caspian-Android\app\build\intermediates\incremental\debug\packageDebugResources\merged.dir
+com.caspian.ai.app-packageDebugResources-30 D:\Projects\Chatgpt Pruner\Caspian-Android\app\build\intermediates\incremental\debug\packageDebugResources\stripped.dir
+com.caspian.ai.app-debug-31 D:\Projects\Chatgpt Pruner\Caspian-Android\app\build\intermediates\merged_res\debug\mergeDebugResources
+com.caspian.ai.app-debug-32 D:\Projects\Chatgpt Pruner\Caspian-Android\app\src\debug\res
+com.caspian.ai.app-main-33 D:\Projects\Chatgpt Pruner\Caspian-Android\app\src\main\res

@@ -1,0 +1,169 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="dark">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <title>Caspian Mobile Hub</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@500;700&family=Outfit:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+  <style>
+    :root {
+      --accent: #A2A9A9;
+      --secondary: #1B4264;
+      --accent-glow: rgba(162, 169, 169, 0.35);
+      --accent-gradient: linear-gradient(135deg, var(--accent), var(--secondary));
+      --bg-deep: #0a1128;
+      --bg-card: rgba(28, 37, 65, 0.85);
+      --border-glass: rgba(255, 255, 255, 0.12);
+      --text-main: #f8fafc;
+      --text-muted: #94a3b8;
+    }
+    * { box-sizing: border-box; margin: 0; padding: 0; user-select: none; }
+    body {
+      font-family: 'Outfit', sans-serif;
+      background: linear-gradient(135deg, #0a1128 0%, #1c2541 100%);
+      color: var(--text-main);
+      height: 100vh;
+      display: flex;
+      flex-direction: column;
+      justify-content: center;
+      align-items: center;
+      padding: 24px;
+    }
+    .hub-container {
+      width: 100%;
+      max-width: 380px;
+      background: rgba(10, 17, 40, 0.85);
+      backdrop-filter: blur(20px);
+      border: 1px solid var(--border-glass);
+      border-radius: 28px;
+      padding: 28px 24px;
+      box-shadow: 0 16px 40px rgba(0, 0, 0, 0.5);
+      text-align: center;
+    }
+    .brand-logo {
+      width: 56px;
+      height: 56px;
+      border-radius: 16px;
+      background: var(--accent-gradient);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      margin: 0 auto 16px auto;
+      box-shadow: 0 8px 24px var(--accent-glow);
+    }
+    .brand-title {
+      font-size: 20px;
+      font-weight: 800;
+      letter-spacing: 2px;
+      background: linear-gradient(135deg, #ffffff 30%, var(--accent) 100%);
+      background-clip: text;
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+    }
+    .brand-sub {
+      font-size: 11px;
+      color: var(--text-muted);
+      margin-top: 4px;
+      margin-bottom: 24px;
+      letter-spacing: 1px;
+    }
+    .launch-grid {
+      display: flex;
+      flex-direction: column;
+      gap: 14px;
+    }
+    .launch-card {
+      background: var(--bg-card);
+      border: 1px solid var(--border-glass);
+      border-radius: 20px;
+      padding: 16px 20px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      cursor: pointer;
+      transition: all 0.25s ease;
+    }
+    .launch-card:active {
+      transform: scale(0.96);
+    }
+    .card-left {
+      display: flex;
+      align-items: center;
+      gap: 14px;
+    }
+    .card-title {
+      font-size: 15px;
+      font-weight: 700;
+      color: #ffffff;
+      text-align: left;
+    }
+    .card-desc {
+      font-size: 11px;
+      color: var(--text-muted);
+      text-align: left;
+    }
+    .arrow-icon {
+      color: var(--accent);
+    }
+  </style>
+</head>
+<body>
+
+  <div class="hub-container">
+    <div class="brand-logo">
+      <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="#FFFFFF" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+        <path d="M4 7c1.2.8 2.8 1.3 5 1.3 3.2 0 3.8-2 7-2 1.8 0 2.8.5 4 1.3"></path>
+        <path d="M4 12c1.2.8 2.8 1.3 5 1.3 3.2 0 3.8-2 7-2 1.8 0 2.8.5 4 1.3"></path>
+        <path d="M4 17c1.2.8 2.8 1.3 5 1.3 3.2 0 3.8-2 7-2 1.8 0 2.8.5 4 1.3"></path>
+      </svg>
+    </div>
+
+    <div class="brand-title">CASPIAN MOBILE</div>
+    <div class="brand-sub">SELECT AI PLATFORM • V1.0.1</div>
+
+    <div class="launch-grid">
+      <div id="launch-chatgpt" class="launch-card">
+        <div class="card-left">
+          <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 2a10 10 0 1 0 10 10A10 10 0 0 0 12 2zm0 18a8 8 0 1 1 8-8 8 8 0 0 1-8 8z"></path></svg>
+          <div>
+            <div class="card-title">ChatGPT</div>
+            <div class="card-desc">chatgpt.com</div>
+          </div>
+        </div>
+        <div class="arrow-icon">➔</div>
+      </div>
+
+      <div id="launch-gemini" class="launch-card">
+        <div class="card-left">
+          <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"></polygon></svg>
+          <div>
+            <div class="card-title">Google Gemini</div>
+            <div class="card-desc">gemini.google.com</div>
+          </div>
+        </div>
+        <div class="arrow-icon">➔</div>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    document.getElementById('launch-chatgpt').addEventListener('click', () => {
+      if (window.CaspianBridge && typeof window.CaspianBridge.switchService === 'function') {
+        window.CaspianBridge.switchService('chatgpt');
+      } else {
+        window.location.href = 'https://chatgpt.com/';
+      }
+    });
+
+    document.getElementById('launch-gemini').addEventListener('click', () => {
+      if (window.CaspianBridge && typeof window.CaspianBridge.switchService === 'function') {
+        window.CaspianBridge.switchService('gemini');
+      } else {
+        window.location.href = 'https://gemini.google.com/';
+      }
+    });
+  </script>
+</body>
+</html>

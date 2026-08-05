@@ -40,14 +40,21 @@ html[data-theme="light"] {
   user-select: none;
 }
 
-body {
-  width: 320px;
-  height: 420px;
+html, body {
+  width: 325px;
+  min-width: 325px;
+  max-width: 325px;
+  height: 435px;
+  min-height: 435px;
+  max-height: 435px;
+  margin: 0;
+  padding: 0;
   background: var(--bg-deep);
   color: var(--text-main);
   font-family: 'Outfit', -apple-system, BlinkMacSystemFont, sans-serif;
   overflow: hidden;
   position: relative;
+  box-sizing: border-box;
   transition: background 0.3s ease, color 0.3s ease;
 }
 
@@ -83,11 +90,13 @@ html[data-theme="light"] body {
 .app-container {
   position: relative;
   z-index: 1;
+  width: 325px;
   height: 100%;
   padding: 14px 14px 56px 14px;
   display: flex;
   flex-direction: column;
   justify-content: space-between;
+  box-sizing: border-box;
 }
 
 /* Header */
