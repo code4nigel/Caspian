@@ -16,20 +16,8 @@ html_content = f'''<!DOCTYPE html>
 </head>
 <body>
 
-  <!-- Floating Touch-Draggable Circular Extension Icon Button -->
-  <div id="caspian-floating-btn" class="caspian-floating-circle" title="Caspian Mobile Engine">
-    <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#FFFFFF" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
-      <path d="M4 7c1.2.8 2.8 1.3 5 1.3 3.2 0 3.8-2 7-2 1.8 0 2.8.5 4 1.3"></path>
-      <path d="M4 12c1.2.8 2.8 1.3 5 1.3 3.2 0 3.8-2 7-2 1.8 0 2.8.5 4 1.3"></path>
-      <path d="M4 17c1.2.8 2.8 1.3 5 1.3 3.2 0 3.8-2 7-2 1.8 0 2.8.5 4 1.3"></path>
-    </svg>
-  </div>
-
-  <!-- Slide-Up Glassmorphic Bottom Control Sheet Backdrop -->
-  <div id="sheet-backdrop" class="caspian-bottom-sheet-backdrop"></div>
-
-  <!-- Slide-Up Bottom Sheet (Samsung One UI + iOS Blur + Interactive Drag Handle) -->
-  <div id="bottom-sheet" class="caspian-bottom-sheet">
+  <!-- Slide-Up Bottom Sheet (Samsung One UI + Native Overlay) -->
+  <div id="bottom-sheet" class="caspian-bottom-sheet active" style="transform: translateY(0);">
     <div id="sheet-drag-area" class="sheet-drag-area" title="Drag to Resize Sheet Height">
       <div class="sheet-drag-handle"></div>
     </div>
@@ -46,7 +34,7 @@ html_content = f'''<!DOCTYPE html>
         </div>
         <div style="display: flex; flex-direction: column;">
           <span class="sheet-brand-name">CASPIAN MOBILE</span>
-          <span class="sheet-brand-tag">V1.0.6</span>
+          <span class="sheet-brand-tag">V1.0.13 (NATIVE)</span>
         </div>
       </div>
       <div class="header-icon-actions">
@@ -71,7 +59,7 @@ html_content = f'''<!DOCTYPE html>
         <span>Engine</span>
       </button>
       <button id="tab-btn-sites" class="tab-nav-btn" data-tab="sites">
-        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"></circle><line x1="2" y1="12" x2="22" y2="12"></line><path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"></path></svg>
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"></circle><line x1="2" y1="12" x2="22" y2="12"></line><path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1 4-10z"></path></svg>
         <span>Sites</span>
       </button>
       <button id="tab-btn-settings" class="tab-nav-btn" data-tab="settings">
@@ -195,7 +183,7 @@ html_content = f'''<!DOCTYPE html>
           </div>
         </div>
 
-        <!-- Background Color Presets (Default OLED Black #050811) -->
+        <!-- Background Color Presets -->
         <div class="setting-section-header" style="margin-top: 14px;">Background Tone</div>
         <div class="preset-pill-grid" style="margin-top: 6px;">
           <button class="bg-preset-btn active" data-bg="#050811"><span class="color-dot" style="background: #050811; border: 1px solid #333;"></span> OLED Black</button>
@@ -223,15 +211,6 @@ html_content = f'''<!DOCTYPE html>
           <button class="preset-btn" data-preset="emerald"><span class="color-dot" style="background: #10b981;"></span> Emerald</button>
         </div>
 
-        <!-- Glassmorphism Blur Toggle -->
-        <div class="setting-row" style="margin-top: 14px;">
-          <div>
-            <div class="setting-label">Modern Glass Blur</div>
-            <div class="setting-sub">Toggle glassmorphic translucent effects</div>
-          </div>
-          <button id="glass-toggle-btn" class="mode-pill active">ON</button>
-        </div>
-
         <!-- Gradient Color Pickers -->
         <div class="setting-row" style="margin-top: 14px;">
           <span class="setting-label">Gradient Start</span>
@@ -250,7 +229,7 @@ html_content = f'''<!DOCTYPE html>
         </div>
       </div>
 
-      <!-- Developer Profile Card (Exact Match to Extension Image 2 with Avatar & Nigel Facts) -->
+      <!-- Developer Profile Card -->
       <div class="m3-card">
         <div class="m3-card-title" style="margin-bottom: 12px;">DEVELOPER</div>
         
@@ -290,4 +269,4 @@ html_content = f'''<!DOCTYPE html>
 with open('d:/Projects/Chatgpt Pruner/Caspian-Android/assets/mobile_control.html', 'w', encoding='utf-8') as out:
     out.write(html_content)
 
-print("Successfully updated mobile_control.html with OLED Black default!")
+print("Successfully updated mobile_control.html with Native Overlay configuration!")

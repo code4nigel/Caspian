@@ -33,6 +33,20 @@
   background: var(--sheet-bg) !important;
 }
 
+#caspian-injected-ui {
+  position: fixed !important;
+  bottom: 0 !important;
+  right: 0 !important;
+  width: 0 !important;
+  height: 0 !important;
+  z-index: 2147483647 !important;
+  pointer-events: none !important;
+}
+
+#caspian-injected-ui > * {
+  pointer-events: auto !important;
+}
+
 * {
   box-sizing: border-box;
   margin: 0;
@@ -70,25 +84,12 @@
   transform: scale(0.92);
 }
 
-/* Slide-Up Glassmorphic Bottom Control Sheet Backdrop */
-.caspian-bottom-sheet-backdrop {
-  position: fixed;
-  top: 0;
-  left: 0;
-  width: 100vw;
-  height: 100vh;
-  z-index: 999995;
-  background: rgba(0, 0, 0, 0.4);
-  backdrop-filter: blur(8px);
-  -webkit-backdrop-filter: blur(8px);
-  opacity: 0;
-  pointer-events: none;
-  transition: opacity 0.3s ease;
+body {
+  background: transparent !important;
 }
 
-.caspian-bottom-sheet-backdrop.active {
-  opacity: 1;
-  pointer-events: auto;
+.caspian-bottom-sheet-backdrop {
+  display: none !important;
 }
 
 .caspian-bottom-sheet {
@@ -96,7 +97,7 @@
   bottom: 0;
   left: 0;
   width: 100vw;
-  max-height: 95vh;
+  max-height: 85vh;
   z-index: 999999;
   background: var(--sheet-bg);
   backdrop-filter: blur(24px);
@@ -107,13 +108,11 @@
   border-bottom: none;
   box-shadow: var(--shadow-glass);
   padding: 12px 20px 32px 20px;
-  transform: translateY(100%);
-  transition: transform 0.35s cubic-bezier(0.16, 1, 0.3, 1), height 0.3s ease;
+  transform: translateY(0) !important;
+  display: block !important;
+  visibility: visible !important;
+  opacity: 1 !important;
   overflow-y: auto;
-}
-
-.caspian-bottom-sheet.active {
-  transform: translateY(0);
 }
 
 /* Drag Handle */

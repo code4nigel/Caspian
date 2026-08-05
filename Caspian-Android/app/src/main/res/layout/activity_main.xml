@@ -1,0 +1,61 @@
+<?xml version="1.0" encoding="utf-8"?>
+<FrameLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    android:id="@+id/root_container"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:background="#050811">
+
+    <!-- 1. Full Screen Primary Browser WebView -->
+    <WebView
+        android:id="@+id/main_webview"
+        android:layout_width="match_parent"
+        android:layout_height="match_parent" />
+
+    <!-- 2. Overlay Control Sheet Container (Elevation 10dp) -->
+    <FrameLayout
+        android:id="@+id/sheet_overlay_container"
+        android:layout_width="match_parent"
+        android:layout_height="match_parent"
+        android:visibility="gone"
+        android:elevation="10dp">
+
+        <!-- Semi-transparent Backdrop -->
+        <View
+            android:id="@+id/sheet_backdrop"
+            android:layout_width="match_parent"
+            android:layout_height="match_parent"
+            android:background="#77000000" />
+
+        <!-- Control Sheet Overlay WebView -->
+        <WebView
+            android:id="@+id/control_webview"
+            android:layout_width="match_parent"
+            android:layout_height="match_parent"
+            android:background="@android:color/transparent" />
+    </FrameLayout>
+
+    <!-- 3. Native Circular Floating Wave Icon Button (Elevation 30dp - Always Top-Most Above Sheet) -->
+    <androidx.cardview.widget.CardView
+        android:id="@+id/floating_caspian_card"
+        android:layout_width="52dp"
+        android:layout_height="52dp"
+        android:layout_gravity="bottom|end"
+        android:layout_marginBottom="80dp"
+        android:layout_marginEnd="20dp"
+        android:elevation="30dp"
+        app:cardCornerRadius="26dp"
+        app:cardBackgroundColor="#1B4264"
+        app:cardElevation="16dp">
+
+        <ImageView
+            android:id="@+id/floating_caspian_icon"
+            android:layout_width="match_parent"
+            android:layout_height="match_parent"
+            android:padding="10dp"
+            android:scaleType="fitCenter"
+            android:src="@drawable/ic_launcher_wave"
+            android:contentDescription="Caspian Mobile Menu" />
+    </androidx.cardview.widget.CardView>
+
+</FrameLayout>

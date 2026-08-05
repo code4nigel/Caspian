@@ -27,6 +27,13 @@ public class CaspianBridge {
     }
 
     @JavascriptInterface
+    public void exportConversation(String fmt) {
+        if (activity != null) {
+            activity.runOnUiThread(() -> activity.performExportOnMainWebView(fmt));
+        }
+    }
+
+    @JavascriptInterface
     public void downloadFile(String fileName, String content, String mimeType) {
         try {
             File downloadsDir = Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_DOWNLOADS);
@@ -55,7 +62,7 @@ public class CaspianBridge {
                 try {
                     activity.pauseInjectionTimer();
                     WebView printWebView = new WebView(activity);
-                    printWebView.getSettings().setJavaScriptEnabled(false); // Isolated static rendering
+                    printWebView.getSettings().setJavaScriptEnabled(false);
                     printWebView.setWebViewClient(new WebViewClient() {
                         @Override
                         public void onPageFinished(WebView view, String url) {
@@ -138,10 +145,7 @@ public class CaspianBridge {
     @JavascriptInterface
     public void convertAndLaunchTab(String promptContext) {
         if (activity != null) {
-            copyToClipboard(promptContext);
-            activity.runOnUiThread(() -> {
-                activity.loadUrlWithPrefill("https://chatgpt.com/", promptContext);
-            });
+            activity.runOnUiThread(() -> activity.performExportOnMainWebView("convert"));
         }
     }
 
@@ -149,6 +153,10 @@ public class CaspianBridge {
     public void saveSetting(String key, String value) {
         SharedPreferences prefs = activity.getSharedPreferences("CaspianMobilePrefs", Context.MODE_PRIVATE);
         prefs.edit().putString(key, value).apply();
+
+        if (activity != null) {
+            activity.runOnUiThread(activity::applyPrunerInMainWebView);
+        }
     }
 
     @JavascriptInterface
