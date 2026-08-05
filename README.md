@@ -42,17 +42,23 @@ Never lose your valuable chat transcripts! Caspian lets you export **both normal
 - **Copy & Export Suite**: 1-click Markdown copy and 5 multi-format file exporters.
 
 ### 📥 Desktop Installation Guide
-1. Download or clone this repository:
-   ```bash
-   git clone https://github.com/code4nigel/Caspian.git
-   ```
-2. Open your browser and navigate to the extensions page:
+
+#### Option 1: Quick Release Download (Easiest & Recommended)
+1. Go to the [**GitHub Releases Page**](https://github.com/code4nigel/Caspian/releases) and download the latest release archive (`.zip`).
+2. Extract (unzip) the `.zip` file to a folder on your computer.
+3. Open your browser and navigate to the extensions management page:
    - **Chrome**: `chrome://extensions`
    - **Edge**: `edge://extensions`
    - **Brave**: `brave://extensions`
-3. Turn **ON** **Developer Mode** (top-right toggle switch).
-4. Click **Load unpacked** and select the [`Caspian`](Caspian) directory.
-5. Open [ChatGPT](https://chatgpt.com) or [Google Gemini](https://gemini.google.com) and tap the Caspian extension icon!
+4. Turn **ON** **Developer Mode** (toggle switch in top-right corner).
+5. Click **Load unpacked** and select the unzipped `Caspian` folder.
+6. Open [ChatGPT](https://chatgpt.com) or [Google Gemini](https://gemini.google.com) and click the Caspian extension icon!
+
+#### Option 2: Clone via Git (Developers / Advanced Users)
+```bash
+git clone https://github.com/code4nigel/Caspian.git
+```
+Then select the [`Caspian`](Caspian) directory via **Load unpacked**.
 
 ---
 
@@ -67,11 +73,10 @@ Never lose your valuable chat transcripts! Caspian lets you export **both normal
 - **Multi-Format Export Suite**: Export Markdown (`.md`), Plain Text (`.txt`), Word (`.doc`), and HTML/PDF documents saved directly to your phone's `Downloads/Caspian/` folder.
 
 ### 📥 Android Installation Guide (`.apk`)
-1. Download the latest compiled APK from the [`versions`](versions/) folder:
-   - **Latest APK:** [`versions/Caspian-Mobile-v1.0.9.apk`](versions/Caspian-Mobile-v1.0.9.apk)
-2. Transfer the `.apk` file to your Android phone.
-3. Open your phone's File Manager and tap **`Caspian-Mobile-v1.0.9.apk`** to install.
-4. Open **Caspian Mobile** to start chatting with zero typing lag!
+1. Go to the [**GitHub Releases Page**](https://github.com/code4nigel/Caspian/releases) and download the latest **`Caspian-Mobile-vX.Y.Z.apk`** under Assets.
+2. Transfer the `.apk` file to your Android phone (or download directly on your device).
+3. Open your phone's File Manager and tap **`Caspian-Mobile-vX.Y.Z.apk`** to install.
+4. Launch **Caspian Mobile** to start chatting with zero typing lag!
 
 ---
 
