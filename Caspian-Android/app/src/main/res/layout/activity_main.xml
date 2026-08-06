@@ -6,9 +6,9 @@
     android:layout_height="match_parent"
     android:background="#050811">
 
-    <!-- 1. Full Screen Primary Browser WebView -->
-    <WebView
-        android:id="@+id/main_webview"
+    <!-- 1. Full Screen Multi-WebView Browser Tab Container -->
+    <FrameLayout
+        android:id="@+id/webview_container"
         android:layout_width="match_parent"
         android:layout_height="match_parent" />
 

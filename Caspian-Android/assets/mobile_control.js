@@ -15,9 +15,12 @@
   const copyBtn = document.getElementById('copy-btn');
   const exportDropdownTrigger = document.getElementById('export-dropdown-trigger');
   const exportMenu = document.getElementById('export-menu');
-  const switchHubBtn = document.getElementById('switch-hub-btn');
-  const switchGptBtn = document.getElementById('switch-chatgpt-btn');
-  const switchGeminiBtn = document.getElementById('switch-gemini-btn');
+
+  const appCardHub = document.getElementById('app-card-hub');
+  const appCardGpt = document.getElementById('app-card-chatgpt');
+  const appCardGemini = document.getElementById('app-card-gemini');
+  const newTabBtn = document.getElementById('new-tab-btn');
+  const closeAllTabsBtn = document.getElementById('close-all-tabs-btn');
 
   const startPicker = document.getElementById('gradient-start-picker');
   const endPicker = document.getElementById('gradient-end-picker');
@@ -29,13 +32,106 @@
   const nigelFactCard = document.getElementById('nigel-fact-card');
   const nigelFactText = document.getElementById('nigel-fact-text');
 
-  let activeTheme = 'dark';
+  let activeTheme = 'light';
   let selectedDarkBg = '#050811';
   let limitVal = 5;
   let globalActive = true;
 
-  // Restore saved limit and power switch state on load
+  function syncAppVersion() {
+    try {
+      if (window.CaspianBridge && typeof window.CaspianBridge.getAppVersion === 'function') {
+        const v = window.CaspianBridge.getAppVersion();
+        const brandTags = document.querySelectorAll('.sheet-brand-tag');
+        brandTags.forEach(el => el.textContent = 'V' + v);
+      }
+    } catch(e) {}
+  }
+
+  function renderOpenTabs() {
+    const container = document.getElementById('tabs-list-container');
+    const countBadge = document.getElementById('tab-count-badge');
+    if (!container) return;
+
+    let tabs = [];
+    try {
+      if (window.CaspianBridge && typeof window.CaspianBridge.getOpenTabs === 'function') {
+        const jsonStr = window.CaspianBridge.getOpenTabs();
+        if (jsonStr) {
+          tabs = JSON.parse(jsonStr);
+        }
+      }
+    } catch(e) {}
+
+    if (countBadge) {
+      countBadge.textContent = tabs.length === 1 ? '1 Tab' : `${tabs.length} Tabs`;
+    }
+
+    if (tabs.length === 0) {
+      container.innerHTML = '<div style="font-size: 12px; color: var(--text-sub); text-align: center; padding: 12px;">No active browser tabs open</div>';
+      return;
+    }
+
+    let html = '<div class="tab-card-grid">';
+    tabs.forEach(tab => {
+      let iconB64 = '';
+      if (tab.service === 'gemini') {
+        iconB64 = window.GEMINI_ICON_B64 || '';
+      } else if (tab.service === 'chatgpt') {
+        iconB64 = window.GPT_ICON_B64 || '';
+      }
+
+      const activeClass = tab.active ? 'active' : '';
+      const activeBadge = tab.active ? '<span style="font-size: 9px; font-weight: 800; color: #10b981; background: rgba(16,185,129,0.15); padding: 2px 6px; border-radius: 6px;">ACTIVE</span>' : '';
+
+      html += `
+        <div class="chrome-tab-card ${activeClass}" data-tabid="${tab.id}">
+          <div class="chrome-tab-header">
+            <div style="display: flex; align-items: center; gap: 6px; overflow: hidden;">
+              ${iconB64 ? `<img src="${iconB64}" style="width: 16px; height: 16px; border-radius: 4px;" />` : ''}
+              <span class="chrome-tab-title">${tab.title || 'Browser Tab'}</span>
+            </div>
+            <button class="chrome-tab-close" data-closeid="${tab.id}" title="Close Tab">&times;</button>
+          </div>
+          <div class="chrome-tab-url" style="font-size: 10px; color: var(--text-sub); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; margin-top: 4px;">
+            ${tab.url || ''}
+          </div>
+          <div style="display: flex; justify-content: flex-end; margin-top: 6px;">
+            ${activeBadge}
+          </div>
+        </div>
+      `;
+    });
+    html += '</div>';
+
+    container.innerHTML = html;
+
+    // Bind Tab Card clicks & Close buttons
+    container.querySelectorAll('.chrome-tab-card').forEach(card => {
+      card.addEventListener('click', (e) => {
+        if (e.target.classList.contains('chrome-tab-close')) return;
+        const tabId = parseInt(card.dataset.tabid);
+        if (window.CaspianBridge && typeof window.CaspianBridge.switchTab === 'function') {
+          window.CaspianBridge.switchTab(tabId);
+          setTimeout(renderOpenTabs, 100);
+        }
+      });
+    });
+
+    container.querySelectorAll('.chrome-tab-close').forEach(btn => {
+      btn.addEventListener('click', (e) => {
+        e.stopPropagation();
+        const tabId = parseInt(btn.dataset.closeid);
+        if (window.CaspianBridge && typeof window.CaspianBridge.closeTab === 'function') {
+          window.CaspianBridge.closeTab(tabId);
+          setTimeout(renderOpenTabs, 150);
+        }
+      });
+    });
+  }
+
+  // Restore saved limit, power switch state, and tabs on load
   function restoreSavedSettings() {
+    syncAppVersion();
     try {
       if (window.CaspianBridge && typeof window.CaspianBridge.getSettings === 'function') {
         const jsonStr = window.CaspianBridge.getSettings();
@@ -65,6 +161,8 @@
         }
       }
     } catch(e) {}
+
+    renderOpenTabs();
   }
 
   // Nigel Facts List
@@ -190,15 +288,18 @@
   if (resetThemeBtn) {
     resetThemeBtn.addEventListener('click', () => {
       applyCustomGradient('#A2A9A9', '#1B4264');
-      applyCustomBg('#050811');
-      setTheme('dark');
+      applyCustomBg('#ffffff');
+      setTheme('light');
     });
   }
 
-  // Sync Theme with Host Web Page
+  // Sync Theme with Host Web Page (Direct JS Execution -> No Activity Recreation -> No Crashing!)
   function syncHostPageTheme(t) {
     const isDark = (t === 'dark');
     try {
+      if (window.CaspianBridge && typeof window.CaspianBridge.setSystemNightMode === 'function') {
+        window.CaspianBridge.setSystemNightMode(isDark);
+      }
       if (isDark) {
         document.documentElement.classList.add('dark');
         document.documentElement.classList.remove('light');
@@ -215,19 +316,19 @@
     } catch(e) {}
   }
 
-  // Theme Toggles
+  // Theme Toggles (Default Light)
   function setTheme(t) {
-    activeTheme = t;
+    activeTheme = t || 'light';
     document.documentElement.setAttribute('data-theme', activeTheme);
-    if (t === 'light') {
+    if (activeTheme === 'light') {
       document.documentElement.style.setProperty('--sheet-bg', '#ffffff');
     } else {
       document.documentElement.style.setProperty('--sheet-bg', selectedDarkBg);
     }
-    if (themeBtnDark) themeBtnDark.classList.toggle('active', t === 'dark');
-    if (themeBtnLight) themeBtnLight.classList.toggle('active', t === 'light');
+    if (themeBtnDark) themeBtnDark.classList.toggle('active', activeTheme === 'dark');
+    if (themeBtnLight) themeBtnLight.classList.toggle('active', activeTheme === 'light');
 
-    syncHostPageTheme(t);
+    syncHostPageTheme(activeTheme);
   }
 
   if (themeToggleBtn) {
@@ -266,27 +367,48 @@
     });
   }
 
-  // Navigation (Hub, ChatGPT, Gemini)
-  if (switchHubBtn) {
-    switchHubBtn.addEventListener('click', () => {
-      if (window.CaspianBridge && typeof window.CaspianBridge.switchService === 'function') {
-        window.CaspianBridge.switchService('hub');
+  // App Icon Cards: Open new tab for selected platform (Hub, ChatGPT, Gemini)
+  if (appCardHub) {
+    appCardHub.addEventListener('click', () => {
+      if (window.CaspianBridge && typeof window.CaspianBridge.createNewTab === 'function') {
+        window.CaspianBridge.createNewTab('hub');
+        setTimeout(renderOpenTabs, 100);
       }
     });
   }
 
-  if (switchGptBtn) {
-    switchGptBtn.addEventListener('click', () => {
-      if (window.CaspianBridge && typeof window.CaspianBridge.switchService === 'function') {
-        window.CaspianBridge.switchService('chatgpt');
+  if (appCardGpt) {
+    appCardGpt.addEventListener('click', () => {
+      if (window.CaspianBridge && typeof window.CaspianBridge.createNewTab === 'function') {
+        window.CaspianBridge.createNewTab('chatgpt');
+        setTimeout(renderOpenTabs, 100);
       }
     });
   }
 
-  if (switchGeminiBtn) {
-    switchGeminiBtn.addEventListener('click', () => {
-      if (window.CaspianBridge && typeof window.CaspianBridge.switchService === 'function') {
-        window.CaspianBridge.switchService('gemini');
+  if (appCardGemini) {
+    appCardGemini.addEventListener('click', () => {
+      if (window.CaspianBridge && typeof window.CaspianBridge.createNewTab === 'function') {
+        window.CaspianBridge.createNewTab('gemini');
+        setTimeout(renderOpenTabs, 100);
+      }
+    });
+  }
+
+  if (newTabBtn) {
+    newTabBtn.addEventListener('click', () => {
+      if (window.CaspianBridge && typeof window.CaspianBridge.createNewTab === 'function') {
+        window.CaspianBridge.createNewTab('chatgpt');
+        setTimeout(renderOpenTabs, 100);
+      }
+    });
+  }
+
+  if (closeAllTabsBtn) {
+    closeAllTabsBtn.addEventListener('click', () => {
+      if (window.CaspianBridge && typeof window.CaspianBridge.closeAllTabs === 'function') {
+        window.CaspianBridge.closeAllTabs();
+        setTimeout(renderOpenTabs, 150);
       }
     });
   }
@@ -301,6 +423,10 @@
       const targetTab = btn.dataset.tab;
       const pane = document.getElementById(`tab-pane-${targetTab}`);
       if (pane) pane.style.display = 'block';
+
+      if (targetTab === 'sites') {
+        renderOpenTabs();
+      }
     });
   });
 
@@ -357,7 +483,7 @@
     });
   }
 
-  // Export Options Handler -> Direct Bridge Call to mainWebView
+  // Export Options Handler
   document.querySelectorAll('.export-opt-btn').forEach(btn => {
     btn.addEventListener('click', () => {
       const fmt = btn.dataset.fmt;

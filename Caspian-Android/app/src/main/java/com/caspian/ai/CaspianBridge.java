@@ -4,10 +4,12 @@ import android.content.ClipData;
 import android.content.ClipboardManager;
 import android.content.Context;
 import android.content.SharedPreferences;
+import android.content.pm.PackageInfo;
 import android.os.Environment;
 import android.print.PrintAttributes;
 import android.print.PrintDocumentAdapter;
 import android.print.PrintManager;
+import android.webkit.CookieManager;
 import android.webkit.JavascriptInterface;
 import android.webkit.WebView;
 import android.webkit.WebViewClient;
@@ -24,6 +26,62 @@ public class CaspianBridge {
 
     public CaspianBridge(MainActivity activity) {
         this.activity = activity;
+    }
+
+    @JavascriptInterface
+    public String getAppVersion() {
+        if (activity != null) {
+            try {
+                PackageInfo pInfo = activity.getPackageManager().getPackageInfo(activity.getPackageName(), 0);
+                return pInfo.versionName;
+            } catch (Exception e) {
+                return "1.0.26";
+            }
+        }
+        return "1.0.26";
+    }
+
+    @JavascriptInterface
+    public String getOpenTabs() {
+        if (activity != null) {
+            return activity.getOpenTabsJson();
+        }
+        return "[]";
+    }
+
+    @JavascriptInterface
+    public void createNewTab(String service) {
+        if (activity != null) {
+            activity.runOnUiThread(() -> activity.createNewTab(service));
+        }
+    }
+
+    @JavascriptInterface
+    public void switchTab(int tabId) {
+        if (activity != null) {
+            activity.runOnUiThread(() -> activity.switchTab(tabId));
+        }
+    }
+
+    @JavascriptInterface
+    public void closeTab(int tabId) {
+        if (activity != null) {
+            activity.runOnUiThread(() -> activity.closeTab(tabId));
+        }
+    }
+
+    @JavascriptInterface
+    public void closeAllTabs() {
+        if (activity != null) {
+            activity.runOnUiThread(activity::closeAllTabs);
+        }
+    }
+
+    @JavascriptInterface
+    public void setSystemNightMode(boolean isDark) {
+        if (activity != null) {
+            activity.runOnUiThread(() -> activity.toggleHostPageTheme(isDark));
+        }
     }
 
     @JavascriptInterface
@@ -130,15 +188,7 @@ public class CaspianBridge {
     @JavascriptInterface
     public void switchService(String service) {
         if (activity != null) {
-            activity.runOnUiThread(() -> {
-                if ("gemini".equalsIgnoreCase(service)) {
-                    activity.loadUrl("https://gemini.google.com/");
-                } else if ("hub".equalsIgnoreCase(service)) {
-                    activity.loadUrl("file:///android_asset/launch_hub.html");
-                } else {
-                    activity.loadUrl("https://chatgpt.com/");
-                }
-            });
+            activity.runOnUiThread(() -> activity.createNewTab(service));
         }
     }
 

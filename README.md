@@ -9,8 +9,22 @@
 | 🖥️ Desktop Extension (Chrome / Edge / Brave / Opera) | 📱 Caspian Mobile (Native Android Application) |
 | :--- | :--- |
 | Injectable Extension Control Panel | Touch-Draggable Floating Circle & Samsung One UI Control Sheet |
-| Compatible with ChatGPT & Google Gemini | Full DOM Chat Pruning on Mobile ChatGPT |
-| Multi-Format Exporters & Custom Accent Pickers | OLED Black (#050811) Theme, Nigel Facts & Direct Exports |
+| Compatible with ChatGPT & Google Gemini | Chrome-Style Multi-WebView Tab Manager |
+| Multi-Format Exporters & Custom Accent Pickers | OLED Black (#050811) Theme, Nigel Facts & Direct Exporters |
+
+---
+
+## 📸 Interface Screenshots & Visual Showcase
+
+<p align="center">
+  <img src="Caspian/images/caspian_mainUI.png" width="45%" alt="Caspian Extension Engine UI" />
+  <img src="Caspian/images/Caspian_darkUI.png" width="45%" alt="Caspian Dark Mode UI" />
+</p>
+<p align="center">
+  <img src="Caspian/images/caspian_exportOptions.png" width="30%" alt="Caspian Export Options" />
+  <img src="Caspian/images/caspian_siteUI.png" width="30%" alt="Caspian Active Site Options" />
+  <img src="Caspian/images/caspian_settingsUI.png" width="30%" alt="Caspian Settings & Themes" />
+</p>
 
 ---
 
@@ -36,7 +50,7 @@ Never lose your valuable chat transcripts! Caspian lets you export **both normal
 
 ## 🖥️ 1. Caspian Desktop Extension (Chromium)
 
-###  Features
+### Features
 - **ChatGPT & Google Gemini Support**: Automatic DOM pruning and temporary chat converter on both platforms.
 - **Custom Accent Engine**: Caspian gradient (`#A2A9A9` to `#1B4264`), dual custom hex pickers, and quick preset pinning system.
 - **Copy & Export Suite**: 1-click Markdown copy and 5 multi-format file exporters.
@@ -65,15 +79,16 @@ Then select the [`Caspian`](Caspian) directory via **Load unpacked**.
 ## 📱 2. Caspian Mobile (Standalone Android Application)
 
 ### ✨ Mobile App Features
+- **Chrome Android-Style Multi-WebView Tab Manager**: Open multiple tabs, switch between ChatGPT & Gemini seamlessly with live chat state retention, tab cards, and 1-click Close All!
 - **Touch-Draggable Circular Floating Button**: A 48px × 48px floating toolbar icon that can be moved anywhere on your screen using touch drag.
-- **Single-Tap Control Sheet**: Tap the floating button once to open or close the 3-Tab Control Sheet (`Engine`, `Sites`, `Settings`).
-- **Default OLED Black (`#050811`) Theme**: Built-in background tone selector (`OLED Black #050811`, `Pitch Black #000000`, `Bluish Dark #0a1128`, `Pure White #ffffff`).
+- **Single-Tap Control Sheet**: Tap the floating button once to open or close the 3-Tab Control Sheet (`Engine`, `Tabs`, `Settings`).
+- **Default OLED Black & Light Mode Sync**: Built-in background tone selector (`OLED Black #050811`, `Pitch Black #000000`, `Bluish Dark #0a1128`, `Pure White #ffffff`).
 - **Multi-Format Export Suite**: Export Markdown (`.md`), Plain Text (`.txt`), Word (`.doc`), and HTML/PDF documents saved directly to your phone's `Downloads/Caspian/` folder.
 
 ### 📥 Android Installation Guide (`.apk`)
-1. Go to the [**GitHub Releases Page**](https://github.com/code4nigel/Caspian/releases) and download the latest **`Caspian-Mobile-vX.Y.Z.apk`** under Assets.
+1. Go to the [**GitHub Releases Page**](https://github.com/code4nigel/Caspian/releases) and download the latest **`Caspian-Mobile-v1.0.26.apk`** under Assets.
 2. Transfer the `.apk` file to your Android phone (or download directly on your device).
-3. Open your phone's File Manager and tap **`Caspian-Mobile-vX.Y.Z.apk`** to install.
+3. Open your phone's File Manager and tap **`Caspian-Mobile-v1.0.26.apk`** to install.
 4. Launch **Caspian Mobile** to start chatting with zero typing lag!
 
 ---
@@ -82,7 +97,7 @@ Then select the [`Caspian`](Caspian) directory via **Load unpacked**.
 
 - 🛡️ **100% Local Execution**: Caspian operates entirely within your browser's local sandbox and native Android app sandbox.
 - 🚫 **Zero Data Collection**: We **DO NOT** track, record, collect, or transmit any user prompts, personal data, or conversation transcripts.
-- **No Remote Servers**: Caspian makes **zero external API calls** to third-party servers. Your data stays 100% on your device.
+- 🔐 **No Remote Servers**: Caspian makes **zero external API calls** to third-party servers. Your data stays 100% on your device.
 
 ---
 
@@ -113,7 +128,7 @@ Caspian/
 │   ├── assets/             # Mobile Control Sheet (HTML, CSS, JS, Pruner)
 │   └── gradlew.bat         # Gradle build script
 └── versions/               # Packaged APKs & Extension releases
-    ├── Caspian-Mobile-v1.0.9.apk
+    ├── Caspian-Mobile-v1.0.26.apk
     └── Caspian-v6.0.0.zip
 ```
 

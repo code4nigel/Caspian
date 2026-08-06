@@ -13,6 +13,22 @@
     limit: 5
   };
 
+  let isTyping = false;
+  let typingTimer = null;
+
+  // Track active input/textarea typing to freeze pruning during typing
+  document.addEventListener('keydown', () => {
+    isTyping = true;
+    if (typingTimer) clearTimeout(typingTimer);
+    typingTimer = setTimeout(() => { isTyping = false; }, 1000);
+  }, { passive: true });
+
+  document.addEventListener('input', () => {
+    isTyping = true;
+    if (typingTimer) clearTimeout(typingTimer);
+    typingTimer = setTimeout(() => { isTyping = false; }, 1000);
+  }, { passive: true });
+
   function loadState() {
     try {
       if (window.CaspianBridge && typeof window.CaspianBridge.getSettings === 'function') {
@@ -42,17 +58,15 @@
   }
 
   function getTopLevelTurns() {
-    // Only target top-level turn containers (ChatGPT & Gemini)
     const turnSelector = '[data-testid^="conversation-turn"], article, user-query, model-response, chat-turn';
     const rawTurns = queryShadowSelectorAll(turnSelector, document);
-    
-    // Filter out nested turns so each turn is strictly counted once
     return rawTurns.filter(turn => {
       return !rawTurns.some(other => other !== turn && other.contains(turn));
     });
   }
 
   function applyPruning() {
+    if (isTyping) return; // Do not manipulate DOM during active typing
     loadState();
     
     const turns = getTopLevelTurns();
@@ -72,7 +86,14 @@
     });
   }
 
-  // Safe Observer initialization for dynamic Gemini & ChatGPT DOMs
+  // 250ms Debounced Observer for zero lag during message generation
+  let debounceTimer = null;
+  function debouncedApplyPruning() {
+    if (isTyping) return;
+    if (debounceTimer) clearTimeout(debounceTimer);
+    debounceTimer = setTimeout(applyPruning, 250);
+  }
+
   function startObserver() {
     const targetNode = document.documentElement || document.body;
     if (!targetNode) {
@@ -80,7 +101,7 @@
       return;
     }
     const observer = new MutationObserver(() => {
-      applyPruning();
+      debouncedApplyPruning();
     });
     observer.observe(targetNode, { childList: true, subtree: true });
   }

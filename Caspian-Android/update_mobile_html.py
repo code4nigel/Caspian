@@ -1,10 +1,11 @@
 import os
+from assets.site_icons import GPT_ICON_B64, GEMINI_ICON_B64
 
 with open('d:/Projects/Chatgpt Pruner/Caspian-Android/assets/dev_avatar.txt', 'r') as f:
     dev_avatar_b64 = f.read().strip()
 
 html_content = f'''<!DOCTYPE html>
-<html lang="en" data-theme="dark">
+<html lang="en" data-theme="light">
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
@@ -34,7 +35,7 @@ html_content = f'''<!DOCTYPE html>
         </div>
         <div style="display: flex; flex-direction: column;">
           <span class="sheet-brand-name">CASPIAN MOBILE</span>
-          <span class="sheet-brand-tag">V1.0.13 (NATIVE)</span>
+          <span class="sheet-brand-tag">V1.0.26</span>
         </div>
       </div>
       <div class="header-icon-actions">
@@ -52,15 +53,15 @@ html_content = f'''<!DOCTYPE html>
       </div>
     </div>
 
-    <!-- Tab Navigation Bar (Engine, Sites, Settings) -->
+    <!-- Tab Navigation Bar (Engine, Tabs, Settings) -->
     <div class="mobile-tab-nav">
       <button id="tab-btn-engine" class="tab-nav-btn active" data-tab="engine">
         <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M2 6c.6.5 1.2 1 2.5 1 2.5 0 2.5-2 5-2 2.5 0 2.5-2 5-2 1.3 0 1.9.5 2.5 1"></path><path d="M2 12c.6.5 1.2 1 2.5 1 2.5 0 2.5-2 5-2 2.5 0 2.5-2 5-2 1.3 0 1.9.5 2.5 1"></path><path d="M2 18c.6.5 1.2 1 2.5 1 2.5 0 2.5-2 5-2 2.5 0 2.5-2 5-2 1.3 0 1.9.5 2.5 1"></path></svg>
         <span>Engine</span>
       </button>
       <button id="tab-btn-sites" class="tab-nav-btn" data-tab="sites">
-        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"></circle><line x1="2" y1="12" x2="22" y2="12"></line><path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1 4-10z"></path></svg>
-        <span>Sites</span>
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="18" height="18" rx="2" ry="2"></rect><line x1="9" y1="3" x2="9" y2="21"></line></svg>
+        <span>Tabs</span>
       </button>
       <button id="tab-btn-settings" class="tab-nav-btn" data-tab="settings">
         <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="3"></circle><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"></path></svg>
@@ -142,25 +143,46 @@ html_content = f'''<!DOCTYPE html>
       </div>
     </div>
 
-    <!-- TAB 2: SITES TAB -->
+    <!-- TAB 2: TABS & SITES TAB -->
     <div id="tab-pane-sites" class="tab-pane" style="display: none;">
       <div class="m3-card">
-        <div class="m3-card-title" style="margin-bottom: 10px;">Select Active AI Platform</div>
-        
-        <div class="service-pill-bar">
-          <button id="switch-hub-btn" class="service-pill" style="flex: 0.8;">Hub</button>
-          <button id="switch-chatgpt-btn" class="service-pill active">ChatGPT</button>
-          <button id="switch-gemini-btn" class="service-pill">Google Gemini</button>
+        <div class="m3-card-row" style="margin-bottom: 8px;">
+          <div class="m3-card-title">OPEN NEW PLATFORM TAB</div>
+          <button id="new-tab-btn" class="text-link-btn">+ New Tab</button>
         </div>
 
-        <div class="site-row" style="margin-top: 14px;">
-          <span>ChatGPT (chatgpt.com)</span>
-          <span class="m3-badge" style="background: rgba(16,185,129,0.15); color: #10b981;">Active</span>
+        <!-- App Icon Grid Cards -->
+        <div class="app-icon-grid">
+          <div id="app-card-hub" class="app-icon-card" data-service="hub">
+            <div style="width: 44px; height: 44px; border-radius: 12px; background: linear-gradient(135deg, #1B4264, #A2A9A9); display: flex; align-items: center; justify-content: center; margin-bottom: 8px;">
+              <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#FFFFFF" stroke-width="2.5"><path d="M4 7c1.2.8 2.8 1.3 5 1.3 3.2 0 3.8-2 7-2 1.8 0 2.8.5 4 1.3"></path><path d="M4 12c1.2.8 2.8 1.3 5 1.3 3.2 0 3.8-2 7-2 1.8 0 2.8.5 4 1.3"></path><path d="M4 17c1.2.8 2.8 1.3 5 1.3 3.2 0 3.8-2 7-2 1.8 0 2.8.5 4 1.3"></path></svg>
+            </div>
+            <span class="app-icon-label">Caspian Hub</span>
+          </div>
+
+          <div id="app-card-chatgpt" class="app-icon-card" data-service="chatgpt">
+            <img src="{GPT_ICON_B64}" class="app-icon-img" alt="ChatGPT" />
+            <span class="app-icon-label">ChatGPT</span>
+          </div>
+
+          <div id="app-card-gemini" class="app-icon-card" data-service="gemini">
+            <img src="{GEMINI_ICON_B64}" class="app-icon-img" alt="Gemini" />
+            <span class="app-icon-label">Google Gemini</span>
+          </div>
         </div>
-        <div class="site-row" style="margin-top: 10px;">
-          <span>Google Gemini (gemini.google.com)</span>
-          <span class="m3-badge" style="background: rgba(16,185,129,0.15); color: #10b981;">Active</span>
+
+        <!-- Active Tabs Container -->
+        <div class="m3-card-row" style="margin-top: 16px; margin-bottom: 6px; display: flex; align-items: center; justify-content: space-between;">
+          <div style="display: flex; align-items: center; gap: 8px;">
+            <div class="setting-section-header" style="margin: 0;">Active Browser Tabs</div>
+            <span id="tab-count-badge" class="m3-badge" style="background: rgba(0,0,0,0.06); color: var(--text-sub);">1 Tab</span>
+          </div>
+          <button id="close-all-tabs-btn" class="oneui-pill-btn secondary" style="padding: 4px 10px; font-size: 11px; color: #ef4444; border-color: rgba(239,68,68,0.3);">Close All</button>
         </div>
+        <div id="tabs-list-container" style="margin-top: 8px; display: flex; flex-direction: column; gap: 8px;">
+          <!-- Dynamically populated open tabs -->
+        </div>
+
       </div>
     </div>
 
@@ -178,26 +200,26 @@ html_content = f'''<!DOCTYPE html>
         <div class="setting-row">
           <span class="setting-label">Appearance Mode</span>
           <div class="mode-pill-toggle">
-            <button id="theme-btn-dark" class="mode-pill active">Dark</button>
-            <button id="theme-btn-light" class="mode-pill">Light</button>
+            <button id="theme-btn-dark" class="mode-pill">Dark</button>
+            <button id="theme-btn-light" class="mode-pill active">Light</button>
           </div>
         </div>
 
         <!-- Background Color Presets -->
         <div class="setting-section-header" style="margin-top: 14px;">Background Tone</div>
         <div class="preset-pill-grid" style="margin-top: 6px;">
-          <button class="bg-preset-btn active" data-bg="#050811"><span class="color-dot" style="background: #050811; border: 1px solid #333;"></span> OLED Black</button>
+          <button class="bg-preset-btn active" data-bg="#ffffff"><span class="color-dot" style="background: #ffffff; border: 1px solid #ccc;"></span> Pure White</button>
+          <button class="bg-preset-btn" data-bg="#050811"><span class="color-dot" style="background: #050811; border: 1px solid #333;"></span> OLED Black</button>
           <button class="bg-preset-btn" data-bg="#000000"><span class="color-dot" style="background: #000000;"></span> Pitch Black</button>
           <button class="bg-preset-btn" data-bg="#0a1128"><span class="color-dot" style="background: #0a1128;"></span> Bluish Dark</button>
-          <button class="bg-preset-btn" data-bg="#ffffff"><span class="color-dot" style="background: #ffffff; border: 1px solid #ccc;"></span> Pure White</button>
         </div>
 
         <!-- Background Color Picker -->
         <div class="setting-row" style="margin-top: 10px;">
           <span class="setting-label">Custom Background</span>
           <div class="color-input-box">
-            <input type="color" id="bg-color-picker" value="#050811">
-            <input type="text" id="bg-color-hex" class="hex-text-input" value="#050811">
+            <input type="color" id="bg-color-picker" value="#ffffff">
+            <input type="text" id="bg-color-hex" class="hex-text-input" value="#FFFFFF">
           </div>
         </div>
 
@@ -269,4 +291,4 @@ html_content = f'''<!DOCTYPE html>
 with open('d:/Projects/Chatgpt Pruner/Caspian-Android/assets/mobile_control.html', 'w', encoding='utf-8') as out:
     out.write(html_content)
 
-print("Successfully updated mobile_control.html with Native Overlay configuration!")
+print("Successfully updated mobile_control.html with V1.0.26 tag!")

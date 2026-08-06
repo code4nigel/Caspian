@@ -1,5 +1,5 @@
 // ======================================================
-// CASPIAN ANDROID - MOBILE DOM PRUNER (ChatGPT + Gemini)
+// CASPIAN ANDROID - MOBILE DOM PRUNER (ChatGPT + Gemini Shadow DOM)
 // ======================================================
 
 (function() {
@@ -13,6 +13,22 @@
     limit: 5
   };
 
+  let isTyping = false;
+  let typingTimer = null;
+
+  // Track active input/textarea typing to freeze pruning during typing
+  document.addEventListener('keydown', () => {
+    isTyping = true;
+    if (typingTimer) clearTimeout(typingTimer);
+    typingTimer = setTimeout(() => { isTyping = false; }, 1000);
+  }, { passive: true });
+
+  document.addEventListener('input', () => {
+    isTyping = true;
+    if (typingTimer) clearTimeout(typingTimer);
+    typingTimer = setTimeout(() => { isTyping = false; }, 1000);
+  }, { passive: true });
+
   function loadState() {
     try {
       if (window.CaspianBridge && typeof window.CaspianBridge.getSettings === 'function') {
@@ -25,16 +41,38 @@
     } catch(e) {}
   }
 
+  // Recursive Shadow DOM Selector (Pierces through Google Gemini Web Components)
+  function queryShadowSelectorAll(selector, root) {
+    root = root || document;
+    let elements = [];
+    try {
+      elements = Array.from(root.querySelectorAll(selector));
+      const shadowRoots = Array.from(root.querySelectorAll('*'))
+        .map(el => el.shadowRoot)
+        .filter(Boolean);
+      for (const shadowRoot of shadowRoots) {
+        elements = elements.concat(queryShadowSelectorAll(selector, shadowRoot));
+      }
+    } catch(e) {}
+    return elements;
+  }
+
+  function getTopLevelTurns() {
+    const turnSelector = '[data-testid^="conversation-turn"], article, user-query, model-response, chat-turn';
+    const rawTurns = queryShadowSelectorAll(turnSelector, document);
+    return rawTurns.filter(turn => {
+      return !rawTurns.some(other => other !== turn && other.contains(turn));
+    });
+  }
+
   function applyPruning() {
+    if (isTyping) return; // Do not manipulate DOM during active typing
     loadState();
     
-    // Support ChatGPT & Google Gemini DOM turn selectors
-    const turns = document.querySelectorAll(
-      '[data-testid^="conversation-turn"], article, main div.group, user-query, model-response, div.conversation-container > div, .query-content, .model-response-text'
-    );
+    const turns = getTopLevelTurns();
 
     if (!state.globalActive || !state.pruningEnabled || state.limit >= 9999) {
-      turns.forEach(t => t.style.setProperty('display', 'block', 'important'));
+      turns.forEach(t => t.style.removeProperty('display'));
       return;
     }
 
@@ -43,16 +81,30 @@
       if (idx < turns.length - limit) {
         t.style.setProperty('display', 'none', 'important');
       } else {
-        t.style.setProperty('display', 'block', 'important');
+        t.style.removeProperty('display');
       }
     });
   }
 
-  // Live Observer for DOM changes
-  const observer = new MutationObserver(() => {
-    applyPruning();
-  });
-  observer.observe(document.body, { childList: true, subtree: true });
+  // 250ms Debounced Observer for zero lag during message generation
+  let debounceTimer = null;
+  function debouncedApplyPruning() {
+    if (isTyping) return;
+    if (debounceTimer) clearTimeout(debounceTimer);
+    debounceTimer = setTimeout(applyPruning, 250);
+  }
+
+  function startObserver() {
+    const targetNode = document.documentElement || document.body;
+    if (!targetNode) {
+      setTimeout(startObserver, 100);
+      return;
+    }
+    const observer = new MutationObserver(() => {
+      debouncedApplyPruning();
+    });
+    observer.observe(targetNode, { childList: true, subtree: true });
+  }
 
   window.addEventListener('message', (e) => {
     if (e.data && e.data.type === 'CASPIAN_SYNC_SETTINGS') {
@@ -61,5 +113,6 @@
     }
   });
 
+  startObserver();
   applyPruning();
 })();
