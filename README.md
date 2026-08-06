@@ -36,7 +36,7 @@ Never lose your valuable chat transcripts! Caspian lets you export **both normal
 
 ## 🖥️ 1. Caspian Desktop Extension (Chromium)
 
-### ✨ Features
+###  Features
 - **ChatGPT & Google Gemini Support**: Automatic DOM pruning and temporary chat converter on both platforms.
 - **Custom Accent Engine**: Caspian gradient (`#A2A9A9` to `#1B4264`), dual custom hex pickers, and quick preset pinning system.
 - **Copy & Export Suite**: 1-click Markdown copy and 5 multi-format file exporters.
@@ -66,10 +66,8 @@ Then select the [`Caspian`](Caspian) directory via **Load unpacked**.
 
 ### ✨ Mobile App Features
 - **Touch-Draggable Circular Floating Button**: A 48px × 48px floating toolbar icon that can be moved anywhere on your screen using touch drag.
-- **Single-Tap Control Sheet**: Tap the floating button once to open or close the Samsung One UI 3-Tab Control Sheet (`Engine`, `Sites`, `Settings`).
-- **Interactive Height Drag Handle**: Touch and hold the top handle on the bottom sheet to resize UI height from `25vh` to `95vh`.
+- **Single-Tap Control Sheet**: Tap the floating button once to open or close the 3-Tab Control Sheet (`Engine`, `Sites`, `Settings`).
 - **Default OLED Black (`#050811`) Theme**: Built-in background tone selector (`OLED Black #050811`, `Pitch Black #000000`, `Bluish Dark #0a1128`, `Pure White #ffffff`).
-- **💡 Interactive Nigel Facts Card**: Tap the developer card in Settings to cycle through fun facts!
 - **Multi-Format Export Suite**: Export Markdown (`.md`), Plain Text (`.txt`), Word (`.doc`), and HTML/PDF documents saved directly to your phone's `Downloads/Caspian/` folder.
 
 ### 📥 Android Installation Guide (`.apk`)
@@ -84,7 +82,7 @@ Then select the [`Caspian`](Caspian) directory via **Load unpacked**.
 
 - 🛡️ **100% Local Execution**: Caspian operates entirely within your browser's local sandbox and native Android app sandbox.
 - 🚫 **Zero Data Collection**: We **DO NOT** track, record, collect, or transmit any user prompts, personal data, or conversation transcripts.
-- 🌐 **No Remote Servers**: Caspian makes **zero external API calls** to third-party servers. Your data stays 100% on your device.
+- **No Remote Servers**: Caspian makes **zero external API calls** to third-party servers. Your data stays 100% on your device.
 
 ---
 
