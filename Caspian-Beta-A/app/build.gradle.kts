@@ -3,15 +3,15 @@ plugins {
 }
 
 android {
-    namespace = "com.caspian.ai"
+    namespace = "com.caspian.betaa"
     compileSdk = 34
 
     defaultConfig {
-        applicationId = "com.caspian.ai"
+        applicationId = "com.caspian.betaa"
         minSdk = 24
         targetSdk = 34
         versionCode = 160
-        versionName = "1.0.60"
+        versionName = "1.0.60-BetaA"
     }
 
     buildTypes {

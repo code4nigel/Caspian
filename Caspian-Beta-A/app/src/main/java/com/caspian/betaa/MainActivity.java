@@ -1,4 +1,4 @@
-package com.caspian.ai;
+package com.caspian.betaa;
 
 import android.annotation.SuppressLint;
 import android.content.Intent;

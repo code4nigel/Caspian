@@ -1,4 +1,4 @@
-package com.caspian.ai;
+package com.caspian.betaa;
 
 import android.content.ClipData;
 import android.content.ClipboardManager;
