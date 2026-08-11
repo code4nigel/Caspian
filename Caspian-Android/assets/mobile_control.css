@@ -214,15 +214,16 @@ body {
   max-height: 85vh;
   z-index: 999999;
   background: var(--sheet-bg);
-  backdrop-filter: blur(24px);
-  -webkit-backdrop-filter: blur(24px);
+  backdrop-filter: blur(16px);
+  -webkit-backdrop-filter: blur(16px);
   border-top-left-radius: 28px;
   border-top-right-radius: 28px;
   border: 1px solid var(--border-glass);
   border-bottom: none;
   box-shadow: var(--shadow-glass);
   padding: 12px 20px 32px 20px;
-  transform: translateY(0) !important;
+  transform: translate3d(0, 0, 0) !important;
+  will-change: transform, opacity;
   display: block !important;
   visibility: visible !important;
   opacity: 1 !important;
@@ -1084,4 +1085,62 @@ select option {
   border-color: #10b981 !important;
   box-shadow: 0 0 14px rgba(16, 185, 129, 0.4) !important;
   transform: scale(1.02);
+}
+
+/* GPU-accelerated tab switching animation */
+.tab-pane {
+  animation: fadeInPane 0.25s cubic-bezier(0.22, 1, 0.36, 1) forwards;
+}
+
+@keyframes fadeInPane {
+  from { opacity: 0; transform: translateY(4px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+/* OneUI Toggle Switch Styles */
+.switch-toggle {
+  position: relative;
+  display: inline-block;
+  width: 44px;
+  height: 24px;
+  flex-shrink: 0;
+}
+
+.switch-toggle input {
+  opacity: 0;
+  width: 0;
+  height: 0;
+}
+
+.slider-round {
+  position: absolute;
+  cursor: pointer;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background-color: var(--border-glass);
+  transition: .25s cubic-bezier(0.4, 0, 0.2, 1);
+  border-radius: 24px;
+}
+
+.slider-round:before {
+  position: absolute;
+  content: "";
+  height: 18px;
+  width: 18px;
+  left: 3px;
+  bottom: 3px;
+  background-color: white;
+  transition: .25s cubic-bezier(0.4, 0, 0.2, 1);
+  border-radius: 50%;
+  box-shadow: 0 2px 5px rgba(0,0,0,0.15);
+}
+
+.switch-toggle input:checked + .slider-round {
+  background-color: #10b981;
+}
+
+.switch-toggle input:checked + .slider-round:before {
+  transform: translateX(20px);
 }

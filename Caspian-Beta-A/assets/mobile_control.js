@@ -3,6 +3,69 @@
 // ======================================================
 
 (function() {
+  let sfxVolume = 0.5;
+  let masterSFXMuted = false;
+
+  function setMasterMute(muted) {
+    masterSFXMuted = !!muted;
+    try {
+      localStorage.setItem('master_sfx_muted', masterSFXMuted ? 'true' : 'false');
+      if (window.CaspianBridge && typeof window.CaspianBridge.saveSetting === 'function') {
+        window.CaspianBridge.saveSetting('master_sfx_muted', masterSFXMuted ? 'true' : 'false');
+      }
+    } catch(e) {}
+
+    const unmutedIcon = document.getElementById('mute-icon-unmuted');
+    const mutedIcon = document.getElementById('mute-icon-muted');
+    const masterToggle = document.getElementById('toggle-sfx-master');
+
+    if (unmutedIcon) unmutedIcon.style.display = masterSFXMuted ? 'none' : 'block';
+    if (mutedIcon) mutedIcon.style.display = masterSFXMuted ? 'block' : 'none';
+    if (masterToggle) masterToggle.checked = !masterSFXMuted;
+  }
+
+  const sfxAssets = {
+    tm: null,
+    tb: null,
+    ta: null
+  };
+
+  setTimeout(() => {
+    try {
+      sfxAssets.tm = new Audio('sfx/tap_main.wav');
+      sfxAssets.tb = new Audio('sfx/tap_button.wav');
+      sfxAssets.ta = new Audio('sfx/tap_alternate.wav');
+      sfxAssets.tm.load();
+      sfxAssets.tb.load();
+      sfxAssets.ta.load();
+    } catch (e) {}
+  }, 1000);
+
+  function playSFX(type) {
+    try {
+      if (masterSFXMuted) return;
+      let enabled = true;
+      if (type === 'tm_tabs') enabled = localStorage.getItem('sfx_enabled_tm_tabs') !== 'false';
+      else if (type === 'tb_clicks') enabled = localStorage.getItem('sfx_enabled_tb_clicks') !== 'false';
+      else if (type === 'tm_header') enabled = localStorage.getItem('sfx_enabled_tm_header') !== 'false';
+      else if (type === 'tb_close') enabled = localStorage.getItem('sfx_enabled_tb_close') !== 'false';
+      else if (type === 'tb_modal') enabled = localStorage.getItem('sfx_enabled_tb_modal') !== 'false';
+
+      if (!enabled) return;
+
+      let audio = null;
+      if (type === 'tm_tabs' || type === 'tm_header') audio = sfxAssets.tm;
+      else if (type === 'tb_clicks' || type === 'tb_close' || type === 'tb_modal') audio = sfxAssets.tb;
+
+      if (!audio) return;
+      audio.currentTime = 0;
+      // Exponential curve for soft/subtle volume scaling (e.g. 5% = 0.05^2.5 = 0.0005)
+      const effectiveVol = Math.pow(sfxVolume, 2.5);
+      audio.volume = effectiveVol;
+      audio.play().catch(() => {});
+    } catch (e) {}
+  }
+
   const sheetBackdrop = document.getElementById('sheet-backdrop');
   const bottomSheet = document.getElementById('bottom-sheet');
   const dragArea = document.getElementById('sheet-drag-area');
@@ -19,6 +82,8 @@
   const appCardHub = document.getElementById('app-card-hub');
   const appCardGpt = document.getElementById('app-card-chatgpt');
   const appCardGemini = document.getElementById('app-card-gemini');
+  const appCardGoogle = document.getElementById('app-card-google');
+  const appCardYoutube = document.getElementById('app-card-youtube');
   const newTabBtn = document.getElementById('new-tab-btn');
   const closeAllTabsBtn = document.getElementById('close-all-tabs-btn');
 
@@ -149,6 +214,10 @@
         iconB64 = window.GEMINI_ICON_B64 || '';
       } else if (tab.service === 'chatgpt') {
         iconB64 = window.GPT_ICON_B64 || '';
+      } else if (tab.service === 'google') {
+        iconB64 = window.GOOGLE_ICON_B64 || '';
+      } else if (tab.service === 'youtube') {
+        iconB64 = window.YOUTUBE_ICON_B64 || '';
       }
 
       const activeClass = tab.active ? 'active' : '';
@@ -191,6 +260,7 @@
       let pressTimer = null;
       let dIdx = -1;
       let cardHeight = 0;
+      let ignoreClickDueToSwipe = false;
 
       const onTouchStart = (e) => {
         const touch = e.touches[0];
@@ -254,9 +324,12 @@
           return;
         }
 
-        if (Math.abs(diffX) > 15 && Math.abs(diffX) > Math.abs(diffY)) {
+        if (!isSwipe && Math.abs(diffX) > 25 && Math.abs(diffX) > Math.abs(diffY) * 1.5) {
           isSwipe = true;
           clearTimeout(pressTimer);
+        }
+
+        if (isSwipe) {
           e.preventDefault();
           card.style.transform = `translateX(${diffX}px)`;
         }
@@ -316,6 +389,8 @@
               triggerCloseTab(tabId);
             }, 200);
           }
+          ignoreClickDueToSwipe = true;
+          setTimeout(() => { ignoreClickDueToSwipe = false; }, 200);
           isSwipe = false;
         }
       };
@@ -328,7 +403,7 @@
       // Support Click Event for switching tab
       card.addEventListener('click', (e) => {
         if (e.target.classList.contains('chrome-tab-close')) return;
-        if (isSwipe || isDrag) return;
+        if (isSwipe || isDrag || ignoreClickDueToSwipe) return;
         const tabId = parseInt(card.dataset.tabid);
 
         container.querySelectorAll('.chrome-tab-card').forEach(c => {
@@ -337,6 +412,7 @@
           if (badge) badge.remove();
         });
         card.classList.add('active');
+        playSFX('tb_clicks');
 
         const badgeContainer = card.querySelector('div[style*="justify-content: flex-end"]');
         if (badgeContainer) {
@@ -377,6 +453,15 @@
   function restoreSavedSettings() {
     syncAppVersion();
     updateDebugRecUI();
+
+    // Immediate theme synchronization on invocation
+    try {
+      const savedTheme = localStorage.getItem('theme');
+      if (savedTheme) {
+        setTheme(savedTheme);
+      }
+    } catch(e) {}
+
     try {
       if (window.CaspianBridge && typeof window.CaspianBridge.getSettings === 'function') {
         const jsonStr = window.CaspianBridge.getSettings();
@@ -419,10 +504,79 @@
                 }
               });
             }
-            updateIconPreview(prefs.theme_start_color || '#A2A9A9', prefs.theme_end_color || '#1B4264', selectedShapeVal);
+          }
+          
+          if (prefs.themeMode !== undefined) {
+            setTheme(prefs.themeMode);
+          } else {
+            setTheme(localStorage.getItem('theme') || 'light');
+          }
+          updateIconPreview(prefs.theme_start_color || '#A2A9A9', prefs.theme_end_color || '#1B4264', selectedShapeVal);
+
+            // Restore visual preferences
+            var openDur = prefs.sheetOpenDuration !== undefined ? parseInt(prefs.sheetOpenDuration) : 150;
+            var txtOpenDur = document.getElementById('txt-open-dur');
+            if (txtOpenDur) txtOpenDur.textContent = `${openDur} ms`;
+
+            var closeDur = prefs.sheetCloseDuration !== undefined ? parseInt(prefs.sheetCloseDuration) : 150;
+            var txtCloseDur = document.getElementById('txt-close-dur');
+            if (txtCloseDur) txtCloseDur.textContent = `${closeDur} ms`;
+
+            var tapDur = prefs.theme_button_tap_duration !== undefined ? parseInt(prefs.theme_button_tap_duration) : 100;
+            var txtTapDur = document.getElementById('txt-tap-dur');
+            if (txtTapDur) txtTapDur.textContent = `${tapDur} ms`;
+
+            var animStyle = prefs.sheetAnimationStyle !== undefined ? prefs.sheetAnimationStyle : 'genie';
+            var selectAnimStyle = document.getElementById('select-anim-style');
+            if (selectAnimStyle) {
+              selectAnimStyle.querySelectorAll('.caspian-select-option').forEach(o => {
+                var isActive = o.dataset.val === animStyle;
+                o.classList.toggle('active', isActive);
+                if (isActive) {
+                  var label = document.getElementById('selected-anim-style-text');
+                  if (label) label.textContent = o.textContent;
+                }
+              });
+            }
+
+            // Restore Master Mute
+            const savedMute = prefs.master_sfx_muted !== undefined ? (prefs.master_sfx_muted === true || prefs.master_sfx_muted === 'true') : (localStorage.getItem('master_sfx_muted') === 'true');
+            setMasterMute(savedMute);
+
+            // Restore SFX settings & Volume Slider
+            let savedVol = 0.5;
+            if (prefs.sfx_volume !== undefined && !isNaN(parseFloat(prefs.sfx_volume))) {
+              savedVol = parseFloat(prefs.sfx_volume);
+            } else if (localStorage.getItem('sfx_volume') !== null && !isNaN(parseFloat(localStorage.getItem('sfx_volume')))) {
+              savedVol = parseFloat(localStorage.getItem('sfx_volume'));
+            }
+            sfxVolume = savedVol;
+            const volSlider = document.getElementById('sfx-volume-slider');
+            const volPercent = document.getElementById('sfx-volume-percent');
+            if (volSlider && volPercent) {
+              volSlider.value = sfxVolume;
+              volPercent.textContent = Math.round(sfxVolume * 100) + '%';
+            }
+
+            const sfxKeys = [
+              { id: 'toggle-sfx-tm-tabs', key: 'sfx_enabled_tm_tabs' },
+              { id: 'toggle-sfx-ta', key: 'sfx_enabled_ta' },
+              { id: 'toggle-sfx-tb-clicks', key: 'sfx_enabled_tb_clicks' },
+              { id: 'toggle-sfx-tm-header', key: 'sfx_enabled_tm_header' },
+              { id: 'toggle-sfx-tb-close', key: 'sfx_enabled_tb_close' },
+              { id: 'toggle-sfx-tb-modal', key: 'sfx_enabled_tb_modal' }
+            ];
+
+            sfxKeys.forEach(item => {
+              const el = document.getElementById(item.id);
+              if (el) {
+                const isChecked = prefs[item.key] !== 'false';
+                el.checked = isChecked;
+                localStorage.setItem(item.key, isChecked ? 'true' : 'false');
+              }
+            });
           }
         }
-      }
     } catch(e) {}
 
     renderOpenTabs();
@@ -646,6 +800,7 @@
   // Reset Defaults
   if (resetThemeBtn) {
     resetThemeBtn.addEventListener('click', () => {
+      playSFX('tm_header');
       applyCustomGradient('#A2A9A9', '#1B4264');
       applyCustomBg('#ffffff');
       setTheme('light');
@@ -688,47 +843,197 @@
     if (themeBtnLight) themeBtnLight.classList.toggle('active', activeTheme === 'light');
 
     syncHostPageTheme(activeTheme);
+    localStorage.setItem('theme', activeTheme);
+
+    if (window.CaspianBridge && typeof window.CaspianBridge.saveSetting === 'function') {
+      window.CaspianBridge.saveSetting('themeMode', activeTheme);
+    }
   }
 
   if (themeToggleBtn) {
     themeToggleBtn.addEventListener('click', () => {
+      playSFX('tm_header');
       setTheme(activeTheme === 'light' ? 'dark' : 'light');
     });
   }
-  if (themeBtnDark) themeBtnDark.addEventListener('click', () => setTheme('dark'));
-  if (themeBtnLight) themeBtnLight.addEventListener('click', () => setTheme('light'));
+  if (themeBtnDark) themeBtnDark.addEventListener('click', () => { playSFX('tm_header'); setTheme('dark'); });
+  if (themeBtnLight) themeBtnLight.addEventListener('click', () => { playSFX('tm_header'); setTheme('light'); });
 
   // Resizable Drag Area Hitbox
   const targetDragArea = dragArea || document.querySelector('.sheet-drag-area') || document.querySelector('.sheet-drag-handle');
   if (targetDragArea && bottomSheet) {
     let startY, startHeight;
+    let lastClientY = 0;
+    let startTime = 0;
 
     targetDragArea.addEventListener('touchstart', (e) => {
       try { e.preventDefault(); } catch(err) {}
       const touch = e.touches[0];
       startY = touch.clientY;
+      lastClientY = touch.clientY;
       startHeight = bottomSheet.offsetHeight;
+      startTime = Date.now();
       bottomSheet.style.transition = 'none';
     }, { passive: false });
 
     targetDragArea.addEventListener('touchmove', (e) => {
       try { e.preventDefault(); } catch(err) {}
       const touch = e.touches[0];
+      lastClientY = touch.clientY;
       const deltaY = startY - touch.clientY;
       const newHeight = startHeight + deltaY;
-      const vhHeight = Math.max(25, Math.min(95, (newHeight / window.innerHeight) * 100));
+      const vhHeight = Math.max(20, Math.min(95, (newHeight / window.innerHeight) * 100));
       bottomSheet.style.height = vhHeight + 'vh';
       bottomSheet.style.maxHeight = '95vh';
     }, { passive: false });
 
     targetDragArea.addEventListener('touchend', () => {
       bottomSheet.style.transition = 'transform 0.35s cubic-bezier(0.16, 1, 0.3, 1), height 0.3s ease';
+      const displacementY = lastClientY - startY;
+      const timeElapsed = Date.now() - startTime;
+      const velocityY = displacementY / timeElapsed; // px/ms
+      const currentHeightVh = (bottomSheet.offsetHeight / window.innerHeight) * 100;
+
+      if ((displacementY > 120 && velocityY > 0.8) || currentHeightVh < 30) {
+        // Dragged down quickly or all the way to bottom! Close the sheet natively.
+        if (window.CaspianBridge && typeof window.CaspianBridge.closeSheet === 'function') {
+          window.CaspianBridge.closeSheet();
+        }
+        setTimeout(() => {
+          bottomSheet.style.height = '65vh';
+        }, 350);
+      } else {
+        // Snap to closest stable layout position (e.g. 45vh, 65vh, 85vh)
+        let snapVh = 65;
+        if (currentHeightVh < 55) {
+          snapVh = 45;
+        } else if (currentHeightVh > 75) {
+          snapVh = 85;
+        }
+        bottomSheet.style.height = snapVh + 'vh';
+      }
+    });
+  }
+
+  // Reload Active Tab WebView Button
+  const reloadBtn = document.getElementById('reload-btn');
+  if (reloadBtn) {
+    reloadBtn.addEventListener('click', () => {
+      playSFX('tm_header');
+      if (window.CaspianBridge && typeof window.CaspianBridge.reloadActiveTab === 'function') {
+        window.CaspianBridge.reloadActiveTab();
+      }
+    });
+  }
+
+  // Open Duration Plus/Minus
+  const btnOpenDurMinus = document.getElementById('btn-open-dur-minus');
+  const btnOpenDurPlus = document.getElementById('btn-open-dur-plus');
+  const txtOpenDur = document.getElementById('txt-open-dur');
+ 
+  if (btnOpenDurMinus && btnOpenDurPlus && txtOpenDur) {
+    btnOpenDurMinus.addEventListener('click', () => {
+      let val = parseInt(txtOpenDur.textContent) || 350;
+      val = Math.max(0, val - 10);
+      txtOpenDur.textContent = `${val} ms`;
+      if (window.CaspianBridge && typeof window.CaspianBridge.saveSetting === 'function') {
+        window.CaspianBridge.saveSetting('sheetOpenDuration', val.toString());
+      }
+    });
+    btnOpenDurPlus.addEventListener('click', () => {
+      let val = parseInt(txtOpenDur.textContent) || 350;
+      val = Math.min(1500, val + 10);
+      txtOpenDur.textContent = `${val} ms`;
+      if (window.CaspianBridge && typeof window.CaspianBridge.saveSetting === 'function') {
+        window.CaspianBridge.saveSetting('sheetOpenDuration', val.toString());
+      }
+    });
+  }
+ 
+  // Close Duration Plus/Minus
+  const btnCloseDurMinus = document.getElementById('btn-close-dur-minus');
+  const btnCloseDurPlus = document.getElementById('btn-close-dur-plus');
+  const txtCloseDur = document.getElementById('txt-close-dur');
+ 
+  if (btnCloseDurMinus && btnCloseDurPlus && txtCloseDur) {
+    btnCloseDurMinus.addEventListener('click', () => {
+      let val = parseInt(txtCloseDur.textContent) || 300;
+      val = Math.max(0, val - 10);
+      txtCloseDur.textContent = `${val} ms`;
+      if (window.CaspianBridge && typeof window.CaspianBridge.saveSetting === 'function') {
+        window.CaspianBridge.saveSetting('sheetCloseDuration', val.toString());
+      }
+    });
+    btnCloseDurPlus.addEventListener('click', () => {
+      let val = parseInt(txtCloseDur.textContent) || 300;
+      val = Math.min(1500, val + 10);
+      txtCloseDur.textContent = `${val} ms`;
+      if (window.CaspianBridge && typeof window.CaspianBridge.saveSetting === 'function') {
+        window.CaspianBridge.saveSetting('sheetCloseDuration', val.toString());
+      }
+    });
+  }
+ 
+  // Button Tap Bounce Duration Plus/Minus
+  const btnTapDurMinus = document.getElementById('btn-tap-dur-minus');
+  const btnTapDurPlus = document.getElementById('btn-tap-dur-plus');
+  const txtTapDur = document.getElementById('txt-tap-dur');
+ 
+  if (btnTapDurMinus && btnTapDurPlus && txtTapDur) {
+    btnTapDurMinus.addEventListener('click', () => {
+      let val = parseInt(txtTapDur.textContent) || 100;
+      val = Math.max(0, val - 10);
+      txtTapDur.textContent = `${val} ms`;
+      if (window.CaspianBridge && typeof window.CaspianBridge.saveSetting === 'function') {
+        window.CaspianBridge.saveSetting('theme_button_tap_duration', val.toString());
+      }
+    });
+    btnTapDurPlus.addEventListener('click', () => {
+      let val = parseInt(txtTapDur.textContent) || 100;
+      val = Math.min(500, val + 10);
+      txtTapDur.textContent = `${val} ms`;
+      if (window.CaspianBridge && typeof window.CaspianBridge.saveSetting === 'function') {
+        window.CaspianBridge.saveSetting('theme_button_tap_duration', val.toString());
+      }
+    });
+  }
+
+  // Animation Style Select Options
+  const selectAnimStyle = document.getElementById('select-anim-style');
+  if (selectAnimStyle) {
+    const trigger = selectAnimStyle.querySelector('.caspian-select-trigger');
+    const optionsContainer = selectAnimStyle.querySelector('.caspian-select-options');
+    const label = document.getElementById('selected-anim-style-text');
+
+    trigger.addEventListener('click', (e) => {
+      e.stopPropagation();
+      optionsContainer.classList.toggle('open');
+    });
+
+    selectAnimStyle.querySelectorAll('.caspian-select-option').forEach(opt => {
+      opt.addEventListener('click', (e) => {
+        e.stopPropagation();
+        selectAnimStyle.querySelectorAll('.caspian-select-option').forEach(o => o.classList.remove('active'));
+        opt.classList.add('active');
+        const val = opt.dataset.val;
+        label.textContent = opt.textContent;
+        optionsContainer.classList.remove('open');
+
+        if (window.CaspianBridge && typeof window.CaspianBridge.saveSetting === 'function') {
+          window.CaspianBridge.saveSetting('sheetAnimationStyle', val);
+        }
+      });
+    });
+
+    document.addEventListener('click', () => {
+      optionsContainer.classList.remove('open');
     });
   }
 
   // App Icon Cards: Open new tab for selected platform (Hub, ChatGPT, Gemini)
   if (appCardHub) {
     appCardHub.addEventListener('click', () => {
+      playSFX('tb_clicks');
       if (window.CaspianBridge && typeof window.CaspianBridge.createNewTab === 'function') {
         window.CaspianBridge.createNewTab('hub');
         setTimeout(renderOpenTabs, 100);
@@ -738,6 +1043,7 @@
 
   if (appCardGpt) {
     appCardGpt.addEventListener('click', () => {
+      playSFX('tb_clicks');
       if (window.CaspianBridge && typeof window.CaspianBridge.createNewTab === 'function') {
         window.CaspianBridge.createNewTab('chatgpt');
         setTimeout(renderOpenTabs, 100);
@@ -747,6 +1053,7 @@
 
   if (appCardGemini) {
     appCardGemini.addEventListener('click', () => {
+      playSFX('tb_clicks');
       if (window.CaspianBridge && typeof window.CaspianBridge.createNewTab === 'function') {
         window.CaspianBridge.createNewTab('gemini');
         setTimeout(renderOpenTabs, 100);
@@ -754,8 +1061,29 @@
     });
   }
 
+  if (appCardGoogle) {
+    appCardGoogle.addEventListener('click', () => {
+      playSFX('tb_clicks');
+      if (window.CaspianBridge && typeof window.CaspianBridge.createNewTab === 'function') {
+        window.CaspianBridge.createNewTab('google');
+        setTimeout(renderOpenTabs, 100);
+      }
+    });
+  }
+
+  if (appCardYoutube) {
+    appCardYoutube.addEventListener('click', () => {
+      playSFX('tb_clicks');
+      if (window.CaspianBridge && typeof window.CaspianBridge.createNewTab === 'function') {
+        window.CaspianBridge.createNewTab('youtube');
+        setTimeout(renderOpenTabs, 100);
+      }
+    });
+  }
+
   if (newTabBtn) {
     newTabBtn.addEventListener('click', () => {
+      playSFX('tb_clicks');
       if (window.CaspianBridge && typeof window.CaspianBridge.createNewTab === 'function') {
         window.CaspianBridge.createNewTab('chatgpt');
         setTimeout(renderOpenTabs, 100);
@@ -765,6 +1093,7 @@
 
   if (closeAllTabsBtn) {
     closeAllTabsBtn.addEventListener('click', () => {
+      playSFX('tb_close');
       if (window.CaspianBridge && typeof window.CaspianBridge.closeAllTabs === 'function') {
         window.CaspianBridge.closeAllTabs();
         setTimeout(renderOpenTabs, 150);
@@ -775,28 +1104,30 @@
   // Mobile Tab Navigation
   document.querySelectorAll('.tab-nav-btn').forEach(btn => {
     btn.addEventListener('click', () => {
+      playSFX('tm_tabs');
       document.querySelectorAll('.tab-nav-btn').forEach(b => b.classList.remove('active'));
       document.querySelectorAll('.tab-pane').forEach(p => p.style.display = 'none');
-
+ 
       btn.classList.add('active');
       const targetTab = btn.dataset.tab;
       const pane = document.getElementById(`tab-pane-${targetTab}`);
       if (pane) pane.style.display = 'block';
-
+ 
       if (targetTab === 'sites') {
         renderOpenTabs();
       }
     });
   });
-
+ 
   // Master Power Switch
   if (powerToggleBtn) {
     powerToggleBtn.addEventListener('click', () => {
+      playSFX('tm_header');
       globalActive = !globalActive;
       const statusDot = document.getElementById('status-dot');
       const statusTitle = document.getElementById('status-title');
       const statusSub = document.getElementById('status-sub');
-
+ 
       if (statusDot) statusDot.classList.toggle('active', globalActive);
       if (statusTitle) statusTitle.textContent = globalActive ? 'Chat Message Limit: ON' : 'Chat Message Limit: OFF';
       if (statusSub) statusSub.textContent = globalActive ? 'it limites the amout of message shown from below so all message above it will get prune or cut out this is done to improve performance and reduce lagging.' : 'Message Limit paused via Master Power Switch';
@@ -973,10 +1304,71 @@
   initCustomSelect('select-export-chatgpt-temp', 'export_chatgpt_temp');
   initCustomSelect('select-export-gemini-normal', 'export_gemini_normal');
   initCustomSelect('select-export-gemini-temp', 'export_gemini_temp');
+  initCustomSelect('select-refresh-rate', 'active_refresh_rate');
+  initCustomSelect('select-anim-style', 'sheetAnimationStyle');
+
+  // Audio SFX Volume & Toggle listeners
+  const volSlider = document.getElementById('sfx-volume-slider');
+  const volPercent = document.getElementById('sfx-volume-percent');
+  if (volSlider && volPercent) {
+    volSlider.addEventListener('input', () => {
+      const vol = parseFloat(volSlider.value);
+      sfxVolume = vol;
+      volPercent.textContent = Math.round(vol * 100) + '%';
+      localStorage.setItem('sfx_volume', vol.toString());
+      if (window.CaspianBridge && typeof window.CaspianBridge.saveSetting === 'function') {
+        window.CaspianBridge.saveSetting('sfx_volume', vol.toString());
+      }
+    });
+  }
+
+  const muteBtn = document.getElementById('mute-toggle-btn');
+  if (muteBtn) {
+    muteBtn.addEventListener('click', () => {
+      setMasterMute(!masterSFXMuted);
+    });
+  }
+
+  const masterToggle = document.getElementById('toggle-sfx-master');
+  if (masterToggle) {
+    masterToggle.addEventListener('change', () => {
+      setMasterMute(!masterToggle.checked);
+    });
+  }
+
+  const sfxToggles = [
+    { id: 'toggle-sfx-tm-tabs', key: 'sfx_enabled_tm_tabs' },
+    { id: 'toggle-sfx-ta', key: 'sfx_enabled_ta' },
+    { id: 'toggle-sfx-tb-clicks', key: 'sfx_enabled_tb_clicks' },
+    { id: 'toggle-sfx-tm-header', key: 'sfx_enabled_tm_header' },
+    { id: 'toggle-sfx-tb-close', key: 'sfx_enabled_tb_close' },
+    { id: 'toggle-sfx-tb-modal', key: 'sfx_enabled_tb_modal' }
+  ];
+
+  sfxToggles.forEach(item => {
+    const el = document.getElementById(item.id);
+    if (el) {
+      el.addEventListener('change', () => {
+        const checkedStr = el.checked ? 'true' : 'false';
+        localStorage.setItem(item.key, checkedStr);
+        if (window.CaspianBridge && typeof window.CaspianBridge.saveSetting === 'function') {
+          window.CaspianBridge.saveSetting(item.key, checkedStr);
+        }
+        if (el.checked) {
+          if (item.key === 'sfx_enabled_ta') {
+            if (window.CaspianBridge && typeof window.CaspianBridge.playAssetSound === 'function') {
+              window.CaspianBridge.playAssetSound("sfx/tap_alternate.wav");
+            }
+          } else {
+            playSFX(item.key.replace('sfx_enabled_', ''));
+          }
+        }
+      });
+    }
+  });
 
   // Initialize saved settings on load
   restoreSavedSettings();
-})();
 
 function restoreSavedSettings() {
   const pdfModeSelect = document.getElementById('pdf-export-mode-select');
@@ -999,7 +1391,9 @@ function restoreSavedSettings() {
           'export_chatgpt_normal': 'select-export-chatgpt-normal',
           'export_chatgpt_temp': 'select-export-chatgpt-temp',
           'export_gemini_normal': 'select-export-gemini-normal',
-          'export_gemini_temp': 'select-export-gemini-temp'
+          'export_gemini_temp': 'select-export-gemini-temp',
+          'active_refresh_rate': 'select-refresh-rate',
+          'sheetAnimationStyle': 'select-anim-style'
         };
         
         for (const [prefKey, elementId] of Object.entries(exportKeys)) {
@@ -1017,6 +1411,29 @@ function restoreSavedSettings() {
               });
             }
           }
+        }
+        const visualsDetails = document.getElementById('settings-card-visuals');
+        if (visualsDetails) {
+          visualsDetails.open = localStorage.getItem('settings_open_visuals') === 'true';
+          visualsDetails.addEventListener('toggle', () => {
+            localStorage.setItem('settings_open_visuals', visualsDetails.open ? 'true' : 'false');
+          });
+        }
+
+        const audioDetails = document.getElementById('settings-card-audio');
+        if (audioDetails) {
+          audioDetails.open = localStorage.getItem('settings_open_audio') === 'true';
+          audioDetails.addEventListener('toggle', () => {
+            localStorage.setItem('settings_open_audio', audioDetails.open ? 'true' : 'false');
+          });
+        }
+
+        const advancedDetails = document.getElementById('settings-card-advanced');
+        if (advancedDetails) {
+          advancedDetails.open = localStorage.getItem('settings_open_advanced') === 'true';
+          advancedDetails.addEventListener('toggle', () => {
+            localStorage.setItem('settings_open_advanced', advancedDetails.open ? 'true' : 'false');
+          });
         }
       }
     } catch(e){}
@@ -1036,6 +1453,7 @@ function openTabOptionsMenu(tab) {
   // Modal actions
   const cancelBtn = document.getElementById('modal-cancel-btn');
   cancelBtn.onclick = () => {
+    playSFX('tb_modal');
     nicknameInput.blur();
     urlDisplay.blur();
     modal.style.display = 'none';
@@ -1046,6 +1464,7 @@ function openTabOptionsMenu(tab) {
 
   const copyUrlBtn = document.getElementById('modal-copy-url-btn');
   copyUrlBtn.onclick = () => {
+    playSFX('tb_modal');
     if (window.CaspianBridge && typeof window.CaspianBridge.copyToClipboard === 'function') {
       window.CaspianBridge.copyToClipboard(urlDisplay.value);
     }
@@ -1054,6 +1473,7 @@ function openTabOptionsMenu(tab) {
   const clearNicknameBtn = document.getElementById('modal-clear-nickname-btn');
   if (clearNicknameBtn) {
     clearNicknameBtn.onclick = () => {
+      playSFX('tb_modal');
       nicknameInput.blur();
       urlDisplay.blur();
       nicknameInput.value = '';
@@ -1066,12 +1486,13 @@ function openTabOptionsMenu(tab) {
         if (typeof window.renderOpenTabs === 'function') {
           window.renderOpenTabs();
         }
-      }, 300);
+      }, 100);
     };
   }
 
   const saveBtn = document.getElementById('modal-save-btn');
   saveBtn.onclick = () => {
+    playSFX('tb_modal');
     nicknameInput.blur();
     urlDisplay.blur();
     const name = nicknameInput.value.trim();
@@ -1089,6 +1510,7 @@ function openTabOptionsMenu(tab) {
 }
 
 function triggerCloseTab(tabId) {
+  playSFX('tb_close');
   showUndoToast();
   if (window.CaspianBridge && typeof window.CaspianBridge.closeTab === 'function') {
     window.CaspianBridge.closeTab(tabId);
@@ -1132,6 +1554,7 @@ function showUndoToast() {
 
   const undoBtn = document.getElementById('undo-toast-btn');
   undoBtn.onclick = () => {
+    playSFX('tb_clicks');
     if (window.CaspianBridge && typeof window.CaspianBridge.restoreLastClosedTab === 'function') {
       window.CaspianBridge.restoreLastClosedTab();
       setTimeout(() => {
@@ -1145,6 +1568,7 @@ function showUndoToast() {
 
   const closeBtn = document.getElementById('close-undo-btn');
   closeBtn.onclick = () => {
+    playSFX('tb_clicks');
     toast.style.display = 'none';
   };
 
@@ -1152,3 +1576,4 @@ function showUndoToast() {
     toast.style.display = 'none';
   }, 6000); // Allow 6 seconds to undo
 }
+})();

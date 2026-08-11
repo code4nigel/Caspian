@@ -1,0 +1,18 @@
+=========================================
+CASPIAN MOBILE - SYSTEM & CONSOLE DIAGNOSTIC LOG
+Started: 2026-08-07 10:05:14
+App Version: 1.0.41
+=========================================
+
+[10:05:14.974] [[SYSTEM]] Started recording console errors, network events & app diagnostics.
+[10:05:16.758] [URL_REDIRECT] https://gemini.google.com/signin?continue=https%3A%2F%2Fgemini.google.com%2Fapp
+[10:05:16.925] [URL_REDIRECT] https://accounts.google.com/ServiceLogin?passive=1209600&continue=https://gemini.google.com/signin?continue%3Dhttps://gemini.google.com/app&followup=https://gemini.google.com/signin?continue%3Dhttps://gemini.google.com/app
+[10:05:16.926] [OAUTH_CCT_LAUNCH] Launching Chrome Custom Tab for complete OAuth session flow: https://accounts.google.com/ServiceLogin?passive=1209600&continue=https://gemini.google.com/signin?continue%3Dhttps://gemini.google.com/app&followup=https://gemini.google.com/signin?continue%3Dhttps://gemini.google.com/app
+[10:05:16.962] [URL_PAGE_FINISH] https://accounts.google.com/ServiceLogin?passive=1209600&continue=https://gemini.google.com/signin?continue%3Dhttps://gemini.google.com/app&followup=https://gemini.google.com/signin?continue%3Dhttps://gemini.google.com/app
+[10:05:18.259] [RESOURCE_ERROR] Error -2: net::ERR_NAME_NOT_RESOLVED @ https://www.google-analytics.com/g/collect?v=2&tid=G-WC57KJ50ZZ&gtm=45je6852v9134258191z89113054662za20gzb9113054662zd9113054662&_p=1786077311996&gcd=13l3l3l3l1l1&npa=0&dma=0&_eu=EAAAAAQ&are=1&cid=595477085.1786076801&frm=0&ir=1&ngs=1&pscdl=noapi&rcb=5&sr=441x956&uaa=&uab=&uafvl=&uam=&uamb=1&uap=Android&uapv=&uaw=0&ul=en-in&tag_exp=115938466~115938469~118897920~118897930~119337770~119527020~119896803~120315470&dl=https%3A%2F%2Fgemini.google-b197145817.com%2Fapp%2F&sid=1786076800&sct=1&seg=1&dt=Google%20Gemini&_s=1&tfd=6667
+[10:05:21.265] [WEB_CONSOLE] The resource https://gemini.gstatic.com/_/mss/boq-bard-web/_/js/k=boq-bard-web.BardChatUi.en_US.TdZ0m8yKt8U.2018.O/ck=boq-bard-web.BardChatUi.u3lx9uhpaJU.L.B1.O/am=FQKQ-Ahgf39Q7JAHBhLAxF4E0AMAAAAgBA/d=1/exm=_b/excm=_b/ed=1/br=1/wt=2/ujg=1/rs=AL3bBk1KBiq5w7T-6VxLJr4LtarPLpMz8g/ee=DGWCxb:CgYiQ;EmZ2Bf:zr1jrb;NJ1rfe:yGfSdd;Pjplud:PoEs9b;QGR0gd:Mlhmy;ScI3Yc:e7Hzgb;UYRIEb:HzTAQc;YIZmRd:A1yn5d;cEt90b:ws9Tlc;dIoSBb:SpsfSb;dowIGb:ebZ3mb;eBAeSb:zbML3c;iFQyKf:vfuNJf;oGtAuc:sOXFj;qQEoOc:KUM7Z;qddgKe:xQtZb;wNp4Gc:k56rsf;wR5FRb:siKnQd;yxTchf:KUM7Z/dti=1/m=LQaXg,ziINQc?wli=BardChatUi.ElhTqNGQ59s.libheifWasm.O%3A%3B was preloaded using link preload but not used within a few seconds from the window's load event. Please make sure it has an appropriate `as` value and it is preloaded intentionally. (Line 0 @ https://gemini.google.com/app)
+[10:05:21.681] [OAUTH_CCT_RESUME] Returned from Chrome Custom Tab. Flushing cookies & reloading main page.
+[10:05:21.870] [URL_PAGE_START] https://chatgpt.com/
+[10:05:21.880] [URL_NAV_HISTORY] https://chatgpt.com/
+[10:05:21.892] [RESOURCE_ERROR] Error -6: net::ERR_CONNECTION_REFUSED @ https://www.google-analytics.com/g/collect?v=2&tid=G-WC57KJ50ZZ&gtm=45je6852v9134258191za20gzb9113054662zd9113054662&_p=1786077311996&gcd=13l3l3l3l1l1&npa=0&dma=0&_eu=EAAAAAQ&are=1&cid=595477085.1786076801&frm=0&ir=1&ngs=1&pscdl=noapi&rcb=5&sr=441x956&uaa=&uab=&uafvl=&uam=&uamb=1&uap=Android&uapv=&uaw=0&ul=en-in&_s=2&tag_exp=115938466~115938469~118897920~118897930~119337770~119527020~119896803~120315470&dl=https%3A%2F%2Fgemini.google-b197145817.com%2F&sid=1786076800&sct=1&seg=1&dt=Google%20Gemini&en=user_engagement&ep.page_locale=default&ep.user_agent=Mozilla%2F5.0%20(Linux%3B%20Android%2010%3B%20K)%20AppleWebKit%2F537.36%20(KHTML%2C%20like%20Gecko)%20Chrome%2F125.0.0.0%20Mobile%20Safari%2F537.36&ep.is_eea=true&_et=1160&tfd=10315
+[10:05:22.035] [URL_PAGE_FINISH] https://chatgpt.com/

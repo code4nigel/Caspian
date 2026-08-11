@@ -18,6 +18,7 @@ import android.webkit.ConsoleMessage;
 import android.webkit.CookieManager;
 import android.webkit.SslErrorHandler;
 import android.webkit.WebChromeClient;
+import android.webkit.ValueCallback;
 import android.webkit.WebResourceError;
 import android.webkit.WebResourceRequest;
 import android.webkit.WebResourceResponse;
@@ -25,6 +26,17 @@ import android.webkit.WebSettings;
 import android.webkit.WebView;
 import android.webkit.WebViewClient;
 import android.widget.FrameLayout;
+import android.net.Uri;
+import android.os.Build;
+import android.content.Intent;
+import android.provider.MediaStore;
+import android.os.Handler;
+import android.os.Looper;
+import androidx.core.app.ActivityCompat;
+import androidx.core.content.ContextCompat;
+import android.content.pm.PackageManager;
+import android.Manifest;
+import android.content.Context;
 
 import androidx.appcompat.app.AppCompatActivity;
 import androidx.cardview.widget.CardView;
@@ -75,6 +87,7 @@ public class MainActivity extends AppCompatActivity {
     private String pendingPrefill = null;
     private boolean isPrinting = false;
     private TabItem lastClosedTab = null;
+    private boolean lastClosedTabWasActive = false;
 
     // Debug Log Recording Variables
     private boolean isDebugRecording = false;
@@ -86,6 +99,43 @@ public class MainActivity extends AppCompatActivity {
     private boolean isDragging = false;
 
     private static final String DEFAULT_CHROME_UA = "Mozilla/5.0 (Linux; Android 10; K) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/128.0.0.0 Mobile Safari/537.36";
+
+    // File Chooser & Camera Permissions Variables
+    private android.webkit.ValueCallback<Uri[]> uploadMessage;
+    private final static int FILECHOOSER_RESULTCODE = 1;
+    private final static int PERMISSION_REQUEST_CODE = 1001;
+    public static final int MIC_PERMISSION_REQUEST_CODE = 1002;
+    private Uri cameraImageUri;
+    private android.webkit.PermissionRequest pendingWebPermissionRequest;
+
+    // HTML5 Fullscreen Video Handling (YouTube, Vimeo, Web Video Players)
+    private View customView;
+    private WebChromeClient.CustomViewCallback customViewCallback;
+    private FrameLayout fullscreenContainer;
+
+    // Video Splash Screen Overlay
+    private FrameLayout splashOverlay;
+    private android.widget.VideoView splashVideoView;
+
+    // WebView active layout refresh timer
+    private final Handler refreshHandler = new Handler(Looper.getMainLooper());
+    private final Runnable refreshRunnable = new Runnable() {
+        @Override
+        public void run() {
+            TabItem activeTab = getActiveTab();
+            if (activeTab != null && activeTab.webView != null && activeTab.webView.getVisibility() == View.VISIBLE) {
+                activeTab.webView.postInvalidate();
+            }
+            SharedPreferences prefs = getSharedPreferences("CaspianMobilePrefs", MODE_PRIVATE);
+            int rate = 100;
+            try {
+                rate = Integer.parseInt(prefs.getString("active_refresh_rate", "100"));
+            } catch (Exception e) {}
+            if (rate > 0) {
+                refreshHandler.postDelayed(this, rate);
+            }
+        }
+    };
 
     @SuppressLint({"SetJavaScriptEnabled", "ClickableViewAccessibility"})
     @Override
@@ -124,12 +174,143 @@ public class MainActivity extends AppCompatActivity {
         String endColor = prefs.getString("theme_end_color", "#1B4264");
         String iconShape = prefs.getString("theme_icon_shape", "circle");
         applyFloatingTheme(startColor, endColor, iconShape);
+        updateRefreshTimer();
+        setupSplashScreen();
+    }
+
+    private void setupSplashScreen() {
+        splashOverlay = findViewById(R.id.splash_overlay);
+        splashVideoView = findViewById(R.id.splash_videoview);
+        if (splashOverlay != null && splashVideoView != null) {
+            try {
+                Uri videoUri = Uri.parse("android.resource://" + getPackageName() + "/" + R.raw.caspian_splash_v22);
+                splashVideoView.setVideoURI(videoUri);
+                Runnable dismissSplash = new Runnable() {
+                    @Override
+                    public void run() {
+                        if (splashOverlay != null && splashOverlay.getVisibility() == View.VISIBLE) {
+                            splashOverlay.animate()
+                                    .alpha(0f)
+                                    .setDuration(300)
+                                    .withEndAction(() -> {
+                                        splashOverlay.setVisibility(View.GONE);
+                                        if (splashVideoView != null) {
+                                            splashVideoView.stopPlayback();
+                                        }
+                                    })
+                                    .start();
+                        }
+                    }
+                };
+
+                // Center Crop Math to Cover 100% Display Edge-to-Edge with Zero Black Bars
+                splashVideoView.setOnPreparedListener(mp -> {
+                    try {
+                        mp.setLooping(false);
+                        int videoWidth = mp.getVideoWidth();
+                        int videoHeight = mp.getVideoHeight();
+                        if (videoWidth > 0 && videoHeight > 0) {
+                            float videoAspect = (float) videoWidth / (float) videoHeight;
+                            int screenWidth = splashOverlay.getWidth();
+                            int screenHeight = splashOverlay.getHeight();
+                            if (screenWidth == 0 || screenHeight == 0) {
+                                android.util.DisplayMetrics metrics = getResources().getDisplayMetrics();
+                                screenWidth = metrics.widthPixels;
+                                screenHeight = metrics.heightPixels;
+                            }
+                            float screenAspect = (float) screenWidth / (float) screenHeight;
+                            FrameLayout.LayoutParams lp = (FrameLayout.LayoutParams) splashVideoView.getLayoutParams();
+                            if (videoAspect > screenAspect) {
+                                lp.width = (int) (screenHeight * videoAspect);
+                                lp.height = screenHeight;
+                            } else {
+                                lp.width = screenWidth;
+                                lp.height = (int) (screenWidth / videoAspect);
+                            }
+                            lp.gravity = android.view.Gravity.CENTER;
+                            splashVideoView.setLayoutParams(lp);
+                        }
+                    } catch (Exception e) {}
+                });
+
+                splashVideoView.setOnCompletionListener(mp -> dismissSplash.run());
+                splashVideoView.setOnErrorListener((mp, what, extra) -> {
+                    dismissSplash.run();
+                    return true;
+                });
+                splashOverlay.setOnClickListener(v -> dismissSplash.run());
+                splashVideoView.start();
+
+                // Timeout fallback after 4.5s
+                splashOverlay.postDelayed(dismissSplash, 4500);
+            } catch (Exception e) {
+                splashOverlay.setVisibility(View.GONE);
+            }
+        }
+    }
+
+    public void showCustomView(View view, WebChromeClient.CustomViewCallback callback) {
+        if (customView != null) {
+            hideCustomView();
+            return;
+        }
+        customView = view;
+        customViewCallback = callback;
+
+        if (fullscreenContainer == null) {
+            fullscreenContainer = new FrameLayout(this);
+            fullscreenContainer.setBackgroundColor(0xFF000000);
+            getWindow().addContentView(fullscreenContainer, new FrameLayout.LayoutParams(
+                    ViewGroup.LayoutParams.MATCH_PARENT,
+                    ViewGroup.LayoutParams.MATCH_PARENT
+            ));
+        }
+        fullscreenContainer.addView(customView, new FrameLayout.LayoutParams(
+                ViewGroup.LayoutParams.MATCH_PARENT,
+                ViewGroup.LayoutParams.MATCH_PARENT
+        ));
+        fullscreenContainer.setVisibility(View.VISIBLE);
+        fullscreenContainer.bringToFront();
+
+        // Immersive Full Screen System Flags
+        getWindow().getDecorView().setSystemUiVisibility(
+                View.SYSTEM_UI_FLAG_FULLSCREEN
+                | View.SYSTEM_UI_FLAG_HIDE_NAVIGATION
+                | View.SYSTEM_UI_FLAG_IMMERSIVE_STICKY
+                | View.SYSTEM_UI_FLAG_LAYOUT_FULLSCREEN
+                | View.SYSTEM_UI_FLAG_LAYOUT_HIDE_NAVIGATION
+        );
+        setRequestedOrientation(android.content.pm.ActivityInfo.SCREEN_ORIENTATION_SENSOR_LANDSCAPE);
+    }
+
+    public void hideCustomView() {
+        if (customView == null) return;
+
+        if (fullscreenContainer != null) {
+            fullscreenContainer.removeView(customView);
+            fullscreenContainer.setVisibility(View.GONE);
+        }
+        if (customViewCallback != null) {
+            customViewCallback.onCustomViewHidden();
+            customViewCallback = null;
+        }
+        customView = null;
+
+        getWindow().getDecorView().setSystemUiVisibility(View.SYSTEM_UI_FLAG_VISIBLE);
+        setRequestedOrientation(android.content.pm.ActivityInfo.SCREEN_ORIENTATION_UNSPECIFIED);
     }
 
     @Override
     protected void onResume() {
         super.onResume();
         CookieManager.getInstance().flush();
+        updateRefreshTimer();
+    }
+
+    @Override
+    protected void onPause() {
+        super.onPause();
+        refreshHandler.removeCallbacks(refreshRunnable);
     }
 
     // Debug Recording Control Methods
@@ -336,6 +517,44 @@ public class MainActivity extends AppCompatActivity {
                 if (!isPrinting && isSupportedUrl(url)) {
                     injectPrunerScript(view);
                 }
+
+                // Restore active theme mode immediately on finish load
+                try {
+                    SharedPreferences prefsShared = getSharedPreferences("CaspianMobilePrefs", MODE_PRIVATE);
+                    String themeMode = prefsShared.getString("themeMode", "light");
+                    boolean isDark = "dark".equalsIgnoreCase(themeMode);
+                    String themeJs = "(function() {" +
+                            "  var isDark = " + isDark + ";" +
+                            "  document.documentElement.classList.toggle('dark', isDark);" +
+                            "  document.documentElement.classList.toggle('light', !isDark);" +
+                            "  document.documentElement.setAttribute('data-theme', isDark ? 'dark' : 'light');" +
+                            "  if (document.body) {" +
+                            "    document.body.classList.toggle('dark-theme', isDark);" +
+                            "    document.body.classList.toggle('light-theme', !isDark);" +
+                            "    document.body.classList.toggle('dark', isDark);" +
+                            "  }" +
+                            "  var provider = document.querySelector('gds-theme-provider, .mat-app-background, mat-sidenav-container');" +
+                            "  if (provider) {" +
+                            "    provider.setAttribute('mode', isDark ? 'dark' : 'light');" +
+                            "    provider.setAttribute('color-scheme', isDark ? 'dark' : 'light');" +
+                            "  }" +
+                            "  var overrideStyle = document.getElementById('caspian-theme-override');" +
+                            "  if (isDark) {" +
+                            "    if (!overrideStyle) {" +
+                            "      overrideStyle = document.createElement('style');" +
+                            "      overrideStyle.id = 'caspian-theme-override';" +
+                            "      document.head.appendChild(overrideStyle);" +
+                            "    }" +
+                            "    overrideStyle.textContent = 'html, body { color-scheme: dark !important; background-color: #131314 !important; color: #e3e3e3 !important; }';" +
+                            "  } else if (overrideStyle) {" +
+                            "    overrideStyle.remove();" +
+                            "  }" +
+                            "  try { localStorage.setItem('theme', isDark ? 'dark' : 'light'); } catch(e){}" +
+                            "  try { localStorage.setItem('colorMode', isDark ? 'dark' : 'light'); } catch(e){}" +
+                            "})();";
+                    view.evaluateJavascript(themeJs, null);
+                } catch (Exception e) {}
+
                 tab.url = url;
                 String t = view.getTitle();
                 if (t != null && !t.isEmpty() && !t.startsWith("file://")) {
@@ -359,6 +578,66 @@ public class MainActivity extends AppCompatActivity {
 
         // OAuth Multi-Window Transport: Dedicated temporary popup WebView for Google & Apple logins!
         wv.setWebChromeClient(new WebChromeClient() {
+            @Override
+            public void onShowCustomView(View view, CustomViewCallback callback) {
+                MainActivity.this.showCustomView(view, callback);
+            }
+
+            @Override
+            public void onHideCustomView() {
+                MainActivity.this.hideCustomView();
+            }
+
+            @Override
+            public void onPermissionRequest(final android.webkit.PermissionRequest request) {
+                MainActivity.this.runOnUiThread(new Runnable() {
+                    @Override
+                    public void run() {
+                        if (request == null) return;
+                        String[] resources = request.getResources();
+                        boolean needsMedia = false;
+                        if (resources != null) {
+                            for (String res : resources) {
+                                if (android.webkit.PermissionRequest.RESOURCE_AUDIO_CAPTURE.equals(res) ||
+                                    android.webkit.PermissionRequest.RESOURCE_VIDEO_CAPTURE.equals(res)) {
+                                    needsMedia = true;
+                                    break;
+                                }
+                            }
+                        }
+                        if (needsMedia) {
+                            boolean hasMic = ContextCompat.checkSelfPermission(MainActivity.this, Manifest.permission.RECORD_AUDIO) == PackageManager.PERMISSION_GRANTED;
+                            boolean hasCam = ContextCompat.checkSelfPermission(MainActivity.this, Manifest.permission.CAMERA) == PackageManager.PERMISSION_GRANTED;
+                            if (!hasMic || !hasCam) {
+                                pendingWebPermissionRequest = request;
+                                ActivityCompat.requestPermissions(MainActivity.this, new String[]{
+                                        Manifest.permission.RECORD_AUDIO,
+                                        Manifest.permission.CAMERA,
+                                        Manifest.permission.MODIFY_AUDIO_SETTINGS
+                                }, MIC_PERMISSION_REQUEST_CODE);
+                                return;
+                            }
+                        }
+                        request.grant(request.getResources());
+                    }
+                });
+            }
+
+            @Override
+            public boolean onShowFileChooser(WebView webView, ValueCallback<Uri[]> filePathCallback, WebChromeClient.FileChooserParams fileChooserParams) {
+                if (uploadMessage != null) {
+                    uploadMessage.onReceiveValue(null);
+                    uploadMessage = null;
+                }
+                uploadMessage = filePathCallback;
+                if (checkPermissions()) {
+                    openFileChooser();
+                } else {
+                    requestPermissions();
+                }
+                return true;
+            }
+
             @Override
             public boolean onConsoleMessage(ConsoleMessage consoleMessage) {
                 if (consoleMessage != null && consoleMessage.message() != null) {
@@ -507,6 +786,30 @@ public class MainActivity extends AppCompatActivity {
 
                 case MotionEvent.ACTION_UP:
                     if (!isDragging) {
+                        playAssetSound("sfx/tap_alternate.wav");
+                        SharedPreferences prefs = getSharedPreferences("CaspianMobilePrefs", MODE_PRIVATE);
+                        int tapDurationVal = 100;
+                        try {
+                            String tapDurStr = prefs.getString("theme_button_tap_duration", "100");
+                            tapDurationVal = Integer.parseInt(tapDurStr);
+                        } catch(Exception e) {}
+
+                        final int finalTapDur = tapDurationVal;
+                        if (finalTapDur > 0) {
+                            floatingCaspianCard.animate()
+                                    .scaleX(0.88f)
+                                    .scaleY(0.88f)
+                                    .setDuration(finalTapDur)
+                                    .withEndAction(() -> {
+                                        floatingCaspianCard.animate()
+                                                .scaleX(1.0f)
+                                                .scaleY(1.0f)
+                                                .setDuration(finalTapDur)
+                                                .setInterpolator(new android.view.animation.OvershootInterpolator(1.2f))
+                                                .start();
+                                    })
+                                    .start();
+                        }
                         toggleControlSheet();
                     }
                     return true;
@@ -666,6 +969,12 @@ public class MainActivity extends AppCompatActivity {
         } else if ("hub".equalsIgnoreCase(service)) {
             url = "file:///android_asset/launch_hub.html";
             title = "Caspian Hub";
+        } else if ("google".equalsIgnoreCase(service)) {
+            url = "https://www.google.com/";
+            title = "Google Search";
+        } else if ("youtube".equalsIgnoreCase(service)) {
+            url = "https://www.youtube.com/";
+            title = "YouTube";
         }
 
         TabItem newTab = new TabItem(newId, title, url, service, null);
@@ -684,6 +993,12 @@ public class MainActivity extends AppCompatActivity {
         } else if ("hub".equalsIgnoreCase(service)) {
             url = "file:///android_asset/launch_hub.html";
             title = "Caspian Hub";
+        } else if ("google".equalsIgnoreCase(service)) {
+            url = "https://www.google.com/";
+            title = "Google Search";
+        } else if ("youtube".equalsIgnoreCase(service)) {
+            url = "https://www.youtube.com/";
+            title = "YouTube";
         }
 
         this.pendingPrefill = promptContext;
@@ -744,6 +1059,7 @@ public class MainActivity extends AppCompatActivity {
                 webViewContainer.removeView(toRemove.webView);
             }
             lastClosedTab = toRemove;
+            lastClosedTabWasActive = (activeTabId == tabId);
             tabsList.remove(toRemove);
 
             if (activeTabId == tabId) {
@@ -758,12 +1074,16 @@ public class MainActivity extends AppCompatActivity {
     public void restoreLastClosedTab() {
         if (lastClosedTab != null) {
             tabsList.add(lastClosedTab);
-            saveTabsToPrefs();
-            switchTab(lastClosedTab.id);
             
             // Re-attach its webview
             if (lastClosedTab.webView != null) {
                 webViewContainer.addView(lastClosedTab.webView);
+            }
+            
+            if (lastClosedTabWasActive) {
+                switchTab(lastClosedTab.id, true);
+            } else {
+                saveTabsToPrefs();
             }
             
             lastClosedTab = null;
@@ -797,12 +1117,120 @@ public class MainActivity extends AppCompatActivity {
 
     public void openControlSheet() {
         sheetOverlayContainer.setVisibility(View.VISIBLE);
-        controlWebView.evaluateJavascript("if (typeof restoreSavedSettings === 'function') { restoreSavedSettings(); }", null);
+        
+        SharedPreferences prefs = getSharedPreferences("CaspianMobilePrefs", MODE_PRIVATE);
+        int openDuration = 150;
+        try {
+            String openDurStr = prefs.getString("sheetOpenDuration", "150");
+            openDuration = Integer.parseInt(openDurStr);
+        } catch(Exception e) {}
+        String animStyle = prefs.getString("sheetAnimationStyle", "genie");
+
+        sheetBackdrop.setAlpha(0f);
+        sheetBackdrop.animate()
+                .alpha(1f)
+                .setDuration(openDuration)
+                .start();
+
+        Runnable onOpenComplete = () -> {
+            controlWebView.evaluateJavascript("if (typeof restoreSavedSettings === 'function') { restoreSavedSettings(); }", null);
+        };
+
+        if ("none".equalsIgnoreCase(animStyle) || openDuration <= 0) {
+            sheetBackdrop.setAlpha(1f);
+            sheetOverlayContainer.setScaleX(1f);
+            sheetOverlayContainer.setScaleY(1f);
+            sheetOverlayContainer.setAlpha(1f);
+            sheetOverlayContainer.setTranslationY(0f);
+            onOpenComplete.run();
+        } else if ("genie".equalsIgnoreCase(animStyle)) {
+            float buttonCenterX = floatingCaspianCard.getX() + floatingCaspianCard.getWidth() / 2f;
+            float buttonCenterY = floatingCaspianCard.getY() + floatingCaspianCard.getHeight() / 2f;
+            
+            sheetOverlayContainer.setPivotX(buttonCenterX);
+            sheetOverlayContainer.setPivotY(buttonCenterY);
+            sheetOverlayContainer.setScaleX(0.05f);
+            sheetOverlayContainer.setScaleY(0.05f);
+            sheetOverlayContainer.setAlpha(0f);
+            sheetOverlayContainer.setTranslationY(0f);
+            
+            sheetOverlayContainer.animate()
+                    .scaleX(1f)
+                    .scaleY(1f)
+                    .alpha(1f)
+                    .setDuration(openDuration)
+                    .setInterpolator(new android.view.animation.DecelerateInterpolator(1.5f))
+                    .withEndAction(onOpenComplete)
+                    .start();
+        } else {
+            int height = sheetOverlayContainer.getHeight();
+            if (height <= 0) {
+                height = getResources().getDisplayMetrics().heightPixels;
+            }
+            sheetOverlayContainer.setScaleX(1f);
+            sheetOverlayContainer.setScaleY(1f);
+            sheetOverlayContainer.setAlpha(1f);
+            sheetOverlayContainer.setTranslationY(height);
+            sheetOverlayContainer.animate()
+                    .translationY(0)
+                    .setDuration(openDuration)
+                    .setInterpolator(new android.view.animation.PathInterpolator(0.22f, 1f, 0.36f, 1f))
+                    .withEndAction(onOpenComplete)
+                    .start();
+        }
     }
 
     public void closeControlSheet() {
-        sheetOverlayContainer.setVisibility(View.GONE);
-        applyPrunerInMainWebView();
+        SharedPreferences prefs = getSharedPreferences("CaspianMobilePrefs", MODE_PRIVATE);
+        int closeDuration = 150;
+        try {
+            String closeDurStr = prefs.getString("sheetCloseDuration", "150");
+            closeDuration = Integer.parseInt(closeDurStr);
+        } catch(Exception e) {}
+        String animStyle = prefs.getString("sheetAnimationStyle", "genie");
+
+        sheetBackdrop.animate()
+                .alpha(0f)
+                .setDuration(closeDuration)
+                .start();
+
+        if ("none".equalsIgnoreCase(animStyle) || closeDuration <= 0) {
+            sheetBackdrop.setAlpha(0f);
+            sheetOverlayContainer.setVisibility(View.GONE);
+            applyPrunerInMainWebView();
+        } else if ("genie".equalsIgnoreCase(animStyle)) {
+            float buttonCenterX = floatingCaspianCard.getX() + floatingCaspianCard.getWidth() / 2f;
+            float buttonCenterY = floatingCaspianCard.getY() + floatingCaspianCard.getHeight() / 2f;
+            
+            sheetOverlayContainer.setPivotX(buttonCenterX);
+            sheetOverlayContainer.setPivotY(buttonCenterY);
+            
+            sheetOverlayContainer.animate()
+                    .scaleX(0.05f)
+                    .scaleY(0.05f)
+                    .alpha(0f)
+                    .setDuration(closeDuration)
+                    .setInterpolator(new android.view.animation.PathInterpolator(0.3f, 0f, 0.8f, 0.15f))
+                    .withEndAction(() -> {
+                        sheetOverlayContainer.setVisibility(View.GONE);
+                        applyPrunerInMainWebView();
+                    })
+                    .start();
+        } else {
+            int height = sheetOverlayContainer.getHeight();
+            if (height <= 0) {
+                height = getResources().getDisplayMetrics().heightPixels;
+            }
+            sheetOverlayContainer.animate()
+                    .translationY(height)
+                    .setDuration(closeDuration)
+                    .setInterpolator(new android.view.animation.PathInterpolator(0.3f, 0f, 0.8f, 0.15f))
+                    .withEndAction(() -> {
+                        sheetOverlayContainer.setVisibility(View.GONE);
+                        applyPrunerInMainWebView();
+                    })
+                    .start();
+        }
     }
 
     public void applyPrunerInMainWebView() {
@@ -1115,22 +1543,22 @@ public class MainActivity extends AppCompatActivity {
                 "              role: isUser ? 'User' : 'Gemini',\n" +
                 "              text: text,\n" +
                 "              html: parsedHtml,\n" +
-                "              service: 'gemini'\n" +
+"              service: 'gemini'\n" +
                 "            });\n" +
                 "          }\n" +
                 "        }\n" +
                 "      } else {\n" +
-                "        var turnDivs = Array.from(document.querySelectorAll('[data-testid^=\"conversation-turn-\"], div.w-full.text-token-text-primary'));\n" +
+                "        var turnDivs = Array.from(document.querySelectorAll('article, [data-testid^=\"conversation-turn-\"], div.w-full.text-token-text-primary'));\n" +
                 "        for (var i = 0; i < turnDivs.length; i++) {\n" +
                 "          var row = turnDivs[i];\n" +
                 "          var text = '';\n" +
                 "          var isUser = false;\n" +
-                "          if (row.querySelector('[data-testid=\"user-turn\"], div[data-message-author-role=\"user\"]') || row.querySelector('div.bg-token-main-surface-secondary') || row.innerText.includes('User Prompt')) {\n" +
+                "          if (row.querySelector('[data-testid=\"user-turn\"], [data-message-author-role=\"user\"]') || row.querySelector('div.bg-token-main-surface-secondary') || row.innerText.includes('User Prompt')) {\n" +
                 "            isUser = true;\n" +
                 "          }\n" +
-                "          var markdownDiv = row.querySelector('.markdown, div.markdown');\n" +
-                "          if (markdownDiv) {\n" +
-                "            text = markdownDiv.innerText.trim();\n" +
+                "          var textDiv = row.querySelector('.markdown, div.markdown, .prose, .whitespace-pre-wrap');\n" +
+                "          if (textDiv) {\n" +
+                "            text = textDiv.innerText.trim();\n" +
                 "          } else {\n" +
                 "            var contentDiv = row.querySelector('.content, div.text-token-text-primary');\n" +
                 "            text = contentDiv ? contentDiv.innerText.trim() : row.innerText.trim();\n" +
@@ -1399,6 +1827,10 @@ public class MainActivity extends AppCompatActivity {
 
     @Override
     public void onBackPressed() {
+        if (customView != null) {
+            hideCustomView();
+            return;
+        }
         if (sheetOverlayContainer.getVisibility() == View.VISIBLE) {
             closeControlSheet();
         } else {
@@ -1418,6 +1850,193 @@ public class MainActivity extends AppCompatActivity {
             } else {
                 super.onBackPressed();
             }
+        }
+    }
+
+    // File Chooser, Permissions & Active Repaint Invalidation Methods
+    private boolean checkPermissions() {
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+            return ContextCompat.checkSelfPermission(this, Manifest.permission.CAMERA) == PackageManager.PERMISSION_GRANTED
+                && ContextCompat.checkSelfPermission(this, Manifest.permission.RECORD_AUDIO) == PackageManager.PERMISSION_GRANTED
+                && ContextCompat.checkSelfPermission(this, Manifest.permission.READ_MEDIA_IMAGES) == PackageManager.PERMISSION_GRANTED
+                && ContextCompat.checkSelfPermission(this, Manifest.permission.READ_MEDIA_VIDEO) == PackageManager.PERMISSION_GRANTED;
+        } else {
+            return ContextCompat.checkSelfPermission(this, Manifest.permission.CAMERA) == PackageManager.PERMISSION_GRANTED
+                && ContextCompat.checkSelfPermission(this, Manifest.permission.RECORD_AUDIO) == PackageManager.PERMISSION_GRANTED
+                && ContextCompat.checkSelfPermission(this, Manifest.permission.READ_EXTERNAL_STORAGE) == PackageManager.PERMISSION_GRANTED
+                && ContextCompat.checkSelfPermission(this, Manifest.permission.WRITE_EXTERNAL_STORAGE) == PackageManager.PERMISSION_GRANTED;
+        }
+    }
+
+    private void requestPermissions() {
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+            ActivityCompat.requestPermissions(this, new String[]{
+                Manifest.permission.CAMERA,
+                Manifest.permission.RECORD_AUDIO,
+                Manifest.permission.READ_MEDIA_IMAGES,
+                Manifest.permission.READ_MEDIA_VIDEO
+            }, PERMISSION_REQUEST_CODE);
+        } else {
+            ActivityCompat.requestPermissions(this, new String[]{
+                Manifest.permission.CAMERA,
+                Manifest.permission.RECORD_AUDIO,
+                Manifest.permission.READ_EXTERNAL_STORAGE,
+                Manifest.permission.WRITE_EXTERNAL_STORAGE
+            }, PERMISSION_REQUEST_CODE);
+        }
+    }
+
+    @Override
+    public void onRequestPermissionsResult(int requestCode, String[] permissions, int[] grantResults) {
+        super.onRequestPermissionsResult(requestCode, permissions, grantResults);
+        if (requestCode == MIC_PERMISSION_REQUEST_CODE) {
+            boolean granted = true;
+            for (int r : grantResults) {
+                if (r != PackageManager.PERMISSION_GRANTED) {
+                    granted = false;
+                    break;
+                }
+            }
+            if (pendingWebPermissionRequest != null) {
+                if (granted) {
+                    pendingWebPermissionRequest.grant(pendingWebPermissionRequest.getResources());
+                } else {
+                    pendingWebPermissionRequest.deny();
+                }
+                pendingWebPermissionRequest = null;
+            }
+        } else if (requestCode == PERMISSION_REQUEST_CODE) {
+            boolean granted = true;
+            for (int r : grantResults) {
+                if (r != PackageManager.PERMISSION_GRANTED) {
+                    granted = false;
+                    break;
+                }
+            }
+            if (granted) {
+                openFileChooser();
+            } else {
+                new CaspianBridge(MainActivity.this).showToast("Permissions are required to upload files.");
+                if (uploadMessage != null) {
+                    uploadMessage.onReceiveValue(null);
+                    uploadMessage = null;
+                }
+            }
+        }
+    }
+
+    private void openFileChooser() {
+        Intent takePictureIntent = new Intent(MediaStore.ACTION_IMAGE_CAPTURE);
+        java.io.File photoFile = null;
+        try {
+            photoFile = createTempImageFile();
+        } catch (java.io.IOException ex) {
+            ex.printStackTrace();
+        }
+        if (photoFile != null) {
+            cameraImageUri = androidx.core.content.FileProvider.getUriForFile(this,
+                    getApplicationContext().getPackageName() + ".fileprovider", photoFile);
+            takePictureIntent.putExtra(MediaStore.EXTRA_OUTPUT, cameraImageUri);
+            takePictureIntent.addFlags(Intent.FLAG_GRANT_WRITE_URI_PERMISSION | Intent.FLAG_GRANT_READ_URI_PERMISSION);
+            
+            try {
+                List<android.content.pm.ResolveInfo> resInfoList = getPackageManager().queryIntentActivities(takePictureIntent, PackageManager.MATCH_DEFAULT_ONLY);
+                for (android.content.pm.ResolveInfo resolveInfo : resInfoList) {
+                    String packageName = resolveInfo.activityInfo.packageName;
+                    grantUriPermission(packageName, cameraImageUri, Intent.FLAG_GRANT_WRITE_URI_PERMISSION | Intent.FLAG_GRANT_READ_URI_PERMISSION);
+                }
+            } catch (Exception e) {}
+        }
+
+        Intent contentSelectionIntent = new Intent(Intent.ACTION_GET_CONTENT);
+        contentSelectionIntent.addCategory(Intent.CATEGORY_OPENABLE);
+        contentSelectionIntent.setType("*/*");
+
+        Intent[] intentArray;
+        if (takePictureIntent.resolveActivity(getPackageManager()) != null && cameraImageUri != null) {
+            intentArray = new Intent[]{takePictureIntent};
+        } else {
+            intentArray = new Intent[0];
+        }
+
+        Intent chooserIntent = new Intent(Intent.ACTION_CHOOSER);
+        chooserIntent.putExtra(Intent.EXTRA_INTENT, contentSelectionIntent);
+        chooserIntent.putExtra(Intent.EXTRA_TITLE, "Select File or Take Photo");
+        chooserIntent.putExtra(Intent.EXTRA_INITIAL_INTENTS, intentArray);
+
+        startActivityForResult(chooserIntent, FILECHOOSER_RESULTCODE);
+    }
+
+    private java.io.File createTempImageFile() throws java.io.IOException {
+        String timeStamp = new java.text.SimpleDateFormat("yyyyMMdd_HHmmss", java.util.Locale.getDefault()).format(new java.util.Date());
+        String imageFileName = "JPEG_" + timeStamp + "_";
+        java.io.File storageDir = getExternalFilesDir(android.os.Environment.DIRECTORY_PICTURES);
+        return java.io.File.createTempFile(imageFileName, ".jpg", storageDir);
+    }
+
+    @Override
+    protected void onActivityResult(int requestCode, int resultCode, Intent data) {
+        super.onActivityResult(requestCode, resultCode, data);
+        if (requestCode == FILECHOOSER_RESULTCODE) {
+            if (uploadMessage == null) return;
+            Uri[] results = null;
+            if (resultCode == RESULT_OK) {
+                if (data == null || data.getData() == null) {
+                    if (cameraImageUri != null) {
+                        results = new Uri[]{cameraImageUri};
+                    }
+                } else {
+                    String dataString = data.getDataString();
+                    if (dataString != null) {
+                        results = new Uri[]{Uri.parse(dataString)};
+                    }
+                }
+            }
+            uploadMessage.onReceiveValue(results);
+            uploadMessage = null;
+        }
+    }
+
+    public void updateRefreshTimer() {
+        refreshHandler.removeCallbacks(refreshRunnable);
+        SharedPreferences prefs = getSharedPreferences("CaspianMobilePrefs", MODE_PRIVATE);
+        int rate = 100;
+        try {
+            rate = Integer.parseInt(prefs.getString("active_refresh_rate", "100"));
+        } catch (Exception e) {}
+        if (rate > 0) {
+            refreshHandler.post(refreshRunnable);
+        }
+    }
+
+    public void playAssetSound(String assetPath) {
+        try {
+            SharedPreferences prefs = getSharedPreferences("CaspianMobilePrefs", MODE_PRIVATE);
+            String masterMuteStr = prefs.getString("master_sfx_muted", "false");
+            if ("true".equalsIgnoreCase(masterMuteStr)) return;
+
+            float volume = 0.5f;
+            try {
+                String volStr = prefs.getString("sfx_volume", "0.5");
+                volume = Float.parseFloat(volStr);
+            } catch (Exception e) {}
+            
+            String enabledStr = prefs.getString("sfx_enabled_ta", "true");
+            boolean enabled = !"false".equalsIgnoreCase(enabledStr);
+            if (!enabled) return;
+
+            float effectiveVolume = (float) Math.pow(volume, 2.5);
+
+            android.media.MediaPlayer mp = new android.media.MediaPlayer();
+            android.content.res.AssetFileDescriptor afd = getAssets().openFd(assetPath);
+            mp.setDataSource(afd.getFileDescriptor(), afd.getStartOffset(), afd.getLength());
+            afd.close();
+            mp.setVolume(effectiveVolume, effectiveVolume);
+            mp.prepare();
+            mp.setOnCompletionListener(android.media.MediaPlayer::release);
+            mp.start();
+        } catch (Exception e) {
+            e.printStackTrace();
         }
     }
 }

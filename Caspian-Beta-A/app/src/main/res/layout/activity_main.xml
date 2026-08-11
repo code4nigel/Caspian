@@ -58,4 +58,20 @@
             android:contentDescription="Caspian Mobile Menu" />
     </androidx.cardview.widget.CardView>
 
+    <!-- 4. YouTube-Style Splash Screen Video Overlay (Elevation 50dp) -->
+    <FrameLayout
+        android:id="@+id/splash_overlay"
+        android:layout_width="match_parent"
+        android:layout_height="match_parent"
+        android:background="#050811"
+        android:elevation="50dp"
+        android:visibility="visible">
+
+        <VideoView
+            android:id="@+id/splash_videoview"
+            android:layout_width="match_parent"
+            android:layout_height="match_parent"
+            android:layout_gravity="center" />
+    </FrameLayout>
+
 </FrameLayout>

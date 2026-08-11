@@ -68,6 +68,13 @@ public class CaspianBridge {
     }
 
     @JavascriptInterface
+    public void closeSheet() {
+        if (activity != null) {
+            activity.runOnUiThread(activity::closeControlSheet);
+        }
+    }
+
+    @JavascriptInterface
     public void closeTab(int tabId) {
         if (activity != null) {
             activity.runOnUiThread(() -> activity.closeTab(tabId));
@@ -406,7 +413,12 @@ public class CaspianBridge {
         prefs.edit().putString(key, value).apply();
 
         if (activity != null) {
-            activity.runOnUiThread(activity::applyPrunerInMainWebView);
+            activity.runOnUiThread(() -> {
+                activity.applyPrunerInMainWebView();
+                if ("active_refresh_rate".equals(key)) {
+                    activity.updateRefreshTimer();
+                }
+            });
         }
     }
 
