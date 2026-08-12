@@ -244,13 +244,13 @@ def build_html(version_name):
         </div>
       </div>
 
-      <!-- 3. Caspian Current (Whisper Flow Speech-to-Text) Card -->
+      <!-- 3. Caspian Drift (Whisper Dictation Engine) Card -->
       <div id="card-caspian-current" class="m3-card engine-card expandable" style="margin-top: 14px;">
         <div id="caspian-current-header" class="m3-card-row" style="cursor: pointer;">
           <div class="m3-card-left">
             <div id="cc-status-dot" class="status-dot active"></div>
             <div>
-              <div class="m3-card-title">Caspian Current (Whisper Flow)</div>
+              <div class="m3-card-title">Caspian Drift (Whisper Flow)</div>
               <div class="m3-card-sub">Long press action button to dictate speech. Tap card to expand settings.</div>
             </div>
           </div>

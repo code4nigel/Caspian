@@ -43,6 +43,7 @@ import android.content.Context;
 
 import androidx.appcompat.app.AppCompatActivity;
 import androidx.cardview.widget.CardView;
+import android.widget.TextView;
 
 import org.json.JSONArray;
 import org.json.JSONObject;
@@ -205,6 +206,7 @@ public class MainActivity extends AppCompatActivity {
         setupNativeFloatingButton();
         setupSmartKeyboardAvoidance();
         setupSpeechRecognizer();
+        setupSearchDock();
 
         sheetBackdrop.setOnClickListener(v -> closeControlSheet());
 
@@ -950,6 +952,16 @@ public class MainActivity extends AppCompatActivity {
             }
         });
 
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
+            wv.setOnScrollChangeListener((v, scrollX, scrollY, oldScrollX, oldScrollY) -> {
+                if (scrollY - oldScrollY > 15) {
+                    collapseSearchDock();
+                } else if (oldScrollY - scrollY > 15 || scrollY <= 10) {
+                    expandSearchDock();
+                }
+            });
+        }
+
         webViewContainer.addView(wv);
         tab.webView = wv;
         wv.loadUrl(tab.url);
@@ -1316,6 +1328,84 @@ public class MainActivity extends AppCompatActivity {
         saveTabsToPrefs();
     }
 
+    private View searchDockExpanded;
+    private View searchDockCollapsed;
+    private TextView searchDockUrl;
+    private float searchDockDX = 0f, searchDockDY = 0f;
+
+    @SuppressLint("ClickableViewAccessibility")
+    private void setupSearchDock() {
+        searchNavContainer = findViewById(R.id.search_nav_container);
+        searchDockExpanded = findViewById(R.id.search_dock_expanded);
+        searchDockCollapsed = findViewById(R.id.search_dock_collapsed_btn);
+        searchDockUrl = findViewById(R.id.search_dock_url);
+        navBackBtn = findViewById(R.id.nav_back_btn);
+        navForwardBtn = findViewById(R.id.nav_forward_btn);
+
+        if (searchDockUrl != null && searchNavContainer != null) {
+            searchDockUrl.setOnTouchListener((view, event) -> {
+                switch (event.getAction()) {
+                    case MotionEvent.ACTION_DOWN:
+                        searchDockDX = searchNavContainer.getX() - event.getRawX();
+                        searchDockDY = searchNavContainer.getY() - event.getRawY();
+                        return true;
+                    case MotionEvent.ACTION_MOVE:
+                        searchNavContainer.setX(event.getRawX() + searchDockDX);
+                        searchNavContainer.setY(event.getRawY() + searchDockDY);
+                        return true;
+                    default:
+                        return false;
+                }
+            });
+        }
+
+        if (searchDockCollapsed != null) {
+            searchDockCollapsed.setOnClickListener(v -> expandSearchDock());
+        }
+
+        if (navBackBtn != null) {
+            navBackBtn.setOnClickListener(v -> {
+                TabItem activeTab = getActiveTab();
+                if (activeTab != null && activeTab.webView != null && activeTab.webView.canGoBack()) {
+                    activeTab.webView.goBack();
+                    new CaspianBridge(MainActivity.this).showToast("⬅️ Back");
+                } else {
+                    new CaspianBridge(MainActivity.this).showToast("Already at initial search page");
+                }
+            });
+        }
+
+        if (navForwardBtn != null) {
+            navForwardBtn.setOnClickListener(v -> {
+                TabItem activeTab = getActiveTab();
+                if (activeTab != null && activeTab.webView != null && activeTab.webView.canGoForward()) {
+                    activeTab.webView.goForward();
+                    new CaspianBridge(MainActivity.this).showToast("➡️ Forward");
+                } else {
+                    new CaspianBridge(MainActivity.this).showToast("No forward history");
+                }
+            });
+        }
+    }
+
+    public void collapseSearchDock() {
+        runOnUiThread(() -> {
+            if (searchDockExpanded != null && searchDockCollapsed != null && searchDockExpanded.getVisibility() == View.VISIBLE) {
+                searchDockExpanded.setVisibility(View.GONE);
+                searchDockCollapsed.setVisibility(View.VISIBLE);
+            }
+        });
+    }
+
+    public void expandSearchDock() {
+        runOnUiThread(() -> {
+            if (searchDockExpanded != null && searchDockCollapsed != null && searchDockCollapsed.getVisibility() == View.VISIBLE) {
+                searchDockCollapsed.setVisibility(View.GONE);
+                searchDockExpanded.setVisibility(View.VISIBLE);
+            }
+        });
+    }
+
     public void updateSearchNavVisibility() {
         runOnUiThread(() -> {
             TabItem active = getActiveTab();
@@ -1328,6 +1418,19 @@ public class MainActivity extends AppCompatActivity {
                 searchNavContainer.setVisibility(showPill ? View.VISIBLE : View.GONE);
                 if (showPill) {
                     searchNavContainer.bringToFront();
+                    if (searchDockUrl != null && active.url != null) {
+                        try {
+                            Uri uri = Uri.parse(active.url);
+                            String host = uri.getHost();
+                            if (host != null) {
+                                searchDockUrl.setText(host.replace("www.", ""));
+                            } else {
+                                searchDockUrl.setText("google.com");
+                            }
+                        } catch (Exception e) {
+                            searchDockUrl.setText("google.com");
+                        }
+                    }
                 }
             }
         });

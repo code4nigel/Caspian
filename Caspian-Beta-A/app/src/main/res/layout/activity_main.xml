@@ -58,47 +58,96 @@
             android:contentDescription="Caspian Mobile Menu" />
     </androidx.cardview.widget.CardView>
 
-    <!-- 4. Search Navigation Controls (Back / Forward Pill for Google Tabs - Elevation 40dp) -->
-    <LinearLayout
+    <!-- 4. Floating Search Dock (Google Tabs Navigation & URL Pill - Elevation 40dp) -->
+    <FrameLayout
         android:id="@+id/search_nav_container"
         android:layout_width="wrap_content"
-        android:layout_height="42dp"
+        android:layout_height="wrap_content"
         android:layout_gravity="bottom|start"
         android:layout_marginBottom="90dp"
         android:layout_marginStart="20dp"
         android:elevation="40dp"
-        android:background="@drawable/bg_nav_pill"
-        android:orientation="horizontal"
-        android:paddingStart="8dp"
-        android:paddingEnd="8dp"
-        android:gravity="center_vertical"
         android:visibility="gone">
 
-        <ImageButton
-            android:id="@+id/nav_back_btn"
-            android:layout_width="36dp"
-            android:layout_height="36dp"
-            android:background="?attr/selectableItemBackgroundBorderless"
-            android:src="@android:drawable/ic_media_previous"
-            android:tint="#FFFFFF"
-            android:contentDescription="Back Navigation" />
+        <!-- Expanded Full Dock Layout -->
+        <LinearLayout
+            android:id="@+id/search_dock_expanded"
+            android:layout_width="wrap_content"
+            android:layout_height="42dp"
+            android:background="@drawable/bg_nav_pill"
+            android:orientation="horizontal"
+            android:paddingStart="8dp"
+            android:paddingEnd="8dp"
+            android:gravity="center_vertical">
 
-        <View
-            android:layout_width="1dp"
-            android:layout_height="18dp"
-            android:layout_marginStart="4dp"
-            android:layout_marginEnd="4dp"
-            android:background="#44FFFFFF" />
+            <ImageButton
+                android:id="@+id/nav_back_btn"
+                android:layout_width="34dp"
+                android:layout_height="34dp"
+                android:background="?attr/selectableItemBackgroundBorderless"
+                android:src="@android:drawable/ic_media_previous"
+                android:tint="#FFFFFF"
+                android:contentDescription="Back Navigation" />
 
-        <ImageButton
-            android:id="@+id/nav_forward_btn"
-            android:layout_width="36dp"
-            android:layout_height="36dp"
-            android:background="?attr/selectableItemBackgroundBorderless"
-            android:src="@android:drawable/ic_media_next"
-            android:tint="#FFFFFF"
-            android:contentDescription="Forward Navigation" />
-    </LinearLayout>
+            <View
+                android:layout_width="1dp"
+                android:layout_height="18dp"
+                android:layout_marginStart="2dp"
+                android:layout_marginEnd="4dp"
+                android:background="#44FFFFFF" />
+
+            <TextView
+                android:id="@+id/search_dock_url"
+                android:layout_width="130dp"
+                android:layout_height="match_parent"
+                android:gravity="center"
+                android:ellipsize="end"
+                android:singleLine="true"
+                android:textColor="#FFFFFF"
+                android:textSize="11sp"
+                android:textStyle="bold"
+                android:text="google.com"
+                android:background="?attr/selectableItemBackground"
+                android:clickable="true"
+                android:focusable="true"
+                android:contentDescription="Drag to Move Search Dock" />
+
+            <View
+                android:layout_width="1dp"
+                android:layout_height="18dp"
+                android:layout_marginStart="4dp"
+                android:layout_marginEnd="2dp"
+                android:background="#44FFFFFF" />
+
+            <ImageButton
+                android:id="@+id/nav_forward_btn"
+                android:layout_width="34dp"
+                android:layout_height="34dp"
+                android:background="?attr/selectableItemBackgroundBorderless"
+                android:src="@android:drawable/ic_media_next"
+                android:tint="#FFFFFF"
+                android:contentDescription="Forward Navigation" />
+        </LinearLayout>
+
+        <!-- Collapsed Floating Circle Button (Shown when Scrolling Down) -->
+        <FrameLayout
+            android:id="@+id/search_dock_collapsed_btn"
+            android:layout_width="42dp"
+            android:layout_height="42dp"
+            android:background="@drawable/bg_nav_pill"
+            android:clickable="true"
+            android:focusable="true"
+            android:visibility="gone">
+
+            <TextView
+                android:layout_width="match_parent"
+                android:layout_height="match_parent"
+                android:gravity="center"
+                android:text="🔍"
+                android:textColor="#FFFFFF"
+                android:textSize="16sp" />
+        </FrameLayout>
+    </FrameLayout>
 
     <!-- 5. Dictation Audio Wave Screen Overlay View (Elevation 25dp) -->
     <com.caspian.betaa.SpeechWaveformView
