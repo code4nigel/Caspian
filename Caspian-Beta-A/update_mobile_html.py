@@ -19,11 +19,17 @@ def build_html(version_name):
   <script>
     (function() {{
       try {{
-        var t = localStorage.getItem('theme');
+        var t = localStorage.getItem('theme') || 'dark';
+        document.documentElement.setAttribute('data-theme', t);
         if (t === 'dark') {{
-          document.documentElement.setAttribute('data-theme', 'dark');
+          document.documentElement.classList.add('dark');
+          document.documentElement.classList.remove('light');
         }} else {{
-          document.documentElement.setAttribute('data-theme', 'light');
+          document.documentElement.classList.add('light');
+          document.documentElement.classList.remove('dark');
+        }}
+        if (localStorage.getItem('master_sfx_muted') === 'true') {{
+          document.documentElement.classList.add('sfx-muted');
         }}
       }} catch(e) {{}}
     }})();
@@ -102,77 +108,211 @@ def build_html(version_name):
 
     <!-- TAB 1: ENGINE TAB -->
     <div id="tab-pane-engine" class="tab-pane active">
-      <!-- Temporary Chat Saver Card -->
-      <div class="m3-card">
+      <!-- 1. Temporary Chat Saver Card -->
+      <div id="card-temp-saver" class="m3-card engine-card">
         <div class="m3-card-row">
           <div class="m3-card-left">
-            <div id="temp-dot" class="status-dot active"></div>
+            <div id="ts-status-dot" class="status-dot active"></div>
             <div>
               <div class="m3-card-title">Temporary Chat Saver</div>
-              <div id="temp-sub" class="m3-card-sub">Save or convert temporary mobile sessions anytime.</div>
+              <div class="m3-card-sub">Save or convert temporary mobile sessions anytime.</div>
             </div>
           </div>
+          <button id="toggle-temp-saver-btn" class="oneui-pill-btn primary" style="font-size: 11px; padding: 4px 10px;">ON</button>
         </div>
 
-        <!-- Clean Action Row Buttons -->
-        <div class="mobile-action-row">
-          <div style="flex: 1;">
-            <button id="convert-btn" class="oneui-pill-btn primary" style="width: 100%; justify-content: center;">
-              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M17 1l4 4-4 4"></path><path d="M3 11V9a4 4 0 0 1 4-4h14"></path><path d="M7 23l-4-4 4-4"></path><path d="M21 13v2a4 4 0 0 1-4 4H3"></path></svg>
+        <div id="temp-saver-body" style="margin-top: 10px;">
+          <div class="mobile-action-row">
+            <button id="convert-btn" class="oneui-pill-btn primary" style="flex: 1; justify-content: center;">
+              <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <path d="M21.5 2v6h-6M21.34 15.57a10 10 0 1 1-.57-8.38l5.67-5.67"/>
+              </svg>
               <span>Convert Chat</span>
             </button>
-          </div>
-          
-          <div style="flex: 1; position: relative;">
-            <button id="export-dropdown-trigger" class="oneui-pill-btn secondary" style="width: 100%; justify-content: center;">
-              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path><polyline points="7 10 12 15 17 10"></polyline><line x1="12" y1="15" x2="12" y2="3"></line></svg>
-              <span>Export ▼</span>
-            </button>
             
-            <div id="export-menu" class="export-menu-overlay">
-              <button class="export-opt-btn" data-fmt="md">Markdown (.md)</button>
-              <button class="export-opt-btn" data-fmt="txt">Plain Text (.txt)</button>
-              <button class="export-opt-btn" data-fmt="doc">Google Doc (.doc)</button>
-              <button class="export-opt-btn" data-fmt="nativepdf">Document PDF (.pdf)</button>
-              <button class="export-opt-btn" data-fmt="styledpdf">Caspian PDF Format</button>
+            <div style="position: relative; flex: 1;">
+              <button id="export-dropdown-trigger" class="oneui-pill-btn secondary" style="width: 100%; justify-content: center;">
+                <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                  <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path>
+                  <polyline points="7 10 12 15 17 10"></polyline>
+                  <line x1="12" y1="15" x2="12" y2="3"></line>
+                </svg>
+                <span>Export ▼</span>
+              </button>
+              
+              <div id="export-menu" class="export-menu-overlay">
+                <button class="export-opt-btn" data-fmt="md">Markdown (.md)</button>
+                <button class="export-opt-btn" data-fmt="txt">Plain Text (.txt)</button>
+                <button class="export-opt-btn" data-fmt="doc">Google Doc (.doc)</button>
+                <button class="export-opt-btn" data-fmt="nativepdf">Document PDF (.pdf)</button>
+                <button class="export-opt-btn" data-fmt="styledpdf">Caspian PDF Format</button>
+              </div>
             </div>
-          </div>
 
-          <button id="copy-btn" class="oneui-pill-btn icon-only" title="Copy Transcript" style="flex-shrink: 0; width: 38px; height: 38px; justify-content: center; padding: 0;">
-            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-              <rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect>
-              <path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path>
-            </svg>
-          </button>
+            <button id="copy-btn" class="oneui-pill-btn icon-only" title="Copy Transcript" style="flex-shrink: 0; width: 38px; height: 38px; justify-content: center; padding: 0;">
+              <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect>
+                <path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path>
+              </svg>
+            </button>
+          </div>
         </div>
       </div>
 
-      <!-- Chat Pruning Card -->
-      <div class="m3-card">
-        <div class="m3-card-row">
+      <!-- 2. Expandable Chat Message Limit Card -->
+      <div id="card-chat-limit" class="m3-card engine-card expandable" style="margin-top: 14px;">
+        <div id="chat-limit-header" class="m3-card-row" style="cursor: pointer;">
           <div class="m3-card-left">
             <div id="status-dot" class="status-dot active"></div>
             <div>
-              <div id="status-title" class="m3-card-title">Chat Message Limit: ON</div>
-              <div id="status-sub" class="m3-card-sub">it limites the amout of message shown from below so all message above it will get prune or cut out this is done to improve performance and reduce lagging.</div>
+              <div id="status-title" class="m3-card-title">Chat Message Limit</div>
+              <div id="status-sub" class="m3-card-sub">Limits message count to improve performance and prevent lagging. Tap to expand.</div>
             </div>
           </div>
-          <span id="active-limit-badge" class="m3-badge">5 Messages</span>
+          <div style="display: flex; align-items: center; gap: 8px;">
+            <span id="active-limit-badge" class="m3-badge">5 Messages</span>
+            <button id="toggle-chat-limit-btn" class="oneui-pill-btn primary" style="font-size: 11px; padding: 4px 10px;">ON</button>
+          </div>
+        </div>
+
+        <!-- Accordion Body: Contains Visible Messages Limit selector -->
+        <div id="chat-limit-body" style="display: block; margin-top: 12px; border-top: 1px solid var(--border-glass); padding-top: 10px;">
+          <div class="limit-section-title">
+            <span>VISIBLE MESSAGES LIMIT</span>
+            <span>AUTO-PRUNE OLDER</span>
+          </div>
+          <div class="pill-grid">
+            <button class="limit-pill" data-val="1">1</button>
+            <button class="limit-pill" data-val="3">3</button>
+            <button class="limit-pill active" data-val="5">5</button>
+            <button class="limit-pill" data-val="8">8</button>
+            <button class="limit-pill" data-val="15">15</button>
+            <button class="limit-pill" data-val="9999" title="Unlimited (Show All)">&#8734;</button>
+          </div>
         </div>
       </div>
 
-      <!-- Visible Message Turns Section -->
-      <div class="limit-section-title">
-        <span>VISIBLE MESSAGES LIMIT</span>
-        <span>AUTO-PRUNE OLDER</span>
+      <!-- YouTube Control Center Card (Dynamic for YouTube Tabs) -->
+      <div id="youtube-control-card" class="m3-card" style="display: none; margin-top: 14px;">
+        <div class="m3-card-row">
+          <div class="m3-card-left">
+            <div class="status-dot active"></div>
+            <div>
+              <div class="m3-card-title">YouTube Player Controls</div>
+              <div class="m3-card-sub">Quick seeking, playback speed, and resolution selector.</div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Seek Buttons Row -->
+        <div class="mobile-action-row" style="margin-top: 10px;">
+          <button id="yt-seek-back-btn" class="oneui-pill-btn secondary" style="flex: 1; justify-content: center;">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polygon points="11 19 2 12 11 5 11 19"></polygon><polygon points="22 19 13 12 22 5 22 19"></polygon></svg>
+            <span>-5s Seek</span>
+          </button>
+          <button id="yt-seek-fwd-btn" class="oneui-pill-btn secondary" style="flex: 1; justify-content: center;">
+            <span>+5s Seek</span>
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polygon points="13 19 22 12 13 5 13 19"></polygon><polygon points="2 19 11 12 2 5 2 19"></polygon></svg>
+          </button>
+        </div>
+
+        <!-- Playback Speed Section -->
+        <div class="limit-section-title" style="margin-top: 12px;">PLAYBACK SPEED</div>
+        <div class="pill-grid" style="grid-template-columns: repeat(4, 1fr); gap: 6px;">
+          <button class="yt-speed-pill" data-speed="0.25">0.25x</button>
+          <button class="yt-speed-pill" data-speed="0.5">0.5x</button>
+          <button class="yt-speed-pill" data-speed="0.75">0.75x</button>
+          <button class="yt-speed-pill active" data-speed="1.0">1x</button>
+          <button class="yt-speed-pill" data-speed="1.25">1.25x</button>
+          <button class="yt-speed-pill" data-speed="1.5">1.5x</button>
+          <button class="yt-speed-pill" data-speed="1.75">1.75x</button>
+          <button class="yt-speed-pill" data-speed="2.0">2x</button>
+          <button class="yt-speed-pill" data-speed="2.5">2.5x</button>
+          <button class="yt-speed-pill" data-speed="3.0">3x</button>
+          <button class="yt-speed-pill" data-speed="4.0">4x</button>
+        </div>
+
+        <!-- Quality Selector Section -->
+        <div class="limit-section-title" style="margin-top: 12px;">VIDEO QUALITY</div>
+        <div class="pill-grid" style="grid-template-columns: repeat(3, 1fr); gap: 6px;">
+          <button class="yt-quality-pill" data-quality="hd1080">1080p</button>
+          <button class="yt-quality-pill" data-quality="hd720">720p</button>
+          <button class="yt-quality-pill" data-quality="large">480p</button>
+          <button class="yt-quality-pill" data-quality="medium">360p</button>
+          <button class="yt-quality-pill" data-quality="small">240p</button>
+          <button class="yt-quality-pill active" data-quality="auto">Auto</button>
+        </div>
       </div>
-      <div class="pill-grid">
-        <button class="limit-pill" data-val="1">1</button>
-        <button class="limit-pill" data-val="3">3</button>
-        <button class="limit-pill active" data-val="5">5</button>
-        <button class="limit-pill" data-val="8">8</button>
-        <button class="limit-pill" data-val="15">15</button>
-        <button class="limit-pill" data-val="9999" title="Unlimited (Show All)">&#8734;</button>
+
+      <!-- 3. Caspian Current (Whisper Flow Speech-to-Text) Card -->
+      <div id="card-caspian-current" class="m3-card engine-card expandable" style="margin-top: 14px;">
+        <div id="caspian-current-header" class="m3-card-row" style="cursor: pointer;">
+          <div class="m3-card-left">
+            <div id="cc-status-dot" class="status-dot active"></div>
+            <div>
+              <div class="m3-card-title">Caspian Current (Whisper Flow)</div>
+              <div class="m3-card-sub">Long press action button to dictate speech. Tap card to expand settings.</div>
+            </div>
+          </div>
+          <button id="toggle-caspian-current-btn" class="oneui-pill-btn primary" style="font-size: 11px; padding: 4px 10px;">ON</button>
+        </div>
+
+        <!-- Accordion Body -->
+        <div id="caspian-current-body" style="display: none; margin-top: 12px; border-top: 1px solid var(--border-glass); padding-top: 10px;">
+          <div class="limit-section-title" style="margin-bottom: 6px;">SPEECH RECOGNITION ENGINE</div>
+          <div class="pill-grid" style="grid-template-columns: repeat(2, 1fr); gap: 6px; margin-bottom: 10px;">
+            <button class="cc-engine-pill active" data-engine="whisper">Groq Cloud Whisper</button>
+            <button class="cc-engine-pill" data-engine="native">Local Multilingual</button>
+          </div>
+
+          <div style="margin-bottom: 10px;">
+            <div class="limit-section-title" style="margin-bottom: 4px;">FREE WHISPER / GROQ API KEY (OPTIONAL)</div>
+            <input type="password" id="whisper-api-key-input" class="caspian-text-input" placeholder="Paste free Groq/OpenAI Whisper API key" style="width: 100%; padding: 8px 12px; font-size: 11px; border-radius: 8px; background: var(--input-bg); border: 1px solid var(--border-glass); color: var(--text-main);" />
+          </div>
+
+          <div class="limit-section-title" style="margin-bottom: 6px;">PRIMARY LANGUAGE ACCENT</div>
+          <div class="pill-grid" style="grid-template-columns: repeat(3, 1fr); gap: 6px;">
+            <button class="cc-lang-pill active" data-lang="auto">Auto Detect</button>
+            <button class="cc-lang-pill" data-lang="hinglish">Hinglish / Hindi</button>
+            <button class="cc-lang-pill" data-lang="en">English (US/IN)</button>
+          </div>
+        </div>
+      </div>
+
+      <!-- 4. Expandable AdBlocker Engine Card -->
+      <div id="card-adblocker" class="m3-card engine-card expandable" style="margin-top: 14px;">
+        <div id="adblock-header" class="m3-card-row" style="cursor: pointer;">
+          <div class="m3-card-left">
+            <div id="adblock-dot" class="status-dot active"></div>
+            <div>
+              <div class="m3-card-title">AdBlocker Engine</div>
+              <div class="m3-card-sub">Blocks video ads, trackers, and banners. Tap card to expand filters.</div>
+            </div>
+          </div>
+          <button id="toggle-adblock-btn" class="oneui-pill-btn primary" style="font-size: 11px; padding: 4px 10px;">ON</button>
+        </div>
+
+        <!-- Accordion Body -->
+        <div id="adblock-body" style="display: none; margin-top: 12px; border-top: 1px solid var(--border-glass); padding-top: 10px;">
+          <div style="display: flex; flex-direction: column; gap: 8px;">
+            <label style="display: flex; align-items: center; justify-content: space-between; font-size: 11px; color: var(--text-main);">
+              <span>🎬 Block YouTube Video Ads</span>
+              <input type="checkbox" id="chk-adblock-yt" checked style="accent-color: var(--accent);" />
+            </label>
+            <label style="display: flex; align-items: center; justify-content: space-between; font-size: 11px; color: var(--text-main);">
+              <span>🚫 Block Banners & Popups</span>
+              <input type="checkbox" id="chk-adblock-banner" checked style="accent-color: var(--accent);" />
+            </label>
+            <label style="display: flex; align-items: center; justify-content: space-between; font-size: 11px; color: var(--text-main);">
+              <span>⚡ Auto-Skip Video Ads</span>
+              <input type="checkbox" id="chk-adblock-skip" checked style="accent-color: var(--accent);" />
+            </label>
+            <label style="display: flex; align-items: center; justify-content: space-between; font-size: 11px; color: var(--text-main);">
+              <span>🔒 Block Trackers & Telemetry</span>
+              <input type="checkbox" id="chk-adblock-trackers" checked style="accent-color: var(--accent);" />
+            </label>
+          </div>
+        </div>
       </div>
     </div>
 
@@ -676,9 +816,16 @@ def build_html(version_name):
         </div>
       </div>
       
-      <div style="margin-top: 20px; display: flex; gap: 10px; justify-content: flex-end;">
-         <button id="modal-cancel-btn" class="oneui-pill-btn secondary" style="padding: 8px 16px; border-radius: 12px;">Cancel</button>
-         <button id="modal-save-btn" class="oneui-pill-btn primary" style="padding: 8px 16px; border-radius: 12px;">Save</button>
+      <div style="margin-top: 20px; display: flex; gap: 10px; align-items: center; justify-content: space-between;">
+         <button id="modal-favorite-btn" class="oneui-pill-btn secondary" style="padding: 8px 14px; border-radius: 12px; font-weight: 700; font-size: 11px; display: flex; align-items: center; gap: 4px; border: 1px solid var(--border-glass);" title="Favorite Tab (Protects from Close All)">
+           <span id="fav-star-icon">⭐</span>
+           <span id="fav-star-text">Favorite</span>
+         </button>
+
+         <div style="display: flex; gap: 10px;">
+           <button id="modal-cancel-btn" class="oneui-pill-btn secondary" style="padding: 8px 16px; border-radius: 12px;">Cancel</button>
+           <button id="modal-save-btn" class="oneui-pill-btn primary" style="padding: 8px 16px; border-radius: 12px;">Save</button>
+         </div>
       </div>
     </div>
   </div>

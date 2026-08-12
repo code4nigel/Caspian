@@ -327,10 +327,10 @@ public class CaspianBridge {
     public void reloadActiveTab() {
         if (activity != null) {
             activity.runOnUiThread(() -> {
-                WebView wv = activity.getWebView();
-                if (wv != null) {
-                    wv.reload();
-                    showToast("Active tab reloaded!");
+                MainActivity.TabItem active = activity.getActiveTab();
+                if (active != null && active.webView != null) {
+                    active.webView.reload();
+                    showToast("↻ " + (active.title != null ? active.title : "Active tab") + " reloaded!");
                 }
             });
         }
@@ -410,7 +410,7 @@ public class CaspianBridge {
     @JavascriptInterface
     public void saveSetting(String key, String value) {
         SharedPreferences prefs = activity.getSharedPreferences("CaspianMobilePrefs", Context.MODE_PRIVATE);
-        prefs.edit().putString(key, value).apply();
+        prefs.edit().putString(key, value).commit();
 
         if (activity != null) {
             activity.runOnUiThread(() -> {
@@ -455,6 +455,113 @@ public class CaspianBridge {
                     mToast.show();
                 } catch (Exception e) {
                     e.printStackTrace();
+                }
+            });
+        }
+    }
+
+    @JavascriptInterface
+    public void seekYouTube(double seconds) {
+        if (activity != null) {
+            activity.runOnUiThread(() -> {
+                MainActivity.TabItem activeTab = activity.getActiveTab();
+                if (activeTab != null && activeTab.webView != null) {
+                    activeTab.webView.evaluateJavascript(
+                        "if (window.__CaspianYouTube) { window.__CaspianYouTube.seekBy(" + seconds + "); }", null
+                    );
+                }
+            });
+        }
+    }
+
+    @JavascriptInterface
+    public void setYouTubeSpeed(double speed) {
+        if (activity != null) {
+            activity.runOnUiThread(() -> {
+                MainActivity.TabItem activeTab = activity.getActiveTab();
+                if (activeTab != null && activeTab.webView != null) {
+                    activeTab.webView.evaluateJavascript(
+                        "if (window.__CaspianYouTube) { window.__CaspianYouTube.setSpeed(" + speed + "); }", null
+                    );
+                }
+            });
+        }
+    }
+
+    @JavascriptInterface
+    public void setYouTubeQuality(String quality) {
+        if (activity != null) {
+            activity.runOnUiThread(() -> {
+                MainActivity.TabItem activeTab = activity.getActiveTab();
+                if (activeTab != null && activeTab.webView != null) {
+                    activeTab.webView.evaluateJavascript(
+                        "if (window.__CaspianYouTube) { window.__CaspianYouTube.setQuality(" + JSONObject.quote(quality) + "); }", null
+                    );
+                }
+            });
+        }
+    }
+
+    @JavascriptInterface
+    public void toggleTabMute(int tabId) {
+        if (activity != null) {
+            activity.runOnUiThread(() -> {
+                MainActivity.TabItem targetTab = null;
+                for (MainActivity.TabItem item : activity.getTabsList()) {
+                    if (item.id == tabId) {
+                        targetTab = item;
+                        break;
+                    }
+                }
+                if (targetTab != null && targetTab.webView != null) {
+                    targetTab.isMuted = !targetTab.isMuted;
+                    targetTab.webView.evaluateJavascript(
+                        "(function(){ var vs = document.querySelectorAll('video, audio'); vs.forEach(function(v){ v.muted = " + targetTab.isMuted + "; }); })();", null
+                    );
+                    showToast(targetTab.isMuted ? "🔇 Tab Muted" : "🔊 Tab Unmuted");
+                    activity.saveTabsToPrefs();
+                }
+            });
+        }
+    }
+
+    @JavascriptInterface
+    public void updateMediaPlaybackState(boolean isPlaying) {
+        if (activity != null) {
+            activity.runOnUiThread(() -> {
+                MainActivity.TabItem activeTab = activity.getActiveTab();
+                if (activeTab != null) {
+                    activeTab.isPlayingAudio = isPlaying;
+                }
+            });
+        }
+    }
+
+    @JavascriptInterface
+    public void updateTabMediaPlaybackState(int tabId, boolean isPlaying) {
+        if (activity != null) {
+            activity.runOnUiThread(() -> {
+                for (MainActivity.TabItem item : activity.getTabsList()) {
+                    if (item.id == tabId || tabId == 0) {
+                        item.isPlayingAudio = isPlaying;
+                        if (tabId != 0) break;
+                    }
+                }
+            });
+        }
+    }
+
+    @JavascriptInterface
+    public void toggleTabFavorite(int tabId) {
+        if (activity != null) {
+            activity.runOnUiThread(() -> {
+                for (MainActivity.TabItem item : activity.getTabsList()) {
+                    if (item.id == tabId) {
+                        item.isFavorite = !item.isFavorite;
+                        showToast(item.isFavorite ? "⭐ Tab Favorited (Protected from Close All)" : "★ Removed from Favorites");
+                        activity.saveTabsToPrefs();
+                        break;
+                    }
                 }
             });
         }

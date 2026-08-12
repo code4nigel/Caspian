@@ -24,6 +24,15 @@
     if (masterToggle) masterToggle.checked = !masterSFXMuted;
   }
 
+  // Immediate startup check for saved mute preference
+  try {
+    const initMuted = localStorage.getItem('master_sfx_muted') === 'true';
+    if (initMuted) {
+      masterSFXMuted = true;
+      document.documentElement.classList.add('sfx-muted');
+    }
+  } catch(e) {}
+
   const sfxAssets = {
     tm: null,
     tb: null,
@@ -223,10 +232,23 @@
       const activeClass = tab.active ? 'active' : '';
       const activeBadge = tab.active ? '<span style="font-size: 9px; font-weight: 800; color: #10b981; background: rgba(16,185,129,0.15); padding: 2px 6px; border-radius: 6px;">ACTIVE</span>' : '';
 
+      const shouldShowAudio = (tab.isPlayingAudio === true || tab.isMuted === true);
+      const muteIcon = tab.isMuted ? '🔇' : '🔊';
+      const muteText = tab.isMuted ? 'Muted' : 'Playing';
+      const audioBadge = shouldShowAudio ? `
+        <button class="chrome-tab-mute-btn ${tab.isMuted ? 'muted' : 'playing'}" data-muteid="${tab.id}" title="Toggle Tab Audio Mute" style="display: flex; align-items: center; gap: 4px; font-size: 9px; font-weight: 700; color: ${tab.isMuted ? '#f43f5e' : '#3b82f6'}; background: ${tab.isMuted ? 'rgba(244,63,94,0.15)' : 'rgba(59,130,246,0.15)'}; border: 1px solid ${tab.isMuted ? 'rgba(244,63,94,0.3)' : 'rgba(59,130,246,0.3)'}; border-radius: 6px; padding: 2px 6px; cursor: pointer;">
+          <span>${muteIcon}</span>
+          <span>${muteText}</span>
+        </button>
+      ` : '';
+
+      const favStarBadge = tab.isFavorite ? '<span style="color: #eab308; font-size: 11px; margin-right: 2px;" title="Favorited Tab (Protected from Close All)">⭐</span>' : '';
+
       html += `
         <div class="chrome-tab-card ${activeClass}" data-tabid="${tab.id}">
           <div class="chrome-tab-header">
             <div style="display: flex; align-items: center; gap: 6px; overflow: hidden;">
+              ${favStarBadge}
               ${iconB64 ? `<img src="${iconB64}" style="width: 16px; height: 16px; border-radius: 4px;" />` : ''}
               <span class="chrome-tab-title">${tab.title || 'Browser Tab'}</span>
             </div>
@@ -235,8 +257,9 @@
           <div class="chrome-tab-url" style="font-size: 10px; color: var(--text-sub); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; margin-top: 4px; display: flex; align-items: center; gap: 4px;">
             ${tab.nickname ? `🏷️ <strong style="color: #10b981;">${tab.nickname}</strong>` : tab.url || ''}
           </div>
-          <div style="display: flex; justify-content: flex-end; margin-top: 6px;">
-            ${activeBadge}
+          <div style="display: flex; justify-content: space-between; align-items: center; margin-top: 6px;">
+            <div>${audioBadge}</div>
+            <div>${activeBadge}</div>
           </div>
         </div>
       `;
@@ -244,6 +267,18 @@
     html += '</div>';
 
     container.innerHTML = html;
+
+    container.querySelectorAll('.chrome-tab-mute-btn').forEach(btn => {
+      btn.addEventListener('click', (e) => {
+        e.stopPropagation();
+        playSFX('tb_clicks');
+        const muteId = parseInt(btn.dataset.muteid);
+        if (window.CaspianBridge && typeof window.CaspianBridge.toggleTabMute === 'function') {
+          window.CaspianBridge.toggleTabMute(muteId);
+          setTimeout(renderOpenTabs, 100);
+        }
+      });
+    });
 
     window.renderOpenTabs = renderOpenTabs;
 
@@ -478,16 +513,31 @@
               activeBadge.textContent = limitVal >= 9999 ? '∞ All' : `${limitVal} ${limitVal === 1 ? 'Message' : 'Messages'}`;
             }
           }
-          if (prefs.globalActive !== undefined) {
-            globalActive = (prefs.globalActive === true || prefs.globalActive === 'true');
-            const statusDot = document.getElementById('status-dot');
-            const statusTitle = document.getElementById('status-title');
-            const statusSub = document.getElementById('status-sub');
-
-            if (statusDot) statusDot.classList.toggle('active', globalActive);
-            if (statusTitle) statusTitle.textContent = globalActive ? 'Chat Message Limit: ON' : 'Chat Message Limit: OFF';
-            if (statusSub) statusSub.textContent = globalActive ? 'it limites the amout of message shown from below so all message above it will get prune or cut out this is done to improve performance and reduce lagging.' : 'Message Limit paused via Master Power Switch';
+          // Restore AdBlocker State
+          const adblockVal = prefs.adblock_enabled !== undefined ? (prefs.adblock_enabled === true || prefs.adblock_enabled === 'true') : (localStorage.getItem('adblock_enabled') !== 'false');
+          const toggleAdblockBtn = document.getElementById('toggle-adblock-btn');
+          const adblockDot = document.getElementById('adblock-dot');
+          if (toggleAdblockBtn) {
+            toggleAdblockBtn.textContent = adblockVal ? 'Enabled' : 'Disabled';
+            toggleAdblockBtn.className = adblockVal ? 'oneui-pill-btn primary' : 'oneui-pill-btn secondary';
           }
+          if (adblockDot) adblockDot.classList.toggle('active', adblockVal);
+
+          // Check active tab to toggle YouTube Control Card
+          try {
+            if (window.CaspianBridge && typeof window.CaspianBridge.getOpenTabs === 'function') {
+              const openTabsStr = window.CaspianBridge.getOpenTabs();
+              if (openTabsStr) {
+                const tabs = JSON.parse(openTabsStr);
+                const activeTab = tabs.find(t => t.active);
+                const ytCard = document.getElementById('youtube-control-card');
+                if (ytCard) {
+                  const isYT = activeTab && ((activeTab.service && activeTab.service.toLowerCase().includes('youtube')) || (activeTab.url && activeTab.url.toLowerCase().includes('youtube.com')));
+                  ytCard.style.display = isYT ? 'block' : 'none';
+                }
+              }
+            }
+          } catch(e) {}
           if (prefs.theme_start_color && prefs.theme_end_color) {
             applyCustomGradient(prefs.theme_start_color, prefs.theme_end_color);
           }
@@ -509,7 +559,7 @@
           if (prefs.themeMode !== undefined) {
             setTheme(prefs.themeMode);
           } else {
-            setTheme(localStorage.getItem('theme') || 'light');
+            setTheme(localStorage.getItem('theme') || 'dark');
           }
           updateIconPreview(prefs.theme_start_color || '#A2A9A9', prefs.theme_end_color || '#1B4264', selectedShapeVal);
 
@@ -814,6 +864,9 @@
       if (window.CaspianBridge && typeof window.CaspianBridge.setSystemNightMode === 'function') {
         window.CaspianBridge.setSystemNightMode(isDark);
       }
+      if (window.CaspianBridge && typeof window.CaspianBridge.toggleHostPageTheme === 'function') {
+        window.CaspianBridge.toggleHostPageTheme(isDark);
+      }
       if (isDark) {
         document.documentElement.classList.add('dark');
         document.documentElement.classList.remove('light');
@@ -832,8 +885,10 @@
 
   // Theme Toggles (Default Light)
   function setTheme(t) {
-    activeTheme = t || 'light';
+    activeTheme = t || 'dark';
     document.documentElement.setAttribute('data-theme', activeTheme);
+    document.documentElement.classList.toggle('dark', activeTheme === 'dark');
+    document.documentElement.classList.toggle('light', activeTheme === 'light');
     if (activeTheme === 'light') {
       document.documentElement.style.setProperty('--sheet-bg', '#ffffff');
     } else {
@@ -1446,9 +1501,28 @@ function openTabOptionsMenu(tab) {
   const urlDisplay = document.getElementById('tab-url-display');
   if (!modal || !nicknameInput || !urlDisplay) return;
 
+  editingTabId = tab.id;
   nicknameInput.value = tab.nickname || '';
   urlDisplay.value = tab.url || '';
   modal.style.display = 'flex';
+
+  const favBtn = document.getElementById('modal-favorite-btn');
+  const favIcon = document.getElementById('fav-star-icon');
+  const favText = document.getElementById('fav-star-text');
+  if (favIcon) favIcon.textContent = tab.isFavorite ? '⭐' : '☆';
+  if (favText) favText.textContent = tab.isFavorite ? 'Favorited' : 'Favorite';
+
+  if (favBtn) {
+    favBtn.onclick = () => {
+      playSFX('tb_clicks');
+      if (window.CaspianBridge && typeof window.CaspianBridge.toggleTabFavorite === 'function') {
+        window.CaspianBridge.toggleTabFavorite(tab.id);
+      }
+      tab.isFavorite = !tab.isFavorite;
+      if (favIcon) favIcon.textContent = tab.isFavorite ? '⭐' : '☆';
+      if (favText) favText.textContent = tab.isFavorite ? 'Favorited' : 'Favorite';
+    };
+  }
 
   // Modal actions
   const cancelBtn = document.getElementById('modal-cancel-btn');
@@ -1491,22 +1565,24 @@ function openTabOptionsMenu(tab) {
   }
 
   const saveBtn = document.getElementById('modal-save-btn');
-  saveBtn.onclick = () => {
-    playSFX('tb_modal');
-    nicknameInput.blur();
-    urlDisplay.blur();
-    const name = nicknameInput.value.trim();
-    const url = urlDisplay.value.trim();
-    if (window.CaspianBridge && typeof window.CaspianBridge.updateTabDetails === 'function') {
-      window.CaspianBridge.updateTabDetails(tab.id, name, url);
-    }
-    modal.style.display = 'none';
-    setTimeout(() => {
-      if (typeof window.renderOpenTabs === 'function') {
-        window.renderOpenTabs();
+  if (saveBtn) {
+    saveBtn.onclick = () => {
+      playSFX('tb_modal');
+      nicknameInput.blur();
+      urlDisplay.blur();
+      const nick = nicknameInput.value.trim();
+      const url = urlDisplay.value.trim();
+      if (window.CaspianBridge && typeof window.CaspianBridge.updateTabDetails === 'function') {
+        window.CaspianBridge.updateTabDetails(tab.id, nick, url);
       }
-    }, 300);
-  };
+      modal.style.display = 'none';
+      setTimeout(() => {
+        if (typeof window.renderOpenTabs === 'function') {
+          window.renderOpenTabs();
+        }
+      }, 100);
+    };
+  }
 }
 
 function triggerCloseTab(tabId) {
@@ -1576,4 +1652,204 @@ function showUndoToast() {
     toast.style.display = 'none';
   }, 6000); // Allow 6 seconds to undo
 }
+
+// YouTube Controls & AdBlocker Event Listeners
+document.addEventListener('DOMContentLoaded', () => {
+  const ytSeekBackBtn = document.getElementById('yt-seek-back-btn');
+  if (ytSeekBackBtn) {
+    ytSeekBackBtn.addEventListener('click', () => {
+      playSFX('tb_clicks');
+      if (window.CaspianBridge && typeof window.CaspianBridge.seekYouTube === 'function') {
+        window.CaspianBridge.seekYouTube(-5);
+      }
+    });
+  }
+
+  const ytSeekFwdBtn = document.getElementById('yt-seek-fwd-btn');
+  if (ytSeekFwdBtn) {
+    ytSeekFwdBtn.addEventListener('click', () => {
+      playSFX('tb_clicks');
+      if (window.CaspianBridge && typeof window.CaspianBridge.seekYouTube === 'function') {
+        window.CaspianBridge.seekYouTube(5);
+      }
+    });
+  }
+
+  document.querySelectorAll('.yt-speed-pill').forEach(pill => {
+    pill.addEventListener('click', () => {
+      playSFX('tb_clicks');
+      const speed = pill.dataset.speed;
+      document.querySelectorAll('.yt-speed-pill').forEach(p => p.classList.toggle('active', p === pill));
+      if (window.CaspianBridge && typeof window.CaspianBridge.setYouTubeSpeed === 'function') {
+        window.CaspianBridge.setYouTubeSpeed(parseFloat(speed));
+      }
+    });
+  });
+
+  document.querySelectorAll('.yt-quality-pill').forEach(pill => {
+    pill.addEventListener('click', () => {
+      playSFX('tb_clicks');
+      const quality = pill.dataset.quality;
+      document.querySelectorAll('.yt-quality-pill').forEach(p => p.classList.toggle('active', p === pill));
+      if (window.CaspianBridge && typeof window.CaspianBridge.setYouTubeQuality === 'function') {
+        window.CaspianBridge.setYouTubeQuality(quality);
+      }
+    });
+  });
+
+  // Engine Tab Cards & Master Power Toggle Logic
+  const cardTS = document.getElementById('card-temp-saver');
+  const cardCL = document.getElementById('card-chat-limit');
+  const cardCC = document.getElementById('card-caspian-current');
+  const cardAB = document.getElementById('card-adblocker');
+
+  const toggleTSBtn = document.getElementById('toggle-temp-saver-btn');
+  const toggleCLBtn = document.getElementById('toggle-chat-limit-btn');
+  const toggleCCBtn = document.getElementById('toggle-caspian-current-btn');
+  const toggleAdblockBtn = document.getElementById('toggle-adblock-btn');
+
+  const chatLimitHeader = document.getElementById('chat-limit-header');
+  const chatLimitBody = document.getElementById('chat-limit-body');
+  const ccHeader = document.getElementById('caspian-current-header');
+  const ccBody = document.getElementById('caspian-current-body');
+  const adblockHeader = document.getElementById('adblock-header');
+  const adblockBody = document.getElementById('adblock-body');
+
+  // Helper to update card states
+  function updateEngineCardUI(card, toggleBtn, body, dotEl, key) {
+    const isEnabled = localStorage.getItem(key) !== 'false';
+    if (card) {
+      card.classList.toggle('disabled', !isEnabled);
+      card.style.opacity = isEnabled ? '1' : '0.45';
+      card.style.filter = isEnabled ? 'none' : 'grayscale(0.6)';
+    }
+    if (body) body.style.display = isEnabled ? 'block' : 'none';
+    if (dotEl) dotEl.classList.toggle('active', isEnabled);
+    if (toggleBtn) {
+      toggleBtn.textContent = isEnabled ? 'ON' : 'OFF';
+      toggleBtn.className = isEnabled ? 'oneui-pill-btn primary' : 'oneui-pill-btn secondary';
+    }
+    if (key === 'chat_limit_enabled') {
+      const statusTitle = document.getElementById('status-title');
+      if (statusTitle) statusTitle.textContent = 'Chat Message Limit: ' + (isEnabled ? 'ON' : 'OFF');
+    }
+  }
+
+  // Initial Sync
+  updateEngineCardUI(cardTS, toggleTSBtn, null, document.getElementById('ts-status-dot'), 'temp_saver_enabled');
+  updateEngineCardUI(cardCL, toggleCLBtn, chatLimitBody, document.getElementById('status-dot'), 'chat_limit_enabled');
+  updateEngineCardUI(cardCC, toggleCCBtn, ccBody, document.getElementById('cc-status-dot'), 'caspian_current_enabled');
+  updateEngineCardUI(cardAB, toggleAdblockBtn, adblockBody, document.getElementById('adblock-dot'), 'adblock_enabled');
+
+  // 1. Temporary Chat Saver Toggle
+  if (toggleTSBtn) {
+    toggleTSBtn.addEventListener('click', (e) => {
+      e.stopPropagation();
+      playSFX('tb_clicks');
+      let current = localStorage.getItem('temp_saver_enabled') !== 'false';
+      let next = !current;
+      localStorage.setItem('temp_saver_enabled', next ? 'true' : 'false');
+      if (window.CaspianBridge && typeof window.CaspianBridge.saveSetting === 'function') {
+        window.CaspianBridge.saveSetting('temp_saver_enabled', next ? 'true' : 'false');
+      }
+      updateEngineCardUI(cardTS, toggleTSBtn, null, document.getElementById('ts-status-dot'), 'temp_saver_enabled');
+    });
+  }
+
+  // 2. Chat Limit Accordion & Toggle
+  if (chatLimitHeader && chatLimitBody) {
+    chatLimitHeader.addEventListener('click', (e) => {
+      if (e.target === toggleCLBtn || (toggleCLBtn && toggleCLBtn.contains(e.target))) return;
+      const isOpen = chatLimitBody.style.display !== 'none';
+      chatLimitBody.style.display = isOpen ? 'none' : 'block';
+    });
+  }
+  if (toggleCLBtn) {
+    toggleCLBtn.addEventListener('click', (e) => {
+      e.stopPropagation();
+      playSFX('tb_clicks');
+      let current = localStorage.getItem('chat_limit_enabled') !== 'false';
+      let next = !current;
+      localStorage.setItem('chat_limit_enabled', next ? 'true' : 'false');
+      if (window.CaspianBridge && typeof window.CaspianBridge.saveSetting === 'function') {
+        window.CaspianBridge.saveSetting('chat_limit_enabled', next ? 'true' : 'false');
+      }
+      updateEngineCardUI(cardCL, toggleCLBtn, chatLimitBody, document.getElementById('status-dot'), 'chat_limit_enabled');
+    });
+  }
+
+  // 3. Caspian Current Accordion & Toggle
+  if (ccHeader && ccBody) {
+    ccHeader.addEventListener('click', (e) => {
+      if (e.target === toggleCCBtn || (toggleCCBtn && toggleCCBtn.contains(e.target))) return;
+      const isOpen = ccBody.style.display !== 'none';
+      ccBody.style.display = isOpen ? 'none' : 'block';
+    });
+  }
+  if (toggleCCBtn) {
+    toggleCCBtn.addEventListener('click', (e) => {
+      e.stopPropagation();
+      playSFX('tb_clicks');
+      let current = localStorage.getItem('caspian_current_enabled') !== 'false';
+      let next = !current;
+      localStorage.setItem('caspian_current_enabled', next ? 'true' : 'false');
+      if (window.CaspianBridge && typeof window.CaspianBridge.saveSetting === 'function') {
+        window.CaspianBridge.saveSetting('caspian_current_enabled', next ? 'true' : 'false');
+      }
+      updateEngineCardUI(cardCC, toggleCCBtn, ccBody, document.getElementById('cc-status-dot'), 'caspian_current_enabled');
+    });
+  }
+
+  // 4. AdBlocker Accordion & Toggle
+  if (adblockHeader && adblockBody) {
+    adblockHeader.addEventListener('click', (e) => {
+      if (e.target === toggleAdblockBtn || (toggleAdblockBtn && toggleAdblockBtn.contains(e.target))) return;
+      const isOpen = adblockBody.style.display !== 'none';
+      adblockBody.style.display = isOpen ? 'none' : 'block';
+    });
+  }
+  if (toggleAdblockBtn) {
+    toggleAdblockBtn.addEventListener('click', (e) => {
+      e.stopPropagation();
+      playSFX('tb_clicks');
+      let current = localStorage.getItem('adblock_enabled') !== 'false';
+      let next = !current;
+      localStorage.setItem('adblock_enabled', next ? 'true' : 'false');
+      if (window.CaspianBridge && typeof window.CaspianBridge.saveSetting === 'function') {
+        window.CaspianBridge.saveSetting('adblock_enabled', next ? 'true' : 'false');
+      }
+      updateEngineCardUI(cardAB, toggleAdblockBtn, adblockBody, document.getElementById('adblock-dot'), 'adblock_enabled');
+    });
+  }
+
+  // 5. Global Top-Right Master Engine Power Toggle Button (#power-toggle-btn / #btn-power-off)
+  const masterPowerBtn = document.getElementById('power-toggle-btn') || document.getElementById('btn-power-off');
+  if (masterPowerBtn) {
+    masterPowerBtn.addEventListener('click', (e) => {
+      e.stopPropagation();
+      playSFX('tb_power');
+      let anyOn = (localStorage.getItem('temp_saver_enabled') !== 'false' ||
+                    localStorage.getItem('chat_limit_enabled') !== 'false' ||
+                    localStorage.getItem('caspian_current_enabled') !== 'false' ||
+                    localStorage.getItem('adblock_enabled') !== 'false');
+      let targetState = !anyOn;
+
+      ['temp_saver_enabled', 'chat_limit_enabled', 'caspian_current_enabled', 'adblock_enabled'].forEach(key => {
+        localStorage.setItem(key, targetState ? 'true' : 'false');
+        if (window.CaspianBridge && typeof window.CaspianBridge.saveSetting === 'function') {
+          window.CaspianBridge.saveSetting(key, targetState ? 'true' : 'false');
+        }
+      });
+
+      updateEngineCardUI(cardTS, toggleTSBtn, null, document.getElementById('ts-status-dot'), 'temp_saver_enabled');
+      updateEngineCardUI(cardCL, toggleCLBtn, chatLimitBody, document.getElementById('status-dot'), 'chat_limit_enabled');
+      updateEngineCardUI(cardCC, toggleCCBtn, ccBody, document.getElementById('cc-status-dot'), 'caspian_current_enabled');
+      updateEngineCardUI(cardAB, toggleAdblockBtn, adblockBody, document.getElementById('adblock-dot'), 'adblock_enabled');
+
+      if (window.CaspianBridge && typeof window.CaspianBridge.showToast === 'function') {
+        window.CaspianBridge.showToast(targetState ? '⚡ All Caspian Engines Activated!' : '🔌 All Engines Disabled');
+      }
+    });
+  }
+});
 })();
