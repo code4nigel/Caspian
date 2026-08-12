@@ -480,6 +480,8 @@ public class MainActivity extends AppCompatActivity {
     private boolean isRecordingPcmAudio = false;
     private ByteArrayOutputStream pcmAudioBuffer;
     private Thread pcmRecordingThread;
+    private boolean isRecordingSpeechMode = false;
+    private boolean justStartedSpeechDictation = false;
 
     public void startSpeechToText() {
         if (ContextCompat.checkSelfPermission(this, Manifest.permission.RECORD_AUDIO) != PackageManager.PERMISSION_GRANTED) {
@@ -520,7 +522,11 @@ public class MainActivity extends AppCompatActivity {
     }
 
     public void stopSpeechToText() {
+        isRecordingSpeechMode = false;
         silenceSystemAudioForSpeech(false);
+        if (floatingCaspianCard != null) {
+            floatingCaspianCard.animate().scaleX(1.0f).scaleY(1.0f).setDuration(150).start();
+        }
         FrameLayout speechContainer = findViewById(R.id.speech_waveform_container);
         if (speechContainer != null) {
             speechContainer.setVisibility(View.GONE);
@@ -1389,24 +1395,27 @@ public class MainActivity extends AppCompatActivity {
                     startRawX = event.getRawX();
                     startRawY = event.getRawY();
                     isDragging = false;
-                    isLongPressing = false;
+                    justStartedSpeechDictation = false;
 
-                    if (longPressRunnable != null) {
-                        longPressHandler.removeCallbacks(longPressRunnable);
-                    }
-                    longPressRunnable = () -> {
-                        if (!isDragging) {
-                            isLongPressing = true;
-                            triggerVibration();
-                            startSpeechToText();
-                            floatingCaspianCard.animate()
-                                    .scaleX(1.2f)
-                                    .scaleY(1.2f)
-                                    .setDuration(150)
-                                    .start();
+                    if (!isRecordingSpeechMode) {
+                        if (longPressRunnable != null) {
+                            longPressHandler.removeCallbacks(longPressRunnable);
                         }
-                    };
-                    longPressHandler.postDelayed(longPressRunnable, 500);
+                        longPressRunnable = () -> {
+                            if (!isDragging) {
+                                isRecordingSpeechMode = true;
+                                justStartedSpeechDictation = true;
+                                triggerVibration();
+                                startSpeechToText();
+                                floatingCaspianCard.animate()
+                                        .scaleX(1.25f)
+                                        .scaleY(1.25f)
+                                        .setDuration(150)
+                                        .start();
+                            }
+                        };
+                        longPressHandler.postDelayed(longPressRunnable, 450);
+                    }
                     return true;
 
                 case MotionEvent.ACTION_MOVE:
@@ -1418,11 +1427,6 @@ public class MainActivity extends AppCompatActivity {
                             longPressHandler.removeCallbacks(longPressRunnable);
                         }
                         isDragging = true;
-                        if (isLongPressing) {
-                            stopSpeechToText();
-                            isLongPressing = false;
-                            floatingCaspianCard.animate().scaleX(1.0f).scaleY(1.0f).setDuration(150).start();
-                        }
                         float newX = event.getRawX() + dX;
                         float newY = event.getRawY() + dY;
 
@@ -1445,42 +1449,54 @@ public class MainActivity extends AppCompatActivity {
                     if (longPressRunnable != null) {
                         longPressHandler.removeCallbacks(longPressRunnable);
                     }
-                    if (isLongPressing) {
-                        stopSpeechToText();
-                        isLongPressing = false;
-                        floatingCaspianCard.animate().scaleX(1.0f).scaleY(1.0f).setDuration(150).start();
-                    } else if (!isDragging) {
-                        playAssetSound("sfx/tap_alternate.wav");
-                        SharedPreferences prefs = getSharedPreferences("CaspianMobilePrefs", MODE_PRIVATE);
-                        int tapDurationVal = 100;
-                        try {
-                            String tapDurStr = prefs.getString("theme_button_tap_duration", "100");
-                            tapDurationVal = Integer.parseInt(tapDurStr);
-                        } catch(Exception e) {}
 
-                        final int finalTapDur = tapDurationVal;
-                        if (finalTapDur > 0) {
-                            floatingCaspianCard.animate()
-                                    .scaleX(0.88f)
-                                    .scaleY(0.88f)
-                                    .setDuration(finalTapDur)
-                                    .withEndAction(() -> {
-                                        floatingCaspianCard.animate()
-                                                .scaleX(1.0f)
-                                                .scaleY(1.0f)
-                                                .setDuration(finalTapDur)
-                                                .setInterpolator(new android.view.animation.OvershootInterpolator(1.2f))
-                                                .start();
-                                    })
-                                    .start();
-                        }
-                        toggleControlSheet();
+                    if (isDragging) {
+                        return true;
                     }
-                    return true;
 
-                default:
-                    return false;
+                    // If long-press just fired to start dictation, user released finger -> keep recording in background!
+                    if (justStartedSpeechDictation) {
+                        justStartedSpeechDictation = false;
+                        return true;
+                    }
+
+                    // If speech recording is ACTIVE, tapping the button STOPS recording & sends audio!
+                    if (isRecordingSpeechMode) {
+                        isRecordingSpeechMode = false;
+                        triggerVibration();
+                        stopSpeechToText();
+                        return true;
+                    }
+
+                    // Otherwise, normal tap toggles Caspian Control Sheet
+                    playAssetSound("sfx/tap_alternate.wav");
+                    SharedPreferences prefs = getSharedPreferences("CaspianMobilePrefs", MODE_PRIVATE);
+                    int tapDurationVal = 100;
+                    try {
+                        String tapDurStr = prefs.getString("theme_button_tap_duration", "100");
+                        tapDurationVal = Integer.parseInt(tapDurStr);
+                    } catch(Exception e) {}
+
+                    final int finalTapDur = tapDurationVal;
+                    if (finalTapDur > 0) {
+                        floatingCaspianCard.animate()
+                                .scaleX(0.88f)
+                                .scaleY(0.88f)
+                                .setDuration(finalTapDur)
+                                .withEndAction(() -> {
+                                    floatingCaspianCard.animate()
+                                            .scaleX(1.0f)
+                                            .scaleY(1.0f)
+                                            .setDuration(finalTapDur)
+                                            .setInterpolator(new android.view.animation.OvershootInterpolator(1.2f))
+                                            .start();
+                                })
+                                .start();
+                    }
+                    toggleControlSheet();
+                    return true;
             }
+            return false;
         });
     }
 
