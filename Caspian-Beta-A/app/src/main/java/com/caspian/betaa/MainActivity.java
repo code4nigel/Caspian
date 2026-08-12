@@ -47,6 +47,16 @@ import android.widget.TextView;
 import android.content.ClipboardManager;
 import android.content.ClipData;
 import android.widget.Toast;
+import android.media.AudioRecord;
+import android.media.MediaRecorder;
+import android.media.AudioFormat;
+import java.io.ByteArrayOutputStream;
+import java.io.OutputStream;
+import java.io.InputStream;
+import java.io.InputStreamReader;
+import java.io.BufferedReader;
+import java.net.HttpURLConnection;
+import java.net.URL;
 
 import org.json.JSONArray;
 import org.json.JSONObject;
@@ -465,33 +475,47 @@ public class MainActivity extends AppCompatActivity {
         }
     }
 
+    // Multi-Engine Speech-to-Text Audio Recorder Fields
+    private AudioRecord audioRecord;
+    private boolean isRecordingPcmAudio = false;
+    private ByteArrayOutputStream pcmAudioBuffer;
+    private Thread pcmRecordingThread;
+
     public void startSpeechToText() {
         if (ContextCompat.checkSelfPermission(this, Manifest.permission.RECORD_AUDIO) != PackageManager.PERMISSION_GRANTED) {
             ActivityCompat.requestPermissions(this, new String[]{Manifest.permission.RECORD_AUDIO}, MIC_PERMISSION_REQUEST_CODE);
             return;
         }
-        if (speechRecognizer == null) {
-            setupSpeechRecognizer();
-        }
-        if (speechRecognizer != null && speechIntent != null) {
-            try {
-                SharedPreferences prefs = getSharedPreferences("CaspianMobilePrefs", MODE_PRIVATE);
-                String startHex = prefs.getString("theme_start_color", "#A2A9A9");
-                String endHex = prefs.getString("theme_end_color", "#1B4264");
-                int startColor = android.graphics.Color.parseColor(startHex);
-                int endColor = android.graphics.Color.parseColor(endHex);
-                FrameLayout speechContainer = findViewById(R.id.speech_waveform_container);
-                if (speechContainer != null) {
-                    speechContainer.setVisibility(View.VISIBLE);
-                }
-                if (speechWaveformView != null) {
-                    speechWaveformView.setWaveColors(startColor, endColor);
-                    speechWaveformView.setVisibility(View.VISIBLE);
-                }
 
-                silenceSystemAudioForSpeech(true);
-                speechRecognizer.startListening(speechIntent);
-            } catch(Exception e) {}
+        SharedPreferences prefs = getSharedPreferences("CaspianMobilePrefs", MODE_PRIVATE);
+        String sttEngine = prefs.getString("stt_engine_mode", "android_native");
+
+        try {
+            String startHex = prefs.getString("theme_start_color", "#A2A9A9");
+            String endHex = prefs.getString("theme_end_color", "#1B4264");
+            int startColor = android.graphics.Color.parseColor(startHex);
+            int endColor = android.graphics.Color.parseColor(endHex);
+            FrameLayout speechContainer = findViewById(R.id.speech_waveform_container);
+            if (speechContainer != null) {
+                speechContainer.setVisibility(View.VISIBLE);
+            }
+            if (speechWaveformView != null) {
+                speechWaveformView.setWaveColors(startColor, endColor);
+                speechWaveformView.setVisibility(View.VISIBLE);
+            }
+
+            silenceSystemAudioForSpeech(true);
+
+            if ("android_native".equalsIgnoreCase(sttEngine)) {
+                if (speechRecognizer == null) setupSpeechRecognizer();
+                if (speechRecognizer != null && speechIntent != null) {
+                    speechRecognizer.startListening(speechIntent);
+                }
+            } else {
+                startAudioRecording();
+            }
+        } catch(Exception e) {
+            e.printStackTrace();
         }
     }
 
@@ -504,11 +528,293 @@ public class MainActivity extends AppCompatActivity {
         if (speechWaveformView != null) {
             speechWaveformView.setVisibility(View.GONE);
         }
-        if (speechRecognizer != null) {
-            try {
-                speechRecognizer.stopListening();
-            } catch(Exception e) {}
+
+        SharedPreferences prefs = getSharedPreferences("CaspianMobilePrefs", MODE_PRIVATE);
+        String sttEngine = prefs.getString("stt_engine_mode", "android_native");
+
+        if ("android_native".equalsIgnoreCase(sttEngine)) {
+            if (speechRecognizer != null) {
+                try {
+                    speechRecognizer.stopListening();
+                } catch(Exception e) {}
+            }
+        } else {
+            byte[] wavBytes = stopAudioRecordingAndGetWav();
+            sendAudioToCloudStt(wavBytes, sttEngine, prefs);
         }
+    }
+
+    private void startAudioRecording() {
+        try {
+            int sampleRate = 16000;
+            int channelConfig = AudioFormat.CHANNEL_IN_MONO;
+            int audioFormat = AudioFormat.ENCODING_PCM_16BIT;
+            int bufferSize = AudioRecord.getMinBufferSize(sampleRate, channelConfig, audioFormat);
+            if (bufferSize <= 0) bufferSize = 4096;
+            final int finalBufSize = bufferSize;
+
+            if (ActivityCompat.checkSelfPermission(this, Manifest.permission.RECORD_AUDIO) != PackageManager.PERMISSION_GRANTED) return;
+            audioRecord = new AudioRecord(MediaRecorder.AudioSource.MIC, sampleRate, channelConfig, audioFormat, finalBufSize);
+            pcmAudioBuffer = new ByteArrayOutputStream();
+            isRecordingPcmAudio = true;
+
+            audioRecord.startRecording();
+            pcmRecordingThread = new Thread(() -> {
+                byte[] data = new byte[finalBufSize];
+                while (isRecordingPcmAudio) {
+                    int read = audioRecord.read(data, 0, data.length);
+                    if (read > 0 && pcmAudioBuffer != null) {
+                        pcmAudioBuffer.write(data, 0, read);
+
+                        // Calculate RMS amplitude normalized to (-2.0 to 10.0) dB matching Android SpeechRecognizer
+                        long sum = 0;
+                        int samples = read / 2;
+                        for (int i = 0; i < read - 1; i += 2) {
+                            short sample = (short) ((data[i + 1] << 8) | (data[i] & 0xff));
+                            sum += sample * sample;
+                        }
+                        double rms = Math.sqrt((double) sum / Math.max(1, samples));
+                        final float rmsdB = (float) Math.max(-2.0, Math.min(10.0, (rms / 350.0) - 2.0));
+                        if (speechWaveformView != null && speechWaveformView.getVisibility() == View.VISIBLE) {
+                            runOnUiThread(() -> speechWaveformView.setAmplitude(rmsdB));
+                        }
+                    }
+                }
+            });
+            pcmRecordingThread.start();
+        } catch(Exception e) {
+            e.printStackTrace();
+        }
+    }
+
+    private byte[] stopAudioRecordingAndGetWav() {
+        isRecordingPcmAudio = false;
+        if (audioRecord != null) {
+            try {
+                audioRecord.stop();
+                audioRecord.release();
+            } catch (Exception e) {}
+            audioRecord = null;
+        }
+        if (pcmRecordingThread != null) {
+            try { pcmRecordingThread.join(500); } catch (Exception e) {}
+            pcmRecordingThread = null;
+        }
+        byte[] pcmData = pcmAudioBuffer != null ? pcmAudioBuffer.toByteArray() : new byte[0];
+        return pcmToWav(pcmData, 16000, 1, 16);
+    }
+
+    private byte[] pcmToWav(byte[] pcm, int sampleRate, int channels, int bitsPerSample) {
+        int totalDataLen = pcm.length + 36;
+        int byteRate = sampleRate * channels * bitsPerSample / 8;
+        byte[] header = new byte[44];
+        header[0] = 'R'; header[1] = 'I'; header[2] = 'F'; header[3] = 'F';
+        header[4] = (byte) (totalDataLen & 0xff);
+        header[5] = (byte) ((totalDataLen >> 8) & 0xff);
+        header[6] = (byte) ((totalDataLen >> 16) & 0xff);
+        header[7] = (byte) ((totalDataLen >> 24) & 0xff);
+        header[8] = 'W'; header[9] = 'A'; header[10] = 'V'; header[11] = 'E';
+        header[12] = 'f'; header[13] = 'm'; header[14] = 't'; header[15] = ' ';
+        header[16] = 16; header[17] = 0; header[18] = 0; header[19] = 0;
+        header[20] = 1; header[21] = 0;
+        header[22] = (byte) channels; header[23] = 0;
+        header[24] = (byte) (sampleRate & 0xff);
+        header[25] = (byte) ((sampleRate >> 8) & 0xff);
+        header[26] = (byte) ((sampleRate >> 16) & 0xff);
+        header[27] = (byte) ((sampleRate >> 24) & 0xff);
+        header[28] = (byte) (byteRate & 0xff);
+        header[29] = (byte) ((byteRate >> 8) & 0xff);
+        header[30] = (byte) ((byteRate >> 16) & 0xff);
+        header[31] = (byte) ((byteRate >> 24) & 0xff);
+        header[32] = (byte) (channels * bitsPerSample / 8); header[33] = 0;
+        header[34] = (byte) bitsPerSample; header[35] = 0;
+        header[36] = 'd'; header[37] = 'a'; header[38] = 't'; header[39] = 'a';
+        header[40] = (byte) (pcm.length & 0xff);
+        header[41] = (byte) ((pcm.length >> 8) & 0xff);
+        header[42] = (byte) ((pcm.length >> 16) & 0xff);
+        header[43] = (byte) ((pcm.length >> 24) & 0xff);
+
+        byte[] wav = new byte[header.length + pcm.length];
+        System.arraycopy(header, 0, wav, 0, header.length);
+        System.arraycopy(pcm, 0, wav, header.length, pcm.length);
+        return wav;
+    }
+
+    private void sendAudioToCloudStt(byte[] wavBytes, String engineMode, SharedPreferences prefs) {
+        if (wavBytes == null || wavBytes.length <= 44) {
+            new CaspianBridge(MainActivity.this).showToast("⚠️ Audio buffer empty.");
+            return;
+        }
+
+        new Thread(() -> {
+            try {
+                String recognizedText = null;
+                if ("deepgram".equalsIgnoreCase(engineMode)) {
+                    String apiKey = prefs.getString("deepgram_api_key", "").trim();
+                    if (apiKey.isEmpty()) {
+                        runOnUiThread(() -> new CaspianBridge(MainActivity.this).showToast("⚠️ Deepgram API Key missing! Enter in Settings."));
+                        return;
+                    }
+                    recognizedText = queryDeepgramApi(wavBytes, apiKey);
+                    if (recognizedText != null) {
+                        int pcmLen = wavBytes.length - 44;
+                        int durationSec = Math.max(1, pcmLen / (16000 * 2));
+                        long newTotal = prefs.getLong("deepgram_used_seconds", 0L) + durationSec;
+                        SharedPreferences.Editor ed = prefs.edit();
+                        ed.putLong("deepgram_used_seconds", newTotal);
+                        ed.apply();
+
+                        final long finalTotalSec = newTotal;
+                        runOnUiThread(() -> {
+                            if (controlWebView != null) {
+                                controlWebView.evaluateJavascript("if(typeof window.updateDeepgramUsageBadge === 'function') { window.updateDeepgramUsageBadge(" + finalTotalSec + "); }", null);
+                            }
+                        });
+                    }
+                } else if ("huggingface".equalsIgnoreCase(engineMode)) {
+                    String apiKey = prefs.getString("huggingface_api_key", "").trim();
+                    if (apiKey.isEmpty()) {
+                        runOnUiThread(() -> new CaspianBridge(MainActivity.this).showToast("⚠️ Hugging Face Token missing! Enter in Settings."));
+                        return;
+                    }
+                    recognizedText = queryHuggingFaceApi(wavBytes, apiKey);
+                }
+
+                final String finalText = recognizedText;
+                if (finalText != null && !finalText.trim().isEmpty()) {
+                    runOnUiThread(() -> handleRecognizedText(finalText));
+                } else {
+                    runOnUiThread(() -> new CaspianBridge(MainActivity.this).showToast("⚠️ Speech not recognized. Speak louder."));
+                }
+            } catch (Exception e) {
+                e.printStackTrace();
+                final String err = e.getMessage();
+                runOnUiThread(() -> new CaspianBridge(MainActivity.this).showToast("⚠️ STT API Error: " + (err != null ? err : "Network Failure")));
+            }
+        }).start();
+    }
+
+    private String readStreamString(InputStream is) throws Exception {
+        if (is == null) return "";
+        BufferedReader r = new BufferedReader(new InputStreamReader(is, "UTF-8"));
+        StringBuilder total = new StringBuilder();
+        String line;
+        while ((line = r.readLine()) != null) {
+            total.append(line).append('\n');
+        }
+        return total.toString();
+    }
+
+    private String queryDeepgramApi(byte[] wavBytes, String apiKey) throws Exception {
+        URL url = new URL("https://api.deepgram.com/v1/listen?model=nova-2&smart_format=true");
+        HttpURLConnection conn = (HttpURLConnection) url.openConnection();
+        conn.setRequestMethod("POST");
+        conn.setRequestProperty("Authorization", "Token " + apiKey);
+        conn.setRequestProperty("Content-Type", "audio/wav");
+        conn.setConnectTimeout(10000);
+        conn.setReadTimeout(15000);
+        conn.setDoOutput(true);
+
+        try (OutputStream os = conn.getOutputStream()) {
+            os.write(wavBytes);
+        }
+
+        int code = conn.getResponseCode();
+        InputStream is = (code >= 200 && code < 300) ? conn.getInputStream() : conn.getErrorStream();
+        String resp = readStreamString(is);
+        JSONObject json = new JSONObject(resp);
+        return json.getJSONObject("results")
+                .getJSONArray("channels")
+                .getJSONObject(0)
+                .getJSONArray("alternatives")
+                .getJSONObject(0)
+                .getString("transcript");
+    }
+
+    private String queryHuggingFaceApi(byte[] wavBytes, String apiKey) throws Exception {
+        String[] endpoints = new String[]{
+            "https://router.huggingface.co/hf-inference/models/openai/whisper-large-v3",
+            "https://api-inference.huggingface.co/models/openai/whisper-large-v3",
+            "https://api-inference.huggingface.co/models/openai/whisper-large-v3-turbo"
+        };
+
+        Exception lastErr = null;
+        for (String endpointUrl : endpoints) {
+            try {
+                URL url = new URL(endpointUrl);
+                HttpURLConnection conn = (HttpURLConnection) url.openConnection();
+                conn.setRequestMethod("POST");
+                conn.setRequestProperty("Authorization", "Bearer " + apiKey);
+                conn.setRequestProperty("Content-Type", "audio/flac");
+                conn.setConnectTimeout(8000);
+                conn.setReadTimeout(15000);
+                conn.setDoOutput(true);
+
+                try (OutputStream os = conn.getOutputStream()) {
+                    os.write(wavBytes);
+                }
+
+                int code = conn.getResponseCode();
+                InputStream is = (code >= 200 && code < 300) ? conn.getInputStream() : conn.getErrorStream();
+                String resp = readStreamString(is);
+
+                if (code == 401) {
+                    throw new Exception("HF Token Invalid (401). Check Token in Settings.");
+                } else if (code == 503) {
+                    throw new Exception("HF Model Loading (503). Try again in a moment.");
+                }
+
+                if (resp != null && !resp.trim().isEmpty()) {
+                    String trimmed = resp.trim();
+                    if (trimmed.startsWith("{")) {
+                        JSONObject json = new JSONObject(trimmed);
+                        if (json.has("text")) {
+                            return json.getString("text");
+                        } else if (json.has("error")) {
+                            lastErr = new Exception("HF: " + json.getString("error"));
+                        }
+                    } else if (trimmed.startsWith("[")) {
+                        JSONArray arr = new JSONArray(trimmed);
+                        if (arr.length() > 0 && arr.getJSONObject(0).has("text")) {
+                            return arr.getJSONObject(0).getString("text");
+                        }
+                    }
+                }
+            } catch (Exception e) {
+                lastErr = e;
+            }
+        }
+        if (lastErr != null) throw lastErr;
+        return null;
+    }
+
+    private String queryGroqApi(byte[] wavBytes, String apiKey) throws Exception {
+        String boundary = "----WebKitFormBoundary" + System.currentTimeMillis();
+        URL url = new URL("https://api.groq.com/openai/v1/audio/transcriptions");
+        HttpURLConnection conn = (HttpURLConnection) url.openConnection();
+        conn.setRequestMethod("POST");
+        conn.setRequestProperty("Authorization", "Bearer " + apiKey);
+        conn.setRequestProperty("Content-Type", "multipart/form-data; boundary=" + boundary);
+        conn.setConnectTimeout(10000);
+        conn.setReadTimeout(15000);
+        conn.setDoOutput(true);
+
+        try (OutputStream os = conn.getOutputStream()) {
+            os.write(("--" + boundary + "\r\n").getBytes());
+            os.write(("Content-Disposition: form-data; name=\"model\"\r\n\r\nwhisper-large-v3\r\n").getBytes());
+
+            os.write(("--" + boundary + "\r\n").getBytes());
+            os.write(("Content-Disposition: form-data; name=\"file\"; filename=\"audio.wav\"\r\n").getBytes());
+            os.write(("Content-Type: audio/wav\r\n\r\n").getBytes());
+            os.write(wavBytes);
+            os.write(("\r\n--" + boundary + "--\r\n").getBytes());
+        }
+
+        int code = conn.getResponseCode();
+        InputStream is = (code >= 200 && code < 300) ? conn.getInputStream() : conn.getErrorStream();
+        String resp = readStreamString(is);
+        JSONObject json = new JSONObject(resp);
+        return json.getString("text");
     }
 
     private void handleRecognizedText(String text) {

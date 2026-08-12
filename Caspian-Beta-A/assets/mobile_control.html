@@ -47,7 +47,7 @@
         </div>
         <div style="display: flex; flex-direction: column;">
           <span class="sheet-brand-name">CASPIAN MOBILE</span>
-          <span class="sheet-brand-tag">V1.0.96-BetaA</span>
+          <span class="sheet-brand-tag">V1.2.03-BetaA</span>
         </div>
       </div>
       <div class="header-icon-actions">
@@ -236,14 +236,14 @@
         </div>
       </div>
 
-      <!-- 3. Caspian Drift (Speech Dictation Engine) Card -->
+      <!-- 3. Caspian Drift (Speech Dictation & Voice Engine) Card -->
       <div id="card-caspian-current" class="m3-card engine-card expandable" style="margin-top: 14px;">
         <div id="caspian-current-header" class="m3-card-row" style="cursor: pointer;">
           <div class="m3-card-left">
             <div id="cc-status-dot" class="status-dot active"></div>
             <div>
               <div class="m3-card-title">Caspian Drift</div>
-              <div class="m3-card-sub">Long press action button to dictate speech. Tap to configure engine & API keys.</div>
+              <div class="m3-card-sub">Long-press wave button to dictate speech. Tap to customize STT models & API keys.</div>
             </div>
           </div>
           <button id="toggle-caspian-current-btn" class="oneui-pill-btn primary" style="font-size: 11px; padding: 4px 10px;">ON</button>
@@ -251,15 +251,28 @@
 
         <!-- Accordion Body -->
         <div id="caspian-current-body" style="display: none; margin-top: 12px; border-top: 1px solid var(--border-glass); padding-top: 10px;">
-          <div class="limit-section-title" style="margin-bottom: 6px;">SPEECH RECOGNITION ENGINE</div>
-          <div class="pill-grid" style="grid-template-columns: repeat(2, 1fr); gap: 6px; margin-bottom: 10px;">
-            <button class="cc-engine-pill active" data-engine="whisper">Groq Cloud Whisper</button>
-            <button class="cc-engine-pill" data-engine="native">Local Multilingual</button>
+          <div class="limit-section-title" style="margin-bottom: 6px;">SELECT SPEECH-TO-TEXT MODEL</div>
+          <div class="pill-grid" style="grid-template-columns: repeat(3, 1fr); gap: 6px; margin-bottom: 10px;">
+            <button class="cc-stt-pill active" data-engine="deepgram">⚡ Deepgram</button>
+            <button class="cc-stt-pill" data-engine="huggingface">🤗 HuggingFace</button>
+            <button class="cc-stt-pill" data-engine="android_native">📱 Native Android</button>
           </div>
 
-          <div style="margin-bottom: 10px;">
-            <div class="limit-section-title" style="margin-bottom: 4px;">FREE WHISPER / GROQ API KEY (OPTIONAL)</div>
-            <input type="password" id="whisper-api-key-input" class="caspian-text-input" placeholder="Paste free Groq/OpenAI Whisper API key" style="width: 100%; padding: 8px 12px; font-size: 11px; border-radius: 8px; background: var(--input-bg); border: 1px solid var(--border-glass); color: var(--text-main);" />
+          <!-- Deepgram Key & Usage Tracker Badge -->
+          <div id="stt-key-container-deepgram" style="margin-bottom: 10px;">
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 4px;">
+              <div class="limit-section-title">DEEPGRAM API KEY ($200 Free Credit)</div>
+              <span id="deepgram-usage-badge" style="font-size: 9.5px; font-weight: 800; color: #10b981; background: rgba(16,185,129,0.15); padding: 2px 7px; border-radius: 6px;">
+                ⏱️ 0s Used (~$200.00 Credit)
+              </span>
+            </div>
+            <input type="password" id="input-deepgram-key" class="caspian-text-input" placeholder="Paste Deepgram API Key (Token ...)" style="width: 100%; box-sizing: border-box; padding: 8px 12px; font-size: 11px; border-radius: 8px; background: var(--input-bg); border: 1px solid var(--border-glass); color: var(--text-main);" />
+          </div>
+
+          <!-- Hugging Face Token Input -->
+          <div id="stt-key-container-huggingface" style="margin-bottom: 10px; display: none;">
+            <div class="limit-section-title" style="margin-bottom: 4px;">HUGGING FACE ACCESS TOKEN (hf_...)</div>
+            <input type="password" id="input-huggingface-key" class="caspian-text-input" placeholder="Paste Hugging Face Token (hf_...)" style="width: 100%; box-sizing: border-box; padding: 8px 12px; font-size: 11px; border-radius: 8px; background: var(--input-bg); border: 1px solid var(--border-glass); color: var(--text-main);" />
           </div>
 
           <div class="limit-section-title" style="margin-bottom: 6px;">PRIMARY LANGUAGE ACCENT</div>

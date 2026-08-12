@@ -1704,6 +1704,79 @@ function restoreSavedSettings() {
             }
           }
         }
+        // Restore STT Engine Settings & Deepgram Usage Tracker
+        window.updateDeepgramUsageBadge = function(totalSeconds) {
+          const badge = document.getElementById('deepgram-usage-badge');
+          if (badge) {
+            const sec = parseInt(totalSeconds, 10) || 0;
+            const cost = (sec * 0.000073).toFixed(3);
+            badge.textContent = `⏱️ ${sec}s Used (~$${cost} / $200.00 Credit)`;
+          }
+        };
+
+        const initialUsedSec = prefs.deepgram_used_seconds || localStorage.getItem('deepgram_used_seconds') || 0;
+        window.updateDeepgramUsageBadge(initialUsedSec);
+
+        // Restore STT Engine Settings using Caspian Pill Grid Buttons (.cc-stt-pill)
+        const sttPills = document.querySelectorAll('.cc-stt-pill');
+        if (sttPills.length > 0) {
+          const updateSttKeyVisibility = (val) => {
+            const dg = document.getElementById('stt-key-container-deepgram');
+            const hf = document.getElementById('stt-key-container-huggingface');
+            if (dg) dg.style.display = val === 'deepgram' ? 'block' : 'none';
+            if (hf) hf.style.display = val === 'huggingface' ? 'block' : 'none';
+          };
+
+          const savedVal = localStorage.getItem('stt_engine_mode') || prefs.stt_engine_mode || 'deepgram';
+          updateSttKeyVisibility(savedVal);
+
+          sttPills.forEach(pill => {
+            const isActive = pill.dataset.engine === savedVal;
+            pill.classList.toggle('active', isActive);
+
+            if (!pill.dataset.bound) {
+              pill.dataset.bound = 'true';
+              pill.addEventListener('click', (e) => {
+                e.stopPropagation();
+                if (typeof playSFX === 'function') playSFX('tb_clicks');
+                sttPills.forEach(p => p.classList.remove('active'));
+                pill.classList.add('active');
+
+                const newVal = pill.dataset.engine;
+                localStorage.setItem('stt_engine_mode', newVal);
+                if (window.CaspianBridge && typeof window.CaspianBridge.saveSetting === 'function') {
+                  window.CaspianBridge.saveSetting('stt_engine_mode', newVal);
+                }
+                updateSttKeyVisibility(newVal);
+
+                if (window.CaspianBridge && typeof window.CaspianBridge.showToast === 'function') {
+                  window.CaspianBridge.showToast(`🎙️ STT Engine set to ${pill.textContent}`);
+                }
+              });
+            }
+          });
+        }
+
+        const bindSttKeyInput = (id, keyName) => {
+          const input = document.getElementById(id);
+          if (input) {
+            const savedVal = prefs[keyName] || localStorage.getItem(keyName) || '';
+            input.value = savedVal;
+            input.onchange = () => {
+              const val = input.value.trim();
+              localStorage.setItem(keyName, val);
+              if (window.CaspianBridge && typeof window.CaspianBridge.saveSetting === 'function') {
+                window.CaspianBridge.saveSetting(keyName, val);
+              }
+              if (window.CaspianBridge && typeof window.CaspianBridge.showToast === 'function') {
+                window.CaspianBridge.showToast(`Saved ${keyName}`);
+              }
+            };
+          }
+        };
+        bindSttKeyInput('input-deepgram-key', 'deepgram_api_key');
+        bindSttKeyInput('input-huggingface-key', 'huggingface_api_key');
+
         const visualsDetails = document.getElementById('settings-card-visuals');
         if (visualsDetails) {
           visualsDetails.open = localStorage.getItem('settings_open_visuals') === 'true';
@@ -2180,49 +2253,6 @@ document.addEventListener('DOMContentLoaded', () => {
 
   // Caspian Drift Settings Wiring (API Key, Speech Engine, Language Accent)
   const apiKeyInput = document.getElementById('whisper-api-key-input');
-  if (apiKeyInput) {
-    let savedKey = localStorage.getItem('whisper_api_key') || '';
-    if (window.CaspianBridge && typeof window.CaspianBridge.getPref === 'function') {
-      savedKey = window.CaspianBridge.getPref('whisper_api_key', savedKey);
-    }
-    apiKeyInput.value = savedKey;
-
-    apiKeyInput.addEventListener('input', () => {
-      const val = apiKeyInput.value.trim();
-      localStorage.setItem('whisper_api_key', val);
-      if (window.CaspianBridge && typeof window.CaspianBridge.savePref === 'function') {
-        window.CaspianBridge.savePref('whisper_api_key', val);
-      }
-    });
-  }
-
-  // Speech Engine Pills
-  const enginePills = document.querySelectorAll('.cc-engine-pill');
-  let savedEngine = localStorage.getItem('caspian_drift_engine') || 'whisper';
-  if (window.CaspianBridge && typeof window.CaspianBridge.getPref === 'function') {
-    savedEngine = window.CaspianBridge.getPref('caspian_drift_engine', savedEngine);
-  }
-  enginePills.forEach(pill => {
-    if (pill.dataset.engine === savedEngine) {
-      pill.classList.add('active');
-    } else {
-      pill.classList.remove('active');
-    }
-    pill.addEventListener('click', () => {
-      playSFX('tb_clicks');
-      enginePills.forEach(p => p.classList.remove('active'));
-      pill.classList.add('active');
-      const selected = pill.dataset.engine;
-      localStorage.setItem('caspian_drift_engine', selected);
-      if (window.CaspianBridge && typeof window.CaspianBridge.savePref === 'function') {
-        window.CaspianBridge.savePref('caspian_drift_engine', selected);
-      }
-      if (window.CaspianBridge && typeof window.CaspianBridge.showToast === 'function') {
-        window.CaspianBridge.showToast(selected === 'whisper' ? '⚡ Groq Cloud Whisper Active' : '📱 Local Speech Engine Active');
-      }
-    });
-  });
-
   // Language Accent Pills
   const langPills = document.querySelectorAll('.cc-lang-pill');
   let savedLang = localStorage.getItem('caspian_drift_lang') || 'auto';

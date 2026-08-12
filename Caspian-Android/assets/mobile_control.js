@@ -1704,6 +1704,54 @@ function restoreSavedSettings() {
             }
           }
         }
+        // Restore STT Engine Settings
+        const sttSelect = document.getElementById('stt-engine-select');
+        const sttEngineVal = prefs.stt_engine_mode || localStorage.getItem('stt_engine_mode') || 'android_native';
+        if (sttSelect) {
+          sttSelect.value = sttEngineVal;
+          const updateSttKeyVisibility = (val) => {
+            const dg = document.getElementById('stt-key-container-deepgram');
+            const hf = document.getElementById('stt-key-container-huggingface');
+            const gq = document.getElementById('stt-key-container-groq');
+            if (dg) dg.style.display = val === 'deepgram' ? 'block' : 'none';
+            if (hf) hf.style.display = val === 'huggingface' ? 'block' : 'none';
+            if (gq) gq.style.display = val === 'groq' ? 'block' : 'none';
+          };
+          updateSttKeyVisibility(sttEngineVal);
+          sttSelect.onchange = () => {
+            const newEngine = sttSelect.value;
+            localStorage.setItem('stt_engine_mode', newEngine);
+            if (window.CaspianBridge && typeof window.CaspianBridge.saveSetting === 'function') {
+              window.CaspianBridge.saveSetting('stt_engine_mode', newEngine);
+            }
+            updateSttKeyVisibility(newEngine);
+            if (window.CaspianBridge && typeof window.CaspianBridge.showToast === 'function') {
+              window.CaspianBridge.showToast(`🎙️ STT Engine set to ${newEngine}`);
+            }
+          };
+        }
+
+        const bindSttKeyInput = (id, keyName) => {
+          const input = document.getElementById(id);
+          if (input) {
+            const savedVal = prefs[keyName] || localStorage.getItem(keyName) || '';
+            input.value = savedVal;
+            input.onchange = () => {
+              const val = input.value.trim();
+              localStorage.setItem(keyName, val);
+              if (window.CaspianBridge && typeof window.CaspianBridge.saveSetting === 'function') {
+                window.CaspianBridge.saveSetting(keyName, val);
+              }
+              if (window.CaspianBridge && typeof window.CaspianBridge.showToast === 'function') {
+                window.CaspianBridge.showToast(`Saved ${keyName}`);
+              }
+            };
+          }
+        };
+        bindSttKeyInput('input-deepgram-key', 'deepgram_api_key');
+        bindSttKeyInput('input-huggingface-key', 'huggingface_api_key');
+        bindSttKeyInput('input-groq-key', 'groq_api_key');
+
         const visualsDetails = document.getElementById('settings-card-visuals');
         if (visualsDetails) {
           visualsDetails.open = localStorage.getItem('settings_open_visuals') === 'true';

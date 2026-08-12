@@ -10,8 +10,8 @@ android {
         applicationId = "com.caspian.ai"
         minSdk = 24
         targetSdk = 34
-        versionCode = 196
-        versionName = "1.0.96"
+        versionCode = 197
+        versionName = "1.0.97"
     }
 
     buildTypes {

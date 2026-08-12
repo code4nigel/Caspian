@@ -96,7 +96,7 @@ public class SpeechWaveformView extends View {
         canvas.drawPath(subPath, wavePaint);
         wavePaint.setAlpha(255);
 
-        // Keep animating while visible
+        // Keep animating continuously at 60FPS while visible
         if (getVisibility() == View.VISIBLE) {
             postInvalidateOnAnimation();
         }
