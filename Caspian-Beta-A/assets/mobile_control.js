@@ -89,7 +89,7 @@
   const exportMenu = document.getElementById('export-menu');
 
   const appCardHub = document.getElementById('app-card-hub');
-  const appCardGpt = document.getElementById('app-card-chatgpt');
+  const appCardChatGPT = document.getElementById('app-card-chatgpt');
   const appCardGemini = document.getElementById('app-card-gemini');
   const appCardGoogle = document.getElementById('app-card-google');
   const appCardYoutube = document.getElementById('app-card-youtube');
@@ -192,9 +192,40 @@
     }
   });
 
+  // Tab Grouping, Multi-Select, & Filter State
+  let tabGroups = [];
+  try {
+    const savedGroupsStr = localStorage.getItem('caspian_tab_groups');
+    if (savedGroupsStr) tabGroups = JSON.parse(savedGroupsStr);
+    if (window.CaspianBridge && typeof window.CaspianBridge.getPref === 'function') {
+      const prefGroups = window.CaspianBridge.getPref('caspian_tab_groups', null);
+      if (prefGroups) tabGroups = JSON.parse(prefGroups);
+    }
+  } catch(e) { tabGroups = []; }
+
+  let isMultiSelectMode = false;
+  let selectedTabIds = new Set();
+  let activeGroupId = null;
+  let selectedGroupColor = '#ef4444';
+  let editingGroupId = null;
+  let activeTabFilter = 'all'; // 'all', 'groups', 'single'
+  let lastDeletedGroup = null;
+
+  function saveTabGroups() {
+    try {
+      const jsonStr = JSON.stringify(tabGroups);
+      localStorage.setItem('caspian_tab_groups', jsonStr);
+      if (window.CaspianBridge && typeof window.CaspianBridge.savePref === 'function') {
+        window.CaspianBridge.savePref('caspian_tab_groups', jsonStr);
+      }
+    } catch(e) {}
+  }
+
   function renderOpenTabs() {
     const container = document.getElementById('tabs-list-container');
     const countBadge = document.getElementById('tab-count-badge');
+    const insideHeader = document.getElementById('inside-group-header');
+    const groupToolbar = document.getElementById('floating-grouping-toolbar');
     if (!container) return;
 
     let tabs = [];
@@ -213,60 +244,186 @@
 
     if (tabs.length === 0) {
       container.innerHTML = '<div style="font-size: 12px; color: var(--text-sub); text-align: center; padding: 12px;">No active browser tabs open</div>';
+      if (insideHeader) insideHeader.style.display = 'none';
+      if (groupToolbar) groupToolbar.style.display = 'none';
       return;
     }
 
+    // Floating Multi-Select Toolbar Visibility
+    if (groupToolbar) {
+      groupToolbar.style.display = isMultiSelectMode ? 'block' : 'none';
+      const selectCount = document.getElementById('grouping-select-count');
+      if (selectCount) selectCount.textContent = `${selectedTabIds.size} Selected`;
+    }
+
+    // Inside Group View Header
+    const activeGroup = tabGroups.find(g => g.id === activeGroupId);
+    if (activeGroup && insideHeader) {
+      const groupTabs = tabs.filter(t => activeGroup.tabIds.includes(t.id));
+      insideHeader.style.display = 'block';
+      const colorDot = document.getElementById('group-banner-color-dot');
+      const titleLabel = document.getElementById('group-banner-title');
+      const countLabel = document.getElementById('group-banner-count');
+      if (colorDot) colorDot.style.background = activeGroup.color || '#3b82f6';
+      if (titleLabel) titleLabel.textContent = activeGroup.title || 'Tab Group';
+      if (countLabel) countLabel.textContent = `${groupTabs.length} Tabs`;
+
+      tabs = groupTabs; // Render only inner group tabs!
+    } else {
+      if (insideHeader) insideHeader.style.display = 'none';
+    }
+
     let html = '<div class="tab-card-grid">';
-    tabs.forEach(tab => {
-      let iconB64 = '';
-      if (tab.service === 'gemini') {
-        iconB64 = window.GEMINI_ICON_B64 || '';
-      } else if (tab.service === 'chatgpt') {
-        iconB64 = window.GPT_ICON_B64 || '';
-      } else if (tab.service === 'google') {
-        iconB64 = window.GOOGLE_ICON_B64 || '';
-      } else if (tab.service === 'youtube') {
-        iconB64 = window.YOUTUBE_ICON_B64 || '';
-      }
 
-      const activeClass = tab.active ? 'active' : '';
-      const activeBadge = tab.active ? '<span style="font-size: 9px; font-weight: 800; color: #10b981; background: rgba(16,185,129,0.15); padding: 2px 6px; border-radius: 6px;">ACTIVE</span>' : '';
+    let selectedGroupColor = '#ef4444';
+    let selectedGroupEmoji = '📁';
 
-      const shouldShowAudio = (tab.isPlayingAudio === true || tab.isMuted === true);
-      const muteIcon = tab.isMuted ? '🔇' : '🔊';
-      const muteText = tab.isMuted ? 'Muted' : 'Playing';
-      const audioBadge = shouldShowAudio ? `
-        <button class="chrome-tab-mute-btn ${tab.isMuted ? 'muted' : 'playing'}" data-muteid="${tab.id}" title="Toggle Tab Audio Mute" style="display: flex; align-items: center; gap: 4px; font-size: 9px; font-weight: 700; color: ${tab.isMuted ? '#f43f5e' : '#3b82f6'}; background: ${tab.isMuted ? 'rgba(244,63,94,0.15)' : 'rgba(59,130,246,0.15)'}; border: 1px solid ${tab.isMuted ? 'rgba(244,63,94,0.3)' : 'rgba(59,130,246,0.3)'}; border-radius: 6px; padding: 2px 6px; cursor: pointer;">
-          <span>${muteIcon}</span>
-          <span>${muteText}</span>
-        </button>
-      ` : '';
+    // Render Group Cards if in Main View and filter allows groups
+    if (!activeGroupId && (activeTabFilter === 'all' || activeTabFilter === 'groups')) {
+      tabGroups.forEach(group => {
+        const groupTabs = tabs.filter(t => group.tabIds.includes(t.id));
+        if (groupTabs.length === 0) return; // Skip empty groups
 
-      const favStarBadge = tab.isFavorite ? '<span style="color: #eab308; font-size: 11px; margin-right: 2px;" title="Favorited Tab (Protected from Close All)">⭐</span>' : '';
+        const isGroupActive = groupTabs.some(t => t.active);
+        const activeBadge = isGroupActive ? '<span style="font-size: 9px; font-weight: 800; color: #10b981; background: rgba(16,185,129,0.15); padding: 2px 6px; border-radius: 6px;">ACTIVE</span>' : '';
+        const groupFavBadge = group.isFavorite ? '<span style="color: #eab308; font-size: 11px; margin-right: 2px;" title="Favorited Group">⭐</span>' : '';
+        const groupIcon = group.icon || '📁';
 
-      html += `
-        <div class="chrome-tab-card ${activeClass}" data-tabid="${tab.id}">
-          <div class="chrome-tab-header">
-            <div style="display: flex; align-items: center; gap: 6px; overflow: hidden;">
-              ${favStarBadge}
-              ${iconB64 ? `<img src="${iconB64}" style="width: 16px; height: 16px; border-radius: 4px;" />` : ''}
-              <span class="chrome-tab-title">${tab.title || 'Browser Tab'}</span>
+        html += `
+          <div class="chrome-tab-card group-card ${isGroupActive ? 'active' : ''}" data-groupid="${group.id}" style="border-left: 6px solid ${group.color || '#3b82f6'};">
+            <div class="chrome-tab-header">
+              <div style="display: flex; align-items: center; gap: 6px; overflow: hidden;">
+                ${groupFavBadge}
+                <span style="font-size: 16px;">${groupIcon}</span>
+                <span class="chrome-tab-title" style="font-weight: 800; color: ${group.color || 'var(--text-main)'};">${group.title || 'Tab Group'}</span>
+              </div>
+              <button class="chrome-group-menu-btn" data-groupmenuid="${group.id}" title="Group Options" style="background: none; border: none; font-size: 16px; color: var(--text-sub); cursor: pointer; padding: 2px 6px;">⋮</button>
             </div>
-            <button class="chrome-tab-close" data-closeid="${tab.id}" title="Close Tab">&times;</button>
+            <div class="chrome-tab-url" style="font-size: 11px; color: var(--text-sub); margin-top: 4px;">
+              ${groupTabs.length} Open ${groupTabs.length === 1 ? 'Tab' : 'Tabs'} inside group
+            </div>
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-top: 6px;">
+              <span style="font-size: 10px; font-weight: 700; color: var(--text-sub);">Tap to view inner tabs</span>
+              <div>${activeBadge}</div>
+            </div>
           </div>
-          <div class="chrome-tab-url" style="font-size: 10px; color: var(--text-sub); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; margin-top: 4px; display: flex; align-items: center; gap: 4px;">
-            ${tab.nickname ? `🏷️ <strong style="color: #10b981;">${tab.nickname}</strong>` : tab.url || ''}
-          </div>
-          <div style="display: flex; justify-content: space-between; align-items: center; margin-top: 6px;">
-            <div>${audioBadge}</div>
-            <div>${activeBadge}</div>
-          </div>
-        </div>
-      `;
-    });
-    html += '</div>';
+        `;
+      });
+    }
 
+    // Render Single Tabs if filter allows single tabs
+    if (activeGroupId || activeTabFilter === 'all' || activeTabFilter === 'single') {
+      const displayTabs = activeGroupId ? tabs : tabs.filter(t => !tabGroups.some(g => g.tabIds.includes(t.id)));
+
+      displayTabs.forEach(tab => {
+        let iconB64 = '';
+        if (tab.service === 'gemini') iconB64 = window.GEMINI_ICON_B64 || '';
+        else if (tab.service === 'chatgpt') iconB64 = window.GPT_ICON_B64 || '';
+        else if (tab.service === 'google') iconB64 = window.GOOGLE_ICON_B64 || '';
+        else if (tab.service === 'youtube') iconB64 = window.YOUTUBE_ICON_B64 || '';
+
+        const isSelected = selectedTabIds.has(tab.id);
+        const selectedClass = isSelected ? 'selected' : '';
+        const activeClass = tab.active ? 'active' : '';
+        const activeBadge = tab.active ? '<span style="font-size: 9px; font-weight: 800; color: #10b981; background: rgba(16,185,129,0.15); padding: 2px 6px; border-radius: 6px;">ACTIVE</span>' : '';
+        const selectCheckbox = isMultiSelectMode ? `<span style="font-size: 14px; margin-right: 4px;">${isSelected ? '☑️' : '⏹️'}</span>` : '';
+
+        const shouldShowAudio = (tab.isPlayingAudio === true || tab.isMuted === true);
+        const muteIcon = tab.isMuted ? '🔇' : '🔊';
+        const muteText = tab.isMuted ? 'Muted' : 'Playing';
+        const audioBadge = shouldShowAudio ? `
+          <button class="chrome-tab-mute-btn ${tab.isMuted ? 'muted' : 'playing'}" data-muteid="${tab.id}" title="Toggle Tab Audio Mute" style="display: flex; align-items: center; gap: 4px; font-size: 9px; font-weight: 700; color: ${tab.isMuted ? '#f43f5e' : '#3b82f6'}; background: ${tab.isMuted ? 'rgba(244,63,94,0.15)' : 'rgba(59,130,246,0.15)'}; border: 1px solid ${tab.isMuted ? 'rgba(244,63,94,0.3)' : 'rgba(59,130,246,0.3)'}; border-radius: 6px; padding: 2px 6px; cursor: pointer;">
+            <span>${muteIcon}</span>
+            <span>${muteText}</span>
+          </button>
+        ` : '';
+
+        const favStarBadge = tab.isFavorite ? '<span style="color: #eab308; font-size: 11px; margin-right: 2px;" title="Favorited Tab">⭐</span>' : '';
+        const optionMenuBtn = `<button class="chrome-tab-menu-btn icon-btn" data-tabmenuid="${tab.id}" title="Tab Options" style="font-size: 14px; width: 22px; height: 22px; border: none; background: none; color: var(--text-sub); cursor: pointer; display: inline-flex; align-items: center; justify-content: center; margin-right: 2px;">⋮</button>`;
+
+        html += `
+          <div class="chrome-tab-card ${activeClass} ${selectedClass}" data-tabid="${tab.id}">
+            <div class="chrome-tab-header">
+              <div style="display: flex; align-items: center; gap: 6px; overflow: hidden;">
+                ${selectCheckbox}
+                ${favStarBadge}
+                ${iconB64 ? `<img src="${iconB64}" style="width: 16px; height: 16px; border-radius: 4px;" />` : ''}
+                <span class="chrome-tab-title">${tab.title || 'Browser Tab'}</span>
+              </div>
+              <div style="display: flex; align-items: center; gap: 2px;">
+                ${optionMenuBtn}
+                <button class="chrome-tab-close" data-closeid="${tab.id}" title="Close Tab">&times;</button>
+              </div>
+            </div>
+            <div class="chrome-tab-url" style="font-size: 10px; color: var(--text-sub); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; margin-top: 4px; display: flex; align-items: center; gap: 4px;">
+              ${tab.nickname ? `🏷️ <strong style="color: #10b981;">${tab.nickname}</strong>` : tab.url || ''}
+            </div>
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-top: 6px;">
+              <div>${audioBadge}</div>
+              <div>${activeBadge}</div>
+            </div>
+          </div>
+        `;
+      });
+    }
+
+    html += '</div>';
     container.innerHTML = html;
+
+    // Bind Group Cards Click, Menu, & Swipe Right Listeners (Fix #3)
+    container.querySelectorAll('.chrome-tab-card.group-card').forEach(card => {
+      const groupId = card.dataset.groupid;
+      const group = tabGroups.find(g => g.id === groupId);
+
+      let touchStartX = 0;
+      let diffX = 0;
+
+      card.addEventListener('touchstart', (e) => {
+        touchStartX = e.touches[0].clientX;
+        diffX = 0;
+      }, { passive: true });
+
+      card.addEventListener('touchmove', (e) => {
+        diffX = e.touches[0].clientX - touchStartX;
+        if (diffX > 20) {
+          card.style.transform = `translateX(${diffX}px)`;
+        }
+      }, { passive: true });
+
+      card.addEventListener('touchend', () => {
+        card.style.transform = '';
+        if (diffX > 80 && group) {
+          playSFX('tb_clicks');
+          openGroupOptionsMenu(group);
+        }
+      });
+
+      card.addEventListener('click', (e) => {
+        if (e.target.classList.contains('chrome-group-menu-btn')) return;
+        playSFX('tb_clicks');
+        activeGroupId = groupId;
+        renderOpenTabs();
+      });
+
+      const menuBtn = card.querySelector('.chrome-group-menu-btn');
+      if (menuBtn && group) {
+        menuBtn.addEventListener('click', (e) => {
+          e.stopPropagation();
+          playSFX('tb_clicks');
+          openGroupOptionsMenu(group);
+        });
+      }
+    });
+
+    container.querySelectorAll('.chrome-tab-menu-btn').forEach(btn => {
+      btn.addEventListener('click', (e) => {
+        e.stopPropagation();
+        playSFX('tb_clicks');
+        const tabId = parseInt(btn.dataset.tabmenuid);
+        const tab = tabs.find(t => t.id === tabId);
+        if (tab) openTabOptionsMenu(tab);
+      });
+    });
 
     container.querySelectorAll('.chrome-tab-mute-btn').forEach(btn => {
       btn.addEventListener('click', (e) => {
@@ -282,8 +439,8 @@
 
     window.renderOpenTabs = renderOpenTabs;
 
-    // Bind Tab Card touch drag reordering, swipe triggers, and click navigation
-    container.querySelectorAll('.chrome-tab-card').forEach(card => {
+    // Bind Normal Tab Cards touch gestures (1-finger drag vs 2-finger multi-select)
+    container.querySelectorAll('.chrome-tab-card:not(.group-card)').forEach(card => {
       let touchStartX = 0;
       let touchStartY = 0;
       let lastMoveX = 0;
@@ -293,11 +450,25 @@
       let isSwipe = false;
       let isDrag = false;
       let pressTimer = null;
-      let dIdx = -1;
-      let cardHeight = 0;
-      let ignoreClickDueToSwipe = false;
+      let cachedTargets = [];
 
       const onTouchStart = (e) => {
+        // Fix Issue 2: 2-finger touch strictly activates Multi-Select mode & cancels drag timers!
+        if (e.touches.length >= 2) {
+          clearTimeout(pressTimer);
+          isDrag = false;
+          const tabId = parseInt(card.dataset.tabid);
+          if (!isMultiSelectMode) {
+            isMultiSelectMode = true;
+            selectedTabIds.clear();
+            selectedTabIds.add(tabId);
+            if (navigator.vibrate) navigator.vibrate(60);
+            playSFX('tb_clicks');
+            renderOpenTabs();
+          }
+          return;
+        }
+
         const touch = e.touches[0];
         touchStartX = touch.clientX;
         touchStartY = touch.clientY;
@@ -308,59 +479,79 @@
         isSwipe = false;
         isDrag = false;
 
-        const cardsList = Array.from(container.querySelectorAll('.chrome-tab-card'));
-        dIdx = cardsList.indexOf(card);
-        cardHeight = card.offsetHeight + 12; // Card height + grid gap
-
-        // 350ms touch and hold to trigger dragging
+        clearTimeout(pressTimer);
+        // 200ms long press to activate tab moving mode
         pressTimer = setTimeout(() => {
-          if (!isSwipe) {
+          if (!isSwipe && e.touches.length === 1) {
             isDrag = true;
             card.classList.add('dragging');
-            card.style.zIndex = '1000';
+            card.style.zIndex = '10000';
+            card.style.pointerEvents = 'none'; // Pass-through touch events once
+            card.style.willChange = 'transform'; // Enable GPU acceleration
             card.style.transition = 'none';
-            // Snap to current move positions to prevent jumping
-            touchStartX = lastMoveX;
-            touchStartY = lastMoveY;
-            diffX = 0;
-            diffY = 0;
+
+            // Cache bounding rects once on drag start to prevent layout flushes during move!
+            cachedTargets = Array.from(container.querySelectorAll('.chrome-tab-card')).map(c => ({
+              el: c,
+              rect: c.getBoundingClientRect()
+            }));
+
+            const headerZone = document.getElementById('group-view-header');
+            if (activeGroupId && headerZone && headerZone.offsetParent !== null) {
+              cachedTargets.push({
+                el: headerZone,
+                rect: headerZone.getBoundingClientRect(),
+                isHeader: true
+              });
+            }
+
             if (navigator.vibrate) navigator.vibrate(40);
+            playSFX('tb_clicks');
           }
-        }, 350);
+        }, 200);
       };
 
       const onTouchMove = (e) => {
+        if (e.touches.length >= 2) {
+          clearTimeout(pressTimer);
+          isDrag = false;
+          return;
+        }
+
         const touch = e.touches[0];
         lastMoveX = touch.clientX;
         lastMoveY = touch.clientY;
         diffX = touch.clientX - touchStartX;
         diffY = touch.clientY - touchStartY;
+        const moveDist = Math.hypot(diffX, diffY);
 
         if (isDrag) {
-          e.preventDefault();
-          // Allow free 2D dragging in all directions
-          card.style.transform = `translate(${diffX}px, ${diffY}px)`;
+          e.preventDefault(); // Prevent native WebView scroll while dragging
+          card.style.transform = `translate3d(${diffX}px, ${diffY}px, 0) scale(1.04)`; // 3D GPU acceleration
 
-          // Highlight target card under the dragging card's center
-          const dragRect = card.getBoundingClientRect();
-          const dragCenterX = dragRect.left + dragRect.width / 2;
-          const dragCenterY = dragRect.top + dragRect.height / 2;
-
-          container.querySelectorAll('.chrome-tab-card').forEach(other => {
-            if (other === card) return;
-            const rect = other.getBoundingClientRect();
-            if (dragCenterX > rect.left && dragCenterX < rect.right &&
-                dragCenterY > rect.top && dragCenterY < rect.bottom) {
-              other.classList.add('drop-target');
-            } else {
-              other.classList.remove('drop-target');
+          // Fast 2D spatial collision detection (handles 2-column grid & diagonal tabs)
+          const touchX = touch.clientX;
+          const touchY = touch.clientY;
+          for (let i = 0; i < cachedTargets.length; i++) {
+            const item = cachedTargets[i];
+            if (item.el === card) continue;
+            const r = item.rect;
+            if (touchX >= r.left && touchX <= r.right && touchY >= r.top && touchY <= r.bottom) {
+              if (!item.el.classList.contains('drop-target')) {
+                container.querySelectorAll('.chrome-tab-card.drop-target, #group-view-header.drop-target').forEach(c => c.classList.remove('drop-target'));
+                item.el.classList.add('drop-target');
+              }
+              break;
             }
-          });
+          }
           return;
         }
 
-        if (!isSwipe && Math.abs(diffX) > 25 && Math.abs(diffX) > Math.abs(diffY) * 1.5) {
-          isSwipe = true;
+        // Finger moved > 10px before 200ms timer fired: cancel drag
+        if (!isDrag && moveDist > 10) {
+          if (Math.abs(diffX) > Math.abs(diffY) * 1.5) {
+            isSwipe = true;
+          }
           clearTimeout(pressTimer);
         }
 
@@ -372,60 +563,126 @@
 
       const onTouchEnd = () => {
         clearTimeout(pressTimer);
+        const wasDrag = isDrag;
+        const wasSwipe = isSwipe;
 
-        if (isDrag) {
-          card.classList.remove('dragging');
-          card.style.zIndex = '';
-          card.style.transform = '';
-          isDrag = false;
+        // Unconditionally unlock card pointer & visual state on touch release!
+        card.classList.remove('dragging');
+        card.style.zIndex = '';
+        card.style.transform = '';
+        card.style.pointerEvents = '';
+        card.style.willChange = '';
+        isDrag = false;
 
-          // Find target drop index
-          const activeDropTarget = container.querySelector('.chrome-tab-card.drop-target');
-          let targetIdx = dIdx;
+        if (wasDrag) {
+          // Find drop target card from drop-target class or cached targets 2D spatial check
+          const activeDropTarget = container.querySelector('.chrome-tab-card.drop-target, #group-view-header.drop-target') || 
+            (() => {
+              const item = cachedTargets.find(t => 
+                t.el !== card && 
+                lastMoveX >= t.rect.left && lastMoveX <= t.rect.right && 
+                lastMoveY >= t.rect.top && lastMoveY <= t.rect.bottom
+              );
+              return item ? item.el : null;
+            })();
+
+          container.querySelectorAll('.chrome-tab-card, #group-view-header').forEach(c => c.classList.remove('drop-target'));
+          cachedTargets = [];
+
           if (activeDropTarget) {
-            const cardsList = Array.from(container.querySelectorAll('.chrome-tab-card'));
-            targetIdx = cardsList.indexOf(activeDropTarget);
-            activeDropTarget.classList.remove('drop-target');
-          }
+            const sourceTabId = parseInt(card.dataset.tabid);
 
-          // Clear any leftovers
-          container.querySelectorAll('.chrome-tab-card').forEach(other => {
-            other.classList.remove('drop-target');
-          });
-
-          if (targetIdx !== dIdx && targetIdx >= 0 && targetIdx < tabs.length) {
-            // Reorder in JS array
-            const [moved] = tabs.splice(dIdx, 1);
-            tabs.splice(targetIdx, 0, moved);
-
-            const newIds = tabs.map(t => t.id);
-            if (window.CaspianBridge && typeof window.CaspianBridge.reorderTabs === 'function') {
-              window.CaspianBridge.reorderTabs(JSON.stringify(newIds));
+            // Case 0: Dropped onto Group View Header (#group-view-header) to remove tab from group!
+            if (activeDropTarget.id === 'group-view-header' || activeDropTarget.closest('#group-view-header')) {
+              const currentGroup = tabGroups.find(g => g.id === activeGroupId);
+              if (currentGroup) {
+                const moveIds = (isMultiSelectMode && selectedTabIds.size > 0) ? Array.from(selectedTabIds) : [sourceTabId];
+                currentGroup.tabIds = currentGroup.tabIds.filter(id => !moveIds.includes(id));
+                saveTabGroups();
+                if (currentGroup.tabIds.length === 0) {
+                  activeGroupId = null;
+                }
+                isMultiSelectMode = false;
+                selectedTabIds.clear();
+                if (window.CaspianBridge && typeof window.CaspianBridge.showToast === 'function') {
+                  window.CaspianBridge.showToast(`Removed ${moveIds.length} tab(s) from "${currentGroup.title}"!`);
+                }
+              }
+              setTimeout(renderOpenTabs, 50);
+              return;
             }
-            setTimeout(renderOpenTabs, 50);
-          } else {
-            card.style.transform = '';
+
+            // Case A: Dropped onto a Group Card (.group-card)
+            if (activeDropTarget.classList.contains('group-card')) {
+              const targetGroupId = activeDropTarget.dataset.groupid;
+              const targetGroup = tabGroups.find(g => g.id === targetGroupId);
+              if (targetGroup) {
+                const moveIds = (isMultiSelectMode && selectedTabIds.size > 0) ? Array.from(selectedTabIds) : [sourceTabId];
+                moveIds.forEach(id => {
+                  if (!targetGroup.tabIds.includes(id)) targetGroup.tabIds.push(id);
+                });
+                tabGroups.forEach(g => {
+                  if (g.id !== targetGroupId) g.tabIds = g.tabIds.filter(id => !moveIds.includes(id));
+                });
+                saveTabGroups();
+                isMultiSelectMode = false;
+                selectedTabIds.clear();
+                if (window.CaspianBridge && typeof window.CaspianBridge.showToast === 'function') {
+                  window.CaspianBridge.showToast(`Added ${moveIds.length} tab(s) to "${targetGroup.title}"!`);
+                }
+              }
+              setTimeout(renderOpenTabs, 50);
+              return;
+            }
+
+            // Case B: Reordering single tabs or multi-selected tabs on FULL grid
+            const allTabsJson = window.CaspianBridge.getOpenTabs();
+            const allTabs = allTabsJson ? JSON.parse(allTabsJson) : [];
+            const targetTabId = parseInt(activeDropTarget.dataset.tabid);
+            const sourceIdx = allTabs.findIndex(t => t.id === sourceTabId);
+            const targetIdx = allTabs.findIndex(t => t.id === targetTabId);
+
+            if (sourceIdx !== -1 && targetIdx !== -1 && sourceIdx !== targetIdx) {
+              if (isMultiSelectMode && selectedTabIds.size > 0) {
+                const selectedItems = allTabs.filter(t => selectedTabIds.has(t.id));
+                const remainingItems = allTabs.filter(t => !selectedTabIds.has(t.id));
+                let insertAt = remainingItems.findIndex(t => t.id === targetTabId);
+                if (insertAt === -1) insertAt = remainingItems.length;
+                remainingItems.splice(insertAt, 0, ...selectedItems);
+                const newIds = remainingItems.map(t => t.id);
+                if (window.CaspianBridge && typeof window.CaspianBridge.reorderTabs === 'function') {
+                  window.CaspianBridge.reorderTabs(JSON.stringify(newIds));
+                }
+                isMultiSelectMode = false;
+                selectedTabIds.clear();
+                if (window.CaspianBridge && typeof window.CaspianBridge.showToast === 'function') {
+                  window.CaspianBridge.showToast(`Moved ${selectedItems.length} selected tabs!`);
+                }
+              } else {
+                const [moved] = allTabs.splice(sourceIdx, 1);
+                allTabs.splice(targetIdx, 0, moved);
+                const newIds = allTabs.map(t => t.id);
+                if (window.CaspianBridge && typeof window.CaspianBridge.reorderTabs === 'function') {
+                  window.CaspianBridge.reorderTabs(JSON.stringify(newIds));
+                }
+              }
+              setTimeout(renderOpenTabs, 50);
+              return;
+            }
           }
+
           return;
         }
 
-        if (isSwipe) {
-          card.style.transform = '';
+        if (wasSwipe) {
           if (diffX > 80) {
             const tabId = parseInt(card.dataset.tabid);
             const tab = tabs.find(t => t.id === tabId);
             if (tab) openTabOptionsMenu(tab);
           } else if (diffX < -80) {
             const tabId = parseInt(card.dataset.tabid);
-            card.style.transition = 'transform 0.2s ease, opacity 0.2s ease';
-            card.style.transform = 'translateX(-120%)';
-            card.style.opacity = '0';
-            setTimeout(() => {
-              triggerCloseTab(tabId);
-            }, 200);
+            triggerCloseTab(tabId);
           }
-          ignoreClickDueToSwipe = true;
-          setTimeout(() => { ignoreClickDueToSwipe = false; }, 200);
           isSwipe = false;
         }
       };
@@ -435,24 +692,34 @@
       card.addEventListener('touchend', onTouchEnd);
       card.addEventListener('touchcancel', onTouchEnd);
 
-      // Support Click Event for switching tab
+      // Click Event for switching tab or toggling selection in multi-select mode
       card.addEventListener('click', (e) => {
-        if (e.target.classList.contains('chrome-tab-close')) return;
-        if (isSwipe || isDrag || ignoreClickDueToSwipe) return;
+        if (e.target.classList.contains('chrome-tab-close') || e.target.closest('.chrome-tab-close') || e.target.closest('.chrome-tab-menu-btn') || e.target.closest('.chrome-tab-mute-btn')) return;
+
+        // If card was dragged or swiped significantly, ignore click
+        if (Math.abs(diffX) > 15 || Math.abs(diffY) > 15) return;
+
         const tabId = parseInt(card.dataset.tabid);
+
+        if (isMultiSelectMode) {
+          playSFX('tb_clicks');
+          if (selectedTabIds.has(tabId)) {
+            selectedTabIds.delete(tabId);
+            if (selectedTabIds.size === 0) {
+              isMultiSelectMode = false;
+            }
+          } else {
+            selectedTabIds.add(tabId);
+          }
+          renderOpenTabs();
+          return;
+        }
 
         container.querySelectorAll('.chrome-tab-card').forEach(c => {
           c.classList.remove('active');
-          const badge = c.querySelector('span[style*="color: #10b981"]');
-          if (badge) badge.remove();
         });
         card.classList.add('active');
         playSFX('tb_clicks');
-
-        const badgeContainer = card.querySelector('div[style*="justify-content: flex-end"]');
-        if (badgeContainer) {
-          badgeContainer.innerHTML = '<span style="font-size: 9px; font-weight: 800; color: #10b981; background: rgba(16,185,129,0.15); padding: 2px 6px; border-radius: 6px;">ACTIVE</span>';
-        }
 
         if (window.CaspianBridge && typeof window.CaspianBridge.switchTab === 'function') {
           window.CaspianBridge.switchTab(tabId);
@@ -466,19 +733,6 @@
       btn.addEventListener('click', (e) => {
         e.stopPropagation();
         const tabId = parseInt(btn.dataset.closeid);
-        const card = container.querySelector(`.chrome-tab-card[data-tabid="${tabId}"]`);
-        if (card) {
-          card.style.opacity = '0';
-          card.style.transform = 'scale(0.9)';
-          card.style.transition = 'all 0.25s cubic-bezier(0.16, 1, 0.3, 1)';
-          setTimeout(() => {
-            card.remove();
-            const remaining = container.querySelectorAll('.chrome-tab-card').length;
-            if (countBadge) {
-              countBadge.textContent = remaining === 1 ? '1 Tab' : `${remaining} Tabs`;
-            }
-          }, 200);
-        }
         triggerCloseTab(tabId);
       });
     });
@@ -1085,65 +1339,48 @@
     });
   }
 
-  // App Icon Cards: Open new tab for selected platform (Hub, ChatGPT, Gemini)
+  function handleCreateNewTab(service) {
+    playSFX('tb_clicks');
+    if (window.CaspianBridge && typeof window.CaspianBridge.createNewTab === 'function') {
+      window.CaspianBridge.createNewTab(service);
+      setTimeout(() => {
+        if (activeGroupId) {
+          const group = tabGroups.find(g => g.id === activeGroupId);
+          if (group && window.CaspianBridge && typeof window.CaspianBridge.getOpenTabs === 'function') {
+            try {
+              const openTabs = JSON.parse(window.CaspianBridge.getOpenTabs());
+              if (openTabs.length > 0) {
+                const latestTab = openTabs[openTabs.length - 1];
+                if (!group.tabIds.includes(latestTab.id)) {
+                  group.tabIds.push(latestTab.id);
+                  saveTabGroups();
+                }
+              }
+            } catch(e){}
+          }
+        }
+        renderOpenTabs();
+      }, 150);
+    }
+  }
+
   if (appCardHub) {
-    appCardHub.addEventListener('click', () => {
-      playSFX('tb_clicks');
-      if (window.CaspianBridge && typeof window.CaspianBridge.createNewTab === 'function') {
-        window.CaspianBridge.createNewTab('hub');
-        setTimeout(renderOpenTabs, 100);
-      }
-    });
+    appCardHub.addEventListener('click', () => handleCreateNewTab('hub'));
   }
-
-  if (appCardGpt) {
-    appCardGpt.addEventListener('click', () => {
-      playSFX('tb_clicks');
-      if (window.CaspianBridge && typeof window.CaspianBridge.createNewTab === 'function') {
-        window.CaspianBridge.createNewTab('chatgpt');
-        setTimeout(renderOpenTabs, 100);
-      }
-    });
+  if (appCardChatGPT) {
+    appCardChatGPT.addEventListener('click', () => handleCreateNewTab('chatgpt'));
   }
-
   if (appCardGemini) {
-    appCardGemini.addEventListener('click', () => {
-      playSFX('tb_clicks');
-      if (window.CaspianBridge && typeof window.CaspianBridge.createNewTab === 'function') {
-        window.CaspianBridge.createNewTab('gemini');
-        setTimeout(renderOpenTabs, 100);
-      }
-    });
+    appCardGemini.addEventListener('click', () => handleCreateNewTab('gemini'));
   }
-
   if (appCardGoogle) {
-    appCardGoogle.addEventListener('click', () => {
-      playSFX('tb_clicks');
-      if (window.CaspianBridge && typeof window.CaspianBridge.createNewTab === 'function') {
-        window.CaspianBridge.createNewTab('google');
-        setTimeout(renderOpenTabs, 100);
-      }
-    });
+    appCardGoogle.addEventListener('click', () => handleCreateNewTab('google'));
   }
-
   if (appCardYoutube) {
-    appCardYoutube.addEventListener('click', () => {
-      playSFX('tb_clicks');
-      if (window.CaspianBridge && typeof window.CaspianBridge.createNewTab === 'function') {
-        window.CaspianBridge.createNewTab('youtube');
-        setTimeout(renderOpenTabs, 100);
-      }
-    });
+    appCardYoutube.addEventListener('click', () => handleCreateNewTab('youtube'));
   }
-
   if (newTabBtn) {
-    newTabBtn.addEventListener('click', () => {
-      playSFX('tb_clicks');
-      if (window.CaspianBridge && typeof window.CaspianBridge.createNewTab === 'function') {
-        window.CaspianBridge.createNewTab('chatgpt');
-        setTimeout(renderOpenTabs, 100);
-      }
-    });
+    newTabBtn.addEventListener('click', () => handleCreateNewTab('chatgpt'));
   }
 
   if (closeAllTabsBtn) {
@@ -1495,6 +1732,121 @@ function restoreSavedSettings() {
   }
 }
 
+function openGroupOptionsMenu(group) {
+  const modal = document.getElementById('group-options-modal');
+  const titleInput = document.getElementById('group-modal-title-input');
+  const colorDot = document.getElementById('group-modal-color-dot');
+  const headerTitle = document.getElementById('group-modal-header-title');
+  if (!modal || !titleInput) return;
+
+  editingGroupId = group.id;
+  titleInput.value = group.title || '';
+  if (colorDot) colorDot.style.background = group.color || '#3b82f6';
+  if (headerTitle) headerTitle.textContent = `Group: ${group.title || 'Tab Group'}`;
+  selectedGroupColor = group.color || '#ef4444';
+  selectedGroupEmoji = group.icon || '📁';
+
+  document.querySelectorAll('.modal-group-color-dot').forEach(d => {
+    d.classList.toggle('active', d.dataset.color === selectedGroupColor);
+  });
+
+  document.querySelectorAll('.modal-group-emoji-dot').forEach(d => {
+    d.classList.toggle('active', d.dataset.emoji === selectedGroupEmoji);
+    d.onclick = () => {
+      playSFX('tb_clicks');
+      document.querySelectorAll('.modal-group-emoji-dot').forEach(x => x.classList.remove('active'));
+      d.classList.add('active');
+      selectedGroupEmoji = d.dataset.emoji || '📁';
+    };
+  });
+
+  const favIcon = document.getElementById('group-fav-star-icon');
+  const favText = document.getElementById('group-fav-star-text');
+  if (favIcon) favIcon.textContent = group.isFavorite ? '⭐' : '☆';
+  if (favText) favText.textContent = group.isFavorite ? 'Favorited' : 'Favorite';
+
+  modal.style.setProperty('display', 'flex', 'important');
+  modal.style.setProperty('pointer-events', 'auto', 'important');
+  modal.style.setProperty('visibility', 'visible', 'important');
+
+  const closeX = document.getElementById('group-modal-close-x');
+  const cancelBtn = document.getElementById('group-modal-cancel-btn');
+  const closeModal = () => {
+    playSFX('tb_modal');
+    modal.style.display = 'none';
+    editingGroupId = null;
+  };
+  if (closeX) closeX.onclick = closeModal;
+  if (cancelBtn) cancelBtn.onclick = closeModal;
+
+  const favBtn = document.getElementById('group-modal-favorite-btn');
+  if (favBtn) {
+    favBtn.onclick = () => {
+      playSFX('tb_clicks');
+      group.isFavorite = !group.isFavorite;
+      saveTabGroups();
+      if (window.CaspianBridge && typeof window.CaspianBridge.setGroupTabsFavorite === 'function') {
+        window.CaspianBridge.setGroupTabsFavorite(JSON.stringify(group.tabIds), group.isFavorite);
+      }
+      if (favIcon) favIcon.textContent = group.isFavorite ? '⭐' : '☆';
+      if (favText) favText.textContent = group.isFavorite ? 'Favorited' : 'Favorite';
+      if (window.CaspianBridge && typeof window.CaspianBridge.showToast === 'function') {
+        window.CaspianBridge.showToast(group.isFavorite ? `⭐ Group "${group.title}" Favorited!` : `Group "${group.title}" Unfavorited`);
+      }
+      renderOpenTabs();
+    };
+  }
+
+  const ungroupBtn = document.getElementById('group-modal-ungroup-btn');
+  if (ungroupBtn) {
+    ungroupBtn.onclick = () => {
+      playSFX('tb_modal');
+      tabGroups = tabGroups.filter(g => g.id !== group.id);
+      saveTabGroups();
+      modal.style.display = 'none';
+      editingGroupId = null;
+      renderOpenTabs();
+      if (window.CaspianBridge && typeof window.CaspianBridge.showToast === 'function') {
+        window.CaspianBridge.showToast(`📂 Group "${group.title}" dissolved. Tabs remain open.`);
+      }
+    };
+  }
+
+  const deleteBtn = document.getElementById('group-modal-delete-btn');
+  if (deleteBtn) {
+    deleteBtn.onclick = () => {
+      playSFX('tb_close');
+      lastDeletedGroup = { group: Object.assign({}, group), tabIds: [...group.tabIds] };
+      if (window.CaspianBridge && typeof window.CaspianBridge.closeMultipleTabs === 'function') {
+        window.CaspianBridge.closeMultipleTabs(JSON.stringify(group.tabIds));
+      }
+      tabGroups = tabGroups.filter(g => g.id !== group.id);
+      saveTabGroups();
+      modal.style.display = 'none';
+      editingGroupId = null;
+      showUndoToast(`Group "${group.title}" deleted`);
+      renderOpenTabs();
+    };
+  }
+
+  const saveBtn = document.getElementById('group-modal-save-btn');
+  if (saveBtn) {
+    saveBtn.onclick = () => {
+      playSFX('tb_modal');
+      group.title = titleInput.value.trim() || 'Tab Group';
+      group.color = selectedGroupColor;
+      group.icon = selectedGroupEmoji;
+      saveTabGroups();
+      modal.style.display = 'none';
+      editingGroupId = null;
+      renderOpenTabs();
+      if (window.CaspianBridge && typeof window.CaspianBridge.showToast === 'function') {
+        window.CaspianBridge.showToast(`Saved Group "${group.title}"!`);
+      }
+    };
+  }
+}
+
 function openTabOptionsMenu(tab) {
   const modal = document.getElementById('tab-options-modal');
   const nicknameInput = document.getElementById('tab-nickname-input');
@@ -1505,6 +1857,32 @@ function openTabOptionsMenu(tab) {
   nicknameInput.value = tab.nickname || '';
   urlDisplay.value = tab.url || '';
   modal.style.display = 'flex';
+
+  const groupActionsRow = document.getElementById('modal-group-actions-row');
+  const leaveGroupBtn = document.getElementById('modal-leave-group-btn');
+  const parentGroup = tabGroups.find(g => g.tabIds.includes(tab.id));
+  if (groupActionsRow) {
+    if (parentGroup) {
+      groupActionsRow.style.display = 'block';
+      if (leaveGroupBtn) {
+        leaveGroupBtn.onclick = () => {
+          playSFX('tb_modal');
+          parentGroup.tabIds = parentGroup.tabIds.filter(id => id !== tab.id);
+          saveTabGroups();
+          if (parentGroup.tabIds.length === 0 && activeGroupId === parentGroup.id) {
+            activeGroupId = null;
+          }
+          modal.style.display = 'none';
+          if (window.CaspianBridge && typeof window.CaspianBridge.showToast === 'function') {
+            window.CaspianBridge.showToast(`Moved tab out of "${parentGroup.title}"!`);
+          }
+          setTimeout(renderOpenTabs, 50);
+        };
+      }
+    } else {
+      groupActionsRow.style.display = 'none';
+    }
+  }
 
   const favBtn = document.getElementById('modal-favorite-btn');
   const favIcon = document.getElementById('fav-star-icon');
@@ -1800,6 +2178,78 @@ document.addEventListener('DOMContentLoaded', () => {
     });
   }
 
+  // Caspian Drift Settings Wiring (API Key, Speech Engine, Language Accent)
+  const apiKeyInput = document.getElementById('whisper-api-key-input');
+  if (apiKeyInput) {
+    let savedKey = localStorage.getItem('whisper_api_key') || '';
+    if (window.CaspianBridge && typeof window.CaspianBridge.getPref === 'function') {
+      savedKey = window.CaspianBridge.getPref('whisper_api_key', savedKey);
+    }
+    apiKeyInput.value = savedKey;
+
+    apiKeyInput.addEventListener('input', () => {
+      const val = apiKeyInput.value.trim();
+      localStorage.setItem('whisper_api_key', val);
+      if (window.CaspianBridge && typeof window.CaspianBridge.savePref === 'function') {
+        window.CaspianBridge.savePref('whisper_api_key', val);
+      }
+    });
+  }
+
+  // Speech Engine Pills
+  const enginePills = document.querySelectorAll('.cc-engine-pill');
+  let savedEngine = localStorage.getItem('caspian_drift_engine') || 'whisper';
+  if (window.CaspianBridge && typeof window.CaspianBridge.getPref === 'function') {
+    savedEngine = window.CaspianBridge.getPref('caspian_drift_engine', savedEngine);
+  }
+  enginePills.forEach(pill => {
+    if (pill.dataset.engine === savedEngine) {
+      pill.classList.add('active');
+    } else {
+      pill.classList.remove('active');
+    }
+    pill.addEventListener('click', () => {
+      playSFX('tb_clicks');
+      enginePills.forEach(p => p.classList.remove('active'));
+      pill.classList.add('active');
+      const selected = pill.dataset.engine;
+      localStorage.setItem('caspian_drift_engine', selected);
+      if (window.CaspianBridge && typeof window.CaspianBridge.savePref === 'function') {
+        window.CaspianBridge.savePref('caspian_drift_engine', selected);
+      }
+      if (window.CaspianBridge && typeof window.CaspianBridge.showToast === 'function') {
+        window.CaspianBridge.showToast(selected === 'whisper' ? '⚡ Groq Cloud Whisper Active' : '📱 Local Speech Engine Active');
+      }
+    });
+  });
+
+  // Language Accent Pills
+  const langPills = document.querySelectorAll('.cc-lang-pill');
+  let savedLang = localStorage.getItem('caspian_drift_lang') || 'auto';
+  if (window.CaspianBridge && typeof window.CaspianBridge.getPref === 'function') {
+    savedLang = window.CaspianBridge.getPref('caspian_drift_lang', savedLang);
+  }
+  langPills.forEach(pill => {
+    if (pill.dataset.lang === savedLang) {
+      pill.classList.add('active');
+    } else {
+      pill.classList.remove('active');
+    }
+    pill.addEventListener('click', () => {
+      playSFX('tb_clicks');
+      langPills.forEach(p => p.classList.remove('active'));
+      pill.classList.add('active');
+      const selected = pill.dataset.lang;
+      localStorage.setItem('caspian_drift_lang', selected);
+      if (window.CaspianBridge && typeof window.CaspianBridge.savePref === 'function') {
+        window.CaspianBridge.savePref('caspian_drift_lang', selected);
+      }
+      if (window.CaspianBridge && typeof window.CaspianBridge.showToast === 'function') {
+        window.CaspianBridge.showToast(`Accent set to: ${pill.textContent.trim()}`);
+      }
+    });
+  });
+
   // 4. AdBlocker Accordion & Toggle
   if (adblockHeader && adblockBody) {
     adblockHeader.addEventListener('click', (e) => {
@@ -1851,5 +2301,235 @@ document.addEventListener('DOMContentLoaded', () => {
       }
     });
   }
+
+  // Floating Multi-Select Group Toolbar Event Listeners
+  const toolbarGroupBtn = document.getElementById('toolbar-group-btn');
+  const toolbarDeselectBtn = document.getElementById('toolbar-deselect-btn');
+  const toolbarDeleteBtn = document.getElementById('toolbar-delete-btn');
+  const modalCreateGroup = document.getElementById('modal-create-group');
+  const inputGroupTitle = document.getElementById('input-group-title');
+
+  if (toolbarGroupBtn) {
+    toolbarGroupBtn.addEventListener('click', () => {
+      playSFX('tb_clicks');
+      if (modalCreateGroup && inputGroupTitle) {
+        editingGroupId = null;
+        inputGroupTitle.value = `Tab Group ${tabGroups.length + 1}`;
+        modalCreateGroup.style.display = 'flex';
+      }
+    });
+  }
+
+  if (toolbarDeselectBtn) {
+    toolbarDeselectBtn.addEventListener('click', () => {
+      playSFX('tb_clicks');
+      isMultiSelectMode = false;
+      selectedTabIds.clear();
+      renderOpenTabs();
+    });
+  }
+
+  if (toolbarDeleteBtn) {
+    toolbarDeleteBtn.addEventListener('click', () => {
+      playSFX('tb_close');
+      selectedTabIds.forEach(id => triggerCloseTab(id));
+      isMultiSelectMode = false;
+      selectedTabIds.clear();
+      setTimeout(renderOpenTabs, 150);
+    });
+  }
+
+  // Emoji Palette Dots
+  document.querySelectorAll('.group-emoji-dot').forEach(dot => {
+    dot.addEventListener('click', () => {
+      playSFX('tb_clicks');
+      document.querySelectorAll('.group-emoji-dot').forEach(d => d.classList.remove('active'));
+      dot.classList.add('active');
+      selectedGroupEmoji = dot.dataset.emoji || '📁';
+    });
+  });
+
+  // Color Palette Dots
+  document.querySelectorAll('.group-color-dot').forEach(dot => {
+    dot.addEventListener('click', () => {
+      playSFX('tb_clicks');
+      document.querySelectorAll('.group-color-dot').forEach(d => d.classList.remove('active'));
+      dot.classList.add('active');
+      selectedGroupColor = dot.dataset.color || '#ef4444';
+    });
+  });
+
+  // Modal Confirm & Cancel
+  const btnConfirmCreateGroup = document.getElementById('btn-confirm-create-group');
+  const btnCancelCreateGroup = document.getElementById('btn-cancel-create-group');
+  const modalCloseGroupBtn = document.getElementById('modal-close-group-btn');
+
+  const closeModal = () => {
+    playSFX('tb_modal');
+    if (modalCreateGroup) modalCreateGroup.style.display = 'none';
+  };
+
+  if (btnCancelCreateGroup) btnCancelCreateGroup.addEventListener('click', closeModal);
+  if (modalCloseGroupBtn) modalCloseGroupBtn.addEventListener('click', closeModal);
+
+  if (btnConfirmCreateGroup) {
+    btnConfirmCreateGroup.addEventListener('click', () => {
+      playSFX('tb_modal');
+      const title = inputGroupTitle ? (inputGroupTitle.value.trim() || 'Tab Group') : 'Tab Group';
+      
+      if (editingGroupId) {
+        const group = tabGroups.find(g => g.id === editingGroupId);
+        if (group) {
+          group.title = title;
+          group.color = selectedGroupColor;
+          group.icon = selectedGroupEmoji;
+        }
+      } else {
+        const newGroup = {
+          id: `group_${Date.now()}`,
+          title: title,
+          color: selectedGroupColor,
+          icon: selectedGroupEmoji,
+          tabIds: Array.from(selectedTabIds)
+        };
+        tabGroups.push(newGroup);
+      }
+
+      saveTabGroups();
+      isMultiSelectMode = false;
+      selectedTabIds.clear();
+      closeModal();
+      renderOpenTabs();
+      if (window.CaspianBridge && typeof window.CaspianBridge.showToast === 'function') {
+        window.CaspianBridge.showToast(`📁 Saved Group "${title}"!`);
+      }
+    });
+  }
+
+  // Inside Group Banner Action Buttons
+  const btnCloseGroupView = document.getElementById('btn-close-group-view');
+  const btnEditGroup = document.getElementById('btn-edit-group');
+  const btnLeaveGroup = document.getElementById('btn-leave-group');
+  const btnDeleteGroup = document.getElementById('btn-delete-group');
+
+  if (btnCloseGroupView) {
+    btnCloseGroupView.addEventListener('click', () => {
+      playSFX('tb_clicks');
+      activeGroupId = null;
+      renderOpenTabs();
+    });
+  }
+
+  if (btnEditGroup) {
+    btnEditGroup.addEventListener('click', () => {
+      playSFX('tb_clicks');
+      const group = tabGroups.find(g => g.id === activeGroupId);
+      if (group && modalCreateGroup && inputGroupTitle) {
+        editingGroupId = group.id;
+        inputGroupTitle.value = group.title;
+        selectedGroupColor = group.color || '#ef4444';
+        document.querySelectorAll('.group-color-dot').forEach(d => {
+          d.classList.toggle('active', d.dataset.color === selectedGroupColor);
+        });
+        modalCreateGroup.style.display = 'flex';
+      }
+    });
+  }
+
+  if (btnLeaveGroup) {
+    btnLeaveGroup.addEventListener('click', () => {
+      playSFX('tb_clicks');
+      const group = tabGroups.find(g => g.id === activeGroupId);
+      const title = group ? group.title : 'Group';
+      tabGroups = tabGroups.filter(g => g.id !== activeGroupId);
+      saveTabGroups();
+      activeGroupId = null;
+      renderOpenTabs();
+      if (window.CaspianBridge && typeof window.CaspianBridge.showToast === 'function') {
+        window.CaspianBridge.showToast(`📂 Dissolved "${title}". Tabs separated to main view.`);
+      }
+    });
+  }
+
+  // Tab Filter Pills (All / Groups / Single - Fix #8)
+  document.querySelectorAll('.tab-filter-pill').forEach(pill => {
+    pill.addEventListener('click', () => {
+      playSFX('tb_clicks');
+      document.querySelectorAll('.tab-filter-pill').forEach(p => {
+        p.classList.remove('active');
+        p.style.background = 'transparent';
+        p.style.color = 'var(--text-sub)';
+      });
+      pill.classList.add('active');
+      pill.style.background = 'var(--accent)';
+      pill.style.color = '#fff';
+      activeTabFilter = pill.dataset.filter || 'all';
+      renderOpenTabs();
+    });
+  });
+
+  // Modal Group Color Dots Binding
+  document.querySelectorAll('.modal-group-color-dot').forEach(dot => {
+    dot.addEventListener('click', () => {
+      playSFX('tb_clicks');
+      document.querySelectorAll('.modal-group-color-dot').forEach(d => d.classList.remove('active'));
+      dot.classList.add('active');
+      selectedGroupColor = dot.dataset.color || '#ef4444';
+      const colorDot = document.getElementById('group-modal-color-dot');
+      if (colorDot) colorDot.style.background = selectedGroupColor;
+    });
+  });
+
+  // Toast Undo Handler for Group & Single Tab Restoration (Fix #5)
+  const undoToastBtn = document.getElementById('undo-toast-btn');
+  if (undoToastBtn) {
+    undoToastBtn.addEventListener('click', () => {
+      playSFX('tb_clicks');
+      if (lastDeletedGroup) {
+        if (window.CaspianBridge && typeof window.CaspianBridge.restoreLastClosedGroupTabs === 'function') {
+          window.CaspianBridge.restoreLastClosedGroupTabs();
+        }
+        tabGroups.push(lastDeletedGroup.group);
+        saveTabGroups();
+        lastDeletedGroup = null;
+        if (window.CaspianBridge && typeof window.CaspianBridge.showToast === 'function') {
+          window.CaspianBridge.showToast(`Restored group "${lastDeletedGroup ? lastDeletedGroup.group.title : 'Group'}"!`);
+        }
+      } else {
+        if (window.CaspianBridge && typeof window.CaspianBridge.restoreLastClosedTab === 'function') {
+          window.CaspianBridge.restoreLastClosedTab();
+        }
+      }
+      const toastContainer = document.getElementById('undo-toast-container');
+      if (toastContainer) toastContainer.style.display = 'none';
+      setTimeout(renderOpenTabs, 200);
+    });
+  }
+
+  if (btnDeleteGroup) {
+    btnDeleteGroup.addEventListener('click', () => {
+      playSFX('tb_close');
+      const group = tabGroups.find(g => g.id === activeGroupId);
+      if (group) {
+        lastDeletedGroup = { group: Object.assign({}, group), tabIds: [...group.tabIds] };
+        if (window.CaspianBridge && typeof window.CaspianBridge.closeMultipleTabs === 'function') {
+          window.CaspianBridge.closeMultipleTabs(JSON.stringify(group.tabIds));
+        }
+        tabGroups = tabGroups.filter(g => g.id !== activeGroupId);
+        saveTabGroups();
+        showUndoToast(`Group "${group.title}" deleted`);
+      }
+      activeGroupId = null;
+      setTimeout(renderOpenTabs, 150);
+    });
+  }
+
+  // Force clean state & render retries on startup so tabs are never locked after app restart
+  isMultiSelectMode = false;
+  selectedTabIds.clear();
+  renderOpenTabs();
+  setTimeout(renderOpenTabs, 150);
+  setTimeout(renderOpenTabs, 400);
+  setTimeout(renderOpenTabs, 1000);
 });
 })();

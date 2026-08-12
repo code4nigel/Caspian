@@ -24,6 +24,15 @@
     if (masterToggle) masterToggle.checked = !masterSFXMuted;
   }
 
+  // Immediate startup check for saved mute preference
+  try {
+    const initMuted = localStorage.getItem('master_sfx_muted') === 'true';
+    if (initMuted) {
+      masterSFXMuted = true;
+      document.documentElement.classList.add('sfx-muted');
+    }
+  } catch(e) {}
+
   const sfxAssets = {
     tm: null,
     tb: null,
@@ -80,7 +89,7 @@
   const exportMenu = document.getElementById('export-menu');
 
   const appCardHub = document.getElementById('app-card-hub');
-  const appCardGpt = document.getElementById('app-card-chatgpt');
+  const appCardChatGPT = document.getElementById('app-card-chatgpt');
   const appCardGemini = document.getElementById('app-card-gemini');
   const appCardGoogle = document.getElementById('app-card-google');
   const appCardYoutube = document.getElementById('app-card-youtube');
@@ -183,9 +192,40 @@
     }
   });
 
+  // Tab Grouping, Multi-Select, & Filter State
+  let tabGroups = [];
+  try {
+    const savedGroupsStr = localStorage.getItem('caspian_tab_groups');
+    if (savedGroupsStr) tabGroups = JSON.parse(savedGroupsStr);
+    if (window.CaspianBridge && typeof window.CaspianBridge.getPref === 'function') {
+      const prefGroups = window.CaspianBridge.getPref('caspian_tab_groups', null);
+      if (prefGroups) tabGroups = JSON.parse(prefGroups);
+    }
+  } catch(e) { tabGroups = []; }
+
+  let isMultiSelectMode = false;
+  let selectedTabIds = new Set();
+  let activeGroupId = null;
+  let selectedGroupColor = '#ef4444';
+  let editingGroupId = null;
+  let activeTabFilter = 'all'; // 'all', 'groups', 'single'
+  let lastDeletedGroup = null;
+
+  function saveTabGroups() {
+    try {
+      const jsonStr = JSON.stringify(tabGroups);
+      localStorage.setItem('caspian_tab_groups', jsonStr);
+      if (window.CaspianBridge && typeof window.CaspianBridge.savePref === 'function') {
+        window.CaspianBridge.savePref('caspian_tab_groups', jsonStr);
+      }
+    } catch(e) {}
+  }
+
   function renderOpenTabs() {
     const container = document.getElementById('tabs-list-container');
     const countBadge = document.getElementById('tab-count-badge');
+    const insideHeader = document.getElementById('inside-group-header');
+    const groupToolbar = document.getElementById('floating-grouping-toolbar');
     if (!container) return;
 
     let tabs = [];
@@ -204,51 +244,203 @@
 
     if (tabs.length === 0) {
       container.innerHTML = '<div style="font-size: 12px; color: var(--text-sub); text-align: center; padding: 12px;">No active browser tabs open</div>';
+      if (insideHeader) insideHeader.style.display = 'none';
+      if (groupToolbar) groupToolbar.style.display = 'none';
       return;
     }
 
+    // Floating Multi-Select Toolbar Visibility
+    if (groupToolbar) {
+      groupToolbar.style.display = isMultiSelectMode ? 'block' : 'none';
+      const selectCount = document.getElementById('grouping-select-count');
+      if (selectCount) selectCount.textContent = `${selectedTabIds.size} Selected`;
+    }
+
+    // Inside Group View Header
+    const activeGroup = tabGroups.find(g => g.id === activeGroupId);
+    if (activeGroup && insideHeader) {
+      const groupTabs = tabs.filter(t => activeGroup.tabIds.includes(t.id));
+      insideHeader.style.display = 'block';
+      const colorDot = document.getElementById('group-banner-color-dot');
+      const titleLabel = document.getElementById('group-banner-title');
+      const countLabel = document.getElementById('group-banner-count');
+      if (colorDot) colorDot.style.background = activeGroup.color || '#3b82f6';
+      if (titleLabel) titleLabel.textContent = activeGroup.title || 'Tab Group';
+      if (countLabel) countLabel.textContent = `${groupTabs.length} Tabs`;
+
+      tabs = groupTabs; // Render only inner group tabs!
+    } else {
+      if (insideHeader) insideHeader.style.display = 'none';
+    }
+
     let html = '<div class="tab-card-grid">';
-    tabs.forEach(tab => {
-      let iconB64 = '';
-      if (tab.service === 'gemini') {
-        iconB64 = window.GEMINI_ICON_B64 || '';
-      } else if (tab.service === 'chatgpt') {
-        iconB64 = window.GPT_ICON_B64 || '';
-      } else if (tab.service === 'google') {
-        iconB64 = window.GOOGLE_ICON_B64 || '';
-      } else if (tab.service === 'youtube') {
-        iconB64 = window.YOUTUBE_ICON_B64 || '';
-      }
 
-      const activeClass = tab.active ? 'active' : '';
-      const activeBadge = tab.active ? '<span style="font-size: 9px; font-weight: 800; color: #10b981; background: rgba(16,185,129,0.15); padding: 2px 6px; border-radius: 6px;">ACTIVE</span>' : '';
+    let selectedGroupColor = '#ef4444';
+    let selectedGroupEmoji = '📁';
 
-      html += `
-        <div class="chrome-tab-card ${activeClass}" data-tabid="${tab.id}">
-          <div class="chrome-tab-header">
-            <div style="display: flex; align-items: center; gap: 6px; overflow: hidden;">
-              ${iconB64 ? `<img src="${iconB64}" style="width: 16px; height: 16px; border-radius: 4px;" />` : ''}
-              <span class="chrome-tab-title">${tab.title || 'Browser Tab'}</span>
+    // Render Group Cards if in Main View and filter allows groups
+    if (!activeGroupId && (activeTabFilter === 'all' || activeTabFilter === 'groups')) {
+      tabGroups.forEach(group => {
+        const groupTabs = tabs.filter(t => group.tabIds.includes(t.id));
+        if (groupTabs.length === 0) return; // Skip empty groups
+
+        const isGroupActive = groupTabs.some(t => t.active);
+        const activeBadge = isGroupActive ? '<span style="font-size: 9px; font-weight: 800; color: #10b981; background: rgba(16,185,129,0.15); padding: 2px 6px; border-radius: 6px;">ACTIVE</span>' : '';
+        const groupFavBadge = group.isFavorite ? '<span style="color: #eab308; font-size: 11px; margin-right: 2px;" title="Favorited Group">⭐</span>' : '';
+        const groupIcon = group.icon || '📁';
+
+        html += `
+          <div class="chrome-tab-card group-card ${isGroupActive ? 'active' : ''}" data-groupid="${group.id}" style="border-left: 6px solid ${group.color || '#3b82f6'};">
+            <div class="chrome-tab-header">
+              <div style="display: flex; align-items: center; gap: 6px; overflow: hidden;">
+                ${groupFavBadge}
+                <span style="font-size: 16px;">${groupIcon}</span>
+                <span class="chrome-tab-title" style="font-weight: 800; color: ${group.color || 'var(--text-main)'};">${group.title || 'Tab Group'}</span>
+              </div>
+              <button class="chrome-group-menu-btn" data-groupmenuid="${group.id}" title="Group Options" style="background: none; border: none; font-size: 16px; color: var(--text-sub); cursor: pointer; padding: 2px 6px;">⋮</button>
             </div>
-            <button class="chrome-tab-close" data-closeid="${tab.id}" title="Close Tab">&times;</button>
+            <div class="chrome-tab-url" style="font-size: 11px; color: var(--text-sub); margin-top: 4px;">
+              ${groupTabs.length} Open ${groupTabs.length === 1 ? 'Tab' : 'Tabs'} inside group
+            </div>
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-top: 6px;">
+              <span style="font-size: 10px; font-weight: 700; color: var(--text-sub);">Tap to view inner tabs</span>
+              <div>${activeBadge}</div>
+            </div>
           </div>
-          <div class="chrome-tab-url" style="font-size: 10px; color: var(--text-sub); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; margin-top: 4px; display: flex; align-items: center; gap: 4px;">
-            ${tab.nickname ? `🏷️ <strong style="color: #10b981;">${tab.nickname}</strong>` : tab.url || ''}
-          </div>
-          <div style="display: flex; justify-content: flex-end; margin-top: 6px;">
-            ${activeBadge}
-          </div>
-        </div>
-      `;
-    });
-    html += '</div>';
+        `;
+      });
+    }
 
+    // Render Single Tabs if filter allows single tabs
+    if (activeGroupId || activeTabFilter === 'all' || activeTabFilter === 'single') {
+      const displayTabs = activeGroupId ? tabs : tabs.filter(t => !tabGroups.some(g => g.tabIds.includes(t.id)));
+
+      displayTabs.forEach(tab => {
+        let iconB64 = '';
+        if (tab.service === 'gemini') iconB64 = window.GEMINI_ICON_B64 || '';
+        else if (tab.service === 'chatgpt') iconB64 = window.GPT_ICON_B64 || '';
+        else if (tab.service === 'google') iconB64 = window.GOOGLE_ICON_B64 || '';
+        else if (tab.service === 'youtube') iconB64 = window.YOUTUBE_ICON_B64 || '';
+
+        const isSelected = selectedTabIds.has(tab.id);
+        const selectedClass = isSelected ? 'selected' : '';
+        const activeClass = tab.active ? 'active' : '';
+        const activeBadge = tab.active ? '<span style="font-size: 9px; font-weight: 800; color: #10b981; background: rgba(16,185,129,0.15); padding: 2px 6px; border-radius: 6px;">ACTIVE</span>' : '';
+        const selectCheckbox = isMultiSelectMode ? `<span style="font-size: 14px; margin-right: 4px;">${isSelected ? '☑️' : '⏹️'}</span>` : '';
+
+        const shouldShowAudio = (tab.isPlayingAudio === true || tab.isMuted === true);
+        const muteIcon = tab.isMuted ? '🔇' : '🔊';
+        const muteText = tab.isMuted ? 'Muted' : 'Playing';
+        const audioBadge = shouldShowAudio ? `
+          <button class="chrome-tab-mute-btn ${tab.isMuted ? 'muted' : 'playing'}" data-muteid="${tab.id}" title="Toggle Tab Audio Mute" style="display: flex; align-items: center; gap: 4px; font-size: 9px; font-weight: 700; color: ${tab.isMuted ? '#f43f5e' : '#3b82f6'}; background: ${tab.isMuted ? 'rgba(244,63,94,0.15)' : 'rgba(59,130,246,0.15)'}; border: 1px solid ${tab.isMuted ? 'rgba(244,63,94,0.3)' : 'rgba(59,130,246,0.3)'}; border-radius: 6px; padding: 2px 6px; cursor: pointer;">
+            <span>${muteIcon}</span>
+            <span>${muteText}</span>
+          </button>
+        ` : '';
+
+        const favStarBadge = tab.isFavorite ? '<span style="color: #eab308; font-size: 11px; margin-right: 2px;" title="Favorited Tab">⭐</span>' : '';
+        const optionMenuBtn = `<button class="chrome-tab-menu-btn icon-btn" data-tabmenuid="${tab.id}" title="Tab Options" style="font-size: 14px; width: 22px; height: 22px; border: none; background: none; color: var(--text-sub); cursor: pointer; display: inline-flex; align-items: center; justify-content: center; margin-right: 2px;">⋮</button>`;
+
+        html += `
+          <div class="chrome-tab-card ${activeClass} ${selectedClass}" data-tabid="${tab.id}">
+            <div class="chrome-tab-header">
+              <div style="display: flex; align-items: center; gap: 6px; overflow: hidden;">
+                ${selectCheckbox}
+                ${favStarBadge}
+                ${iconB64 ? `<img src="${iconB64}" style="width: 16px; height: 16px; border-radius: 4px;" />` : ''}
+                <span class="chrome-tab-title">${tab.title || 'Browser Tab'}</span>
+              </div>
+              <div style="display: flex; align-items: center; gap: 2px;">
+                ${optionMenuBtn}
+                <button class="chrome-tab-close" data-closeid="${tab.id}" title="Close Tab">&times;</button>
+              </div>
+            </div>
+            <div class="chrome-tab-url" style="font-size: 10px; color: var(--text-sub); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; margin-top: 4px; display: flex; align-items: center; gap: 4px;">
+              ${tab.nickname ? `🏷️ <strong style="color: #10b981;">${tab.nickname}</strong>` : tab.url || ''}
+            </div>
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-top: 6px;">
+              <div>${audioBadge}</div>
+              <div>${activeBadge}</div>
+            </div>
+          </div>
+        `;
+      });
+    }
+
+    html += '</div>';
     container.innerHTML = html;
+
+    // Bind Group Cards Click, Menu, & Swipe Right Listeners (Fix #3)
+    container.querySelectorAll('.chrome-tab-card.group-card').forEach(card => {
+      const groupId = card.dataset.groupid;
+      const group = tabGroups.find(g => g.id === groupId);
+
+      let touchStartX = 0;
+      let diffX = 0;
+
+      card.addEventListener('touchstart', (e) => {
+        touchStartX = e.touches[0].clientX;
+        diffX = 0;
+      }, { passive: true });
+
+      card.addEventListener('touchmove', (e) => {
+        diffX = e.touches[0].clientX - touchStartX;
+        if (diffX > 20) {
+          card.style.transform = `translateX(${diffX}px)`;
+        }
+      }, { passive: true });
+
+      card.addEventListener('touchend', () => {
+        card.style.transform = '';
+        if (diffX > 80 && group) {
+          playSFX('tb_clicks');
+          openGroupOptionsMenu(group);
+        }
+      });
+
+      card.addEventListener('click', (e) => {
+        if (e.target.classList.contains('chrome-group-menu-btn')) return;
+        playSFX('tb_clicks');
+        activeGroupId = groupId;
+        renderOpenTabs();
+      });
+
+      const menuBtn = card.querySelector('.chrome-group-menu-btn');
+      if (menuBtn && group) {
+        menuBtn.addEventListener('click', (e) => {
+          e.stopPropagation();
+          playSFX('tb_clicks');
+          openGroupOptionsMenu(group);
+        });
+      }
+    });
+
+    container.querySelectorAll('.chrome-tab-menu-btn').forEach(btn => {
+      btn.addEventListener('click', (e) => {
+        e.stopPropagation();
+        playSFX('tb_clicks');
+        const tabId = parseInt(btn.dataset.tabmenuid);
+        const tab = tabs.find(t => t.id === tabId);
+        if (tab) openTabOptionsMenu(tab);
+      });
+    });
+
+    container.querySelectorAll('.chrome-tab-mute-btn').forEach(btn => {
+      btn.addEventListener('click', (e) => {
+        e.stopPropagation();
+        playSFX('tb_clicks');
+        const muteId = parseInt(btn.dataset.muteid);
+        if (window.CaspianBridge && typeof window.CaspianBridge.toggleTabMute === 'function') {
+          window.CaspianBridge.toggleTabMute(muteId);
+          setTimeout(renderOpenTabs, 100);
+        }
+      });
+    });
 
     window.renderOpenTabs = renderOpenTabs;
 
-    // Bind Tab Card touch drag reordering, swipe triggers, and click navigation
-    container.querySelectorAll('.chrome-tab-card').forEach(card => {
+    // Bind Normal Tab Cards touch gestures (1-finger drag vs 2-finger multi-select)
+    container.querySelectorAll('.chrome-tab-card:not(.group-card)').forEach(card => {
       let touchStartX = 0;
       let touchStartY = 0;
       let lastMoveX = 0;
@@ -258,11 +450,25 @@
       let isSwipe = false;
       let isDrag = false;
       let pressTimer = null;
-      let dIdx = -1;
-      let cardHeight = 0;
-      let ignoreClickDueToSwipe = false;
+      let cachedTargets = [];
 
       const onTouchStart = (e) => {
+        // Fix Issue 2: 2-finger touch strictly activates Multi-Select mode & cancels drag timers!
+        if (e.touches.length >= 2) {
+          clearTimeout(pressTimer);
+          isDrag = false;
+          const tabId = parseInt(card.dataset.tabid);
+          if (!isMultiSelectMode) {
+            isMultiSelectMode = true;
+            selectedTabIds.clear();
+            selectedTabIds.add(tabId);
+            if (navigator.vibrate) navigator.vibrate(60);
+            playSFX('tb_clicks');
+            renderOpenTabs();
+          }
+          return;
+        }
+
         const touch = e.touches[0];
         touchStartX = touch.clientX;
         touchStartY = touch.clientY;
@@ -273,59 +479,79 @@
         isSwipe = false;
         isDrag = false;
 
-        const cardsList = Array.from(container.querySelectorAll('.chrome-tab-card'));
-        dIdx = cardsList.indexOf(card);
-        cardHeight = card.offsetHeight + 12; // Card height + grid gap
-
-        // 350ms touch and hold to trigger dragging
+        clearTimeout(pressTimer);
+        // 200ms long press to activate tab moving mode
         pressTimer = setTimeout(() => {
-          if (!isSwipe) {
+          if (!isSwipe && e.touches.length === 1) {
             isDrag = true;
             card.classList.add('dragging');
-            card.style.zIndex = '1000';
+            card.style.zIndex = '10000';
+            card.style.pointerEvents = 'none'; // Pass-through touch events once
+            card.style.willChange = 'transform'; // Enable GPU acceleration
             card.style.transition = 'none';
-            // Snap to current move positions to prevent jumping
-            touchStartX = lastMoveX;
-            touchStartY = lastMoveY;
-            diffX = 0;
-            diffY = 0;
+
+            // Cache bounding rects once on drag start to prevent layout flushes during move!
+            cachedTargets = Array.from(container.querySelectorAll('.chrome-tab-card')).map(c => ({
+              el: c,
+              rect: c.getBoundingClientRect()
+            }));
+
+            const headerZone = document.getElementById('group-view-header');
+            if (activeGroupId && headerZone && headerZone.offsetParent !== null) {
+              cachedTargets.push({
+                el: headerZone,
+                rect: headerZone.getBoundingClientRect(),
+                isHeader: true
+              });
+            }
+
             if (navigator.vibrate) navigator.vibrate(40);
+            playSFX('tb_clicks');
           }
-        }, 350);
+        }, 200);
       };
 
       const onTouchMove = (e) => {
+        if (e.touches.length >= 2) {
+          clearTimeout(pressTimer);
+          isDrag = false;
+          return;
+        }
+
         const touch = e.touches[0];
         lastMoveX = touch.clientX;
         lastMoveY = touch.clientY;
         diffX = touch.clientX - touchStartX;
         diffY = touch.clientY - touchStartY;
+        const moveDist = Math.hypot(diffX, diffY);
 
         if (isDrag) {
-          e.preventDefault();
-          // Allow free 2D dragging in all directions
-          card.style.transform = `translate(${diffX}px, ${diffY}px)`;
+          e.preventDefault(); // Prevent native WebView scroll while dragging
+          card.style.transform = `translate3d(${diffX}px, ${diffY}px, 0) scale(1.04)`; // 3D GPU acceleration
 
-          // Highlight target card under the dragging card's center
-          const dragRect = card.getBoundingClientRect();
-          const dragCenterX = dragRect.left + dragRect.width / 2;
-          const dragCenterY = dragRect.top + dragRect.height / 2;
-
-          container.querySelectorAll('.chrome-tab-card').forEach(other => {
-            if (other === card) return;
-            const rect = other.getBoundingClientRect();
-            if (dragCenterX > rect.left && dragCenterX < rect.right &&
-                dragCenterY > rect.top && dragCenterY < rect.bottom) {
-              other.classList.add('drop-target');
-            } else {
-              other.classList.remove('drop-target');
+          // Fast 2D spatial collision detection (handles 2-column grid & diagonal tabs)
+          const touchX = touch.clientX;
+          const touchY = touch.clientY;
+          for (let i = 0; i < cachedTargets.length; i++) {
+            const item = cachedTargets[i];
+            if (item.el === card) continue;
+            const r = item.rect;
+            if (touchX >= r.left && touchX <= r.right && touchY >= r.top && touchY <= r.bottom) {
+              if (!item.el.classList.contains('drop-target')) {
+                container.querySelectorAll('.chrome-tab-card.drop-target, #group-view-header.drop-target').forEach(c => c.classList.remove('drop-target'));
+                item.el.classList.add('drop-target');
+              }
+              break;
             }
-          });
+          }
           return;
         }
 
-        if (!isSwipe && Math.abs(diffX) > 25 && Math.abs(diffX) > Math.abs(diffY) * 1.5) {
-          isSwipe = true;
+        // Finger moved > 10px before 200ms timer fired: cancel drag
+        if (!isDrag && moveDist > 10) {
+          if (Math.abs(diffX) > Math.abs(diffY) * 1.5) {
+            isSwipe = true;
+          }
           clearTimeout(pressTimer);
         }
 
@@ -337,60 +563,126 @@
 
       const onTouchEnd = () => {
         clearTimeout(pressTimer);
+        const wasDrag = isDrag;
+        const wasSwipe = isSwipe;
 
-        if (isDrag) {
-          card.classList.remove('dragging');
-          card.style.zIndex = '';
-          card.style.transform = '';
-          isDrag = false;
+        // Unconditionally unlock card pointer & visual state on touch release!
+        card.classList.remove('dragging');
+        card.style.zIndex = '';
+        card.style.transform = '';
+        card.style.pointerEvents = '';
+        card.style.willChange = '';
+        isDrag = false;
 
-          // Find target drop index
-          const activeDropTarget = container.querySelector('.chrome-tab-card.drop-target');
-          let targetIdx = dIdx;
+        if (wasDrag) {
+          // Find drop target card from drop-target class or cached targets 2D spatial check
+          const activeDropTarget = container.querySelector('.chrome-tab-card.drop-target, #group-view-header.drop-target') || 
+            (() => {
+              const item = cachedTargets.find(t => 
+                t.el !== card && 
+                lastMoveX >= t.rect.left && lastMoveX <= t.rect.right && 
+                lastMoveY >= t.rect.top && lastMoveY <= t.rect.bottom
+              );
+              return item ? item.el : null;
+            })();
+
+          container.querySelectorAll('.chrome-tab-card, #group-view-header').forEach(c => c.classList.remove('drop-target'));
+          cachedTargets = [];
+
           if (activeDropTarget) {
-            const cardsList = Array.from(container.querySelectorAll('.chrome-tab-card'));
-            targetIdx = cardsList.indexOf(activeDropTarget);
-            activeDropTarget.classList.remove('drop-target');
-          }
+            const sourceTabId = parseInt(card.dataset.tabid);
 
-          // Clear any leftovers
-          container.querySelectorAll('.chrome-tab-card').forEach(other => {
-            other.classList.remove('drop-target');
-          });
-
-          if (targetIdx !== dIdx && targetIdx >= 0 && targetIdx < tabs.length) {
-            // Reorder in JS array
-            const [moved] = tabs.splice(dIdx, 1);
-            tabs.splice(targetIdx, 0, moved);
-
-            const newIds = tabs.map(t => t.id);
-            if (window.CaspianBridge && typeof window.CaspianBridge.reorderTabs === 'function') {
-              window.CaspianBridge.reorderTabs(JSON.stringify(newIds));
+            // Case 0: Dropped onto Group View Header (#group-view-header) to remove tab from group!
+            if (activeDropTarget.id === 'group-view-header' || activeDropTarget.closest('#group-view-header')) {
+              const currentGroup = tabGroups.find(g => g.id === activeGroupId);
+              if (currentGroup) {
+                const moveIds = (isMultiSelectMode && selectedTabIds.size > 0) ? Array.from(selectedTabIds) : [sourceTabId];
+                currentGroup.tabIds = currentGroup.tabIds.filter(id => !moveIds.includes(id));
+                saveTabGroups();
+                if (currentGroup.tabIds.length === 0) {
+                  activeGroupId = null;
+                }
+                isMultiSelectMode = false;
+                selectedTabIds.clear();
+                if (window.CaspianBridge && typeof window.CaspianBridge.showToast === 'function') {
+                  window.CaspianBridge.showToast(`Removed ${moveIds.length} tab(s) from "${currentGroup.title}"!`);
+                }
+              }
+              setTimeout(renderOpenTabs, 50);
+              return;
             }
-            setTimeout(renderOpenTabs, 50);
-          } else {
-            card.style.transform = '';
+
+            // Case A: Dropped onto a Group Card (.group-card)
+            if (activeDropTarget.classList.contains('group-card')) {
+              const targetGroupId = activeDropTarget.dataset.groupid;
+              const targetGroup = tabGroups.find(g => g.id === targetGroupId);
+              if (targetGroup) {
+                const moveIds = (isMultiSelectMode && selectedTabIds.size > 0) ? Array.from(selectedTabIds) : [sourceTabId];
+                moveIds.forEach(id => {
+                  if (!targetGroup.tabIds.includes(id)) targetGroup.tabIds.push(id);
+                });
+                tabGroups.forEach(g => {
+                  if (g.id !== targetGroupId) g.tabIds = g.tabIds.filter(id => !moveIds.includes(id));
+                });
+                saveTabGroups();
+                isMultiSelectMode = false;
+                selectedTabIds.clear();
+                if (window.CaspianBridge && typeof window.CaspianBridge.showToast === 'function') {
+                  window.CaspianBridge.showToast(`Added ${moveIds.length} tab(s) to "${targetGroup.title}"!`);
+                }
+              }
+              setTimeout(renderOpenTabs, 50);
+              return;
+            }
+
+            // Case B: Reordering single tabs or multi-selected tabs on FULL grid
+            const allTabsJson = window.CaspianBridge.getOpenTabs();
+            const allTabs = allTabsJson ? JSON.parse(allTabsJson) : [];
+            const targetTabId = parseInt(activeDropTarget.dataset.tabid);
+            const sourceIdx = allTabs.findIndex(t => t.id === sourceTabId);
+            const targetIdx = allTabs.findIndex(t => t.id === targetTabId);
+
+            if (sourceIdx !== -1 && targetIdx !== -1 && sourceIdx !== targetIdx) {
+              if (isMultiSelectMode && selectedTabIds.size > 0) {
+                const selectedItems = allTabs.filter(t => selectedTabIds.has(t.id));
+                const remainingItems = allTabs.filter(t => !selectedTabIds.has(t.id));
+                let insertAt = remainingItems.findIndex(t => t.id === targetTabId);
+                if (insertAt === -1) insertAt = remainingItems.length;
+                remainingItems.splice(insertAt, 0, ...selectedItems);
+                const newIds = remainingItems.map(t => t.id);
+                if (window.CaspianBridge && typeof window.CaspianBridge.reorderTabs === 'function') {
+                  window.CaspianBridge.reorderTabs(JSON.stringify(newIds));
+                }
+                isMultiSelectMode = false;
+                selectedTabIds.clear();
+                if (window.CaspianBridge && typeof window.CaspianBridge.showToast === 'function') {
+                  window.CaspianBridge.showToast(`Moved ${selectedItems.length} selected tabs!`);
+                }
+              } else {
+                const [moved] = allTabs.splice(sourceIdx, 1);
+                allTabs.splice(targetIdx, 0, moved);
+                const newIds = allTabs.map(t => t.id);
+                if (window.CaspianBridge && typeof window.CaspianBridge.reorderTabs === 'function') {
+                  window.CaspianBridge.reorderTabs(JSON.stringify(newIds));
+                }
+              }
+              setTimeout(renderOpenTabs, 50);
+              return;
+            }
           }
+
           return;
         }
 
-        if (isSwipe) {
-          card.style.transform = '';
+        if (wasSwipe) {
           if (diffX > 80) {
             const tabId = parseInt(card.dataset.tabid);
             const tab = tabs.find(t => t.id === tabId);
             if (tab) openTabOptionsMenu(tab);
           } else if (diffX < -80) {
             const tabId = parseInt(card.dataset.tabid);
-            card.style.transition = 'transform 0.2s ease, opacity 0.2s ease';
-            card.style.transform = 'translateX(-120%)';
-            card.style.opacity = '0';
-            setTimeout(() => {
-              triggerCloseTab(tabId);
-            }, 200);
+            triggerCloseTab(tabId);
           }
-          ignoreClickDueToSwipe = true;
-          setTimeout(() => { ignoreClickDueToSwipe = false; }, 200);
           isSwipe = false;
         }
       };
@@ -400,24 +692,34 @@
       card.addEventListener('touchend', onTouchEnd);
       card.addEventListener('touchcancel', onTouchEnd);
 
-      // Support Click Event for switching tab
+      // Click Event for switching tab or toggling selection in multi-select mode
       card.addEventListener('click', (e) => {
-        if (e.target.classList.contains('chrome-tab-close')) return;
-        if (isSwipe || isDrag || ignoreClickDueToSwipe) return;
+        if (e.target.classList.contains('chrome-tab-close') || e.target.closest('.chrome-tab-close') || e.target.closest('.chrome-tab-menu-btn') || e.target.closest('.chrome-tab-mute-btn')) return;
+
+        // If card was dragged or swiped significantly, ignore click
+        if (Math.abs(diffX) > 15 || Math.abs(diffY) > 15) return;
+
         const tabId = parseInt(card.dataset.tabid);
+
+        if (isMultiSelectMode) {
+          playSFX('tb_clicks');
+          if (selectedTabIds.has(tabId)) {
+            selectedTabIds.delete(tabId);
+            if (selectedTabIds.size === 0) {
+              isMultiSelectMode = false;
+            }
+          } else {
+            selectedTabIds.add(tabId);
+          }
+          renderOpenTabs();
+          return;
+        }
 
         container.querySelectorAll('.chrome-tab-card').forEach(c => {
           c.classList.remove('active');
-          const badge = c.querySelector('span[style*="color: #10b981"]');
-          if (badge) badge.remove();
         });
         card.classList.add('active');
         playSFX('tb_clicks');
-
-        const badgeContainer = card.querySelector('div[style*="justify-content: flex-end"]');
-        if (badgeContainer) {
-          badgeContainer.innerHTML = '<span style="font-size: 9px; font-weight: 800; color: #10b981; background: rgba(16,185,129,0.15); padding: 2px 6px; border-radius: 6px;">ACTIVE</span>';
-        }
 
         if (window.CaspianBridge && typeof window.CaspianBridge.switchTab === 'function') {
           window.CaspianBridge.switchTab(tabId);
@@ -431,19 +733,6 @@
       btn.addEventListener('click', (e) => {
         e.stopPropagation();
         const tabId = parseInt(btn.dataset.closeid);
-        const card = container.querySelector(`.chrome-tab-card[data-tabid="${tabId}"]`);
-        if (card) {
-          card.style.opacity = '0';
-          card.style.transform = 'scale(0.9)';
-          card.style.transition = 'all 0.25s cubic-bezier(0.16, 1, 0.3, 1)';
-          setTimeout(() => {
-            card.remove();
-            const remaining = container.querySelectorAll('.chrome-tab-card').length;
-            if (countBadge) {
-              countBadge.textContent = remaining === 1 ? '1 Tab' : `${remaining} Tabs`;
-            }
-          }, 200);
-        }
         triggerCloseTab(tabId);
       });
     });
@@ -478,16 +767,31 @@
               activeBadge.textContent = limitVal >= 9999 ? '∞ All' : `${limitVal} ${limitVal === 1 ? 'Message' : 'Messages'}`;
             }
           }
-          if (prefs.globalActive !== undefined) {
-            globalActive = (prefs.globalActive === true || prefs.globalActive === 'true');
-            const statusDot = document.getElementById('status-dot');
-            const statusTitle = document.getElementById('status-title');
-            const statusSub = document.getElementById('status-sub');
-
-            if (statusDot) statusDot.classList.toggle('active', globalActive);
-            if (statusTitle) statusTitle.textContent = globalActive ? 'Chat Message Limit: ON' : 'Chat Message Limit: OFF';
-            if (statusSub) statusSub.textContent = globalActive ? 'it limites the amout of message shown from below so all message above it will get prune or cut out this is done to improve performance and reduce lagging.' : 'Message Limit paused via Master Power Switch';
+          // Restore AdBlocker State
+          const adblockVal = prefs.adblock_enabled !== undefined ? (prefs.adblock_enabled === true || prefs.adblock_enabled === 'true') : (localStorage.getItem('adblock_enabled') !== 'false');
+          const toggleAdblockBtn = document.getElementById('toggle-adblock-btn');
+          const adblockDot = document.getElementById('adblock-dot');
+          if (toggleAdblockBtn) {
+            toggleAdblockBtn.textContent = adblockVal ? 'Enabled' : 'Disabled';
+            toggleAdblockBtn.className = adblockVal ? 'oneui-pill-btn primary' : 'oneui-pill-btn secondary';
           }
+          if (adblockDot) adblockDot.classList.toggle('active', adblockVal);
+
+          // Check active tab to toggle YouTube Control Card
+          try {
+            if (window.CaspianBridge && typeof window.CaspianBridge.getOpenTabs === 'function') {
+              const openTabsStr = window.CaspianBridge.getOpenTabs();
+              if (openTabsStr) {
+                const tabs = JSON.parse(openTabsStr);
+                const activeTab = tabs.find(t => t.active);
+                const ytCard = document.getElementById('youtube-control-card');
+                if (ytCard) {
+                  const isYT = activeTab && ((activeTab.service && activeTab.service.toLowerCase().includes('youtube')) || (activeTab.url && activeTab.url.toLowerCase().includes('youtube.com')));
+                  ytCard.style.display = isYT ? 'block' : 'none';
+                }
+              }
+            }
+          } catch(e) {}
           if (prefs.theme_start_color && prefs.theme_end_color) {
             applyCustomGradient(prefs.theme_start_color, prefs.theme_end_color);
           }
@@ -509,7 +813,7 @@
           if (prefs.themeMode !== undefined) {
             setTheme(prefs.themeMode);
           } else {
-            setTheme(localStorage.getItem('theme') || 'light');
+            setTheme(localStorage.getItem('theme') || 'dark');
           }
           updateIconPreview(prefs.theme_start_color || '#A2A9A9', prefs.theme_end_color || '#1B4264', selectedShapeVal);
 
@@ -814,6 +1118,9 @@
       if (window.CaspianBridge && typeof window.CaspianBridge.setSystemNightMode === 'function') {
         window.CaspianBridge.setSystemNightMode(isDark);
       }
+      if (window.CaspianBridge && typeof window.CaspianBridge.toggleHostPageTheme === 'function') {
+        window.CaspianBridge.toggleHostPageTheme(isDark);
+      }
       if (isDark) {
         document.documentElement.classList.add('dark');
         document.documentElement.classList.remove('light');
@@ -832,8 +1139,10 @@
 
   // Theme Toggles (Default Light)
   function setTheme(t) {
-    activeTheme = t || 'light';
+    activeTheme = t || 'dark';
     document.documentElement.setAttribute('data-theme', activeTheme);
+    document.documentElement.classList.toggle('dark', activeTheme === 'dark');
+    document.documentElement.classList.toggle('light', activeTheme === 'light');
     if (activeTheme === 'light') {
       document.documentElement.style.setProperty('--sheet-bg', '#ffffff');
     } else {
@@ -1030,65 +1339,48 @@
     });
   }
 
-  // App Icon Cards: Open new tab for selected platform (Hub, ChatGPT, Gemini)
+  function handleCreateNewTab(service) {
+    playSFX('tb_clicks');
+    if (window.CaspianBridge && typeof window.CaspianBridge.createNewTab === 'function') {
+      window.CaspianBridge.createNewTab(service);
+      setTimeout(() => {
+        if (activeGroupId) {
+          const group = tabGroups.find(g => g.id === activeGroupId);
+          if (group && window.CaspianBridge && typeof window.CaspianBridge.getOpenTabs === 'function') {
+            try {
+              const openTabs = JSON.parse(window.CaspianBridge.getOpenTabs());
+              if (openTabs.length > 0) {
+                const latestTab = openTabs[openTabs.length - 1];
+                if (!group.tabIds.includes(latestTab.id)) {
+                  group.tabIds.push(latestTab.id);
+                  saveTabGroups();
+                }
+              }
+            } catch(e){}
+          }
+        }
+        renderOpenTabs();
+      }, 150);
+    }
+  }
+
   if (appCardHub) {
-    appCardHub.addEventListener('click', () => {
-      playSFX('tb_clicks');
-      if (window.CaspianBridge && typeof window.CaspianBridge.createNewTab === 'function') {
-        window.CaspianBridge.createNewTab('hub');
-        setTimeout(renderOpenTabs, 100);
-      }
-    });
+    appCardHub.addEventListener('click', () => handleCreateNewTab('hub'));
   }
-
-  if (appCardGpt) {
-    appCardGpt.addEventListener('click', () => {
-      playSFX('tb_clicks');
-      if (window.CaspianBridge && typeof window.CaspianBridge.createNewTab === 'function') {
-        window.CaspianBridge.createNewTab('chatgpt');
-        setTimeout(renderOpenTabs, 100);
-      }
-    });
+  if (appCardChatGPT) {
+    appCardChatGPT.addEventListener('click', () => handleCreateNewTab('chatgpt'));
   }
-
   if (appCardGemini) {
-    appCardGemini.addEventListener('click', () => {
-      playSFX('tb_clicks');
-      if (window.CaspianBridge && typeof window.CaspianBridge.createNewTab === 'function') {
-        window.CaspianBridge.createNewTab('gemini');
-        setTimeout(renderOpenTabs, 100);
-      }
-    });
+    appCardGemini.addEventListener('click', () => handleCreateNewTab('gemini'));
   }
-
   if (appCardGoogle) {
-    appCardGoogle.addEventListener('click', () => {
-      playSFX('tb_clicks');
-      if (window.CaspianBridge && typeof window.CaspianBridge.createNewTab === 'function') {
-        window.CaspianBridge.createNewTab('google');
-        setTimeout(renderOpenTabs, 100);
-      }
-    });
+    appCardGoogle.addEventListener('click', () => handleCreateNewTab('google'));
   }
-
   if (appCardYoutube) {
-    appCardYoutube.addEventListener('click', () => {
-      playSFX('tb_clicks');
-      if (window.CaspianBridge && typeof window.CaspianBridge.createNewTab === 'function') {
-        window.CaspianBridge.createNewTab('youtube');
-        setTimeout(renderOpenTabs, 100);
-      }
-    });
+    appCardYoutube.addEventListener('click', () => handleCreateNewTab('youtube'));
   }
-
   if (newTabBtn) {
-    newTabBtn.addEventListener('click', () => {
-      playSFX('tb_clicks');
-      if (window.CaspianBridge && typeof window.CaspianBridge.createNewTab === 'function') {
-        window.CaspianBridge.createNewTab('chatgpt');
-        setTimeout(renderOpenTabs, 100);
-      }
-    });
+    newTabBtn.addEventListener('click', () => handleCreateNewTab('chatgpt'));
   }
 
   if (closeAllTabsBtn) {
@@ -1440,15 +1732,175 @@ function restoreSavedSettings() {
   }
 }
 
+function openGroupOptionsMenu(group) {
+  const modal = document.getElementById('group-options-modal');
+  const titleInput = document.getElementById('group-modal-title-input');
+  const colorDot = document.getElementById('group-modal-color-dot');
+  const headerTitle = document.getElementById('group-modal-header-title');
+  if (!modal || !titleInput) return;
+
+  editingGroupId = group.id;
+  titleInput.value = group.title || '';
+  if (colorDot) colorDot.style.background = group.color || '#3b82f6';
+  if (headerTitle) headerTitle.textContent = `Group: ${group.title || 'Tab Group'}`;
+  selectedGroupColor = group.color || '#ef4444';
+  selectedGroupEmoji = group.icon || '📁';
+
+  document.querySelectorAll('.modal-group-color-dot').forEach(d => {
+    d.classList.toggle('active', d.dataset.color === selectedGroupColor);
+  });
+
+  document.querySelectorAll('.modal-group-emoji-dot').forEach(d => {
+    d.classList.toggle('active', d.dataset.emoji === selectedGroupEmoji);
+    d.onclick = () => {
+      playSFX('tb_clicks');
+      document.querySelectorAll('.modal-group-emoji-dot').forEach(x => x.classList.remove('active'));
+      d.classList.add('active');
+      selectedGroupEmoji = d.dataset.emoji || '📁';
+    };
+  });
+
+  const favIcon = document.getElementById('group-fav-star-icon');
+  const favText = document.getElementById('group-fav-star-text');
+  if (favIcon) favIcon.textContent = group.isFavorite ? '⭐' : '☆';
+  if (favText) favText.textContent = group.isFavorite ? 'Favorited' : 'Favorite';
+
+  modal.style.setProperty('display', 'flex', 'important');
+  modal.style.setProperty('pointer-events', 'auto', 'important');
+  modal.style.setProperty('visibility', 'visible', 'important');
+
+  const closeX = document.getElementById('group-modal-close-x');
+  const cancelBtn = document.getElementById('group-modal-cancel-btn');
+  const closeModal = () => {
+    playSFX('tb_modal');
+    modal.style.display = 'none';
+    editingGroupId = null;
+  };
+  if (closeX) closeX.onclick = closeModal;
+  if (cancelBtn) cancelBtn.onclick = closeModal;
+
+  const favBtn = document.getElementById('group-modal-favorite-btn');
+  if (favBtn) {
+    favBtn.onclick = () => {
+      playSFX('tb_clicks');
+      group.isFavorite = !group.isFavorite;
+      saveTabGroups();
+      if (window.CaspianBridge && typeof window.CaspianBridge.setGroupTabsFavorite === 'function') {
+        window.CaspianBridge.setGroupTabsFavorite(JSON.stringify(group.tabIds), group.isFavorite);
+      }
+      if (favIcon) favIcon.textContent = group.isFavorite ? '⭐' : '☆';
+      if (favText) favText.textContent = group.isFavorite ? 'Favorited' : 'Favorite';
+      if (window.CaspianBridge && typeof window.CaspianBridge.showToast === 'function') {
+        window.CaspianBridge.showToast(group.isFavorite ? `⭐ Group "${group.title}" Favorited!` : `Group "${group.title}" Unfavorited`);
+      }
+      renderOpenTabs();
+    };
+  }
+
+  const ungroupBtn = document.getElementById('group-modal-ungroup-btn');
+  if (ungroupBtn) {
+    ungroupBtn.onclick = () => {
+      playSFX('tb_modal');
+      tabGroups = tabGroups.filter(g => g.id !== group.id);
+      saveTabGroups();
+      modal.style.display = 'none';
+      editingGroupId = null;
+      renderOpenTabs();
+      if (window.CaspianBridge && typeof window.CaspianBridge.showToast === 'function') {
+        window.CaspianBridge.showToast(`📂 Group "${group.title}" dissolved. Tabs remain open.`);
+      }
+    };
+  }
+
+  const deleteBtn = document.getElementById('group-modal-delete-btn');
+  if (deleteBtn) {
+    deleteBtn.onclick = () => {
+      playSFX('tb_close');
+      lastDeletedGroup = { group: Object.assign({}, group), tabIds: [...group.tabIds] };
+      if (window.CaspianBridge && typeof window.CaspianBridge.closeMultipleTabs === 'function') {
+        window.CaspianBridge.closeMultipleTabs(JSON.stringify(group.tabIds));
+      }
+      tabGroups = tabGroups.filter(g => g.id !== group.id);
+      saveTabGroups();
+      modal.style.display = 'none';
+      editingGroupId = null;
+      showUndoToast(`Group "${group.title}" deleted`);
+      renderOpenTabs();
+    };
+  }
+
+  const saveBtn = document.getElementById('group-modal-save-btn');
+  if (saveBtn) {
+    saveBtn.onclick = () => {
+      playSFX('tb_modal');
+      group.title = titleInput.value.trim() || 'Tab Group';
+      group.color = selectedGroupColor;
+      group.icon = selectedGroupEmoji;
+      saveTabGroups();
+      modal.style.display = 'none';
+      editingGroupId = null;
+      renderOpenTabs();
+      if (window.CaspianBridge && typeof window.CaspianBridge.showToast === 'function') {
+        window.CaspianBridge.showToast(`Saved Group "${group.title}"!`);
+      }
+    };
+  }
+}
+
 function openTabOptionsMenu(tab) {
   const modal = document.getElementById('tab-options-modal');
   const nicknameInput = document.getElementById('tab-nickname-input');
   const urlDisplay = document.getElementById('tab-url-display');
   if (!modal || !nicknameInput || !urlDisplay) return;
 
+  editingTabId = tab.id;
   nicknameInput.value = tab.nickname || '';
   urlDisplay.value = tab.url || '';
   modal.style.display = 'flex';
+
+  const groupActionsRow = document.getElementById('modal-group-actions-row');
+  const leaveGroupBtn = document.getElementById('modal-leave-group-btn');
+  const parentGroup = tabGroups.find(g => g.tabIds.includes(tab.id));
+  if (groupActionsRow) {
+    if (parentGroup) {
+      groupActionsRow.style.display = 'block';
+      if (leaveGroupBtn) {
+        leaveGroupBtn.onclick = () => {
+          playSFX('tb_modal');
+          parentGroup.tabIds = parentGroup.tabIds.filter(id => id !== tab.id);
+          saveTabGroups();
+          if (parentGroup.tabIds.length === 0 && activeGroupId === parentGroup.id) {
+            activeGroupId = null;
+          }
+          modal.style.display = 'none';
+          if (window.CaspianBridge && typeof window.CaspianBridge.showToast === 'function') {
+            window.CaspianBridge.showToast(`Moved tab out of "${parentGroup.title}"!`);
+          }
+          setTimeout(renderOpenTabs, 50);
+        };
+      }
+    } else {
+      groupActionsRow.style.display = 'none';
+    }
+  }
+
+  const favBtn = document.getElementById('modal-favorite-btn');
+  const favIcon = document.getElementById('fav-star-icon');
+  const favText = document.getElementById('fav-star-text');
+  if (favIcon) favIcon.textContent = tab.isFavorite ? '⭐' : '☆';
+  if (favText) favText.textContent = tab.isFavorite ? 'Favorited' : 'Favorite';
+
+  if (favBtn) {
+    favBtn.onclick = () => {
+      playSFX('tb_clicks');
+      if (window.CaspianBridge && typeof window.CaspianBridge.toggleTabFavorite === 'function') {
+        window.CaspianBridge.toggleTabFavorite(tab.id);
+      }
+      tab.isFavorite = !tab.isFavorite;
+      if (favIcon) favIcon.textContent = tab.isFavorite ? '⭐' : '☆';
+      if (favText) favText.textContent = tab.isFavorite ? 'Favorited' : 'Favorite';
+    };
+  }
 
   // Modal actions
   const cancelBtn = document.getElementById('modal-cancel-btn');
@@ -1491,22 +1943,24 @@ function openTabOptionsMenu(tab) {
   }
 
   const saveBtn = document.getElementById('modal-save-btn');
-  saveBtn.onclick = () => {
-    playSFX('tb_modal');
-    nicknameInput.blur();
-    urlDisplay.blur();
-    const name = nicknameInput.value.trim();
-    const url = urlDisplay.value.trim();
-    if (window.CaspianBridge && typeof window.CaspianBridge.updateTabDetails === 'function') {
-      window.CaspianBridge.updateTabDetails(tab.id, name, url);
-    }
-    modal.style.display = 'none';
-    setTimeout(() => {
-      if (typeof window.renderOpenTabs === 'function') {
-        window.renderOpenTabs();
+  if (saveBtn) {
+    saveBtn.onclick = () => {
+      playSFX('tb_modal');
+      nicknameInput.blur();
+      urlDisplay.blur();
+      const nick = nicknameInput.value.trim();
+      const url = urlDisplay.value.trim();
+      if (window.CaspianBridge && typeof window.CaspianBridge.updateTabDetails === 'function') {
+        window.CaspianBridge.updateTabDetails(tab.id, nick, url);
       }
-    }, 300);
-  };
+      modal.style.display = 'none';
+      setTimeout(() => {
+        if (typeof window.renderOpenTabs === 'function') {
+          window.renderOpenTabs();
+        }
+      }, 100);
+    };
+  }
 }
 
 function triggerCloseTab(tabId) {
@@ -1576,4 +2030,506 @@ function showUndoToast() {
     toast.style.display = 'none';
   }, 6000); // Allow 6 seconds to undo
 }
+
+// YouTube Controls & AdBlocker Event Listeners
+document.addEventListener('DOMContentLoaded', () => {
+  const ytSeekBackBtn = document.getElementById('yt-seek-back-btn');
+  if (ytSeekBackBtn) {
+    ytSeekBackBtn.addEventListener('click', () => {
+      playSFX('tb_clicks');
+      if (window.CaspianBridge && typeof window.CaspianBridge.seekYouTube === 'function') {
+        window.CaspianBridge.seekYouTube(-5);
+      }
+    });
+  }
+
+  const ytSeekFwdBtn = document.getElementById('yt-seek-fwd-btn');
+  if (ytSeekFwdBtn) {
+    ytSeekFwdBtn.addEventListener('click', () => {
+      playSFX('tb_clicks');
+      if (window.CaspianBridge && typeof window.CaspianBridge.seekYouTube === 'function') {
+        window.CaspianBridge.seekYouTube(5);
+      }
+    });
+  }
+
+  document.querySelectorAll('.yt-speed-pill').forEach(pill => {
+    pill.addEventListener('click', () => {
+      playSFX('tb_clicks');
+      const speed = pill.dataset.speed;
+      document.querySelectorAll('.yt-speed-pill').forEach(p => p.classList.toggle('active', p === pill));
+      if (window.CaspianBridge && typeof window.CaspianBridge.setYouTubeSpeed === 'function') {
+        window.CaspianBridge.setYouTubeSpeed(parseFloat(speed));
+      }
+    });
+  });
+
+  document.querySelectorAll('.yt-quality-pill').forEach(pill => {
+    pill.addEventListener('click', () => {
+      playSFX('tb_clicks');
+      const quality = pill.dataset.quality;
+      document.querySelectorAll('.yt-quality-pill').forEach(p => p.classList.toggle('active', p === pill));
+      if (window.CaspianBridge && typeof window.CaspianBridge.setYouTubeQuality === 'function') {
+        window.CaspianBridge.setYouTubeQuality(quality);
+      }
+    });
+  });
+
+  // Engine Tab Cards & Master Power Toggle Logic
+  const cardTS = document.getElementById('card-temp-saver');
+  const cardCL = document.getElementById('card-chat-limit');
+  const cardCC = document.getElementById('card-caspian-current');
+  const cardAB = document.getElementById('card-adblocker');
+
+  const toggleTSBtn = document.getElementById('toggle-temp-saver-btn');
+  const toggleCLBtn = document.getElementById('toggle-chat-limit-btn');
+  const toggleCCBtn = document.getElementById('toggle-caspian-current-btn');
+  const toggleAdblockBtn = document.getElementById('toggle-adblock-btn');
+
+  const chatLimitHeader = document.getElementById('chat-limit-header');
+  const chatLimitBody = document.getElementById('chat-limit-body');
+  const ccHeader = document.getElementById('caspian-current-header');
+  const ccBody = document.getElementById('caspian-current-body');
+  const adblockHeader = document.getElementById('adblock-header');
+  const adblockBody = document.getElementById('adblock-body');
+
+  // Helper to update card states
+  function updateEngineCardUI(card, toggleBtn, body, dotEl, key) {
+    const isEnabled = localStorage.getItem(key) !== 'false';
+    if (card) {
+      card.classList.toggle('disabled', !isEnabled);
+      card.style.opacity = isEnabled ? '1' : '0.45';
+      card.style.filter = isEnabled ? 'none' : 'grayscale(0.6)';
+    }
+    if (body) body.style.display = isEnabled ? 'block' : 'none';
+    if (dotEl) dotEl.classList.toggle('active', isEnabled);
+    if (toggleBtn) {
+      toggleBtn.textContent = isEnabled ? 'ON' : 'OFF';
+      toggleBtn.className = isEnabled ? 'oneui-pill-btn primary' : 'oneui-pill-btn secondary';
+    }
+    if (key === 'chat_limit_enabled') {
+      const statusTitle = document.getElementById('status-title');
+      if (statusTitle) statusTitle.textContent = 'Chat Message Limit: ' + (isEnabled ? 'ON' : 'OFF');
+    }
+  }
+
+  // Initial Sync
+  updateEngineCardUI(cardTS, toggleTSBtn, null, document.getElementById('ts-status-dot'), 'temp_saver_enabled');
+  updateEngineCardUI(cardCL, toggleCLBtn, chatLimitBody, document.getElementById('status-dot'), 'chat_limit_enabled');
+  updateEngineCardUI(cardCC, toggleCCBtn, ccBody, document.getElementById('cc-status-dot'), 'caspian_current_enabled');
+  updateEngineCardUI(cardAB, toggleAdblockBtn, adblockBody, document.getElementById('adblock-dot'), 'adblock_enabled');
+
+  // 1. Temporary Chat Saver Toggle
+  if (toggleTSBtn) {
+    toggleTSBtn.addEventListener('click', (e) => {
+      e.stopPropagation();
+      playSFX('tb_clicks');
+      let current = localStorage.getItem('temp_saver_enabled') !== 'false';
+      let next = !current;
+      localStorage.setItem('temp_saver_enabled', next ? 'true' : 'false');
+      if (window.CaspianBridge && typeof window.CaspianBridge.saveSetting === 'function') {
+        window.CaspianBridge.saveSetting('temp_saver_enabled', next ? 'true' : 'false');
+      }
+      updateEngineCardUI(cardTS, toggleTSBtn, null, document.getElementById('ts-status-dot'), 'temp_saver_enabled');
+    });
+  }
+
+  // 2. Chat Limit Accordion & Toggle
+  if (chatLimitHeader && chatLimitBody) {
+    chatLimitHeader.addEventListener('click', (e) => {
+      if (e.target === toggleCLBtn || (toggleCLBtn && toggleCLBtn.contains(e.target))) return;
+      const isOpen = chatLimitBody.style.display !== 'none';
+      chatLimitBody.style.display = isOpen ? 'none' : 'block';
+    });
+  }
+  if (toggleCLBtn) {
+    toggleCLBtn.addEventListener('click', (e) => {
+      e.stopPropagation();
+      playSFX('tb_clicks');
+      let current = localStorage.getItem('chat_limit_enabled') !== 'false';
+      let next = !current;
+      localStorage.setItem('chat_limit_enabled', next ? 'true' : 'false');
+      if (window.CaspianBridge && typeof window.CaspianBridge.saveSetting === 'function') {
+        window.CaspianBridge.saveSetting('chat_limit_enabled', next ? 'true' : 'false');
+      }
+      updateEngineCardUI(cardCL, toggleCLBtn, chatLimitBody, document.getElementById('status-dot'), 'chat_limit_enabled');
+    });
+  }
+
+  // 3. Caspian Current Accordion & Toggle
+  if (ccHeader && ccBody) {
+    ccHeader.addEventListener('click', (e) => {
+      if (e.target === toggleCCBtn || (toggleCCBtn && toggleCCBtn.contains(e.target))) return;
+      const isOpen = ccBody.style.display !== 'none';
+      ccBody.style.display = isOpen ? 'none' : 'block';
+    });
+  }
+  if (toggleCCBtn) {
+    toggleCCBtn.addEventListener('click', (e) => {
+      e.stopPropagation();
+      playSFX('tb_clicks');
+      let current = localStorage.getItem('caspian_current_enabled') !== 'false';
+      let next = !current;
+      localStorage.setItem('caspian_current_enabled', next ? 'true' : 'false');
+      if (window.CaspianBridge && typeof window.CaspianBridge.saveSetting === 'function') {
+        window.CaspianBridge.saveSetting('caspian_current_enabled', next ? 'true' : 'false');
+      }
+      updateEngineCardUI(cardCC, toggleCCBtn, ccBody, document.getElementById('cc-status-dot'), 'caspian_current_enabled');
+    });
+  }
+
+  // Caspian Drift Settings Wiring (API Key, Speech Engine, Language Accent)
+  const apiKeyInput = document.getElementById('whisper-api-key-input');
+  if (apiKeyInput) {
+    let savedKey = localStorage.getItem('whisper_api_key') || '';
+    if (window.CaspianBridge && typeof window.CaspianBridge.getPref === 'function') {
+      savedKey = window.CaspianBridge.getPref('whisper_api_key', savedKey);
+    }
+    apiKeyInput.value = savedKey;
+
+    apiKeyInput.addEventListener('input', () => {
+      const val = apiKeyInput.value.trim();
+      localStorage.setItem('whisper_api_key', val);
+      if (window.CaspianBridge && typeof window.CaspianBridge.savePref === 'function') {
+        window.CaspianBridge.savePref('whisper_api_key', val);
+      }
+    });
+  }
+
+  // Speech Engine Pills
+  const enginePills = document.querySelectorAll('.cc-engine-pill');
+  let savedEngine = localStorage.getItem('caspian_drift_engine') || 'whisper';
+  if (window.CaspianBridge && typeof window.CaspianBridge.getPref === 'function') {
+    savedEngine = window.CaspianBridge.getPref('caspian_drift_engine', savedEngine);
+  }
+  enginePills.forEach(pill => {
+    if (pill.dataset.engine === savedEngine) {
+      pill.classList.add('active');
+    } else {
+      pill.classList.remove('active');
+    }
+    pill.addEventListener('click', () => {
+      playSFX('tb_clicks');
+      enginePills.forEach(p => p.classList.remove('active'));
+      pill.classList.add('active');
+      const selected = pill.dataset.engine;
+      localStorage.setItem('caspian_drift_engine', selected);
+      if (window.CaspianBridge && typeof window.CaspianBridge.savePref === 'function') {
+        window.CaspianBridge.savePref('caspian_drift_engine', selected);
+      }
+      if (window.CaspianBridge && typeof window.CaspianBridge.showToast === 'function') {
+        window.CaspianBridge.showToast(selected === 'whisper' ? '⚡ Groq Cloud Whisper Active' : '📱 Local Speech Engine Active');
+      }
+    });
+  });
+
+  // Language Accent Pills
+  const langPills = document.querySelectorAll('.cc-lang-pill');
+  let savedLang = localStorage.getItem('caspian_drift_lang') || 'auto';
+  if (window.CaspianBridge && typeof window.CaspianBridge.getPref === 'function') {
+    savedLang = window.CaspianBridge.getPref('caspian_drift_lang', savedLang);
+  }
+  langPills.forEach(pill => {
+    if (pill.dataset.lang === savedLang) {
+      pill.classList.add('active');
+    } else {
+      pill.classList.remove('active');
+    }
+    pill.addEventListener('click', () => {
+      playSFX('tb_clicks');
+      langPills.forEach(p => p.classList.remove('active'));
+      pill.classList.add('active');
+      const selected = pill.dataset.lang;
+      localStorage.setItem('caspian_drift_lang', selected);
+      if (window.CaspianBridge && typeof window.CaspianBridge.savePref === 'function') {
+        window.CaspianBridge.savePref('caspian_drift_lang', selected);
+      }
+      if (window.CaspianBridge && typeof window.CaspianBridge.showToast === 'function') {
+        window.CaspianBridge.showToast(`Accent set to: ${pill.textContent.trim()}`);
+      }
+    });
+  });
+
+  // 4. AdBlocker Accordion & Toggle
+  if (adblockHeader && adblockBody) {
+    adblockHeader.addEventListener('click', (e) => {
+      if (e.target === toggleAdblockBtn || (toggleAdblockBtn && toggleAdblockBtn.contains(e.target))) return;
+      const isOpen = adblockBody.style.display !== 'none';
+      adblockBody.style.display = isOpen ? 'none' : 'block';
+    });
+  }
+  if (toggleAdblockBtn) {
+    toggleAdblockBtn.addEventListener('click', (e) => {
+      e.stopPropagation();
+      playSFX('tb_clicks');
+      let current = localStorage.getItem('adblock_enabled') !== 'false';
+      let next = !current;
+      localStorage.setItem('adblock_enabled', next ? 'true' : 'false');
+      if (window.CaspianBridge && typeof window.CaspianBridge.saveSetting === 'function') {
+        window.CaspianBridge.saveSetting('adblock_enabled', next ? 'true' : 'false');
+      }
+      updateEngineCardUI(cardAB, toggleAdblockBtn, adblockBody, document.getElementById('adblock-dot'), 'adblock_enabled');
+    });
+  }
+
+  // 5. Global Top-Right Master Engine Power Toggle Button (#power-toggle-btn / #btn-power-off)
+  const masterPowerBtn = document.getElementById('power-toggle-btn') || document.getElementById('btn-power-off');
+  if (masterPowerBtn) {
+    masterPowerBtn.addEventListener('click', (e) => {
+      e.stopPropagation();
+      playSFX('tb_power');
+      let anyOn = (localStorage.getItem('temp_saver_enabled') !== 'false' ||
+                    localStorage.getItem('chat_limit_enabled') !== 'false' ||
+                    localStorage.getItem('caspian_current_enabled') !== 'false' ||
+                    localStorage.getItem('adblock_enabled') !== 'false');
+      let targetState = !anyOn;
+
+      ['temp_saver_enabled', 'chat_limit_enabled', 'caspian_current_enabled', 'adblock_enabled'].forEach(key => {
+        localStorage.setItem(key, targetState ? 'true' : 'false');
+        if (window.CaspianBridge && typeof window.CaspianBridge.saveSetting === 'function') {
+          window.CaspianBridge.saveSetting(key, targetState ? 'true' : 'false');
+        }
+      });
+
+      updateEngineCardUI(cardTS, toggleTSBtn, null, document.getElementById('ts-status-dot'), 'temp_saver_enabled');
+      updateEngineCardUI(cardCL, toggleCLBtn, chatLimitBody, document.getElementById('status-dot'), 'chat_limit_enabled');
+      updateEngineCardUI(cardCC, toggleCCBtn, ccBody, document.getElementById('cc-status-dot'), 'caspian_current_enabled');
+      updateEngineCardUI(cardAB, toggleAdblockBtn, adblockBody, document.getElementById('adblock-dot'), 'adblock_enabled');
+
+      if (window.CaspianBridge && typeof window.CaspianBridge.showToast === 'function') {
+        window.CaspianBridge.showToast(targetState ? '⚡ All Caspian Engines Activated!' : '🔌 All Engines Disabled');
+      }
+    });
+  }
+
+  // Floating Multi-Select Group Toolbar Event Listeners
+  const toolbarGroupBtn = document.getElementById('toolbar-group-btn');
+  const toolbarDeselectBtn = document.getElementById('toolbar-deselect-btn');
+  const toolbarDeleteBtn = document.getElementById('toolbar-delete-btn');
+  const modalCreateGroup = document.getElementById('modal-create-group');
+  const inputGroupTitle = document.getElementById('input-group-title');
+
+  if (toolbarGroupBtn) {
+    toolbarGroupBtn.addEventListener('click', () => {
+      playSFX('tb_clicks');
+      if (modalCreateGroup && inputGroupTitle) {
+        editingGroupId = null;
+        inputGroupTitle.value = `Tab Group ${tabGroups.length + 1}`;
+        modalCreateGroup.style.display = 'flex';
+      }
+    });
+  }
+
+  if (toolbarDeselectBtn) {
+    toolbarDeselectBtn.addEventListener('click', () => {
+      playSFX('tb_clicks');
+      isMultiSelectMode = false;
+      selectedTabIds.clear();
+      renderOpenTabs();
+    });
+  }
+
+  if (toolbarDeleteBtn) {
+    toolbarDeleteBtn.addEventListener('click', () => {
+      playSFX('tb_close');
+      selectedTabIds.forEach(id => triggerCloseTab(id));
+      isMultiSelectMode = false;
+      selectedTabIds.clear();
+      setTimeout(renderOpenTabs, 150);
+    });
+  }
+
+  // Emoji Palette Dots
+  document.querySelectorAll('.group-emoji-dot').forEach(dot => {
+    dot.addEventListener('click', () => {
+      playSFX('tb_clicks');
+      document.querySelectorAll('.group-emoji-dot').forEach(d => d.classList.remove('active'));
+      dot.classList.add('active');
+      selectedGroupEmoji = dot.dataset.emoji || '📁';
+    });
+  });
+
+  // Color Palette Dots
+  document.querySelectorAll('.group-color-dot').forEach(dot => {
+    dot.addEventListener('click', () => {
+      playSFX('tb_clicks');
+      document.querySelectorAll('.group-color-dot').forEach(d => d.classList.remove('active'));
+      dot.classList.add('active');
+      selectedGroupColor = dot.dataset.color || '#ef4444';
+    });
+  });
+
+  // Modal Confirm & Cancel
+  const btnConfirmCreateGroup = document.getElementById('btn-confirm-create-group');
+  const btnCancelCreateGroup = document.getElementById('btn-cancel-create-group');
+  const modalCloseGroupBtn = document.getElementById('modal-close-group-btn');
+
+  const closeModal = () => {
+    playSFX('tb_modal');
+    if (modalCreateGroup) modalCreateGroup.style.display = 'none';
+  };
+
+  if (btnCancelCreateGroup) btnCancelCreateGroup.addEventListener('click', closeModal);
+  if (modalCloseGroupBtn) modalCloseGroupBtn.addEventListener('click', closeModal);
+
+  if (btnConfirmCreateGroup) {
+    btnConfirmCreateGroup.addEventListener('click', () => {
+      playSFX('tb_modal');
+      const title = inputGroupTitle ? (inputGroupTitle.value.trim() || 'Tab Group') : 'Tab Group';
+      
+      if (editingGroupId) {
+        const group = tabGroups.find(g => g.id === editingGroupId);
+        if (group) {
+          group.title = title;
+          group.color = selectedGroupColor;
+          group.icon = selectedGroupEmoji;
+        }
+      } else {
+        const newGroup = {
+          id: `group_${Date.now()}`,
+          title: title,
+          color: selectedGroupColor,
+          icon: selectedGroupEmoji,
+          tabIds: Array.from(selectedTabIds)
+        };
+        tabGroups.push(newGroup);
+      }
+
+      saveTabGroups();
+      isMultiSelectMode = false;
+      selectedTabIds.clear();
+      closeModal();
+      renderOpenTabs();
+      if (window.CaspianBridge && typeof window.CaspianBridge.showToast === 'function') {
+        window.CaspianBridge.showToast(`📁 Saved Group "${title}"!`);
+      }
+    });
+  }
+
+  // Inside Group Banner Action Buttons
+  const btnCloseGroupView = document.getElementById('btn-close-group-view');
+  const btnEditGroup = document.getElementById('btn-edit-group');
+  const btnLeaveGroup = document.getElementById('btn-leave-group');
+  const btnDeleteGroup = document.getElementById('btn-delete-group');
+
+  if (btnCloseGroupView) {
+    btnCloseGroupView.addEventListener('click', () => {
+      playSFX('tb_clicks');
+      activeGroupId = null;
+      renderOpenTabs();
+    });
+  }
+
+  if (btnEditGroup) {
+    btnEditGroup.addEventListener('click', () => {
+      playSFX('tb_clicks');
+      const group = tabGroups.find(g => g.id === activeGroupId);
+      if (group && modalCreateGroup && inputGroupTitle) {
+        editingGroupId = group.id;
+        inputGroupTitle.value = group.title;
+        selectedGroupColor = group.color || '#ef4444';
+        document.querySelectorAll('.group-color-dot').forEach(d => {
+          d.classList.toggle('active', d.dataset.color === selectedGroupColor);
+        });
+        modalCreateGroup.style.display = 'flex';
+      }
+    });
+  }
+
+  if (btnLeaveGroup) {
+    btnLeaveGroup.addEventListener('click', () => {
+      playSFX('tb_clicks');
+      const group = tabGroups.find(g => g.id === activeGroupId);
+      const title = group ? group.title : 'Group';
+      tabGroups = tabGroups.filter(g => g.id !== activeGroupId);
+      saveTabGroups();
+      activeGroupId = null;
+      renderOpenTabs();
+      if (window.CaspianBridge && typeof window.CaspianBridge.showToast === 'function') {
+        window.CaspianBridge.showToast(`📂 Dissolved "${title}". Tabs separated to main view.`);
+      }
+    });
+  }
+
+  // Tab Filter Pills (All / Groups / Single - Fix #8)
+  document.querySelectorAll('.tab-filter-pill').forEach(pill => {
+    pill.addEventListener('click', () => {
+      playSFX('tb_clicks');
+      document.querySelectorAll('.tab-filter-pill').forEach(p => {
+        p.classList.remove('active');
+        p.style.background = 'transparent';
+        p.style.color = 'var(--text-sub)';
+      });
+      pill.classList.add('active');
+      pill.style.background = 'var(--accent)';
+      pill.style.color = '#fff';
+      activeTabFilter = pill.dataset.filter || 'all';
+      renderOpenTabs();
+    });
+  });
+
+  // Modal Group Color Dots Binding
+  document.querySelectorAll('.modal-group-color-dot').forEach(dot => {
+    dot.addEventListener('click', () => {
+      playSFX('tb_clicks');
+      document.querySelectorAll('.modal-group-color-dot').forEach(d => d.classList.remove('active'));
+      dot.classList.add('active');
+      selectedGroupColor = dot.dataset.color || '#ef4444';
+      const colorDot = document.getElementById('group-modal-color-dot');
+      if (colorDot) colorDot.style.background = selectedGroupColor;
+    });
+  });
+
+  // Toast Undo Handler for Group & Single Tab Restoration (Fix #5)
+  const undoToastBtn = document.getElementById('undo-toast-btn');
+  if (undoToastBtn) {
+    undoToastBtn.addEventListener('click', () => {
+      playSFX('tb_clicks');
+      if (lastDeletedGroup) {
+        if (window.CaspianBridge && typeof window.CaspianBridge.restoreLastClosedGroupTabs === 'function') {
+          window.CaspianBridge.restoreLastClosedGroupTabs();
+        }
+        tabGroups.push(lastDeletedGroup.group);
+        saveTabGroups();
+        lastDeletedGroup = null;
+        if (window.CaspianBridge && typeof window.CaspianBridge.showToast === 'function') {
+          window.CaspianBridge.showToast(`Restored group "${lastDeletedGroup ? lastDeletedGroup.group.title : 'Group'}"!`);
+        }
+      } else {
+        if (window.CaspianBridge && typeof window.CaspianBridge.restoreLastClosedTab === 'function') {
+          window.CaspianBridge.restoreLastClosedTab();
+        }
+      }
+      const toastContainer = document.getElementById('undo-toast-container');
+      if (toastContainer) toastContainer.style.display = 'none';
+      setTimeout(renderOpenTabs, 200);
+    });
+  }
+
+  if (btnDeleteGroup) {
+    btnDeleteGroup.addEventListener('click', () => {
+      playSFX('tb_close');
+      const group = tabGroups.find(g => g.id === activeGroupId);
+      if (group) {
+        lastDeletedGroup = { group: Object.assign({}, group), tabIds: [...group.tabIds] };
+        if (window.CaspianBridge && typeof window.CaspianBridge.closeMultipleTabs === 'function') {
+          window.CaspianBridge.closeMultipleTabs(JSON.stringify(group.tabIds));
+        }
+        tabGroups = tabGroups.filter(g => g.id !== activeGroupId);
+        saveTabGroups();
+        showUndoToast(`Group "${group.title}" deleted`);
+      }
+      activeGroupId = null;
+      setTimeout(renderOpenTabs, 150);
+    });
+  }
+
+  // Force clean state & render retries on startup so tabs are never locked after app restart
+  isMultiSelectMode = false;
+  selectedTabIds.clear();
+  renderOpenTabs();
+  setTimeout(renderOpenTabs, 150);
+  setTimeout(renderOpenTabs, 400);
+  setTimeout(renderOpenTabs, 1000);
+});
 })();

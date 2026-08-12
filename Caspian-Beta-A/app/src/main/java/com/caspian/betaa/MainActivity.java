@@ -44,6 +44,9 @@ import android.content.Context;
 import androidx.appcompat.app.AppCompatActivity;
 import androidx.cardview.widget.CardView;
 import android.widget.TextView;
+import android.content.ClipboardManager;
+import android.content.ClipData;
+import android.widget.Toast;
 
 import org.json.JSONArray;
 import org.json.JSONObject;
@@ -129,7 +132,7 @@ public class MainActivity extends AppCompatActivity {
     private SpeechWaveformView speechWaveformView;
 
     // Search Navigation Controls (Google Search Tabs)
-    private android.widget.LinearLayout searchNavContainer;
+    private FrameLayout searchNavContainer;
     private android.widget.ImageButton navBackBtn;
     private android.widget.ImageButton navForwardBtn;
 
@@ -168,6 +171,37 @@ public class MainActivity extends AppCompatActivity {
                 WindowManager.LayoutParams.FLAG_HARDWARE_ACCELERATED
         );
 
+        Thread.setDefaultUncaughtExceptionHandler((thread, throwable) -> {
+            try {
+                String stackTrace = Log.getStackTraceString(throwable);
+                Log.e("CaspianCrash", "UNCAUGHT CRASH: " + stackTrace, throwable);
+                SharedPreferences prefs = getSharedPreferences("CaspianCrashPrefs", MODE_PRIVATE);
+                prefs.edit().putString("last_crash_log", stackTrace).commit();
+            } catch (Exception e) {}
+        });
+
+        // Check for previous crash log on startup
+        try {
+            SharedPreferences crashPrefs = getSharedPreferences("CaspianCrashPrefs", MODE_PRIVATE);
+            String lastCrash = crashPrefs.getString("last_crash_log", null);
+            if (lastCrash != null) {
+                crashPrefs.edit().remove("last_crash_log").apply();
+                new androidx.appcompat.app.AlertDialog.Builder(this)
+                        .setTitle("Caspian Diagnostic Log")
+                        .setMessage("An unexpected error occurred previously:\n\n" + lastCrash.substring(0, Math.min(500, lastCrash.length())) + "\n...")
+                        .setPositiveButton("Copy Full Log & Continue", (dialog, which) -> {
+                            try {
+                                ClipboardManager clipboard = (ClipboardManager) getSystemService(Context.CLIPBOARD_SERVICE);
+                                ClipData clip = ClipData.newPlainText("Caspian Crash Log", lastCrash);
+                                if (clipboard != null) clipboard.setPrimaryClip(clip);
+                                Toast.makeText(this, "Copied crash log to clipboard!", Toast.LENGTH_LONG).show();
+                            } catch (Exception e) {}
+                        })
+                        .setNegativeButton("Close", null)
+                        .show();
+            }
+        } catch (Exception e) {}
+
         setContentView(R.layout.activity_main);
 
         webViewContainer = findViewById(R.id.webview_container);
@@ -182,7 +216,21 @@ public class MainActivity extends AppCompatActivity {
         searchNavContainer = findViewById(R.id.search_nav_container);
         navBackBtn = findViewById(R.id.nav_back_btn);
         navForwardBtn = findViewById(R.id.nav_forward_btn);
-        speechWaveformView = findViewById(R.id.speech_waveform_view);
+
+        // Safe dynamic initialization of SpeechWaveformView
+        try {
+            FrameLayout speechContainer = findViewById(R.id.speech_waveform_container);
+            if (speechContainer != null) {
+                speechWaveformView = new SpeechWaveformView(this);
+                speechContainer.addView(speechWaveformView, new FrameLayout.LayoutParams(
+                        ViewGroup.LayoutParams.MATCH_PARENT,
+                        ViewGroup.LayoutParams.MATCH_PARENT
+                ));
+                speechContainer.setVisibility(View.GONE);
+            }
+        } catch (Throwable t) {
+            Log.e("CaspianDebugA", "SpeechWaveformView dynamic init error: " + t.getMessage());
+        }
 
         if (navBackBtn != null) {
             navBackBtn.setOnClickListener(v -> {
@@ -202,25 +250,30 @@ public class MainActivity extends AppCompatActivity {
             });
         }
 
-        setupControlWebView();
-        setupNativeFloatingButton();
-        setupSmartKeyboardAvoidance();
-        setupSpeechRecognizer();
-        setupSearchDock();
+        try {
+            setupControlWebView();
+            setupNativeFloatingButton();
+            setupSmartKeyboardAvoidance();
+            setupSearchDock();
 
-        sheetBackdrop.setOnClickListener(v -> closeControlSheet());
+            if (sheetBackdrop != null) {
+                sheetBackdrop.setOnClickListener(v -> closeControlSheet());
+            }
 
-        // Load Persistent Tabs from Preferences
-        loadTabsFromPrefs();
+            // Load Persistent Tabs from Preferences
+            loadTabsFromPrefs();
 
-        // Load Saved Floating Theme on startup
-        SharedPreferences prefs = getSharedPreferences("CaspianMobilePrefs", MODE_PRIVATE);
-        String startColor = prefs.getString("theme_start_color", "#A2A9A9");
-        String endColor = prefs.getString("theme_end_color", "#1B4264");
-        String iconShape = prefs.getString("theme_icon_shape", "circle");
-        applyFloatingTheme(startColor, endColor, iconShape);
-        updateRefreshTimer();
-        setupSplashScreen();
+            // Load Saved Floating Theme on startup
+            SharedPreferences prefs = getSharedPreferences("CaspianMobilePrefs", MODE_PRIVATE);
+            String startColor = prefs.getString("theme_start_color", "#A2A9A9");
+            String endColor = prefs.getString("theme_end_color", "#1B4264");
+            String iconShape = prefs.getString("theme_icon_shape", "circle");
+            applyFloatingTheme(startColor, endColor, iconShape);
+            updateRefreshTimer();
+            setupSplashScreen();
+        } catch (Throwable t) {
+            Log.e("CaspianDebugA", "Error during onCreate startup: " + t.getMessage(), t);
+        }
     }
 
     private void setupSplashScreen() {
@@ -240,7 +293,7 @@ public class MainActivity extends AppCompatActivity {
                                     .withEndAction(() -> {
                                         splashOverlay.setVisibility(View.GONE);
                                         if (splashVideoView != null) {
-                                            splashVideoView.stopPlayback();
+                                            try { splashVideoView.stopPlayback(); } catch (Exception e) {}
                                         }
                                     })
                                     .start();
@@ -288,7 +341,7 @@ public class MainActivity extends AppCompatActivity {
 
                 // Timeout fallback after 4.5s
                 splashOverlay.postDelayed(dismissSplash, 4500);
-            } catch (Exception e) {
+            } catch (Throwable t) {
                 splashOverlay.setVisibility(View.GONE);
             }
         }
@@ -358,6 +411,17 @@ public class MainActivity extends AppCompatActivity {
         } catch (Exception e) {}
     }
 
+    private void silenceSystemAudioForSpeech(boolean silence) {
+        try {
+            android.media.AudioManager audioManager = (android.media.AudioManager) getSystemService(Context.AUDIO_SERVICE);
+            if (audioManager != null && Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
+                int adjust = silence ? android.media.AudioManager.ADJUST_MUTE : android.media.AudioManager.ADJUST_UNMUTE;
+                audioManager.adjustStreamVolume(android.media.AudioManager.STREAM_NOTIFICATION, adjust, 0);
+                audioManager.adjustStreamVolume(android.media.AudioManager.STREAM_SYSTEM, adjust, 0);
+            }
+        } catch (Exception e) {}
+    }
+
     private void setupSpeechRecognizer() {
         try {
             if (SpeechRecognizer.isRecognitionAvailable(this)) {
@@ -378,10 +442,13 @@ public class MainActivity extends AppCompatActivity {
                     }
                     @Override public void onBufferReceived(byte[] buffer) {}
                     @Override public void onEndOfSpeech() {}
-                    @Override public void onError(int error) {}
+                    @Override public void onError(int error) {
+                        silenceSystemAudioForSpeech(false);
+                    }
 
                     @Override
                     public void onResults(Bundle results) {
+                        silenceSystemAudioForSpeech(false);
                         ArrayList<String> matches = results.getStringArrayList(SpeechRecognizer.RESULTS_RECOGNITION);
                         if (matches != null && !matches.isEmpty()) {
                             String transcribedText = matches.get(0);
@@ -403,6 +470,9 @@ public class MainActivity extends AppCompatActivity {
             ActivityCompat.requestPermissions(this, new String[]{Manifest.permission.RECORD_AUDIO}, MIC_PERMISSION_REQUEST_CODE);
             return;
         }
+        if (speechRecognizer == null) {
+            setupSpeechRecognizer();
+        }
         if (speechRecognizer != null && speechIntent != null) {
             try {
                 SharedPreferences prefs = getSharedPreferences("CaspianMobilePrefs", MODE_PRIVATE);
@@ -410,17 +480,27 @@ public class MainActivity extends AppCompatActivity {
                 String endHex = prefs.getString("theme_end_color", "#1B4264");
                 int startColor = android.graphics.Color.parseColor(startHex);
                 int endColor = android.graphics.Color.parseColor(endHex);
+                FrameLayout speechContainer = findViewById(R.id.speech_waveform_container);
+                if (speechContainer != null) {
+                    speechContainer.setVisibility(View.VISIBLE);
+                }
                 if (speechWaveformView != null) {
                     speechWaveformView.setWaveColors(startColor, endColor);
                     speechWaveformView.setVisibility(View.VISIBLE);
                 }
 
+                silenceSystemAudioForSpeech(true);
                 speechRecognizer.startListening(speechIntent);
             } catch(Exception e) {}
         }
     }
 
     public void stopSpeechToText() {
+        silenceSystemAudioForSpeech(false);
+        FrameLayout speechContainer = findViewById(R.id.speech_waveform_container);
+        if (speechContainer != null) {
+            speechContainer.setVisibility(View.GONE);
+        }
         if (speechWaveformView != null) {
             speechWaveformView.setVisibility(View.GONE);
         }
@@ -575,35 +655,40 @@ public class MainActivity extends AppCompatActivity {
             SharedPreferences prefs = getSharedPreferences("CaspianMobilePrefs", MODE_PRIVATE);
             String jsonStr = prefs.getString("saved_tabs", null);
             int savedActiveId = prefs.getInt("active_tab_id", 1);
-            if (jsonStr != null) {
+            if (jsonStr != null && !jsonStr.trim().isEmpty()) {
                 JSONArray arr = new JSONArray(jsonStr);
                 if (arr.length() > 0) {
                     tabsList.clear();
                     for (int i = 0; i < arr.length(); i++) {
                         JSONObject obj = arr.getJSONObject(i);
-                        int id = obj.getInt("id");
-                        String title = obj.getString("title");
-                        String url = obj.getString("url");
-                        String service = obj.getString("service");
+                        int id = obj.optInt("id", i + 1);
+                        String title = obj.optString("title", "Browser Tab");
+                        String url = obj.optString("url", "file:///android_asset/launch_hub.html");
+                        String service = obj.optString("service", "hub");
                         String nickname = obj.optString("nickname", "");
                         boolean isFav = obj.optBoolean("isFavorite", false);
 
                         TabItem tab = new TabItem(id, title, url, service, null);
                         tab.nickname = nickname;
                         tab.isFavorite = isFav;
-                        createTabWebView(tab);
-                        tabsList.add(tab);
-                        if (id >= nextTabId) nextTabId = id + 1;
+                        WebView wv = createTabWebView(tab);
+                        if (wv != null) {
+                            tabsList.add(tab);
+                            if (id >= nextTabId) nextTabId = id + 1;
+                        }
                     }
-                    switchTab(savedActiveId, false);
-                    return;
+                    if (!tabsList.isEmpty()) {
+                        switchTab(savedActiveId, false);
+                        return;
+                    }
                 }
             }
-        } catch (Exception e) {
-            e.printStackTrace();
+        } catch (Throwable t) {
+            Log.e("CaspianDebugA", "Error loading saved tabs: " + t.getMessage(), t);
         }
 
-        // Default initial Tab
+        // Fallback default initial Tab
+        tabsList.clear();
         createNewTab("hub");
     }
 
@@ -975,6 +1060,15 @@ public class MainActivity extends AppCompatActivity {
         controlWebView.getSettings().setAllowFileAccess(true);
         controlWebView.setBackgroundColor(0);
         controlWebView.addJavascriptInterface(new CaspianBridge(this), "CaspianBridge");
+
+        controlWebView.setWebViewClient(new WebViewClient() {
+            @Override
+            public void onPageFinished(WebView view, String url) {
+                super.onPageFinished(view, url);
+                controlWebView.evaluateJavascript("if (typeof window.renderOpenTabs === 'function') { window.renderOpenTabs(); }", null);
+                controlWebView.evaluateJavascript("if (typeof restoreSavedSettings === 'function') { restoreSavedSettings(); }", null);
+            }
+        });
 
         controlWebView.loadUrl("file:///android_asset/mobile_control.html");
     }
@@ -1491,6 +1585,61 @@ public class MainActivity extends AppCompatActivity {
         }
     }
 
+    private List<TabItem> lastClosedGroupTabs = new ArrayList<>();
+
+    public void closeMultipleTabs(List<Integer> tabIds) {
+        lastClosedGroupTabs.clear();
+        for (int tabId : tabIds) {
+            TabItem toRemove = null;
+            for (TabItem item : tabsList) {
+                if (item.id == tabId) {
+                    toRemove = item;
+                    break;
+                }
+            }
+            if (toRemove != null) {
+                if (toRemove.webView != null) {
+                    webViewContainer.removeView(toRemove.webView);
+                }
+                lastClosedGroupTabs.add(toRemove);
+                tabsList.remove(toRemove);
+            }
+        }
+        if (!tabsList.isEmpty()) {
+            switchTab(tabsList.get(tabsList.size() - 1).id, false);
+        } else {
+            createNewTab("hub");
+        }
+        saveTabsToPrefs();
+    }
+
+    public void restoreLastClosedGroupTabs() {
+        if (!lastClosedGroupTabs.isEmpty()) {
+            for (TabItem tab : lastClosedGroupTabs) {
+                if (!tabsList.contains(tab)) {
+                    tabsList.add(tab);
+                    if (tab.webView != null) {
+                        webViewContainer.addView(tab.webView);
+                        tab.webView.setVisibility(View.GONE);
+                    }
+                }
+            }
+            lastClosedGroupTabs.clear();
+            saveTabsToPrefs();
+        } else if (lastClosedTab != null) {
+            restoreLastClosedTab();
+        }
+    }
+
+    public void setGroupTabsFavorite(List<Integer> tabIds, boolean isFav) {
+        for (TabItem item : tabsList) {
+            if (tabIds.contains(item.id)) {
+                item.isFavorite = isFav;
+            }
+        }
+        saveTabsToPrefs();
+    }
+
     public void closeAllTabs() {
         List<TabItem> toKeep = new ArrayList<>();
         for (TabItem item : tabsList) {
@@ -1546,6 +1695,7 @@ public class MainActivity extends AppCompatActivity {
                 .start();
 
         Runnable onOpenComplete = () -> {
+            controlWebView.evaluateJavascript("if (typeof window.renderOpenTabs === 'function') { window.renderOpenTabs(); }", null);
             controlWebView.evaluateJavascript("if (typeof restoreSavedSettings === 'function') { restoreSavedSettings(); }", null);
         };
 

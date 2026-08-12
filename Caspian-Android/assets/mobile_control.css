@@ -8,11 +8,27 @@
   --border-glass: rgba(255, 255, 255, 0.12);
   --text-main: #f8fafc;
   --text-muted: #94a3b8;
+  --text-sub: #94a3b8;
   --input-bg: rgba(255, 255, 255, 0.06);
   --shadow-glass: 0 16px 40px rgba(0, 0, 0, 0.45);
 }
 
-[data-theme="light"] {
+[data-theme="dark"], .dark {
+  --accent: #A2A9A9;
+  --secondary: #1B4264;
+  --accent-glow: rgba(162, 169, 169, 0.35);
+  --accent-gradient: linear-gradient(135deg, var(--accent), var(--secondary));
+  --sheet-bg: #050811 !important;
+  --card-bg: rgba(28, 37, 65, 0.75);
+  --border-glass: rgba(255, 255, 255, 0.12);
+  --text-main: #f8fafc !important;
+  --text-muted: #94a3b8 !important;
+  --text-sub: #94a3b8 !important;
+  --input-bg: rgba(255, 255, 255, 0.06);
+  --shadow-glass: 0 16px 40px rgba(0, 0, 0, 0.45);
+}
+
+[data-theme="light"], .light {
   --accent: #1B4264;
   --secondary: #0f2b48;
   --accent-glow: rgba(27, 66, 100, 0.25);
@@ -20,8 +36,9 @@
   --sheet-bg: #ffffff !important;
   --card-bg: rgba(255, 255, 255, 0.88);
   --border-glass: rgba(0, 0, 0, 0.08);
-  --text-main: #0f172a;
-  --text-muted: #64748b;
+  --text-main: #0f172a !important;
+  --text-muted: #64748b !important;
+  --text-sub: #64748b !important;
   --input-bg: rgba(0, 0, 0, 0.04);
   --shadow-glass: 0 12px 32px rgba(0, 0, 0, 0.12);
 }
@@ -31,6 +48,17 @@
   backdrop-filter: none !important;
   -webkit-backdrop-filter: none !important;
   background: var(--sheet-bg) !important;
+}
+
+/* Master SFX Muted Immediate CSS State */
+html.sfx-muted #mute-icon-unmuted { display: none !important; }
+html.sfx-muted #mute-icon-muted { display: block !important; }
+
+/* Disabled Engine Card Fading */
+.engine-card.disabled {
+  opacity: 0.45 !important;
+  filter: grayscale(0.6) !important;
+  transition: all 0.3s ease !important;
 }
 
 #caspian-injected-ui {
@@ -1143,4 +1171,93 @@ select option {
 
 .switch-toggle input:checked + .slider-round:before {
   transform: translateX(20px);
+}
+
+/* ==========================================================================
+   Tab Grouping & Multi-Select Styling
+   ========================================================================== */
+.chrome-tab-card.selected {
+  border: 2px solid #3b82f6 !important;
+  background: rgba(59, 130, 246, 0.12) !important;
+  box-shadow: 0 0 12px rgba(59, 130, 246, 0.25) !important;
+}
+
+.chrome-tab-card.group-card {
+  border-left-width: 6px !important;
+  background: linear-gradient(135deg, var(--card-bg) 70%, rgba(255,255,255,0.03)) !important;
+}
+
+.floating-group-bar {
+  position: sticky;
+  bottom: 12px;
+  left: 0;
+  right: 0;
+  margin: 10px 0;
+  padding: 10px 14px;
+  border-radius: 18px;
+  background: var(--card-bg);
+  border: 1.5px solid var(--accent);
+  box-shadow: 0 8px 24px var(--shadow-main);
+  z-index: 900;
+  backdrop-filter: blur(16px);
+  -webkit-backdrop-filter: blur(16px);
+}
+
+.group-color-dot.active {
+  transform: scale(1.15);
+  box-shadow: 0 0 0 3px var(--card-bg), 0 0 0 5px var(--accent);
+}
+
+.modal-overlay[style*="display: none"] {
+  pointer-events: none !important;
+  visibility: hidden !important;
+}
+
+.modal-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: rgba(0, 0, 0, 0.65);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 10000;
+  padding: 20px;
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
+  pointer-events: auto;
+}
+
+.modal-card {
+  width: 100%;
+  max-width: 340px;
+  background: var(--card-bg);
+  border: 1px solid var(--border-glass);
+  border-radius: 20px;
+  padding: 18px;
+  box-shadow: 0 16px 40px rgba(0,0,0,0.5);
+}
+
+.modal-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  border-bottom: 1px solid var(--border-glass);
+  padding-bottom: 10px;
+}
+
+.modal-title {
+  font-size: 14px;
+  font-weight: 800;
+  color: var(--text-main);
+}
+
+.modal-close-btn {
+  background: none;
+  border: none;
+  font-size: 20px;
+  color: var(--text-sub);
+  cursor: pointer;
 }

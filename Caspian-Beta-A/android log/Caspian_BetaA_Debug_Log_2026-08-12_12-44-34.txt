@@ -1,0 +1,29 @@
+=========================================
+CASPIAN BETA A DIAGNOSTIC LOG
+Started: 2026-08-12 12:44:04
+App Version: 1.0.95-BetaA
+=========================================
+
+[12:44:04.744] [[SYSTEM]] Started recording console errors, network events & app diagnostics.
+[12:44:15.637] [URL_PAGE_FINISH] file:///android_asset/launch_hub.html
+[12:44:15.926] [URL_NAV_HISTORY] https://chatgpt.com/
+[12:44:15.929] [URL_PAGE_FINISH] https://chatgpt.com/
+[12:44:15.943] [URL_REDIRECT] https://m.youtube.com/
+[12:44:16.636] [URL_PAGE_START] https://m.youtube.com/
+[12:44:16.637] [URL_NAV_HISTORY] https://m.youtube.com/
+[12:44:16.646] [URL_NAV_HISTORY] https://chatgpt.com/
+[12:44:16.648] [URL_PAGE_FINISH] https://chatgpt.com/
+[12:44:17.867] [WEB_CONSOLE] The key "" is not recognized and ignored. (Line 1 @ https://m.youtube.com/)
+[12:44:17.914] [URL_PAGE_FINISH] https://gemini.google.com/app
+[12:44:18.189] [HTTP_ERROR] HTTP 403  @ https://chatgpt.com/backend-api/bazaar/obi/sync-token
+[12:44:18.389] [URL_PAGE_FINISH] https://chatgpt.com/
+[12:44:18.584] [URL_PAGE_FINISH] https://chatgpt.com/
+[12:44:18.770] [WEB_CONSOLE] RequestError: OBI synchronization is not available [object Object] (Line 28 @ https://chatgpt.com/cdn/assets/2340486e-ntgsg4a2ljrzv0ij.js)
+[12:44:19.043] [HTTP_ERROR] HTTP 403  @ https://chatgpt.com/backend-api/bazaar/obi/sync-token
+[12:44:19.101] [WEB_CONSOLE] RequestError: OBI synchronization is not available [object Object] (Line 28 @ https://chatgpt.com/cdn/assets/2340486e-ntgsg4a2ljrzv0ij.js)
+[12:44:19.170] [URL_PAGE_FINISH] https://m.youtube.com/
+[12:44:19.519] [URL_NAV_HISTORY] https://m.youtube.com/
+[12:44:19.521] [URL_PAGE_FINISH] https://m.youtube.com/
+[12:44:19.680] [WEB_CONSOLE] Access to XMLHttpRequest at 'https://googleads.g.doubleclick.net/pagead/id' from origin 'https://m.youtube.com' has been blocked by CORS policy: No 'Access-Control-Allow-Origin' header is present on the requested resource. (Line 0 @ https://m.youtube.com/)
+[12:44:22.194] [WEB_CONSOLE] The resource https://gemini.gstatic.com/_/mss/boq-bard-web/_/js/k=boq-bard-web.BardChatUi.en_GB.FBG7u-cBof8.2018.O/ck=boq-bard-web.BardChatUi.GOvZv-Wmvfw.L.B1.O/am=FQCQ-Ahgf39Q7Bd5YCABTNiLAHoAAAAAhA/d=1/exm=_b/excm=_b/ed=1/br=1/wt=2/ujg=1/rs=AL3bBk1ar6C0TKyI4ZRBvzBMth_7DWTMNg/ee=DGWCxb:CgYiQ;EmZ2Bf:zr1jrb;NJ1rfe:yGfSdd;Pjplud:PoEs9b;QGR0gd:Mlhmy;ScI3Yc:e7Hzgb;UYRIEb:HzTAQc;YIZmRd:A1yn5d;cEt90b:ws9Tlc;dIoSBb:SpsfSb;dowIGb:ebZ3mb;eBAeSb:zbML3c;iFQyKf:vfuNJf;oGtAuc:sOXFj;qQEoOc:KUM7Z;qddgKe:xQtZb;wNp4Gc:k56rsf;wR5FRb:siKnQd;yxTchf:KUM7Z/dti=1/m=LQaXg,ziINQc?wli=BardChatUi.ElhTqNGQ59s.libheifWasm.O%3A%3B was preloaded using link preload but not used within a few seconds from the window's load event. Please make sure it has an appropriate `as` value and it is preloaded intentionally. (Line 0 @ https://gemini.google.com/app)
+[12:44:27.652] [WEB_CONSOLE] The resource https://gemini.gstatic.com/_/mss/boq-bard-web/_/js/k=boq-bard-web.BardChatUi.en_GB.FBG7u-cBof8.2018.O/ck=boq-bard-web.BardChatUi.GOvZv-Wmvfw.L.B1.O/am=FQCQ-Ahgf39Q7Bd5YCABTNiLAHoAAAAAhA/d=1/exm=_b/excm=_b/ed=1/br=1/wt=2/ujg=1/rs=AL3bBk1ar6C0TKyI4ZRBvzBMth_7DWTMNg/ee=DGWCxb:CgYiQ;EmZ2Bf:zr1jrb;NJ1rfe:yGfSdd;Pjplud:PoEs9b;QGR0gd:Mlhmy;ScI3Yc:e7Hzgb;UYRIEb:HzTAQc;YIZmRd:A1yn5d;cEt90b:ws9Tlc;dIoSBb:SpsfSb;dowIGb:ebZ3mb;eBAeSb:zbML3c;iFQyKf:vfuNJf;oGtAuc:sOXFj;qQEoOc:KUM7Z;qddgKe:xQtZb;wNp4Gc:k56rsf;wR5FRb:siKnQd;yxTchf:KUM7Z/dti=1/m=LQaXg,ziINQc?wli=BardChatUi.ElhTqNGQ59s.libheifWasm.O%3A%3B was preloaded using link preload but not used within a few seconds from the window's load event. Please make sure it has an appropriate `as` value and it is preloaded intentionally. (Line 0 @ https://gemini.google.com/app)

@@ -17,6 +17,8 @@ import android.view.View;
 import android.widget.FrameLayout;
 import android.widget.Toast;
 
+import java.util.List;
+import java.util.ArrayList;
 import org.json.JSONObject;
 import java.io.File;
 import java.io.FileOutputStream;
@@ -30,6 +32,23 @@ public class CaspianBridge {
 
     public CaspianBridge(MainActivity activity) {
         this.activity = activity;
+    }
+
+    @JavascriptInterface
+    public void savePref(String key, String val) {
+        if (activity != null) {
+            SharedPreferences prefs = activity.getSharedPreferences("CaspianMobilePrefs", Context.MODE_PRIVATE);
+            prefs.edit().putString(key, val).apply();
+        }
+    }
+
+    @JavascriptInterface
+    public String getPref(String key, String fallback) {
+        if (activity != null) {
+            SharedPreferences prefs = activity.getSharedPreferences("CaspianMobilePrefs", Context.MODE_PRIVATE);
+            return prefs.getString(key, fallback);
+        }
+        return fallback;
     }
 
     @JavascriptInterface
@@ -78,6 +97,41 @@ public class CaspianBridge {
     public void closeTab(int tabId) {
         if (activity != null) {
             activity.runOnUiThread(() -> activity.closeTab(tabId));
+        }
+    }
+
+    @JavascriptInterface
+    public void closeMultipleTabs(String jsonIds) {
+        if (activity != null) {
+            try {
+                org.json.JSONArray arr = new org.json.JSONArray(jsonIds);
+                List<Integer> ids = new ArrayList<>();
+                for (int i = 0; i < arr.length(); i++) {
+                    ids.add(arr.getInt(i));
+                }
+                activity.runOnUiThread(() -> activity.closeMultipleTabs(ids));
+            } catch(Exception e){}
+        }
+    }
+
+    @JavascriptInterface
+    public void restoreLastClosedGroupTabs() {
+        if (activity != null) {
+            activity.runOnUiThread(activity::restoreLastClosedGroupTabs);
+        }
+    }
+
+    @JavascriptInterface
+    public void setGroupTabsFavorite(String jsonIds, boolean isFav) {
+        if (activity != null) {
+            try {
+                org.json.JSONArray arr = new org.json.JSONArray(jsonIds);
+                List<Integer> ids = new ArrayList<>();
+                for (int i = 0; i < arr.length(); i++) {
+                    ids.add(arr.getInt(i));
+                }
+                activity.runOnUiThread(() -> activity.setGroupTabsFavorite(ids, isFav));
+            } catch(Exception e){}
         }
     }
 

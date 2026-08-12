@@ -150,8 +150,8 @@
     </FrameLayout>
 
     <!-- 5. Dictation Audio Wave Screen Overlay View (Elevation 25dp) -->
-    <com.caspian.betaa.SpeechWaveformView
-        android:id="@+id/speech_waveform_view"
+    <FrameLayout
+        android:id="@+id/speech_waveform_container"
         android:layout_width="match_parent"
         android:layout_height="140dp"
         android:layout_gravity="center_vertical"

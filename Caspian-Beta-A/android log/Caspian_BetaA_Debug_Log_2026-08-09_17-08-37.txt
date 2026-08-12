@@ -1,8 +1,0 @@
-=========================================
-CASPIAN BETA A DIAGNOSTIC LOG
-Started: 2026-08-09 17:08:09
-App Version: 1.0.54-BetaA
-=========================================
-
-[17:08:09.881] [[SYSTEM]] Started recording console errors, network events & app diagnostics.
-[17:08:10.343] [RESOURCE_ERROR] Error -1: net::ERR_QUIC_PROTOCOL_ERROR @ https://signaler-pa.clients6.google.com/punctual/multi-watch/channel?VER=8&gsessionid=xDankz3e3NHn0or5v3GZrnwkHEkUh7kEtIaFhaDzdw8&key=AIzaSyBWW50ghQ5qHpMg1gxHV7U9t0wHE0qIUk4&RID=rpc&SID=V5_mhPGyIprRyEW7jGMNlg&AID=33&CI=0&TYPE=xmlhttp&zx=ese7l7l8qawh&t=1
