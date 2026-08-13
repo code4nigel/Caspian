@@ -14,11 +14,7 @@
 }
 
 [data-theme="dark"], .dark {
-  --accent: #A2A9A9;
-  --secondary: #1B4264;
-  --accent-glow: rgba(162, 169, 169, 0.35);
-  --accent-gradient: linear-gradient(135deg, var(--accent), var(--secondary));
-  --sheet-bg: #050811 !important;
+  --sheet-bg: #050811;
   --card-bg: rgba(28, 37, 65, 0.75);
   --border-glass: rgba(255, 255, 255, 0.12);
   --text-main: #f8fafc !important;
@@ -29,11 +25,7 @@
 }
 
 [data-theme="light"], .light {
-  --accent: #1B4264;
-  --secondary: #0f2b48;
-  --accent-glow: rgba(27, 66, 100, 0.25);
-  --accent-gradient: linear-gradient(135deg, #1B4264, #A2A9A9);
-  --sheet-bg: #ffffff !important;
+  --sheet-bg: #ffffff;
   --card-bg: rgba(255, 255, 255, 0.88);
   --border-glass: rgba(0, 0, 0, 0.08);
   --text-main: #0f172a !important;

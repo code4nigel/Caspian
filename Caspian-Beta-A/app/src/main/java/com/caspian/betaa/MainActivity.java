@@ -484,12 +484,19 @@ public class MainActivity extends AppCompatActivity {
     private boolean justStartedSpeechDictation = false;
 
     public void startSpeechToText() {
+        SharedPreferences prefs = getSharedPreferences("CaspianMobilePrefs", MODE_PRIVATE);
+        boolean isDriftEnabled = !"false".equalsIgnoreCase(prefs.getString("caspian_current_enabled", "true"));
+        if (!isDriftEnabled) {
+            isRecordingSpeechMode = false;
+            Toast.makeText(this, "⚠️ Caspian Drift Engine is OFF. Enable it in Caspian Engines tab.", Toast.LENGTH_SHORT).show();
+            return;
+        }
+
         if (ContextCompat.checkSelfPermission(this, Manifest.permission.RECORD_AUDIO) != PackageManager.PERMISSION_GRANTED) {
             ActivityCompat.requestPermissions(this, new String[]{Manifest.permission.RECORD_AUDIO}, MIC_PERMISSION_REQUEST_CODE);
             return;
         }
 
-        SharedPreferences prefs = getSharedPreferences("CaspianMobilePrefs", MODE_PRIVATE);
         String sttEngine = prefs.getString("stt_engine_mode", "android_native");
 
         try {
@@ -1403,6 +1410,13 @@ public class MainActivity extends AppCompatActivity {
                         }
                         longPressRunnable = () -> {
                             if (!isDragging) {
+                                SharedPreferences prefs = getSharedPreferences("CaspianMobilePrefs", MODE_PRIVATE);
+                                boolean isDriftEnabled = !"false".equalsIgnoreCase(prefs.getString("caspian_current_enabled", "true"));
+                                if (!isDriftEnabled) {
+                                    triggerVibration();
+                                    Toast.makeText(MainActivity.this, "⚠️ Caspian Drift Engine is OFF. Enable it in Caspian Engines tab.", Toast.LENGTH_SHORT).show();
+                                    return;
+                                }
                                 isRecordingSpeechMode = true;
                                 justStartedSpeechDictation = true;
                                 triggerVibration();

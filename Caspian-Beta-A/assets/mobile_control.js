@@ -792,9 +792,29 @@
               }
             }
           } catch(e) {}
-          if (prefs.theme_start_color && prefs.theme_end_color) {
-            applyCustomGradient(prefs.theme_start_color, prefs.theme_end_color);
-          }
+          const startCol = prefs.theme_start_color || localStorage.getItem('theme_start_color') || '#A2A9A9';
+          const endCol = prefs.theme_end_color || localStorage.getItem('theme_end_color') || '#1B4264';
+          const bgCol = prefs.theme_bg_color || localStorage.getItem('theme_bg_color') || '#050811';
+
+          applyCustomGradient(startCol, endCol);
+          applyCustomBg(bgCol);
+
+          // Highlight matching Accent Preset button
+          document.querySelectorAll('.preset-btn').forEach(btn => {
+            const pKey = btn.dataset.preset;
+            if (presets[pKey] && presets[pKey].start.toLowerCase() === startCol.toLowerCase()) {
+              btn.classList.add('active');
+            } else {
+              btn.classList.remove('active');
+            }
+          });
+
+          // Highlight matching Background Tone button
+          document.querySelectorAll('.bg-preset-btn').forEach(btn => {
+            const isMatch = btn.dataset.bg && btn.dataset.bg.toLowerCase() === bgCol.toLowerCase();
+            btn.classList.toggle('active', isMatch);
+          });
+
           if (prefs.theme_icon_shape) {
             selectedShapeVal = prefs.theme_icon_shape;
             var cssSelect = document.getElementById('custom-shape-select');
@@ -815,7 +835,7 @@
           } else {
             setTheme(localStorage.getItem('theme') || 'dark');
           }
-          updateIconPreview(prefs.theme_start_color || '#A2A9A9', prefs.theme_end_color || '#1B4264', selectedShapeVal);
+          updateIconPreview(startCol, endCol, selectedShapeVal);
 
             // Restore visual preferences
             var openDur = prefs.sheetOpenDuration !== undefined ? parseInt(prefs.sheetOpenDuration) : 150;
@@ -937,15 +957,22 @@
   };
 
   function applyCustomGradient(start, end) {
-    document.documentElement.style.setProperty('--accent', start);
-    document.documentElement.style.setProperty('--secondary', end);
-    document.documentElement.style.setProperty('--accent-glow', `${start}55`);
-    document.documentElement.style.setProperty('--accent-gradient', `linear-gradient(135deg, ${start}, ${end})`);
+    document.documentElement.style.setProperty('--accent', start, 'important');
+    document.documentElement.style.setProperty('--secondary', end, 'important');
+    document.documentElement.style.setProperty('--accent-glow', `${start}55`, 'important');
+    document.documentElement.style.setProperty('--accent-gradient', `linear-gradient(135deg, ${start}, ${end})`, 'important');
 
     if (startPicker) startPicker.value = start;
     if (endPicker) endPicker.value = end;
     if (startHex) startHex.value = start.toUpperCase();
     if (endHex) endHex.value = end.toUpperCase();
+
+    localStorage.setItem('theme_start_color', start);
+    localStorage.setItem('theme_end_color', end);
+    if (window.CaspianBridge && typeof window.CaspianBridge.saveSetting === 'function') {
+      window.CaspianBridge.saveSetting('theme_start_color', start);
+      window.CaspianBridge.saveSetting('theme_end_color', end);
+    }
 
     const shapeSelect = document.getElementById('icon-shape-select');
     updateIconPreview(start, end, selectedShapeVal);
@@ -1026,12 +1053,17 @@
   function applyCustomBg(colorHex) {
     if (activeTheme === 'dark') {
       selectedDarkBg = colorHex;
-      document.documentElement.style.setProperty('--sheet-bg', colorHex);
+      document.documentElement.style.setProperty('--sheet-bg', colorHex, 'important');
     } else {
-      document.documentElement.style.setProperty('--sheet-bg', '#ffffff');
+      document.documentElement.style.setProperty('--sheet-bg', '#ffffff', 'important');
     }
     if (bgColorPicker) bgColorPicker.value = colorHex;
     if (bgColorHex) bgColorHex.value = colorHex.toUpperCase();
+
+    localStorage.setItem('theme_bg_color', colorHex);
+    if (window.CaspianBridge && typeof window.CaspianBridge.saveSetting === 'function') {
+      window.CaspianBridge.saveSetting('theme_bg_color', colorHex);
+    }
   }
 
   // Bind Background Tone Presets

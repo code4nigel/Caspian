@@ -28,6 +28,14 @@ def build_html(version_name):
           document.documentElement.classList.add('light');
           document.documentElement.classList.remove('dark');
         }}
+        var start = localStorage.getItem('theme_start_color') || '#A2A9A9';
+        var end = localStorage.getItem('theme_end_color') || '#1B4264';
+        var bg = localStorage.getItem('theme_bg_color') || (t === 'dark' ? '#050811' : '#ffffff');
+        document.documentElement.style.setProperty('--accent', start, 'important');
+        document.documentElement.style.setProperty('--secondary', end, 'important');
+        document.documentElement.style.setProperty('--accent-glow', start + '55', 'important');
+        document.documentElement.style.setProperty('--accent-gradient', 'linear-gradient(135deg, ' + start + ', ' + end + ')', 'important');
+        document.documentElement.style.setProperty('--sheet-bg', bg, 'important');
         if (localStorage.getItem('master_sfx_muted') === 'true') {{
           document.documentElement.classList.add('sfx-muted');
         }}
@@ -740,7 +748,7 @@ def build_html(version_name):
             <div style="display: flex; gap: 6px; flex-wrap: wrap; margin-bottom: 12px;">
               <button class="preset-theme-chip" data-start="#A2A9A9" data-end="#1B4264" style="background: linear-gradient(135deg, #A2A9A9, #1B4264); border: 1px solid #ffffff; color: #fff; padding: 4px 8px; border-radius: 6px; font-size: 10px; font-weight: 600; cursor: pointer;">Caspian Classic</button>
               <button class="preset-theme-chip" data-start="#10a37f" data-end="#047857" style="background: linear-gradient(135deg, #10a37f, #047857); border: 1px solid #ffffff; color: #fff; padding: 4px 8px; border-radius: 6px; font-size: 10px; font-weight: 600; cursor: pointer;">ChatGPT Emerald</button>
-              <button class="preset-theme-chip" data-start="#7c3aed" data-end="#1e1b4b" style="background: linear-gradient(135deg, #7c3aed, #1e1b4b); border: 1px solid #ffffff; color: #fff; padding: 4px 8px; border-radius: 6px; font-size: 10px; font-weight: 600; cursor: pointer;">Cosmic Gemini</button>
+              <button class="preset-theme-chip" data-start="#2563eb" data-end="#0f172a" style="background: linear-gradient(135deg, #2563eb, #0f172a); border: 1px solid #ffffff; color: #fff; padding: 4px 8px; border-radius: 6px; font-size: 10px; font-weight: 600; cursor: pointer;">Royal Sapphire</button>
               <button class="preset-theme-chip" data-start="#374151" data-end="#111827" style="background: linear-gradient(135deg, #374151, #111827); border: 1px solid #ffffff; color: #fff; padding: 4px 8px; border-radius: 6px; font-size: 10px; font-weight: 600; cursor: pointer;">Midnight Obsidian</button>
               <button class="preset-theme-chip" data-start="#ec4899" data-end="#3b82f6" style="background: linear-gradient(135deg, #ec4899, #3b82f6); border: 1px solid #ffffff; color: #fff; padding: 4px 8px; border-radius: 6px; font-size: 10px; font-weight: 600; cursor: pointer;">Cyberpunk Neon</button>
             </div>
@@ -878,6 +886,21 @@ def build_html(version_name):
               </div>
             </div>
             <button id="debug-rec-toggle-btn" class="oneui-pill-btn secondary" style="font-size: 11px; padding: 4px 12px; border-color: #a855f7; color: #9333ea;">Start Rec</button>
+          </div>
+
+          <!-- Developer Exclusive Themes Section -->
+          <div style="margin-top: 10px; border-top: 1px dashed rgba(168, 85, 247, 0.3); padding-top: 10px;">
+            <div style="font-size: 10px; font-weight: 800; color: #a855f7; letter-spacing: 0.5px; margin-bottom: 6px;">
+              👑 DEVELOPER EXCLUSIVE THEMES
+            </div>
+            <div style="display: flex; gap: 6px; flex-wrap: wrap;">
+              <button class="preset-theme-chip dev-exclusive-theme" data-start="#7c3aed" data-end="#1e1b4b" style="background: linear-gradient(135deg, #7c3aed, #1e1b4b); border: 1.5px solid #a855f7; color: #fff; padding: 6px 12px; border-radius: 8px; font-size: 10.5px; font-weight: 700; cursor: pointer; box-shadow: 0 0 12px rgba(168,85,247,0.4);">
+                ✨ Cosmic Gemini (Developer Exclusive)
+              </button>
+              <button class="preset-theme-chip dev-exclusive-theme" data-start="#fbbf24" data-end="#78350f" style="background: linear-gradient(135deg, #fbbf24, #78350f); border: 1.5px solid #fbbf24; color: #fff; padding: 6px 12px; border-radius: 8px; font-size: 10.5px; font-weight: 700; cursor: pointer; box-shadow: 0 0 12px rgba(251,191,36,0.4);">
+                👑 Ena Shine (Golden Premium)
+              </button>
+            </div>
           </div>
         </div>
 
