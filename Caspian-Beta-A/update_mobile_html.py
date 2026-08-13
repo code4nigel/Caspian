@@ -616,75 +616,147 @@ def build_html(version_name):
           <div style="font-size: 10px; color: var(--text-muted); margin-bottom: 8px; font-weight: 700; letter-spacing: 0.5px;">PLAY SOUND FOR ACTIONS</div>
 
           <!-- Option 1: Switching Main Tabs -->
-          <div class="setting-row" style="margin-bottom: 10px;">
-            <div>
-              <div class="setting-label">Switching Main Tabs</div>
-              <div style="font-size: 9.5px; color: var(--text-muted);">tap_main.wav (tm)</div>
+          <div style="margin-bottom: 10px; background: rgba(255,255,255,0.03); border: 1px solid var(--border-glass); border-radius: 10px; padding: 8px 10px;">
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 6px;">
+              <span class="setting-label" style="font-weight: 700;">Switching Main Tabs</span>
+              <label class="switch-toggle">
+                <input type="checkbox" id="toggle-sfx-tm-tabs" checked>
+                <span class="slider-round"></span>
+              </label>
             </div>
-            <label class="switch-toggle">
-              <input type="checkbox" id="toggle-sfx-tm-tabs" checked>
-              <span class="slider-round"></span>
-            </label>
+            <div style="display: flex; align-items: center; justify-content: space-between;">
+              <span style="font-size: 9.5px; color: var(--text-muted);">Sound Effect:</span>
+              <select id="select-sfx-tm-tabs" class="sfx-sound-select" style="background: var(--card-bg); color: var(--text-main); border: 1px solid var(--border-glass); border-radius: 6px; padding: 3px 8px; font-size: 10px; outline: none;">
+                <option value="pop_button.mp3">pop_button.mp3 (Default)</option>
+                <option value="tap_main.wav">tap_main.wav</option>
+                <option value="tap_button.wav">tap_button.wav</option>
+                <option value="tap_alternate.wav">tap_alternate.wav</option>
+                <option value="pop_button_v2.wav">pop_button_v2.wav</option>
+                <option value="pop_click.wav">pop_click.wav</option>
+                <option value="pop_unknown_v1.wav">pop_unknown_v1.wav</option>
+              </select>
+            </div>
           </div>
 
           <!-- Option 2: Action Button Tap -->
-          <div class="setting-row" style="margin-bottom: 10px;">
-            <div>
-              <div class="setting-label">Action Button Tap</div>
-              <div style="font-size: 9.5px; color: var(--text-muted);">tap_alternate.wav (ta)</div>
+          <div style="margin-bottom: 10px; background: rgba(255,255,255,0.03); border: 1px solid var(--border-glass); border-radius: 10px; padding: 8px 10px;">
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 6px;">
+              <span class="setting-label" style="font-weight: 700;">Action Button Tap</span>
+              <label class="switch-toggle">
+                <input type="checkbox" id="toggle-sfx-ta" checked>
+                <span class="slider-round"></span>
+              </label>
             </div>
-            <label class="switch-toggle">
-              <input type="checkbox" id="toggle-sfx-ta" checked>
-              <span class="slider-round"></span>
-            </label>
+            <div style="display: flex; align-items: center; justify-content: space-between;">
+              <span style="font-size: 9.5px; color: var(--text-muted);">Sound Effect:</span>
+              <select id="select-sfx-ta" class="sfx-sound-select" style="background: var(--card-bg); color: var(--text-main); border: 1px solid var(--border-glass); border-radius: 6px; padding: 3px 8px; font-size: 10px; outline: none;">
+                <option value="pop_click.wav">pop_click.wav (Default)</option>
+                <option value="tap_alternate.wav">tap_alternate.wav</option>
+                <option value="tap_main.wav">tap_main.wav</option>
+                <option value="tap_button.wav">tap_button.wav</option>
+                <option value="pop_button.mp3">pop_button.mp3</option>
+                <option value="pop_button_v2.wav">pop_button_v2.wav</option>
+                <option value="pop_unknown_v1.wav">pop_unknown_v1.wav</option>
+              </select>
+            </div>
           </div>
 
           <!-- Option 3: Browser Tab Clicks -->
-          <div class="setting-row" style="margin-bottom: 10px;">
-            <div>
-              <div class="setting-label">Browser Tab Clicks</div>
-              <div style="font-size: 9.5px; color: var(--text-muted);">tap_button.wav (tb)</div>
+          <div style="margin-bottom: 10px; background: rgba(255,255,255,0.03); border: 1px solid var(--border-glass); border-radius: 10px; padding: 8px 10px;">
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 6px;">
+              <span class="setting-label" style="font-weight: 700;">Browser Tab Clicks</span>
+              <label class="switch-toggle">
+                <input type="checkbox" id="toggle-sfx-tb-clicks" checked>
+                <span class="slider-round"></span>
+              </label>
             </div>
-            <label class="switch-toggle">
-              <input type="checkbox" id="toggle-sfx-tb-clicks" checked>
-              <span class="slider-round"></span>
-            </label>
+            <div style="display: flex; align-items: center; justify-content: space-between;">
+              <span style="font-size: 9.5px; color: var(--text-muted);">Sound Effect:</span>
+              <select id="select-sfx-tb-clicks" class="sfx-sound-select" style="background: var(--card-bg); color: var(--text-main); border: 1px solid var(--border-glass); border-radius: 6px; padding: 3px 8px; font-size: 10px; outline: none;">
+                <option value="tap_button.wav">tap_button.wav (Default)</option>
+                <option value="tap_main.wav">tap_main.wav</option>
+                <option value="tap_alternate.wav">tap_alternate.wav</option>
+                <option value="pop_button.mp3">pop_button.mp3</option>
+                <option value="pop_button_v2.wav">pop_button_v2.wav</option>
+                <option value="pop_click.wav">pop_click.wav</option>
+                <option value="pop_unknown_v1.wav">pop_unknown_v1.wav</option>
+              </select>
+            </div>
           </div>
 
           <!-- Option 4: Header Row Controls -->
-          <div class="setting-row" style="margin-bottom: 10px;">
-            <div>
-              <div class="setting-label">Header Controls (Reload/Power)</div>
-              <div style="font-size: 9.5px; color: var(--text-muted);">tap_main.wav (tm)</div>
+          <div style="margin-bottom: 10px; background: rgba(255,255,255,0.03); border: 1px solid var(--border-glass); border-radius: 10px; padding: 8px 10px;">
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 6px;">
+              <span class="setting-label" style="font-weight: 700;">Header Controls (Reload/Power)</span>
+              <label class="switch-toggle">
+                <input type="checkbox" id="toggle-sfx-tm-header" checked>
+                <span class="slider-round"></span>
+              </label>
             </div>
-            <label class="switch-toggle">
-              <input type="checkbox" id="toggle-sfx-tm-header" checked>
-              <span class="slider-round"></span>
-            </label>
+            <div style="display: flex; align-items: center; justify-content: space-between;">
+              <span style="font-size: 9.5px; color: var(--text-muted);">Sound Effect:</span>
+              <select id="select-sfx-tm-header" class="sfx-sound-select" style="background: var(--card-bg); color: var(--text-main); border: 1px solid var(--border-glass); border-radius: 6px; padding: 3px 8px; font-size: 10px; outline: none;">
+                <option value="tap_main.wav">tap_main.wav (Default)</option>
+                <option value="tap_button.wav">tap_button.wav</option>
+                <option value="tap_alternate.wav">tap_alternate.wav</option>
+                <option value="pop_button.mp3">pop_button.mp3</option>
+                <option value="pop_button_v2.wav">pop_button_v2.wav</option>
+                <option value="pop_click.wav">pop_click.wav</option>
+                <option value="pop_unknown_v1.wav">pop_unknown_v1.wav</option>
+              </select>
+            </div>
           </div>
 
           <!-- Option 5: Close Browser Tab -->
-          <div class="setting-row" style="margin-bottom: 10px;">
-            <div>
-              <div class="setting-label">Close Browser Tab</div>
-              <div style="font-size: 9.5px; color: var(--text-muted);">tap_button.wav (tb)</div>
+          <div style="margin-bottom: 10px; background: rgba(255,255,255,0.03); border: 1px solid var(--border-glass); border-radius: 10px; padding: 8px 10px;">
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 6px;">
+              <span class="setting-label" style="font-weight: 700;">Close Browser Tab</span>
+              <label class="switch-toggle">
+                <input type="checkbox" id="toggle-sfx-tb-close" checked>
+                <span class="slider-round"></span>
+              </label>
             </div>
-            <label class="switch-toggle">
-              <input type="checkbox" id="toggle-sfx-tb-close" checked>
-              <span class="slider-round"></span>
-            </label>
+            <div style="display: flex; align-items: center; justify-content: space-between;">
+              <span style="font-size: 9.5px; color: var(--text-muted);">Sound Effect:</span>
+              <select id="select-sfx-tb-close" class="sfx-sound-select" style="background: var(--card-bg); color: var(--text-main); border: 1px solid var(--border-glass); border-radius: 6px; padding: 3px 8px; font-size: 10px; outline: none;">
+                <option value="tap_button.wav">tap_button.wav (Default)</option>
+                <option value="tap_main.wav">tap_main.wav</option>
+                <option value="tap_alternate.wav">tap_alternate.wav</option>
+                <option value="pop_button.mp3">pop_button.mp3</option>
+                <option value="pop_button_v2.wav">pop_button_v2.wav</option>
+                <option value="pop_click.wav">pop_click.wav</option>
+                <option value="pop_unknown_v1.wav">pop_unknown_v1.wav</option>
+              </select>
+            </div>
           </div>
 
           <!-- Option 6: Tab Options Actions -->
-          <div class="setting-row">
-            <div>
-              <div class="setting-label">Tab Options Menu Actions</div>
-              <div style="font-size: 9.5px; color: var(--text-muted);">tap_button.wav (tb)</div>
+          <div style="margin-bottom: 10px; background: rgba(255,255,255,0.03); border: 1px solid var(--border-glass); border-radius: 10px; padding: 8px 10px;">
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 6px;">
+              <span class="setting-label" style="font-weight: 700;">Tab Options Menu Actions</span>
+              <label class="switch-toggle">
+                <input type="checkbox" id="toggle-sfx-tb-modal" checked>
+                <span class="slider-round"></span>
+              </label>
             </div>
-            <label class="switch-toggle">
-              <input type="checkbox" id="toggle-sfx-tb-modal" checked>
-              <span class="slider-round"></span>
-            </label>
+            <div style="display: flex; align-items: center; justify-content: space-between;">
+              <span style="font-size: 9.5px; color: var(--text-muted);">Sound Effect:</span>
+              <select id="select-sfx-tb-modal" class="sfx-sound-select" style="background: var(--card-bg); color: var(--text-main); border: 1px solid var(--border-glass); border-radius: 6px; padding: 3px 8px; font-size: 10px; outline: none;">
+                <option value="tap_button.wav">tap_button.wav (Default)</option>
+                <option value="tap_main.wav">tap_main.wav</option>
+                <option value="tap_alternate.wav">tap_alternate.wav</option>
+                <option value="pop_button.mp3">pop_button.mp3</option>
+                <option value="pop_button_v2.wav">pop_button_v2.wav</option>
+                <option value="pop_click.wav">pop_click.wav</option>
+                <option value="pop_unknown_v1.wav">pop_unknown_v1.wav</option>
+              </select>
+            </div>
+          </div>
+
+          <!-- Save SFX Mapping Button -->
+          <div style="margin-top: 14px; border-top: 1px dashed var(--border-glass); padding-top: 10px; display: flex; justify-content: space-between; align-items: center;">
+            <div style="font-size: 9.5px; color: var(--text-muted);">Takes effect on next app launch</div>
+            <button id="btn-save-sfx-mapping" class="oneui-pill-btn primary" style="font-size: 11px; padding: 6px 14px; font-weight: 700;">💾 Save SFX Mapping</button>
           </div>
         </div>
       </details>

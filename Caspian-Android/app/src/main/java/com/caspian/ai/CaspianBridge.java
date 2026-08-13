@@ -257,7 +257,7 @@ public class CaspianBridge {
                         savedPath = targetFile.getAbsolutePath();
                     }
                 } catch (Exception e2) {
-                    // TIER 3: Safe fallback to getExternalFilesDir (Android/data/com.caspian.betaa/files)
+                    // TIER 3: Safe fallback to getExternalFilesDir (Android/data/com.caspian.ai/files)
                     try {
                         File fallbackFolder = activity.getExternalFilesDir(Environment.DIRECTORY_DOWNLOADS);
                         File targetFolder = new File(fallbackFolder, "Caspian/" + subFolder);

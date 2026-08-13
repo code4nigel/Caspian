@@ -36,6 +36,15 @@
         if (jsonStr) {
           const parsed = JSON.parse(jsonStr);
           state = { ...state, ...parsed };
+
+          // Map Caspian mobile control settings keys
+          if (parsed.chat_limit_enabled !== undefined) {
+            state.pruningEnabled = (parsed.chat_limit_enabled === true || parsed.chat_limit_enabled === 'true');
+          }
+          if (parsed.chat_message_limit !== undefined) {
+            const lim = parseInt(parsed.chat_message_limit, 10);
+            state.limit = isNaN(lim) ? 5 : lim;
+          }
         }
       }
     } catch(e) {}

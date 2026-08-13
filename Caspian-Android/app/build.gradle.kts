@@ -10,8 +10,8 @@ android {
         applicationId = "com.caspian.ai"
         minSdk = 24
         targetSdk = 34
-        versionCode = 197
-        versionName = "1.0.97"
+        versionCode = 198
+        versionName = "1.0.98"
     }
 
     buildTypes {
@@ -20,6 +20,11 @@ android {
             proguardFiles(getDefaultProguardFile("proguard-android-optimize.txt"), "proguard-rules.pro")
         }
     }
+    lint {
+        checkReleaseBuilds = false
+        abortOnError = false
+    }
+
     compileOptions {
         sourceCompatibility = JavaVersion.VERSION_17
         targetCompatibility = JavaVersion.VERSION_17

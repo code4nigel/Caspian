@@ -19,11 +19,25 @@ def build_html(version_name):
   <script>
     (function() {{
       try {{
-        var t = localStorage.getItem('theme');
+        var t = localStorage.getItem('theme') || 'dark';
+        document.documentElement.setAttribute('data-theme', t);
         if (t === 'dark') {{
-          document.documentElement.setAttribute('data-theme', 'dark');
+          document.documentElement.classList.add('dark');
+          document.documentElement.classList.remove('light');
         }} else {{
-          document.documentElement.setAttribute('data-theme', 'light');
+          document.documentElement.classList.add('light');
+          document.documentElement.classList.remove('dark');
+        }}
+        var start = localStorage.getItem('theme_start_color') || '#A2A9A9';
+        var end = localStorage.getItem('theme_end_color') || '#1B4264';
+        var bg = localStorage.getItem('theme_bg_color') || (t === 'dark' ? '#050811' : '#ffffff');
+        document.documentElement.style.setProperty('--accent', start, 'important');
+        document.documentElement.style.setProperty('--secondary', end, 'important');
+        document.documentElement.style.setProperty('--accent-glow', start + '55', 'important');
+        document.documentElement.style.setProperty('--accent-gradient', 'linear-gradient(135deg, ' + start + ', ' + end + ')', 'important');
+        document.documentElement.style.setProperty('--sheet-bg', bg, 'important');
+        if (localStorage.getItem('master_sfx_muted') === 'true') {{
+          document.documentElement.classList.add('sfx-muted');
         }}
       }} catch(e) {{}}
     }})();
@@ -102,77 +116,224 @@ def build_html(version_name):
 
     <!-- TAB 1: ENGINE TAB -->
     <div id="tab-pane-engine" class="tab-pane active">
-      <!-- Temporary Chat Saver Card -->
-      <div class="m3-card">
+      <!-- 1. Temporary Chat Saver Card -->
+      <div id="card-temp-saver" class="m3-card engine-card">
         <div class="m3-card-row">
           <div class="m3-card-left">
-            <div id="temp-dot" class="status-dot active"></div>
+            <div id="ts-status-dot" class="status-dot active"></div>
             <div>
               <div class="m3-card-title">Temporary Chat Saver</div>
-              <div id="temp-sub" class="m3-card-sub">Save or convert temporary mobile sessions anytime.</div>
+              <div class="m3-card-sub">Save or convert temporary mobile sessions anytime.</div>
             </div>
           </div>
+          <button id="toggle-temp-saver-btn" class="oneui-pill-btn primary" style="font-size: 11px; padding: 4px 10px;">ON</button>
         </div>
 
-        <!-- Clean Action Row Buttons -->
-        <div class="mobile-action-row">
-          <div style="flex: 1;">
-            <button id="convert-btn" class="oneui-pill-btn primary" style="width: 100%; justify-content: center;">
-              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M17 1l4 4-4 4"></path><path d="M3 11V9a4 4 0 0 1 4-4h14"></path><path d="M7 23l-4-4 4-4"></path><path d="M21 13v2a4 4 0 0 1-4 4H3"></path></svg>
+        <div id="temp-saver-body" style="margin-top: 10px;">
+          <div class="mobile-action-row">
+            <button id="convert-btn" class="oneui-pill-btn primary" style="flex: 1; justify-content: center;">
+              <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <path d="M21.5 2v6h-6M21.34 15.57a10 10 0 1 1-.57-8.38l5.67-5.67"/>
+              </svg>
               <span>Convert Chat</span>
             </button>
-          </div>
-          
-          <div style="flex: 1; position: relative;">
-            <button id="export-dropdown-trigger" class="oneui-pill-btn secondary" style="width: 100%; justify-content: center;">
-              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path><polyline points="7 10 12 15 17 10"></polyline><line x1="12" y1="15" x2="12" y2="3"></line></svg>
-              <span>Export ▼</span>
-            </button>
             
-            <div id="export-menu" class="export-menu-overlay">
-              <button class="export-opt-btn" data-fmt="md">Markdown (.md)</button>
-              <button class="export-opt-btn" data-fmt="txt">Plain Text (.txt)</button>
-              <button class="export-opt-btn" data-fmt="doc">Google Doc (.doc)</button>
-              <button class="export-opt-btn" data-fmt="nativepdf">Document PDF (.pdf)</button>
-              <button class="export-opt-btn" data-fmt="styledpdf">Caspian PDF Format</button>
+            <div style="position: relative; flex: 1;">
+              <button id="export-dropdown-trigger" class="oneui-pill-btn secondary" style="width: 100%; justify-content: center;">
+                <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                  <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path>
+                  <polyline points="7 10 12 15 17 10"></polyline>
+                  <line x1="12" y1="15" x2="12" y2="3"></line>
+                </svg>
+                <span>Export ▼</span>
+              </button>
+              
+              <div id="export-menu" class="export-menu-overlay">
+                <button class="export-opt-btn" data-fmt="md">Markdown (.md)</button>
+                <button class="export-opt-btn" data-fmt="txt">Plain Text (.txt)</button>
+                <button class="export-opt-btn" data-fmt="doc">Google Doc (.doc)</button>
+                <button class="export-opt-btn" data-fmt="nativepdf">Document PDF (.pdf)</button>
+                <button class="export-opt-btn" data-fmt="styledpdf">Caspian PDF Format</button>
+              </div>
             </div>
-          </div>
 
-          <button id="copy-btn" class="oneui-pill-btn icon-only" title="Copy Transcript" style="flex-shrink: 0; width: 38px; height: 38px; justify-content: center; padding: 0;">
-            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-              <rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect>
-              <path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path>
-            </svg>
-          </button>
+            <button id="copy-btn" class="oneui-pill-btn icon-only" title="Copy Transcript" style="flex-shrink: 0; width: 38px; height: 38px; justify-content: center; padding: 0;">
+              <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect>
+                <path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path>
+              </svg>
+            </button>
+          </div>
         </div>
       </div>
 
-      <!-- Chat Pruning Card -->
-      <div class="m3-card">
-        <div class="m3-card-row">
+      <!-- 2. Expandable Chat Message Limit Card -->
+      <div id="card-chat-limit" class="m3-card engine-card expandable" style="margin-top: 14px;">
+        <div id="chat-limit-header" class="m3-card-row" style="cursor: pointer;">
           <div class="m3-card-left">
             <div id="status-dot" class="status-dot active"></div>
             <div>
-              <div id="status-title" class="m3-card-title">Chat Message Limit: ON</div>
-              <div id="status-sub" class="m3-card-sub">it limites the amout of message shown from below so all message above it will get prune or cut out this is done to improve performance and reduce lagging.</div>
+              <div id="status-title" class="m3-card-title">Chat Message Limit</div>
+              <div id="status-sub" class="m3-card-sub">Limits message count to improve performance and prevent lagging. Tap to expand.</div>
             </div>
           </div>
-          <span id="active-limit-badge" class="m3-badge">5 Messages</span>
+          <div style="display: flex; align-items: center; gap: 8px;">
+            <span id="active-limit-badge" class="m3-badge">5 Messages</span>
+            <button id="toggle-chat-limit-btn" class="oneui-pill-btn primary" style="font-size: 11px; padding: 4px 10px;">ON</button>
+          </div>
+        </div>
+
+        <!-- Accordion Body: Contains Visible Messages Limit selector -->
+        <div id="chat-limit-body" style="display: block; margin-top: 12px; border-top: 1px solid var(--border-glass); padding-top: 10px;">
+          <div class="limit-section-title">
+            <span>VISIBLE MESSAGES LIMIT</span>
+            <span>AUTO-PRUNE OLDER</span>
+          </div>
+          <div class="pill-grid">
+            <button class="limit-pill" data-val="1">1</button>
+            <button class="limit-pill" data-val="3">3</button>
+            <button class="limit-pill active" data-val="5">5</button>
+            <button class="limit-pill" data-val="8">8</button>
+            <button class="limit-pill" data-val="15">15</button>
+            <button class="limit-pill" data-val="9999" title="Unlimited (Show All)">&#8734;</button>
+          </div>
         </div>
       </div>
 
-      <!-- Visible Message Turns Section -->
-      <div class="limit-section-title">
-        <span>VISIBLE MESSAGES LIMIT</span>
-        <span>AUTO-PRUNE OLDER</span>
+      <!-- YouTube Control Center Card (Dynamic for YouTube Tabs) -->
+      <div id="youtube-control-card" class="m3-card" style="display: none; margin-top: 14px;">
+        <div class="m3-card-row">
+          <div class="m3-card-left">
+            <div class="status-dot active"></div>
+            <div>
+              <div class="m3-card-title">YouTube Player Controls</div>
+              <div class="m3-card-sub">Quick seeking, playback speed, and resolution selector.</div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Seek Buttons Row -->
+        <div class="mobile-action-row" style="margin-top: 10px;">
+          <button id="yt-seek-back-btn" class="oneui-pill-btn secondary" style="flex: 1; justify-content: center;">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polygon points="11 19 2 12 11 5 11 19"></polygon><polygon points="22 19 13 12 22 5 22 19"></polygon></svg>
+            <span>-5s Seek</span>
+          </button>
+          <button id="yt-seek-fwd-btn" class="oneui-pill-btn secondary" style="flex: 1; justify-content: center;">
+            <span>+5s Seek</span>
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polygon points="13 19 22 12 13 5 13 19"></polygon><polygon points="2 19 11 12 2 5 2 19"></polygon></svg>
+          </button>
+        </div>
+
+        <!-- Playback Speed Section -->
+        <div class="limit-section-title" style="margin-top: 12px;">PLAYBACK SPEED</div>
+        <div class="pill-grid" style="grid-template-columns: repeat(4, 1fr); gap: 6px;">
+          <button class="yt-speed-pill" data-speed="0.25">0.25x</button>
+          <button class="yt-speed-pill" data-speed="0.5">0.5x</button>
+          <button class="yt-speed-pill" data-speed="0.75">0.75x</button>
+          <button class="yt-speed-pill active" data-speed="1.0">1x</button>
+          <button class="yt-speed-pill" data-speed="1.25">1.25x</button>
+          <button class="yt-speed-pill" data-speed="1.5">1.5x</button>
+          <button class="yt-speed-pill" data-speed="1.75">1.75x</button>
+          <button class="yt-speed-pill" data-speed="2.0">2x</button>
+          <button class="yt-speed-pill" data-speed="2.5">2.5x</button>
+          <button class="yt-speed-pill" data-speed="3.0">3x</button>
+          <button class="yt-speed-pill" data-speed="4.0">4x</button>
+        </div>
+
+        <!-- Quality Selector Section -->
+        <div class="limit-section-title" style="margin-top: 12px;">VIDEO QUALITY</div>
+        <div class="pill-grid" style="grid-template-columns: repeat(3, 1fr); gap: 6px;">
+          <button class="yt-quality-pill" data-quality="hd1080">1080p</button>
+          <button class="yt-quality-pill" data-quality="hd720">720p</button>
+          <button class="yt-quality-pill" data-quality="large">480p</button>
+          <button class="yt-quality-pill" data-quality="medium">360p</button>
+          <button class="yt-quality-pill" data-quality="small">240p</button>
+          <button class="yt-quality-pill active" data-quality="auto">Auto</button>
+        </div>
       </div>
-      <div class="pill-grid">
-        <button class="limit-pill" data-val="1">1</button>
-        <button class="limit-pill" data-val="3">3</button>
-        <button class="limit-pill active" data-val="5">5</button>
-        <button class="limit-pill" data-val="8">8</button>
-        <button class="limit-pill" data-val="15">15</button>
-        <button class="limit-pill" data-val="9999" title="Unlimited (Show All)">&#8734;</button>
+
+      <!-- 3. Caspian Drift (Speech Dictation & Voice Engine) Card -->
+      <div id="card-caspian-current" class="m3-card engine-card expandable" style="margin-top: 14px;">
+        <div id="caspian-current-header" class="m3-card-row" style="cursor: pointer;">
+          <div class="m3-card-left">
+            <div id="cc-status-dot" class="status-dot active"></div>
+            <div>
+              <div class="m3-card-title">Caspian Drift</div>
+              <div class="m3-card-sub">Long-press wave button to dictate speech. Tap to customize STT models & API keys.</div>
+            </div>
+          </div>
+          <button id="toggle-caspian-current-btn" class="oneui-pill-btn primary" style="font-size: 11px; padding: 4px 10px;">ON</button>
+        </div>
+
+        <!-- Accordion Body -->
+        <div id="caspian-current-body" style="display: none; margin-top: 12px; border-top: 1px solid var(--border-glass); padding-top: 10px;">
+          <div class="limit-section-title" style="margin-bottom: 6px;">SELECT SPEECH-TO-TEXT MODEL</div>
+          <div class="pill-grid" style="grid-template-columns: repeat(3, 1fr); gap: 6px; margin-bottom: 10px;">
+            <button class="cc-stt-pill active" data-engine="deepgram">⚡ Deepgram</button>
+            <button class="cc-stt-pill" data-engine="huggingface">🤗 HuggingFace</button>
+            <button class="cc-stt-pill" data-engine="android_native">📱 Native Android</button>
+          </div>
+
+          <!-- Deepgram Key & Usage Tracker Badge -->
+          <div id="stt-key-container-deepgram" style="margin-bottom: 10px;">
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 4px;">
+              <div class="limit-section-title">DEEPGRAM API KEY ($200 Free Credit)</div>
+              <span id="deepgram-usage-badge" style="font-size: 9.5px; font-weight: 800; color: #10b981; background: rgba(16,185,129,0.15); padding: 2px 7px; border-radius: 6px;">
+                ⏱️ 0s Used (~$200.00 Credit)
+              </span>
+            </div>
+            <input type="password" id="input-deepgram-key" class="caspian-text-input" placeholder="Paste Deepgram API Key (Token ...)" style="width: 100%; box-sizing: border-box; padding: 8px 12px; font-size: 11px; border-radius: 8px; background: var(--input-bg); border: 1px solid var(--border-glass); color: var(--text-main);" />
+          </div>
+
+          <!-- Hugging Face Token Input -->
+          <div id="stt-key-container-huggingface" style="margin-bottom: 10px; display: none;">
+            <div class="limit-section-title" style="margin-bottom: 4px;">HUGGING FACE ACCESS TOKEN (hf_...)</div>
+            <input type="password" id="input-huggingface-key" class="caspian-text-input" placeholder="Paste Hugging Face Token (hf_...)" style="width: 100%; box-sizing: border-box; padding: 8px 12px; font-size: 11px; border-radius: 8px; background: var(--input-bg); border: 1px solid var(--border-glass); color: var(--text-main);" />
+          </div>
+
+          <div class="limit-section-title" style="margin-bottom: 6px;">PRIMARY LANGUAGE ACCENT</div>
+          <div class="pill-grid" style="grid-template-columns: repeat(3, 1fr); gap: 6px;">
+            <button class="cc-lang-pill active" data-lang="auto">Auto Detect</button>
+            <button class="cc-lang-pill" data-lang="hinglish">Hinglish / Hindi</button>
+            <button class="cc-lang-pill" data-lang="en">English (US/IN)</button>
+          </div>
+        </div>
+      </div>
+
+      <!-- 4. Expandable AdBlocker Engine Card -->
+      <div id="card-adblocker" class="m3-card engine-card expandable" style="margin-top: 14px;">
+        <div id="adblock-header" class="m3-card-row" style="cursor: pointer;">
+          <div class="m3-card-left">
+            <div id="adblock-dot" class="status-dot active"></div>
+            <div>
+              <div class="m3-card-title">AdBlocker Engine</div>
+              <div class="m3-card-sub">Blocks video ads, trackers, and banners. Tap card to expand filters.</div>
+            </div>
+          </div>
+          <button id="toggle-adblock-btn" class="oneui-pill-btn primary" style="font-size: 11px; padding: 4px 10px;">ON</button>
+        </div>
+
+        <!-- Accordion Body -->
+        <div id="adblock-body" style="display: none; margin-top: 12px; border-top: 1px solid var(--border-glass); padding-top: 10px;">
+          <div style="display: flex; flex-direction: column; gap: 8px;">
+            <label style="display: flex; align-items: center; justify-content: space-between; font-size: 11px; color: var(--text-main);">
+              <span>🎬 Block YouTube Video Ads</span>
+              <input type="checkbox" id="chk-adblock-yt" checked style="accent-color: var(--accent);" />
+            </label>
+            <label style="display: flex; align-items: center; justify-content: space-between; font-size: 11px; color: var(--text-main);">
+              <span>🚫 Block Banners & Popups</span>
+              <input type="checkbox" id="chk-adblock-banner" checked style="accent-color: var(--accent);" />
+            </label>
+            <label style="display: flex; align-items: center; justify-content: space-between; font-size: 11px; color: var(--text-main);">
+              <span>⚡ Auto-Skip Video Ads</span>
+              <input type="checkbox" id="chk-adblock-skip" checked style="accent-color: var(--accent);" />
+            </label>
+            <label style="display: flex; align-items: center; justify-content: space-between; font-size: 11px; color: var(--text-main);">
+              <span>🔒 Block Trackers & Telemetry</span>
+              <input type="checkbox" id="chk-adblock-trackers" checked style="accent-color: var(--accent);" />
+            </label>
+          </div>
+        </div>
       </div>
     </div>
 
@@ -214,18 +375,99 @@ def build_html(version_name):
           </div>
         </div>
 
-        <!-- Active Tabs Container -->
-        <div class="m3-card-row" style="margin-top: 16px; margin-bottom: 6px; display: flex; align-items: center; justify-content: space-between;">
-          <div style="display: flex; align-items: center; gap: 8px;">
-            <div class="setting-section-header" style="margin: 0;">Active Browser Tabs</div>
+        <!-- Active Tabs Container Header with Filter Pills -->
+        <div class="m3-card-row" style="margin-top: 16px; margin-bottom: 6px; display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 6px;">
+          <div style="display: flex; align-items: center; gap: 6px;">
+            <div class="setting-section-header" style="margin: 0;">Active Tabs</div>
             <span id="tab-count-badge" class="m3-badge" style="background: rgba(0,0,0,0.06); color: var(--text-sub);">1 Tab</span>
           </div>
+
+          <!-- Tab Filter Pills (All / Groups / Single) -->
+          <div id="tab-filter-pill-bar" style="display: flex; background: var(--input-bg); border: 1px solid var(--border-glass); border-radius: 14px; padding: 2px; gap: 2px;">
+            <button class="tab-filter-pill active" data-filter="all" style="font-size: 10px; font-weight: 700; padding: 3px 8px; border-radius: 12px; border: none; background: var(--accent); color: #fff; cursor: pointer;">All</button>
+            <button class="tab-filter-pill" data-filter="groups" style="font-size: 10px; font-weight: 700; padding: 3px 8px; border-radius: 12px; border: none; background: transparent; color: var(--text-sub); cursor: pointer;">Groups</button>
+            <button class="tab-filter-pill" data-filter="single" style="font-size: 10px; font-weight: 700; padding: 3px 8px; border-radius: 12px; border: none; background: transparent; color: var(--text-sub); cursor: pointer;">Single</button>
+          </div>
+
           <button id="close-all-tabs-btn" class="oneui-pill-btn secondary" style="padding: 4px 10px; font-size: 11px; color: #ef4444; border-color: rgba(239,68,68,0.3);">Close All</button>
         </div>
+        <!-- Inside Group Banner -->
+        <div id="inside-group-header" class="inside-group-banner" style="display: none; margin-top: 8px; margin-bottom: 8px; padding: 10px 12px; border-radius: 14px; background: var(--input-bg); border: 1px solid var(--border-glass);">
+          <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 8px;">
+            <div style="display: flex; align-items: center; gap: 8px;">
+              <span id="group-banner-color-dot" style="width: 12px; height: 12px; border-radius: 50%; background: #3b82f6; display: inline-block;"></span>
+              <strong id="group-banner-title" style="font-size: 13px; color: var(--text-main);">Group Name</strong>
+              <span id="group-banner-count" class="m3-badge">3 Tabs</span>
+            </div>
+            <button id="btn-close-group-view" class="icon-btn" title="Back to All Tabs" style="font-size: 11px; width: 28px; height: 28px;">✕</button>
+          </div>
+          <div style="display: flex; gap: 6px; flex-wrap: wrap;">
+            <button id="btn-edit-group" class="oneui-pill-btn secondary" style="font-size: 10px; padding: 3px 8px;">✏️ Edit</button>
+            <button id="btn-leave-group" class="oneui-pill-btn secondary" style="font-size: 10px; padding: 3px 8px;">📂 Leave Tabs (Ungroup)</button>
+            <button id="btn-delete-group" class="oneui-pill-btn danger" style="font-size: 10px; padding: 3px 8px; color: #ef4444; border-color: rgba(239,68,68,0.3);">🗑️ Delete Group & Tabs</button>
+          </div>
+        </div>
+
         <div id="tabs-list-container" style="margin-top: 8px; display: flex; flex-direction: column; gap: 8px;">
           <!-- Dynamically populated open tabs -->
         </div>
 
+        <!-- Floating Multi-Select Grouping Toolbar -->
+        <div id="floating-grouping-toolbar" class="floating-group-bar" style="display: none;">
+          <div style="display: flex; align-items: center; justify-content: space-between; width: 100%; gap: 10px;">
+            <span id="grouping-select-count" style="font-weight: 700; font-size: 13px; color: var(--text-main); white-space: nowrap;">0 Selected</span>
+            <div style="display: flex; align-items: center; gap: 8px;">
+              <button id="toolbar-group-btn" class="oneui-pill-btn primary" style="height: 34px; border-radius: 17px; padding: 0 14px; font-size: 11px; font-weight: 600; display: inline-flex; align-items: center; gap: 4px;">📁 Make Group</button>
+              <button id="toolbar-deselect-btn" class="oneui-pill-btn secondary" style="height: 34px; border-radius: 17px; padding: 0 14px; font-size: 11px; font-weight: 600; display: inline-flex; align-items: center; justify-content: center;">Deselect</button>
+              <button id="toolbar-delete-btn" class="oneui-pill-btn danger" title="Delete Selected Tabs" style="width: 34px; height: 34px; border-radius: 17px; padding: 0; display: inline-flex; align-items: center; justify-content: center; background: rgba(239,68,68,0.18); color: #ef4444; border: 1px solid rgba(239,68,68,0.3); font-size: 15px;">🗑️</button>
+            </div>
+          </div>
+        </div>
+
+      </div>
+    </div>
+
+    <!-- Create / Edit Tab Group Modal Dialog -->
+    <div id="modal-create-group" class="modal-overlay" style="display: none;">
+      <div class="modal-card">
+        <div class="modal-header">
+          <span id="modal-group-title-label" class="modal-title">Create Tab Group</span>
+          <button id="modal-close-group-btn" class="modal-close-btn">&times;</button>
+        </div>
+        <div class="modal-body" style="padding: 14px 0;">
+          <div class="limit-section-title" style="margin-bottom: 6px;">GROUP NAME</div>
+          <input type="text" id="input-group-title" class="caspian-text-input" placeholder="e.g. Research, Work, Videos..." style="width: 100%; padding: 8px 12px; font-size: 12px; border-radius: 8px; background: var(--input-bg); border: 1px solid var(--border-glass); color: var(--text-main); margin-bottom: 14px;" />
+
+          <div class="limit-section-title" style="margin-bottom: 6px;">GROUP EMOJI ICON</div>
+          <div id="group-emoji-palette" style="display: flex; gap: 8px; flex-wrap: wrap; margin-bottom: 14px;">
+            <div class="group-emoji-dot active" data-emoji="📁" style="font-size: 18px; width: 32px; height: 32px; border-radius: 8px; display: flex; align-items: center; justify-content: center; cursor: pointer; background: var(--bg-card); border: 1px solid var(--border-glass);">📁</div>
+            <div class="group-emoji-dot" data-emoji="🚀" style="font-size: 18px; width: 32px; height: 32px; border-radius: 8px; display: flex; align-items: center; justify-content: center; cursor: pointer; background: var(--bg-card); border: 1px solid var(--border-glass);">🚀</div>
+            <div class="group-emoji-dot" data-emoji="🔥" style="font-size: 18px; width: 32px; height: 32px; border-radius: 8px; display: flex; align-items: center; justify-content: center; cursor: pointer; background: var(--bg-card); border: 1px solid var(--border-glass);">🔥</div>
+            <div class="group-emoji-dot" data-emoji="⭐" style="font-size: 18px; width: 32px; height: 32px; border-radius: 8px; display: flex; align-items: center; justify-content: center; cursor: pointer; background: var(--bg-card); border: 1px solid var(--border-glass);">⭐</div>
+            <div class="group-emoji-dot" data-emoji="🎨" style="font-size: 18px; width: 32px; height: 32px; border-radius: 8px; display: flex; align-items: center; justify-content: center; cursor: pointer; background: var(--bg-card); border: 1px solid var(--border-glass);">🎨</div>
+            <div class="group-emoji-dot" data-emoji="📚" style="font-size: 18px; width: 32px; height: 32px; border-radius: 8px; display: flex; align-items: center; justify-content: center; cursor: pointer; background: var(--bg-card); border: 1px solid var(--border-glass);">📚</div>
+            <div class="group-emoji-dot" data-emoji="🎮" style="font-size: 18px; width: 32px; height: 32px; border-radius: 8px; display: flex; align-items: center; justify-content: center; cursor: pointer; background: var(--bg-card); border: 1px solid var(--border-glass);">🎮</div>
+            <div class="group-emoji-dot" data-emoji="💡" style="font-size: 18px; width: 32px; height: 32px; border-radius: 8px; display: flex; align-items: center; justify-content: center; cursor: pointer; background: var(--bg-card); border: 1px solid var(--border-glass);">💡</div>
+            <div class="group-emoji-dot" data-emoji="💼" style="font-size: 18px; width: 32px; height: 32px; border-radius: 8px; display: flex; align-items: center; justify-content: center; cursor: pointer; background: var(--bg-card); border: 1px solid var(--border-glass);">💼</div>
+            <div class="group-emoji-dot" data-emoji="⚡" style="font-size: 18px; width: 32px; height: 32px; border-radius: 8px; display: flex; align-items: center; justify-content: center; cursor: pointer; background: var(--bg-card); border: 1px solid var(--border-glass);">⚡</div>
+          </div>
+
+          <div class="limit-section-title" style="margin-bottom: 6px;">GROUP COLOR ACCENT</div>
+          <div id="group-color-palette" class="color-palette-grid" style="display: flex; gap: 8px; justify-content: space-between; margin-bottom: 16px;">
+            <div class="group-color-dot active" data-color="#ef4444" style="background: #ef4444; width: 26px; height: 26px; border-radius: 50%; cursor: pointer;"></div>
+            <div class="group-color-dot" data-color="#f97316" style="background: #f97316; width: 26px; height: 26px; border-radius: 50%; cursor: pointer;"></div>
+            <div class="group-color-dot" data-color="#eab308" style="background: #eab308; width: 26px; height: 26px; border-radius: 50%; cursor: pointer;"></div>
+            <div class="group-color-dot" data-color="#10b981" style="background: #10b981; width: 26px; height: 26px; border-radius: 50%; cursor: pointer;"></div>
+            <div class="group-color-dot" data-color="#06b6d4" style="background: #06b6d4; width: 26px; height: 26px; border-radius: 50%; cursor: pointer;"></div>
+            <div class="group-color-dot" data-color="#3b82f6" style="background: #3b82f6; width: 26px; height: 26px; border-radius: 50%; cursor: pointer;"></div>
+            <div class="group-color-dot" data-color="#8b5cf6" style="background: #8b5cf6; width: 26px; height: 26px; border-radius: 50%; cursor: pointer;"></div>
+            <div class="group-color-dot" data-color="#ec4899" style="background: #ec4899; width: 26px; height: 26px; border-radius: 50%; cursor: pointer;"></div>
+          </div>
+        </div>
+        <div class="modal-footer" style="display: flex; justify-content: flex-end; gap: 8px;">
+          <button id="btn-cancel-create-group" class="oneui-pill-btn secondary">Cancel</button>
+          <button id="btn-confirm-create-group" class="oneui-pill-btn primary">Save Group</button>
+        </div>
       </div>
     </div>
 
@@ -374,75 +616,147 @@ def build_html(version_name):
           <div style="font-size: 10px; color: var(--text-muted); margin-bottom: 8px; font-weight: 700; letter-spacing: 0.5px;">PLAY SOUND FOR ACTIONS</div>
 
           <!-- Option 1: Switching Main Tabs -->
-          <div class="setting-row" style="margin-bottom: 10px;">
-            <div>
-              <div class="setting-label">Switching Main Tabs</div>
-              <div style="font-size: 9.5px; color: var(--text-muted);">tap_main.wav (tm)</div>
+          <div style="margin-bottom: 10px; background: rgba(255,255,255,0.03); border: 1px solid var(--border-glass); border-radius: 10px; padding: 8px 10px;">
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 6px;">
+              <span class="setting-label" style="font-weight: 700;">Switching Main Tabs</span>
+              <label class="switch-toggle">
+                <input type="checkbox" id="toggle-sfx-tm-tabs" checked>
+                <span class="slider-round"></span>
+              </label>
             </div>
-            <label class="switch-toggle">
-              <input type="checkbox" id="toggle-sfx-tm-tabs" checked>
-              <span class="slider-round"></span>
-            </label>
+            <div style="display: flex; align-items: center; justify-content: space-between;">
+              <span style="font-size: 9.5px; color: var(--text-muted);">Sound Effect:</span>
+              <select id="select-sfx-tm-tabs" class="sfx-sound-select" style="background: var(--card-bg); color: var(--text-main); border: 1px solid var(--border-glass); border-radius: 6px; padding: 3px 8px; font-size: 10px; outline: none;">
+                <option value="pop_button.mp3">pop_button.mp3 (Default)</option>
+                <option value="tap_main.wav">tap_main.wav</option>
+                <option value="tap_button.wav">tap_button.wav</option>
+                <option value="tap_alternate.wav">tap_alternate.wav</option>
+                <option value="pop_button_v2.wav">pop_button_v2.wav</option>
+                <option value="pop_click.wav">pop_click.wav</option>
+                <option value="pop_unknown_v1.wav">pop_unknown_v1.wav</option>
+              </select>
+            </div>
           </div>
 
           <!-- Option 2: Action Button Tap -->
-          <div class="setting-row" style="margin-bottom: 10px;">
-            <div>
-              <div class="setting-label">Action Button Tap</div>
-              <div style="font-size: 9.5px; color: var(--text-muted);">tap_alternate.wav (ta)</div>
+          <div style="margin-bottom: 10px; background: rgba(255,255,255,0.03); border: 1px solid var(--border-glass); border-radius: 10px; padding: 8px 10px;">
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 6px;">
+              <span class="setting-label" style="font-weight: 700;">Action Button Tap</span>
+              <label class="switch-toggle">
+                <input type="checkbox" id="toggle-sfx-ta" checked>
+                <span class="slider-round"></span>
+              </label>
             </div>
-            <label class="switch-toggle">
-              <input type="checkbox" id="toggle-sfx-ta" checked>
-              <span class="slider-round"></span>
-            </label>
+            <div style="display: flex; align-items: center; justify-content: space-between;">
+              <span style="font-size: 9.5px; color: var(--text-muted);">Sound Effect:</span>
+              <select id="select-sfx-ta" class="sfx-sound-select" style="background: var(--card-bg); color: var(--text-main); border: 1px solid var(--border-glass); border-radius: 6px; padding: 3px 8px; font-size: 10px; outline: none;">
+                <option value="pop_click.wav">pop_click.wav (Default)</option>
+                <option value="tap_alternate.wav">tap_alternate.wav</option>
+                <option value="tap_main.wav">tap_main.wav</option>
+                <option value="tap_button.wav">tap_button.wav</option>
+                <option value="pop_button.mp3">pop_button.mp3</option>
+                <option value="pop_button_v2.wav">pop_button_v2.wav</option>
+                <option value="pop_unknown_v1.wav">pop_unknown_v1.wav</option>
+              </select>
+            </div>
           </div>
 
           <!-- Option 3: Browser Tab Clicks -->
-          <div class="setting-row" style="margin-bottom: 10px;">
-            <div>
-              <div class="setting-label">Browser Tab Clicks</div>
-              <div style="font-size: 9.5px; color: var(--text-muted);">tap_button.wav (tb)</div>
+          <div style="margin-bottom: 10px; background: rgba(255,255,255,0.03); border: 1px solid var(--border-glass); border-radius: 10px; padding: 8px 10px;">
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 6px;">
+              <span class="setting-label" style="font-weight: 700;">Browser Tab Clicks</span>
+              <label class="switch-toggle">
+                <input type="checkbox" id="toggle-sfx-tb-clicks" checked>
+                <span class="slider-round"></span>
+              </label>
             </div>
-            <label class="switch-toggle">
-              <input type="checkbox" id="toggle-sfx-tb-clicks" checked>
-              <span class="slider-round"></span>
-            </label>
+            <div style="display: flex; align-items: center; justify-content: space-between;">
+              <span style="font-size: 9.5px; color: var(--text-muted);">Sound Effect:</span>
+              <select id="select-sfx-tb-clicks" class="sfx-sound-select" style="background: var(--card-bg); color: var(--text-main); border: 1px solid var(--border-glass); border-radius: 6px; padding: 3px 8px; font-size: 10px; outline: none;">
+                <option value="tap_button.wav">tap_button.wav (Default)</option>
+                <option value="tap_main.wav">tap_main.wav</option>
+                <option value="tap_alternate.wav">tap_alternate.wav</option>
+                <option value="pop_button.mp3">pop_button.mp3</option>
+                <option value="pop_button_v2.wav">pop_button_v2.wav</option>
+                <option value="pop_click.wav">pop_click.wav</option>
+                <option value="pop_unknown_v1.wav">pop_unknown_v1.wav</option>
+              </select>
+            </div>
           </div>
 
           <!-- Option 4: Header Row Controls -->
-          <div class="setting-row" style="margin-bottom: 10px;">
-            <div>
-              <div class="setting-label">Header Controls (Reload/Power)</div>
-              <div style="font-size: 9.5px; color: var(--text-muted);">tap_main.wav (tm)</div>
+          <div style="margin-bottom: 10px; background: rgba(255,255,255,0.03); border: 1px solid var(--border-glass); border-radius: 10px; padding: 8px 10px;">
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 6px;">
+              <span class="setting-label" style="font-weight: 700;">Header Controls (Reload/Power)</span>
+              <label class="switch-toggle">
+                <input type="checkbox" id="toggle-sfx-tm-header" checked>
+                <span class="slider-round"></span>
+              </label>
             </div>
-            <label class="switch-toggle">
-              <input type="checkbox" id="toggle-sfx-tm-header" checked>
-              <span class="slider-round"></span>
-            </label>
+            <div style="display: flex; align-items: center; justify-content: space-between;">
+              <span style="font-size: 9.5px; color: var(--text-muted);">Sound Effect:</span>
+              <select id="select-sfx-tm-header" class="sfx-sound-select" style="background: var(--card-bg); color: var(--text-main); border: 1px solid var(--border-glass); border-radius: 6px; padding: 3px 8px; font-size: 10px; outline: none;">
+                <option value="tap_main.wav">tap_main.wav (Default)</option>
+                <option value="tap_button.wav">tap_button.wav</option>
+                <option value="tap_alternate.wav">tap_alternate.wav</option>
+                <option value="pop_button.mp3">pop_button.mp3</option>
+                <option value="pop_button_v2.wav">pop_button_v2.wav</option>
+                <option value="pop_click.wav">pop_click.wav</option>
+                <option value="pop_unknown_v1.wav">pop_unknown_v1.wav</option>
+              </select>
+            </div>
           </div>
 
           <!-- Option 5: Close Browser Tab -->
-          <div class="setting-row" style="margin-bottom: 10px;">
-            <div>
-              <div class="setting-label">Close Browser Tab</div>
-              <div style="font-size: 9.5px; color: var(--text-muted);">tap_button.wav (tb)</div>
+          <div style="margin-bottom: 10px; background: rgba(255,255,255,0.03); border: 1px solid var(--border-glass); border-radius: 10px; padding: 8px 10px;">
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 6px;">
+              <span class="setting-label" style="font-weight: 700;">Close Browser Tab</span>
+              <label class="switch-toggle">
+                <input type="checkbox" id="toggle-sfx-tb-close" checked>
+                <span class="slider-round"></span>
+              </label>
             </div>
-            <label class="switch-toggle">
-              <input type="checkbox" id="toggle-sfx-tb-close" checked>
-              <span class="slider-round"></span>
-            </label>
+            <div style="display: flex; align-items: center; justify-content: space-between;">
+              <span style="font-size: 9.5px; color: var(--text-muted);">Sound Effect:</span>
+              <select id="select-sfx-tb-close" class="sfx-sound-select" style="background: var(--card-bg); color: var(--text-main); border: 1px solid var(--border-glass); border-radius: 6px; padding: 3px 8px; font-size: 10px; outline: none;">
+                <option value="tap_button.wav">tap_button.wav (Default)</option>
+                <option value="tap_main.wav">tap_main.wav</option>
+                <option value="tap_alternate.wav">tap_alternate.wav</option>
+                <option value="pop_button.mp3">pop_button.mp3</option>
+                <option value="pop_button_v2.wav">pop_button_v2.wav</option>
+                <option value="pop_click.wav">pop_click.wav</option>
+                <option value="pop_unknown_v1.wav">pop_unknown_v1.wav</option>
+              </select>
+            </div>
           </div>
 
           <!-- Option 6: Tab Options Actions -->
-          <div class="setting-row">
-            <div>
-              <div class="setting-label">Tab Options Menu Actions</div>
-              <div style="font-size: 9.5px; color: var(--text-muted);">tap_button.wav (tb)</div>
+          <div style="margin-bottom: 10px; background: rgba(255,255,255,0.03); border: 1px solid var(--border-glass); border-radius: 10px; padding: 8px 10px;">
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 6px;">
+              <span class="setting-label" style="font-weight: 700;">Tab Options Menu Actions</span>
+              <label class="switch-toggle">
+                <input type="checkbox" id="toggle-sfx-tb-modal" checked>
+                <span class="slider-round"></span>
+              </label>
             </div>
-            <label class="switch-toggle">
-              <input type="checkbox" id="toggle-sfx-tb-modal" checked>
-              <span class="slider-round"></span>
-            </label>
+            <div style="display: flex; align-items: center; justify-content: space-between;">
+              <span style="font-size: 9.5px; color: var(--text-muted);">Sound Effect:</span>
+              <select id="select-sfx-tb-modal" class="sfx-sound-select" style="background: var(--card-bg); color: var(--text-main); border: 1px solid var(--border-glass); border-radius: 6px; padding: 3px 8px; font-size: 10px; outline: none;">
+                <option value="tap_button.wav">tap_button.wav (Default)</option>
+                <option value="tap_main.wav">tap_main.wav</option>
+                <option value="tap_alternate.wav">tap_alternate.wav</option>
+                <option value="pop_button.mp3">pop_button.mp3</option>
+                <option value="pop_button_v2.wav">pop_button_v2.wav</option>
+                <option value="pop_click.wav">pop_click.wav</option>
+                <option value="pop_unknown_v1.wav">pop_unknown_v1.wav</option>
+              </select>
+            </div>
+          </div>
+
+          <!-- Save SFX Mapping Button -->
+          <div style="margin-top: 14px; border-top: 1px dashed var(--border-glass); padding-top: 10px; display: flex; justify-content: space-between; align-items: center;">
+            <div style="font-size: 9.5px; color: var(--text-muted);">Takes effect on next app launch</div>
+            <button id="btn-save-sfx-mapping" class="oneui-pill-btn primary" style="font-size: 11px; padding: 6px 14px; font-weight: 700;">💾 Save SFX Mapping</button>
           </div>
         </div>
       </details>
@@ -506,7 +820,7 @@ def build_html(version_name):
             <div style="display: flex; gap: 6px; flex-wrap: wrap; margin-bottom: 12px;">
               <button class="preset-theme-chip" data-start="#A2A9A9" data-end="#1B4264" style="background: linear-gradient(135deg, #A2A9A9, #1B4264); border: 1px solid #ffffff; color: #fff; padding: 4px 8px; border-radius: 6px; font-size: 10px; font-weight: 600; cursor: pointer;">Caspian Classic</button>
               <button class="preset-theme-chip" data-start="#10a37f" data-end="#047857" style="background: linear-gradient(135deg, #10a37f, #047857); border: 1px solid #ffffff; color: #fff; padding: 4px 8px; border-radius: 6px; font-size: 10px; font-weight: 600; cursor: pointer;">ChatGPT Emerald</button>
-              <button class="preset-theme-chip" data-start="#7c3aed" data-end="#1e1b4b" style="background: linear-gradient(135deg, #7c3aed, #1e1b4b); border: 1px solid #ffffff; color: #fff; padding: 4px 8px; border-radius: 6px; font-size: 10px; font-weight: 600; cursor: pointer;">Cosmic Gemini</button>
+              <button class="preset-theme-chip" data-start="#2563eb" data-end="#0f172a" style="background: linear-gradient(135deg, #2563eb, #0f172a); border: 1px solid #ffffff; color: #fff; padding: 4px 8px; border-radius: 6px; font-size: 10px; font-weight: 600; cursor: pointer;">Royal Sapphire</button>
               <button class="preset-theme-chip" data-start="#374151" data-end="#111827" style="background: linear-gradient(135deg, #374151, #111827); border: 1px solid #ffffff; color: #fff; padding: 4px 8px; border-radius: 6px; font-size: 10px; font-weight: 600; cursor: pointer;">Midnight Obsidian</button>
               <button class="preset-theme-chip" data-start="#ec4899" data-end="#3b82f6" style="background: linear-gradient(135deg, #ec4899, #3b82f6); border: 1px solid #ffffff; color: #fff; padding: 4px 8px; border-radius: 6px; font-size: 10px; font-weight: 600; cursor: pointer;">Cyberpunk Neon</button>
             </div>
@@ -645,6 +959,21 @@ def build_html(version_name):
             </div>
             <button id="debug-rec-toggle-btn" class="oneui-pill-btn secondary" style="font-size: 11px; padding: 4px 12px; border-color: #a855f7; color: #9333ea;">Start Rec</button>
           </div>
+
+          <!-- Developer Exclusive Themes Section -->
+          <div style="margin-top: 10px; border-top: 1px dashed rgba(168, 85, 247, 0.3); padding-top: 10px;">
+            <div style="font-size: 10px; font-weight: 800; color: #a855f7; letter-spacing: 0.5px; margin-bottom: 6px;">
+              👑 DEVELOPER EXCLUSIVE THEMES
+            </div>
+            <div style="display: flex; gap: 6px; flex-wrap: wrap;">
+              <button class="preset-theme-chip dev-exclusive-theme" data-start="#7c3aed" data-end="#1e1b4b" style="background: linear-gradient(135deg, #7c3aed, #1e1b4b); border: 1.5px solid #a855f7; color: #fff; padding: 6px 12px; border-radius: 8px; font-size: 10.5px; font-weight: 700; cursor: pointer; box-shadow: 0 0 12px rgba(168,85,247,0.4);">
+                ✨ Cosmic Gemini (Developer Exclusive)
+              </button>
+              <button class="preset-theme-chip dev-exclusive-theme" data-start="#fbbf24" data-end="#78350f" style="background: linear-gradient(135deg, #fbbf24, #78350f); border: 1.5px solid #fbbf24; color: #fff; padding: 6px 12px; border-radius: 8px; font-size: 10.5px; font-weight: 700; cursor: pointer; box-shadow: 0 0 12px rgba(251,191,36,0.4);">
+                👑 Ena Shine (Golden Premium)
+              </button>
+            </div>
+          </div>
         </div>
 
       </div>
@@ -655,10 +984,10 @@ def build_html(version_name):
 
   <!-- Tab Options Menu Modal (Global Overlay - Out of Bottom Sheet) -->
   <div id="tab-options-modal" class="modal-overlay" style="display: none; z-index: 20000000;">
-    <div class="modal-box">
-      <div class="modal-title">Tab Options Menu</div>
+    <div class="modal-card" style="width: 100%; max-width: 350px; background: var(--card-bg); border: 1px solid var(--border-glass); border-radius: 20px; padding: 20px; box-shadow: 0 16px 40px rgba(0,0,0,0.5);">
+      <div class="modal-title" style="font-size: 14px; font-weight: 800; color: var(--text-main); margin-bottom: 14px;">Tab Options Menu</div>
       
-      <div style="margin-top: 14px;">
+      <div style="margin-bottom: 14px;">
         <label style="font-size: 11px; font-weight: 700; color: var(--text-muted); display: block; margin-bottom: 6px;">Nickname</label>
         <div style="display: flex; gap: 8px; align-items: center;">
           <input type="text" id="tab-nickname-input" class="m3-text-input" placeholder="Give this tab a nice name..." style="flex: 1; min-width: 0; box-sizing: border-box; background: var(--input-bg); border: 1px solid var(--border-glass); border-radius: 12px; padding: 10px; color: var(--text-main); font-size: 12px; font-weight: 600;">
@@ -666,7 +995,7 @@ def build_html(version_name):
         </div>
       </div>
       
-      <div style="margin-top: 14px;">
+      <div style="margin-bottom: 14px;">
         <label style="font-size: 11px; font-weight: 700; color: var(--text-muted); display: block; margin-bottom: 6px;">Full Link</label>
         <div style="display: flex; gap: 8px; align-items: center;">
           <input type="text" id="tab-url-display" class="m3-text-input" style="flex: 1; min-width: 0; background: var(--input-bg); border: 1px solid var(--border-glass); border-radius: 12px; padding: 10px; color: var(--text-main); font-size: 11px; font-weight: 600;">
@@ -676,14 +1005,92 @@ def build_html(version_name):
         </div>
       </div>
       
-      <div style="margin-top: 20px; display: flex; gap: 10px; justify-content: flex-end;">
-         <button id="modal-cancel-btn" class="oneui-pill-btn secondary" style="padding: 8px 16px; border-radius: 12px;">Cancel</button>
-         <button id="modal-save-btn" class="oneui-pill-btn primary" style="padding: 8px 16px; border-radius: 12px;">Save</button>
+      <div id="modal-group-actions-row" style="margin-bottom: 14px; display: none;">
+        <button id="modal-leave-group-btn" class="oneui-pill-btn secondary" style="width: 100%; justify-content: center; font-size: 11px; padding: 9px 12px; color: var(--text-main); border: 1px solid var(--border-glass); font-weight: 700; border-radius: 12px; display: flex; align-items: center; gap: 6px;">
+          📤 Move Out of Group (Ungroup Tab)
+        </button>
+      </div>
+
+      <div style="margin-top: 20px; display: flex; gap: 10px; align-items: center; justify-content: space-between;">
+         <button id="modal-favorite-btn" class="oneui-pill-btn secondary" style="padding: 8px 14px; border-radius: 12px; font-weight: 700; font-size: 11px; display: flex; align-items: center; gap: 4px; border: 1px solid var(--border-glass);" title="Favorite Tab (Protects from Close All)">
+           <span id="fav-star-icon">⭐</span>
+           <span id="fav-star-text">Favorite</span>
+         </button>
+
+         <div style="display: flex; gap: 10px;">
+           <button id="modal-cancel-btn" class="oneui-pill-btn secondary" style="padding: 8px 16px; border-radius: 12px;">Cancel</button>
+           <button id="modal-save-btn" class="oneui-pill-btn primary" style="padding: 8px 16px; border-radius: 12px;">Save</button>
+         </div>
       </div>
     </div>
   </div>
 
-  <!-- Tab Undo Toast Container -->
+  <!-- Group Options Menu Modal (Separate Top-Level Overlay) -->
+  <div id="group-options-modal" class="modal-overlay" style="display: none; z-index: 20000005;">
+    <div class="modal-card" style="width: 100%; max-width: 350px; background: var(--card-bg); border: 1px solid var(--border-glass); border-radius: 20px; padding: 20px; box-shadow: 0 16px 40px rgba(0,0,0,0.5);">
+      <div style="display: flex; align-items: center; justify-content: space-between; border-bottom: 1px solid var(--border-glass); padding-bottom: 10px; margin-bottom: 14px;">
+        <div style="display: flex; align-items: center; gap: 8px;">
+          <span id="group-modal-color-dot" style="width: 14px; height: 14px; border-radius: 50%; background: #3b82f6; display: inline-block;"></span>
+          <span id="group-modal-header-title" class="modal-title" style="font-size: 14px; font-weight: 800; color: var(--text-main);">Group Options</span>
+        </div>
+        <button id="group-modal-close-x" class="modal-close-btn" style="background: none; border: none; font-size: 20px; color: var(--text-sub); cursor: pointer;">&times;</button>
+      </div>
+
+      <div style="margin-bottom: 14px;">
+        <label style="font-size: 11px; font-weight: 700; color: var(--text-muted); display: block; margin-bottom: 6px;">GROUP TITLE</label>
+        <input type="text" id="group-modal-title-input" class="m3-text-input" placeholder="Group Name..." style="width: 100%; box-sizing: border-box; background: var(--input-bg); border: 1px solid var(--border-glass); border-radius: 12px; padding: 10px 12px; color: var(--text-main); font-size: 12px; font-weight: 600;">
+      </div>
+
+      <div style="margin-bottom: 14px;">
+        <label style="font-size: 11px; font-weight: 700; color: var(--text-muted); display: block; margin-bottom: 6px;">GROUP EMOJI ICON</label>
+        <div id="group-modal-emoji-palette" style="display: flex; gap: 8px; flex-wrap: wrap;">
+          <div class="modal-group-emoji-dot active" data-emoji="📁" style="font-size: 18px; width: 30px; height: 30px; border-radius: 8px; display: flex; align-items: center; justify-content: center; cursor: pointer; background: var(--input-bg); border: 1px solid var(--border-glass);">📁</div>
+          <div class="modal-group-emoji-dot" data-emoji="🚀" style="font-size: 18px; width: 30px; height: 30px; border-radius: 8px; display: flex; align-items: center; justify-content: center; cursor: pointer; background: var(--input-bg); border: 1px solid var(--border-glass);">🚀</div>
+          <div class="modal-group-emoji-dot" data-emoji="🔥" style="font-size: 18px; width: 30px; height: 30px; border-radius: 8px; display: flex; align-items: center; justify-content: center; cursor: pointer; background: var(--input-bg); border: 1px solid var(--border-glass);">🔥</div>
+          <div class="modal-group-emoji-dot" data-emoji="⭐" style="font-size: 18px; width: 30px; height: 30px; border-radius: 8px; display: flex; align-items: center; justify-content: center; cursor: pointer; background: var(--input-bg); border: 1px solid var(--border-glass);">⭐</div>
+          <div class="modal-group-emoji-dot" data-emoji="🎨" style="font-size: 18px; width: 30px; height: 30px; border-radius: 8px; display: flex; align-items: center; justify-content: center; cursor: pointer; background: var(--input-bg); border: 1px solid var(--border-glass);">🎨</div>
+          <div class="modal-group-emoji-dot" data-emoji="📚" style="font-size: 18px; width: 30px; height: 30px; border-radius: 8px; display: flex; align-items: center; justify-content: center; cursor: pointer; background: var(--input-bg); border: 1px solid var(--border-glass);">📚</div>
+          <div class="modal-group-emoji-dot" data-emoji="🎮" style="font-size: 18px; width: 30px; height: 30px; border-radius: 8px; display: flex; align-items: center; justify-content: center; cursor: pointer; background: var(--input-bg); border: 1px solid var(--border-glass);">🎮</div>
+          <div class="modal-group-emoji-dot" data-emoji="💡" style="font-size: 18px; width: 30px; height: 30px; border-radius: 8px; display: flex; align-items: center; justify-content: center; cursor: pointer; background: var(--input-bg); border: 1px solid var(--border-glass);">💡</div>
+          <div class="modal-group-emoji-dot" data-emoji="💼" style="font-size: 18px; width: 30px; height: 30px; border-radius: 8px; display: flex; align-items: center; justify-content: center; cursor: pointer; background: var(--input-bg); border: 1px solid var(--border-glass);">💼</div>
+          <div class="modal-group-emoji-dot" data-emoji="⚡" style="font-size: 18px; width: 30px; height: 30px; border-radius: 8px; display: flex; align-items: center; justify-content: center; cursor: pointer; background: var(--input-bg); border: 1px solid var(--border-glass);">⚡</div>
+        </div>
+      </div>
+
+      <div style="margin-bottom: 16px;">
+        <label style="font-size: 11px; font-weight: 700; color: var(--text-muted); display: block; margin-bottom: 8px;">GROUP COLOR ACCENT</label>
+        <div id="group-modal-color-palette" class="color-palette-grid" style="display: flex; gap: 8px; justify-content: space-between;">
+          <div class="modal-group-color-dot active" data-color="#ef4444" style="background: #ef4444; width: 26px; height: 26px; border-radius: 50%; cursor: pointer;"></div>
+          <div class="modal-group-color-dot" data-color="#f97316" style="background: #f97316; width: 26px; height: 26px; border-radius: 50%; cursor: pointer;"></div>
+          <div class="modal-group-color-dot" data-color="#eab308" style="background: #eab308; width: 26px; height: 26px; border-radius: 50%; cursor: pointer;"></div>
+          <div class="modal-group-color-dot" data-color="#10b981" style="background: #10b981; width: 26px; height: 26px; border-radius: 50%; cursor: pointer;"></div>
+          <div class="modal-group-color-dot" data-color="#06b6d4" style="background: #06b6d4; width: 26px; height: 26px; border-radius: 50%; cursor: pointer;"></div>
+          <div class="modal-group-color-dot" data-color="#3b82f6" style="background: #3b82f6; width: 26px; height: 26px; border-radius: 50%; cursor: pointer;"></div>
+          <div class="modal-group-color-dot" data-color="#8b5cf6" style="background: #8b5cf6; width: 26px; height: 26px; border-radius: 50%; cursor: pointer;"></div>
+          <div class="modal-group-color-dot" data-color="#ec4899" style="background: #ec4899; width: 26px; height: 26px; border-radius: 50%; cursor: pointer;"></div>
+        </div>
+      </div>
+
+      <div style="margin-bottom: 18px; display: flex; flex-direction: column; gap: 8px;">
+        <button id="group-modal-ungroup-btn" class="oneui-pill-btn secondary" style="width: 100%; justify-content: center; font-size: 11px; padding: 10px;">📂 Leave Group (Ungroup Tabs)</button>
+        <button id="group-modal-delete-btn" class="oneui-pill-btn danger" style="width: 100%; justify-content: center; font-size: 11px; padding: 10px; color: #ef4444; border-color: rgba(239,68,68,0.3);">🗑️ Delete Group & Close All Tabs</button>
+      </div>
+
+      <div style="display: flex; gap: 10px; align-items: center; justify-content: space-between;">
+         <button id="group-modal-favorite-btn" class="oneui-pill-btn secondary" style="padding: 8px 14px; border-radius: 12px; font-weight: 700; font-size: 11px; display: flex; align-items: center; gap: 4px; border: 1px solid var(--border-glass);" title="Favorite Group (Protects from Close All)">
+           <span id="group-fav-star-icon">⭐</span>
+           <span id="group-fav-star-text">Favorite</span>
+         </button>
+
+         <div style="display: flex; gap: 10px;">
+           <button id="group-modal-cancel-btn" class="oneui-pill-btn secondary" style="padding: 8px 16px; border-radius: 12px;">Cancel</button>
+           <button id="group-modal-save-btn" class="oneui-pill-btn primary" style="padding: 8px 16px; border-radius: 12px;">Save</button>
+         </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Tab Undo Toast Container (Separate Top-Level Toast) -->
   <div id="undo-toast-container" class="undo-toast" style="display: none;">
     <div class="undo-toast-content">
       <span>Tab closed</span>

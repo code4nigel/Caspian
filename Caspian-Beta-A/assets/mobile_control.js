@@ -2,7 +2,7 @@
 // CASPIAN ANDROID - MOBILE CONTROL SHEET JS
 // ======================================================
 
-(function() {
+(function () {
   let sfxVolume = 0.5;
   let masterSFXMuted = false;
 
@@ -13,7 +13,7 @@
       if (window.CaspianBridge && typeof window.CaspianBridge.saveSetting === 'function') {
         window.CaspianBridge.saveSetting('master_sfx_muted', masterSFXMuted ? 'true' : 'false');
       }
-    } catch(e) {}
+    } catch (e) { }
 
     const unmutedIcon = document.getElementById('mute-icon-unmuted');
     const mutedIcon = document.getElementById('mute-icon-muted');
@@ -31,30 +31,60 @@
       masterSFXMuted = true;
       document.documentElement.classList.add('sfx-muted');
     }
-  } catch(e) {}
+  } catch (e) { }
 
-  const sfxAssets = {
-    tm: null,
-    tb: null,
-    ta: null
+  const ALL_SFX_FILES = [
+    'tap_main.wav',
+    'tap_button.wav',
+    'tap_alternate.wav',
+    'pop_button.mp3',
+    'pop_button_v2.wav',
+    'pop_click.wav',
+    'pop_unknown_v1.wav'
+  ];
+
+  let sfxConfig = {
+    tm_tabs: localStorage.getItem('sfx_file_tm_tabs') || 'pop_button.mp3',
+    ta: localStorage.getItem('sfx_file_ta') || 'pop_click.wav',
+    tb_clicks: localStorage.getItem('sfx_file_tb_clicks') || 'tap_button.wav',
+    tm_header: localStorage.getItem('sfx_file_tm_header') || 'tap_main.wav',
+    tb_close: localStorage.getItem('sfx_file_tb_close') || 'tap_button.wav',
+    tb_modal: localStorage.getItem('sfx_file_tb_modal') || 'tap_button.wav'
   };
 
-  setTimeout(() => {
+  const sfxAudioPool = {};
+
+  function preloadAllSFX() {
     try {
-      sfxAssets.tm = new Audio('sfx/tap_main.wav');
-      sfxAssets.tb = new Audio('sfx/tap_button.wav');
-      sfxAssets.ta = new Audio('sfx/tap_alternate.wav');
-      sfxAssets.tm.load();
-      sfxAssets.tb.load();
-      sfxAssets.ta.load();
-    } catch (e) {}
-  }, 1000);
+      ALL_SFX_FILES.forEach(fileName => {
+        if (!sfxAudioPool[fileName]) {
+          const a = new Audio(`sfx/${fileName}`);
+          a.load();
+          sfxAudioPool[fileName] = a;
+        }
+      });
+    } catch (e) { }
+  }
+
+  // Preload all sounds on startup
+  setTimeout(preloadAllSFX, 100);
+
+  function getSFXFileForType(type) {
+    if (sfxConfig[type]) return sfxConfig[type];
+    const saved = localStorage.getItem(`sfx_file_${type}`);
+    if (saved) return saved;
+    if (type === 'tm_tabs') return 'pop_button.mp3';
+    if (type === 'tm_header') return 'tap_main.wav';
+    if (type === 'ta') return 'pop_click.wav';
+    return 'tap_button.wav';
+  }
 
   function playSFX(type) {
     try {
       if (masterSFXMuted) return;
       let enabled = true;
       if (type === 'tm_tabs') enabled = localStorage.getItem('sfx_enabled_tm_tabs') !== 'false';
+      else if (type === 'ta') enabled = localStorage.getItem('sfx_enabled_ta') !== 'false';
       else if (type === 'tb_clicks') enabled = localStorage.getItem('sfx_enabled_tb_clicks') !== 'false';
       else if (type === 'tm_header') enabled = localStorage.getItem('sfx_enabled_tm_header') !== 'false';
       else if (type === 'tb_close') enabled = localStorage.getItem('sfx_enabled_tb_close') !== 'false';
@@ -62,17 +92,35 @@
 
       if (!enabled) return;
 
-      let audio = null;
-      if (type === 'tm_tabs' || type === 'tm_header') audio = sfxAssets.tm;
-      else if (type === 'tb_clicks' || type === 'tb_close' || type === 'tb_modal') audio = sfxAssets.tb;
+      const fileName = getSFXFileForType(type);
+      let audio = sfxAudioPool[fileName];
+      if (!audio) {
+        audio = new Audio(`sfx/${fileName}`);
+        audio.load();
+        sfxAudioPool[fileName] = audio;
+      }
 
-      if (!audio) return;
       audio.currentTime = 0;
-      // Exponential curve for soft/subtle volume scaling (e.g. 5% = 0.05^2.5 = 0.0005)
       const effectiveVol = Math.pow(sfxVolume, 2.5);
       audio.volume = effectiveVol;
-      audio.play().catch(() => {});
-    } catch (e) {}
+      audio.play().catch(() => { });
+    } catch (e) { }
+  }
+
+  function previewSFXFile(fileName) {
+    try {
+      if (masterSFXMuted) return;
+      let audio = sfxAudioPool[fileName];
+      if (!audio) {
+        audio = new Audio(`sfx/${fileName}`);
+        audio.load();
+        sfxAudioPool[fileName] = audio;
+      }
+      audio.currentTime = 0;
+      const effectiveVol = Math.pow(sfxVolume, 2.5);
+      audio.volume = effectiveVol;
+      audio.play().catch(() => { });
+    } catch(e) {}
   }
 
   const sheetBackdrop = document.getElementById('sheet-backdrop');
@@ -127,7 +175,7 @@
         const brandTags = document.querySelectorAll('.sheet-brand-tag');
         brandTags.forEach(el => el.textContent = 'V' + v);
       }
-    } catch(e) {}
+    } catch (e) { }
   }
 
   function updateDebugRecUI() {
@@ -135,7 +183,7 @@
       if (window.CaspianBridge && typeof window.CaspianBridge.isDebugRecording === 'function') {
         isRecordingLogs = window.CaspianBridge.isDebugRecording();
       }
-    } catch(e) {}
+    } catch (e) { }
 
     const recDot = document.getElementById('debug-rec-dot');
     const recBtn = document.getElementById('debug-rec-toggle-btn');
@@ -201,7 +249,7 @@
       const prefGroups = window.CaspianBridge.getPref('caspian_tab_groups', null);
       if (prefGroups) tabGroups = JSON.parse(prefGroups);
     }
-  } catch(e) { tabGroups = []; }
+  } catch (e) { tabGroups = []; }
 
   let isMultiSelectMode = false;
   let selectedTabIds = new Set();
@@ -218,7 +266,7 @@
       if (window.CaspianBridge && typeof window.CaspianBridge.savePref === 'function') {
         window.CaspianBridge.savePref('caspian_tab_groups', jsonStr);
       }
-    } catch(e) {}
+    } catch (e) { }
   }
 
   function renderOpenTabs() {
@@ -236,7 +284,7 @@
           tabs = JSON.parse(jsonStr);
         }
       }
-    } catch(e) {}
+    } catch (e) { }
 
     if (countBadge) {
       countBadge.textContent = tabs.length === 1 ? '1 Tab' : `${tabs.length} Tabs`;
@@ -576,11 +624,11 @@
 
         if (wasDrag) {
           // Find drop target card from drop-target class or cached targets 2D spatial check
-          const activeDropTarget = container.querySelector('.chrome-tab-card.drop-target, #group-view-header.drop-target') || 
+          const activeDropTarget = container.querySelector('.chrome-tab-card.drop-target, #group-view-header.drop-target') ||
             (() => {
-              const item = cachedTargets.find(t => 
-                t.el !== card && 
-                lastMoveX >= t.rect.left && lastMoveX <= t.rect.right && 
+              const item = cachedTargets.find(t =>
+                t.el !== card &&
+                lastMoveX >= t.rect.left && lastMoveX <= t.rect.right &&
                 lastMoveY >= t.rect.top && lastMoveY <= t.rect.bottom
               );
               return item ? item.el : null;
@@ -749,13 +797,21 @@
       if (savedTheme) {
         setTheme(savedTheme);
       }
-    } catch(e) {}
+      const savedHeight = localStorage.getItem('saved_sheet_height') || '88vh';
+      if (bottomSheet) {
+        bottomSheet.style.height = savedHeight;
+      }
+    } catch (e) { }
 
     try {
       if (window.CaspianBridge && typeof window.CaspianBridge.getSettings === 'function') {
         const jsonStr = window.CaspianBridge.getSettings();
         if (jsonStr) {
           const prefs = JSON.parse(jsonStr);
+          if (prefs.saved_sheet_height && bottomSheet) {
+            bottomSheet.style.height = prefs.saved_sheet_height;
+            localStorage.setItem('saved_sheet_height', prefs.saved_sheet_height);
+          }
           if (prefs.limit !== undefined) {
             limitVal = parseInt(prefs.limit);
             document.querySelectorAll('.limit-pill').forEach(p => {
@@ -791,7 +847,7 @@
                 }
               }
             }
-          } catch(e) {}
+          } catch (e) { }
           const startCol = prefs.theme_start_color || localStorage.getItem('theme_start_color') || '#A2A9A9';
           const endCol = prefs.theme_end_color || localStorage.getItem('theme_end_color') || '#1B4264';
           const bgCol = prefs.theme_bg_color || localStorage.getItem('theme_bg_color') || '#050811';
@@ -829,7 +885,7 @@
               });
             }
           }
-          
+
           if (prefs.themeMode !== undefined) {
             setTheme(prefs.themeMode);
           } else {
@@ -837,73 +893,254 @@
           }
           updateIconPreview(startCol, endCol, selectedShapeVal);
 
-            // Restore visual preferences
-            var openDur = prefs.sheetOpenDuration !== undefined ? parseInt(prefs.sheetOpenDuration) : 150;
-            var txtOpenDur = document.getElementById('txt-open-dur');
-            if (txtOpenDur) txtOpenDur.textContent = `${openDur} ms`;
+          // Restore visual preferences
+          var openDur = prefs.sheetOpenDuration !== undefined ? parseInt(prefs.sheetOpenDuration) : 150;
+          var txtOpenDur = document.getElementById('txt-open-dur');
+          if (txtOpenDur) txtOpenDur.textContent = `${openDur} ms`;
 
-            var closeDur = prefs.sheetCloseDuration !== undefined ? parseInt(prefs.sheetCloseDuration) : 150;
-            var txtCloseDur = document.getElementById('txt-close-dur');
-            if (txtCloseDur) txtCloseDur.textContent = `${closeDur} ms`;
+          var closeDur = prefs.sheetCloseDuration !== undefined ? parseInt(prefs.sheetCloseDuration) : 150;
+          var txtCloseDur = document.getElementById('txt-close-dur');
+          if (txtCloseDur) txtCloseDur.textContent = `${closeDur} ms`;
 
-            var tapDur = prefs.theme_button_tap_duration !== undefined ? parseInt(prefs.theme_button_tap_duration) : 100;
-            var txtTapDur = document.getElementById('txt-tap-dur');
-            if (txtTapDur) txtTapDur.textContent = `${tapDur} ms`;
+          var tapDur = prefs.theme_button_tap_duration !== undefined ? parseInt(prefs.theme_button_tap_duration) : 100;
+          var txtTapDur = document.getElementById('txt-tap-dur');
+          if (txtTapDur) txtTapDur.textContent = `${tapDur} ms`;
 
-            var animStyle = prefs.sheetAnimationStyle !== undefined ? prefs.sheetAnimationStyle : 'genie';
-            var selectAnimStyle = document.getElementById('select-anim-style');
-            if (selectAnimStyle) {
-              selectAnimStyle.querySelectorAll('.caspian-select-option').forEach(o => {
-                var isActive = o.dataset.val === animStyle;
-                o.classList.toggle('active', isActive);
-                if (isActive) {
-                  var label = document.getElementById('selected-anim-style-text');
-                  if (label) label.textContent = o.textContent;
-                }
-              });
-            }
-
-            // Restore Master Mute
-            const savedMute = prefs.master_sfx_muted !== undefined ? (prefs.master_sfx_muted === true || prefs.master_sfx_muted === 'true') : (localStorage.getItem('master_sfx_muted') === 'true');
-            setMasterMute(savedMute);
-
-            // Restore SFX settings & Volume Slider
-            let savedVol = 0.5;
-            if (prefs.sfx_volume !== undefined && !isNaN(parseFloat(prefs.sfx_volume))) {
-              savedVol = parseFloat(prefs.sfx_volume);
-            } else if (localStorage.getItem('sfx_volume') !== null && !isNaN(parseFloat(localStorage.getItem('sfx_volume')))) {
-              savedVol = parseFloat(localStorage.getItem('sfx_volume'));
-            }
-            sfxVolume = savedVol;
-            const volSlider = document.getElementById('sfx-volume-slider');
-            const volPercent = document.getElementById('sfx-volume-percent');
-            if (volSlider && volPercent) {
-              volSlider.value = sfxVolume;
-              volPercent.textContent = Math.round(sfxVolume * 100) + '%';
-            }
-
-            const sfxKeys = [
-              { id: 'toggle-sfx-tm-tabs', key: 'sfx_enabled_tm_tabs' },
-              { id: 'toggle-sfx-ta', key: 'sfx_enabled_ta' },
-              { id: 'toggle-sfx-tb-clicks', key: 'sfx_enabled_tb_clicks' },
-              { id: 'toggle-sfx-tm-header', key: 'sfx_enabled_tm_header' },
-              { id: 'toggle-sfx-tb-close', key: 'sfx_enabled_tb_close' },
-              { id: 'toggle-sfx-tb-modal', key: 'sfx_enabled_tb_modal' }
-            ];
-
-            sfxKeys.forEach(item => {
-              const el = document.getElementById(item.id);
-              if (el) {
-                const isChecked = prefs[item.key] !== 'false';
-                el.checked = isChecked;
-                localStorage.setItem(item.key, isChecked ? 'true' : 'false');
+          var animStyle = prefs.sheetAnimationStyle !== undefined ? prefs.sheetAnimationStyle : 'genie';
+          var selectAnimStyle = document.getElementById('select-anim-style');
+          if (selectAnimStyle) {
+            selectAnimStyle.querySelectorAll('.caspian-select-option').forEach(o => {
+              var isActive = o.dataset.val === animStyle;
+              o.classList.toggle('active', isActive);
+              if (isActive) {
+                var label = document.getElementById('selected-anim-style-text');
+                if (label) label.textContent = o.textContent;
               }
             });
           }
+
+          // Restore Master Mute
+          const savedMute = prefs.master_sfx_muted !== undefined ? (prefs.master_sfx_muted === true || prefs.master_sfx_muted === 'true') : (localStorage.getItem('master_sfx_muted') === 'true');
+          setMasterMute(savedMute);
+
+          // Restore SFX settings & Volume Slider
+          let savedVol = 0.5;
+          if (prefs.sfx_volume !== undefined && !isNaN(parseFloat(prefs.sfx_volume))) {
+            savedVol = parseFloat(prefs.sfx_volume);
+          } else if (localStorage.getItem('sfx_volume') !== null && !isNaN(parseFloat(localStorage.getItem('sfx_volume')))) {
+            savedVol = parseFloat(localStorage.getItem('sfx_volume'));
+          }
+          sfxVolume = savedVol;
+          const volSlider = document.getElementById('sfx-volume-slider');
+          const volPercent = document.getElementById('sfx-volume-percent');
+          if (volSlider && volPercent) {
+            volSlider.value = sfxVolume;
+            volPercent.textContent = Math.round(sfxVolume * 100) + '%';
+          }
+
+          const sfxKeys = [
+            { id: 'toggle-sfx-tm-tabs', key: 'sfx_enabled_tm_tabs' },
+            { id: 'toggle-sfx-ta', key: 'sfx_enabled_ta' },
+            { id: 'toggle-sfx-tb-clicks', key: 'sfx_enabled_tb_clicks' },
+            { id: 'toggle-sfx-tm-header', key: 'sfx_enabled_tm_header' },
+            { id: 'toggle-sfx-tb-close', key: 'sfx_enabled_tb_close' },
+            { id: 'toggle-sfx-tb-modal', key: 'sfx_enabled_tb_modal' }
+          ];
+
+          sfxKeys.forEach(item => {
+            const el = document.getElementById(item.id);
+            if (el) {
+              const isChecked = prefs[item.key] !== 'false';
+              el.checked = isChecked;
+              localStorage.setItem(item.key, isChecked ? 'true' : 'false');
+            }
+          });
+
+          // Restore SFX dropdown choices from Android Preferences and localStorage
+          const sfxDropdownKeys = ['tm_tabs', 'ta', 'tb_clicks', 'tm_header', 'tb_close', 'tb_modal'];
+          sfxDropdownKeys.forEach(k => {
+            const sel = document.getElementById(`select-sfx-${k.replace('_', '-')}`);
+            const savedVal = (prefs && prefs[`sfx_file_${k}`]) || localStorage.getItem(`sfx_file_${k}`) || sfxConfig[k];
+            if (savedVal) {
+              sfxConfig[k] = savedVal;
+              localStorage.setItem(`sfx_file_${k}`, savedVal);
+              if (sel) {
+                sel.value = savedVal;
+              }
+            }
+          });
+
+          // Restore PDF Export Mode
+          const pdfModeSelect = document.getElementById('pdf-export-mode-select');
+          if (pdfModeSelect) {
+            const savedMode = (prefs && prefs.pdfExportMode) || localStorage.getItem('pdfExportMode') || 'html';
+            pdfModeSelect.value = savedMode;
+            if (window.CaspianBridge && typeof window.CaspianBridge.setPdfExportMode === 'function') {
+              window.CaspianBridge.setPdfExportMode(savedMode);
+            }
+          }
+
+          // Restore Custom Dropdown Export Settings from preferences
+          const exportKeys = {
+            'export_chatgpt_normal': 'select-export-chatgpt-normal',
+            'export_chatgpt_temp': 'select-export-chatgpt-temp',
+            'export_gemini_normal': 'select-export-gemini-normal',
+            'export_gemini_temp': 'select-export-gemini-temp',
+            'active_refresh_rate': 'select-refresh-rate',
+            'sheetAnimationStyle': 'select-anim-style'
+          };
+
+          for (const [prefKey, elementId] of Object.entries(exportKeys)) {
+            const val = (prefs && prefs[prefKey]) || localStorage.getItem(prefKey);
+            if (val) {
+              const selectEl = document.getElementById(elementId);
+              if (selectEl) {
+                selectEl.querySelectorAll('.caspian-select-option').forEach(o => {
+                  const isActive = o.dataset.val === val;
+                  o.classList.toggle('active', isActive);
+                  if (isActive) {
+                    const st = selectEl.querySelector('.caspian-select-trigger span');
+                    if (st) st.textContent = o.textContent;
+                  }
+                });
+              }
+            }
+          }
+
+          // Restore STT Engine Settings & Deepgram Usage Tracker
+          window.updateDeepgramUsageBadge = function (totalSeconds) {
+            const badge = document.getElementById('deepgram-usage-badge');
+            if (badge) {
+              const sec = parseInt(totalSeconds, 10) || 0;
+              const cost = (sec * 0.000073).toFixed(3);
+              badge.textContent = `⏱️ ${sec}s Used (~$${cost} / $200.00 Credit)`;
+            }
+          };
+
+          const initialUsedSec = (prefs && prefs.deepgram_used_seconds) || localStorage.getItem('deepgram_used_seconds') || 0;
+          window.updateDeepgramUsageBadge(initialUsedSec);
+
+          // Restore STT Engine Settings using Caspian Pill Grid Buttons (.cc-stt-pill)
+          const sttPills = document.querySelectorAll('.cc-stt-pill');
+          if (sttPills.length > 0) {
+            const updateSttKeyVisibility = (val) => {
+              const dg = document.getElementById('stt-key-container-deepgram');
+              const hf = document.getElementById('stt-key-container-huggingface');
+              if (dg) dg.style.display = val === 'deepgram' ? 'block' : 'none';
+              if (hf) hf.style.display = val === 'huggingface' ? 'block' : 'none';
+            };
+
+            const savedVal = (prefs && prefs.stt_engine_mode) || localStorage.getItem('stt_engine_mode') || 'deepgram';
+            updateSttKeyVisibility(savedVal);
+
+            sttPills.forEach(pill => {
+              const isActive = pill.dataset.engine === savedVal;
+              pill.classList.toggle('active', isActive);
+
+              if (!pill.dataset.bound) {
+                pill.dataset.bound = 'true';
+                pill.addEventListener('click', (e) => {
+                  e.stopPropagation();
+                  if (typeof playSFX === 'function') playSFX('tb_clicks');
+                  sttPills.forEach(p => p.classList.remove('active'));
+                  pill.classList.add('active');
+
+                  const newVal = pill.dataset.engine;
+                  localStorage.setItem('stt_engine_mode', newVal);
+                  if (window.CaspianBridge && typeof window.CaspianBridge.saveSetting === 'function') {
+                    window.CaspianBridge.saveSetting('stt_engine_mode', newVal);
+                  }
+                  updateSttKeyVisibility(newVal);
+
+                  if (window.CaspianBridge && typeof window.CaspianBridge.showToast === 'function') {
+                    window.CaspianBridge.showToast(`🎙️ STT Engine set to ${pill.textContent}`);
+                  }
+                });
+              }
+            });
+          }
+
+          const bindSttKeyInput = (id, keyName) => {
+            const input = document.getElementById(id);
+            if (input) {
+              const savedVal = (prefs && prefs[keyName]) || localStorage.getItem(keyName) || '';
+              input.value = savedVal;
+              input.onchange = () => {
+                const val = input.value.trim();
+                localStorage.setItem(keyName, val);
+                if (window.CaspianBridge && typeof window.CaspianBridge.saveSetting === 'function') {
+                  window.CaspianBridge.saveSetting(keyName, val);
+                }
+                if (window.CaspianBridge && typeof window.CaspianBridge.showToast === 'function') {
+                  window.CaspianBridge.showToast(`Saved ${keyName}`);
+                }
+              };
+            }
+          };
+          bindSttKeyInput('input-deepgram-key', 'deepgram_api_key');
+          bindSttKeyInput('input-huggingface-key', 'huggingface_api_key');
+
+          const visualsDetails = document.getElementById('settings-card-visuals');
+          if (visualsDetails) {
+            visualsDetails.open = localStorage.getItem('settings_open_visuals') === 'true';
+            visualsDetails.addEventListener('toggle', () => {
+              localStorage.setItem('settings_open_visuals', visualsDetails.open ? 'true' : 'false');
+            });
+          }
+
+          const audioDetails = document.getElementById('settings-card-audio');
+          if (audioDetails) {
+            audioDetails.open = localStorage.getItem('settings_open_audio') === 'true';
+            audioDetails.addEventListener('toggle', () => {
+              localStorage.setItem('settings_open_audio', audioDetails.open ? 'true' : 'false');
+            });
+          }
+
+          const advancedDetails = document.getElementById('settings-card-advanced');
+          if (advancedDetails) {
+            advancedDetails.open = localStorage.getItem('settings_open_advanced') === 'true';
+            advancedDetails.addEventListener('toggle', () => {
+              localStorage.setItem('settings_open_advanced', advancedDetails.open ? 'true' : 'false');
+            });
+          }
         }
-    } catch(e) {}
+      }
+    } catch (e) { }
 
     renderOpenTabs();
+  }
+
+  // Bind live audio preview when selecting dropdown choices
+  document.querySelectorAll('.sfx-sound-select').forEach(sel => {
+    sel.addEventListener('change', (e) => {
+      e.stopPropagation();
+      if (sel.value) {
+        previewSFXFile(sel.value);
+      }
+    });
+  });
+
+  // Save SFX Mapping Button Handler
+  const btnSaveSfxMapping = document.getElementById('btn-save-sfx-mapping');
+  if (btnSaveSfxMapping) {
+    btnSaveSfxMapping.addEventListener('click', () => {
+      const sfxDropdownKeys = ['tm_tabs', 'ta', 'tb_clicks', 'tm_header', 'tb_close', 'tb_modal'];
+      sfxDropdownKeys.forEach(k => {
+        const sel = document.getElementById(`select-sfx-${k.replace('_', '-')}`);
+        if (sel && sel.value) {
+          const val = sel.value;
+          sfxConfig[k] = val;
+          localStorage.setItem(`sfx_file_${k}`, val);
+          if (window.CaspianBridge && typeof window.CaspianBridge.saveSetting === 'function') {
+            window.CaspianBridge.saveSetting(`sfx_file_${k}`, val);
+          }
+        }
+      });
+      playSFX('tm_header');
+      if (window.CaspianBridge && typeof window.CaspianBridge.showToast === 'function') {
+        window.CaspianBridge.showToast("💾 SFX mapping saved successfully!");
+      }
+    });
   }
 
   // Nigel Facts List & 7-Tap Rapid Easter Egg Developer Unlocking (1.5s timeout)
@@ -1006,13 +1243,13 @@
       if (window.CaspianBridge && typeof window.CaspianBridge.updateFloatingTheme === 'function') {
         window.CaspianBridge.updateFloatingTheme(start, end, shape);
       }
-    } catch(e){}
+    } catch (e) { }
   }
 
   // Custom Dropdown Handling
   var customShapeSelect = document.getElementById('custom-shape-select');
   var selectedShapeText = document.getElementById('selected-shape-text');
-  
+
   if (customShapeSelect && selectedShapeText) {
     customShapeSelect.querySelector('.caspian-select-trigger').addEventListener('click', (e) => {
       e.stopPropagation();
@@ -1027,7 +1264,7 @@
         selectedShapeVal = opt.dataset.val;
         selectedShapeText.textContent = opt.textContent;
         customShapeSelect.classList.remove('open');
-        
+
         var sp = document.getElementById('gradient-start-picker');
         var ep = document.getElementById('gradient-end-picker');
         updateIconPreview(sp ? sp.value : '#A2A9A9', ep ? ep.value : '#1B4264', selectedShapeVal);
@@ -1166,7 +1403,7 @@
       }
       localStorage.setItem('theme', isDark ? 'dark' : 'light');
       localStorage.setItem('colorMode', isDark ? 'dark' : 'light');
-    } catch(e) {}
+    } catch (e) { }
   }
 
   // Theme Toggles (Default Light)
@@ -1208,7 +1445,7 @@
     let startTime = 0;
 
     targetDragArea.addEventListener('touchstart', (e) => {
-      try { e.preventDefault(); } catch(err) {}
+      try { e.preventDefault(); } catch (err) { }
       const touch = e.touches[0];
       startY = touch.clientY;
       lastClientY = touch.clientY;
@@ -1218,7 +1455,7 @@
     }, { passive: false });
 
     targetDragArea.addEventListener('touchmove', (e) => {
-      try { e.preventDefault(); } catch(err) {}
+      try { e.preventDefault(); } catch (err) { }
       const touch = e.touches[0];
       lastClientY = touch.clientY;
       const deltaY = startY - touch.clientY;
@@ -1241,17 +1478,23 @@
           window.CaspianBridge.closeSheet();
         }
         setTimeout(() => {
-          bottomSheet.style.height = '65vh';
+          bottomSheet.style.height = localStorage.getItem('saved_sheet_height') || '88vh';
         }, 350);
       } else {
-        // Snap to closest stable layout position (e.g. 45vh, 65vh, 85vh)
-        let snapVh = 65;
+        // Snap to closest stable layout position (e.g. 50vh, 70vh, 88vh)
+        let snapVh = 88;
         if (currentHeightVh < 55) {
-          snapVh = 45;
-        } else if (currentHeightVh > 75) {
-          snapVh = 85;
+          snapVh = 50;
+        } else if (currentHeightVh < 75) {
+          snapVh = 70;
+        } else {
+          snapVh = 88;
         }
         bottomSheet.style.height = snapVh + 'vh';
+        localStorage.setItem('saved_sheet_height', snapVh + 'vh');
+        if (window.CaspianBridge && typeof window.CaspianBridge.saveSetting === 'function') {
+          window.CaspianBridge.saveSetting('saved_sheet_height', snapVh + 'vh');
+        }
       }
     });
   }
@@ -1271,7 +1514,7 @@
   const btnOpenDurMinus = document.getElementById('btn-open-dur-minus');
   const btnOpenDurPlus = document.getElementById('btn-open-dur-plus');
   const txtOpenDur = document.getElementById('txt-open-dur');
- 
+
   if (btnOpenDurMinus && btnOpenDurPlus && txtOpenDur) {
     btnOpenDurMinus.addEventListener('click', () => {
       let val = parseInt(txtOpenDur.textContent) || 350;
@@ -1290,12 +1533,12 @@
       }
     });
   }
- 
+
   // Close Duration Plus/Minus
   const btnCloseDurMinus = document.getElementById('btn-close-dur-minus');
   const btnCloseDurPlus = document.getElementById('btn-close-dur-plus');
   const txtCloseDur = document.getElementById('txt-close-dur');
- 
+
   if (btnCloseDurMinus && btnCloseDurPlus && txtCloseDur) {
     btnCloseDurMinus.addEventListener('click', () => {
       let val = parseInt(txtCloseDur.textContent) || 300;
@@ -1314,12 +1557,12 @@
       }
     });
   }
- 
+
   // Button Tap Bounce Duration Plus/Minus
   const btnTapDurMinus = document.getElementById('btn-tap-dur-minus');
   const btnTapDurPlus = document.getElementById('btn-tap-dur-plus');
   const txtTapDur = document.getElementById('txt-tap-dur');
- 
+
   if (btnTapDurMinus && btnTapDurPlus && txtTapDur) {
     btnTapDurMinus.addEventListener('click', () => {
       let val = parseInt(txtTapDur.textContent) || 100;
@@ -1388,7 +1631,7 @@
                   saveTabGroups();
                 }
               }
-            } catch(e){}
+            } catch (e) { }
           }
         }
         renderOpenTabs();
@@ -1425,24 +1668,34 @@
     });
   }
 
-  // Mobile Tab Navigation
+  // Mobile Tab Navigation (Engine, Tabs, Settings)
   document.querySelectorAll('.tab-nav-btn').forEach(btn => {
     btn.addEventListener('click', () => {
       playSFX('tm_tabs');
       document.querySelectorAll('.tab-nav-btn').forEach(b => b.classList.remove('active'));
-      document.querySelectorAll('.tab-pane').forEach(p => p.style.display = 'none');
- 
+      document.querySelectorAll('.tab-pane').forEach(p => {
+        p.classList.remove('active');
+        p.style.display = 'none';
+      });
+
       btn.classList.add('active');
       const targetTab = btn.dataset.tab;
       const pane = document.getElementById(`tab-pane-${targetTab}`);
-      if (pane) pane.style.display = 'block';
- 
+      if (pane) {
+        pane.style.display = 'block';
+        requestAnimationFrame(() => {
+          pane.classList.add('active');
+        });
+      }
+
       if (targetTab === 'sites') {
-        renderOpenTabs();
+        requestAnimationFrame(() => {
+          renderOpenTabs();
+        });
       }
     });
   });
- 
+
   // Master Power Switch
   if (powerToggleBtn) {
     powerToggleBtn.addEventListener('click', () => {
@@ -1451,7 +1704,7 @@
       const statusDot = document.getElementById('status-dot');
       const statusTitle = document.getElementById('status-title');
       const statusSub = document.getElementById('status-sub');
- 
+
       if (statusDot) statusDot.classList.toggle('active', globalActive);
       if (statusTitle) statusTitle.textContent = globalActive ? 'Chat Message Limit: ON' : 'Chat Message Limit: OFF';
       if (statusSub) statusSub.textContent = globalActive ? 'it limites the amout of message shown from below so all message above it will get prune or cut out this is done to improve performance and reduce lagging.' : 'Message Limit paused via Master Power Switch';
@@ -1578,7 +1831,7 @@
   if (pdfModeSelect) {
     pdfModeSelect.addEventListener('change', () => {
       const mode = pdfModeSelect.value;
-      try { localStorage.setItem('pdfExportMode', mode); } catch(e){}
+      try { localStorage.setItem('pdfExportMode', mode); } catch (e) { }
       if (window.CaspianBridge) {
         if (typeof window.CaspianBridge.saveSetting === 'function') {
           window.CaspianBridge.saveSetting('pdfExportMode', JSON.stringify(mode));
@@ -1593,10 +1846,10 @@
   function initCustomSelect(id, storageKey) {
     const selectEl = document.getElementById(id);
     if (!selectEl) return;
-    
+
     const trigger = selectEl.querySelector('.caspian-select-trigger');
     const textEl = trigger.querySelector('span');
-    
+
     trigger.addEventListener('click', (e) => {
       e.stopPropagation();
       document.querySelectorAll('.caspian-select').forEach(sel => {
@@ -1604,7 +1857,7 @@
       });
       selectEl.classList.toggle('open');
     });
-    
+
     selectEl.querySelectorAll('.caspian-select-option').forEach(opt => {
       opt.addEventListener('click', (e) => {
         e.stopPropagation();
@@ -1612,14 +1865,14 @@
         opt.classList.add('active');
         textEl.textContent = opt.textContent;
         selectEl.classList.remove('open');
-        
+
         const val = opt.dataset.val;
         try {
           localStorage.setItem(storageKey, val);
           if (window.CaspianBridge && typeof window.CaspianBridge.saveSetting === 'function') {
             window.CaspianBridge.saveSetting(storageKey, val);
           }
-        } catch(err){}
+        } catch (err) { }
       });
     });
   }
@@ -1694,904 +1947,761 @@
   // Initialize saved settings on load
   restoreSavedSettings();
 
-function restoreSavedSettings() {
-  const pdfModeSelect = document.getElementById('pdf-export-mode-select');
-  if (pdfModeSelect) {
-    try {
-      const savedMode = localStorage.getItem('pdfExportMode') || 'html';
-      pdfModeSelect.value = savedMode;
-      if (window.CaspianBridge && typeof window.CaspianBridge.setPdfExportMode === 'function') {
-        window.CaspianBridge.setPdfExportMode(savedMode);
-      }
-    } catch(e){}
+  function openGroupOptionsMenu(group) {
+    const modal = document.getElementById('group-options-modal');
+    const titleInput = document.getElementById('group-modal-title-input');
+    const colorDot = document.getElementById('group-modal-color-dot');
+    const headerTitle = document.getElementById('group-modal-header-title');
+    if (!modal || !titleInput) return;
+
+    editingGroupId = group.id;
+    titleInput.value = group.title || '';
+    if (colorDot) colorDot.style.background = group.color || '#3b82f6';
+    if (headerTitle) headerTitle.textContent = `Group: ${group.title || 'Tab Group'}`;
+    selectedGroupColor = group.color || '#ef4444';
+    selectedGroupEmoji = group.icon || '📁';
+
+    document.querySelectorAll('.modal-group-color-dot').forEach(d => {
+      d.classList.toggle('active', d.dataset.color === selectedGroupColor);
+    });
+
+    document.querySelectorAll('.modal-group-emoji-dot').forEach(d => {
+      d.classList.toggle('active', d.dataset.emoji === selectedGroupEmoji);
+      d.onclick = () => {
+        playSFX('tb_clicks');
+        document.querySelectorAll('.modal-group-emoji-dot').forEach(x => x.classList.remove('active'));
+        d.classList.add('active');
+        selectedGroupEmoji = d.dataset.emoji || '📁';
+      };
+    });
+
+    const favIcon = document.getElementById('group-fav-star-icon');
+    const favText = document.getElementById('group-fav-star-text');
+    if (favIcon) favIcon.textContent = group.isFavorite ? '⭐' : '☆';
+    if (favText) favText.textContent = group.isFavorite ? 'Favorited' : 'Favorite';
+
+    modal.style.setProperty('display', 'flex', 'important');
+    modal.style.setProperty('pointer-events', 'auto', 'important');
+    modal.style.setProperty('visibility', 'visible', 'important');
+
+    const closeX = document.getElementById('group-modal-close-x');
+    const cancelBtn = document.getElementById('group-modal-cancel-btn');
+    const closeModal = () => {
+      playSFX('tb_modal');
+      modal.style.display = 'none';
+      editingGroupId = null;
+    };
+    if (closeX) closeX.onclick = closeModal;
+    if (cancelBtn) cancelBtn.onclick = closeModal;
+
+    const favBtn = document.getElementById('group-modal-favorite-btn');
+    if (favBtn) {
+      favBtn.onclick = () => {
+        playSFX('tb_clicks');
+        group.isFavorite = !group.isFavorite;
+        saveTabGroups();
+        if (window.CaspianBridge && typeof window.CaspianBridge.setGroupTabsFavorite === 'function') {
+          window.CaspianBridge.setGroupTabsFavorite(JSON.stringify(group.tabIds), group.isFavorite);
+        }
+        if (favIcon) favIcon.textContent = group.isFavorite ? '⭐' : '☆';
+        if (favText) favText.textContent = group.isFavorite ? 'Favorited' : 'Favorite';
+        if (window.CaspianBridge && typeof window.CaspianBridge.showToast === 'function') {
+          window.CaspianBridge.showToast(group.isFavorite ? `⭐ Group "${group.title}" Favorited!` : `Group "${group.title}" Unfavorited`);
+        }
+        renderOpenTabs();
+      };
+    }
+
+    const ungroupBtn = document.getElementById('group-modal-ungroup-btn');
+    if (ungroupBtn) {
+      ungroupBtn.onclick = () => {
+        playSFX('tb_modal');
+        tabGroups = tabGroups.filter(g => g.id !== group.id);
+        saveTabGroups();
+        modal.style.display = 'none';
+        editingGroupId = null;
+        renderOpenTabs();
+        if (window.CaspianBridge && typeof window.CaspianBridge.showToast === 'function') {
+          window.CaspianBridge.showToast(`📂 Group "${group.title}" dissolved. Tabs remain open.`);
+        }
+      };
+    }
+
+    const deleteBtn = document.getElementById('group-modal-delete-btn');
+    if (deleteBtn) {
+      deleteBtn.onclick = () => {
+        playSFX('tb_close');
+        lastDeletedGroup = { group: Object.assign({}, group), tabIds: [...group.tabIds] };
+        if (window.CaspianBridge && typeof window.CaspianBridge.closeMultipleTabs === 'function') {
+          window.CaspianBridge.closeMultipleTabs(JSON.stringify(group.tabIds));
+        }
+        tabGroups = tabGroups.filter(g => g.id !== group.id);
+        saveTabGroups();
+        modal.style.display = 'none';
+        editingGroupId = null;
+        showUndoToast(`Group "${group.title}" deleted`);
+        renderOpenTabs();
+      };
+    }
+
+    const saveBtn = document.getElementById('group-modal-save-btn');
+    if (saveBtn) {
+      saveBtn.onclick = () => {
+        playSFX('tb_modal');
+        group.title = titleInput.value.trim() || 'Tab Group';
+        group.color = selectedGroupColor;
+        group.icon = selectedGroupEmoji;
+        saveTabGroups();
+        modal.style.display = 'none';
+        editingGroupId = null;
+        renderOpenTabs();
+        if (window.CaspianBridge && typeof window.CaspianBridge.showToast === 'function') {
+          window.CaspianBridge.showToast(`Saved Group "${group.title}"!`);
+        }
+      };
+    }
   }
 
-  // Restore Custom Dropdown Export Settings from preferences
-  if (window.CaspianBridge && typeof window.CaspianBridge.getSettings === 'function') {
-    try {
-      const prefs = JSON.parse(window.CaspianBridge.getSettings());
-      if (prefs) {
-        const exportKeys = {
-          'export_chatgpt_normal': 'select-export-chatgpt-normal',
-          'export_chatgpt_temp': 'select-export-chatgpt-temp',
-          'export_gemini_normal': 'select-export-gemini-normal',
-          'export_gemini_temp': 'select-export-gemini-temp',
-          'active_refresh_rate': 'select-refresh-rate',
-          'sheetAnimationStyle': 'select-anim-style'
-        };
-        
-        for (const [prefKey, elementId] of Object.entries(exportKeys)) {
-          const val = prefs[prefKey] || localStorage.getItem(prefKey);
-          if (val) {
-            const selectEl = document.getElementById(elementId);
-            if (selectEl) {
-              selectEl.querySelectorAll('.caspian-select-option').forEach(o => {
-                const isActive = o.dataset.val === val;
-                o.classList.toggle('active', isActive);
-                if (isActive) {
-                  const st = selectEl.querySelector('.caspian-select-trigger span');
-                  if (st) st.textContent = o.textContent;
-                }
-              });
+  function openTabOptionsMenu(tab) {
+    const modal = document.getElementById('tab-options-modal');
+    const nicknameInput = document.getElementById('tab-nickname-input');
+    const urlDisplay = document.getElementById('tab-url-display');
+    if (!modal || !nicknameInput || !urlDisplay) return;
+
+    editingTabId = tab.id;
+    nicknameInput.value = tab.nickname || '';
+    urlDisplay.value = tab.url || '';
+    modal.style.display = 'flex';
+
+    const groupActionsRow = document.getElementById('modal-group-actions-row');
+    const leaveGroupBtn = document.getElementById('modal-leave-group-btn');
+    const parentGroup = tabGroups.find(g => g.tabIds.includes(tab.id));
+    if (groupActionsRow) {
+      if (parentGroup) {
+        groupActionsRow.style.display = 'block';
+        if (leaveGroupBtn) {
+          leaveGroupBtn.onclick = () => {
+            playSFX('tb_modal');
+            parentGroup.tabIds = parentGroup.tabIds.filter(id => id !== tab.id);
+            saveTabGroups();
+            if (parentGroup.tabIds.length === 0 && activeGroupId === parentGroup.id) {
+              activeGroupId = null;
             }
-          }
-        }
-        // Restore STT Engine Settings & Deepgram Usage Tracker
-        window.updateDeepgramUsageBadge = function(totalSeconds) {
-          const badge = document.getElementById('deepgram-usage-badge');
-          if (badge) {
-            const sec = parseInt(totalSeconds, 10) || 0;
-            const cost = (sec * 0.000073).toFixed(3);
-            badge.textContent = `⏱️ ${sec}s Used (~$${cost} / $200.00 Credit)`;
-          }
-        };
-
-        const initialUsedSec = prefs.deepgram_used_seconds || localStorage.getItem('deepgram_used_seconds') || 0;
-        window.updateDeepgramUsageBadge(initialUsedSec);
-
-        // Restore STT Engine Settings using Caspian Pill Grid Buttons (.cc-stt-pill)
-        const sttPills = document.querySelectorAll('.cc-stt-pill');
-        if (sttPills.length > 0) {
-          const updateSttKeyVisibility = (val) => {
-            const dg = document.getElementById('stt-key-container-deepgram');
-            const hf = document.getElementById('stt-key-container-huggingface');
-            if (dg) dg.style.display = val === 'deepgram' ? 'block' : 'none';
-            if (hf) hf.style.display = val === 'huggingface' ? 'block' : 'none';
+            modal.style.display = 'none';
+            if (window.CaspianBridge && typeof window.CaspianBridge.showToast === 'function') {
+              window.CaspianBridge.showToast(`Moved tab out of "${parentGroup.title}"!`);
+            }
+            setTimeout(renderOpenTabs, 50);
           };
-
-          const savedVal = localStorage.getItem('stt_engine_mode') || prefs.stt_engine_mode || 'deepgram';
-          updateSttKeyVisibility(savedVal);
-
-          sttPills.forEach(pill => {
-            const isActive = pill.dataset.engine === savedVal;
-            pill.classList.toggle('active', isActive);
-
-            if (!pill.dataset.bound) {
-              pill.dataset.bound = 'true';
-              pill.addEventListener('click', (e) => {
-                e.stopPropagation();
-                if (typeof playSFX === 'function') playSFX('tb_clicks');
-                sttPills.forEach(p => p.classList.remove('active'));
-                pill.classList.add('active');
-
-                const newVal = pill.dataset.engine;
-                localStorage.setItem('stt_engine_mode', newVal);
-                if (window.CaspianBridge && typeof window.CaspianBridge.saveSetting === 'function') {
-                  window.CaspianBridge.saveSetting('stt_engine_mode', newVal);
-                }
-                updateSttKeyVisibility(newVal);
-
-                if (window.CaspianBridge && typeof window.CaspianBridge.showToast === 'function') {
-                  window.CaspianBridge.showToast(`🎙️ STT Engine set to ${pill.textContent}`);
-                }
-              });
-            }
-          });
         }
-
-        const bindSttKeyInput = (id, keyName) => {
-          const input = document.getElementById(id);
-          if (input) {
-            const savedVal = prefs[keyName] || localStorage.getItem(keyName) || '';
-            input.value = savedVal;
-            input.onchange = () => {
-              const val = input.value.trim();
-              localStorage.setItem(keyName, val);
-              if (window.CaspianBridge && typeof window.CaspianBridge.saveSetting === 'function') {
-                window.CaspianBridge.saveSetting(keyName, val);
-              }
-              if (window.CaspianBridge && typeof window.CaspianBridge.showToast === 'function') {
-                window.CaspianBridge.showToast(`Saved ${keyName}`);
-              }
-            };
-          }
-        };
-        bindSttKeyInput('input-deepgram-key', 'deepgram_api_key');
-        bindSttKeyInput('input-huggingface-key', 'huggingface_api_key');
-
-        const visualsDetails = document.getElementById('settings-card-visuals');
-        if (visualsDetails) {
-          visualsDetails.open = localStorage.getItem('settings_open_visuals') === 'true';
-          visualsDetails.addEventListener('toggle', () => {
-            localStorage.setItem('settings_open_visuals', visualsDetails.open ? 'true' : 'false');
-          });
-        }
-
-        const audioDetails = document.getElementById('settings-card-audio');
-        if (audioDetails) {
-          audioDetails.open = localStorage.getItem('settings_open_audio') === 'true';
-          audioDetails.addEventListener('toggle', () => {
-            localStorage.setItem('settings_open_audio', audioDetails.open ? 'true' : 'false');
-          });
-        }
-
-        const advancedDetails = document.getElementById('settings-card-advanced');
-        if (advancedDetails) {
-          advancedDetails.open = localStorage.getItem('settings_open_advanced') === 'true';
-          advancedDetails.addEventListener('toggle', () => {
-            localStorage.setItem('settings_open_advanced', advancedDetails.open ? 'true' : 'false');
-          });
-        }
+      } else {
+        groupActionsRow.style.display = 'none';
       }
-    } catch(e){}
-  }
-}
-
-function openGroupOptionsMenu(group) {
-  const modal = document.getElementById('group-options-modal');
-  const titleInput = document.getElementById('group-modal-title-input');
-  const colorDot = document.getElementById('group-modal-color-dot');
-  const headerTitle = document.getElementById('group-modal-header-title');
-  if (!modal || !titleInput) return;
-
-  editingGroupId = group.id;
-  titleInput.value = group.title || '';
-  if (colorDot) colorDot.style.background = group.color || '#3b82f6';
-  if (headerTitle) headerTitle.textContent = `Group: ${group.title || 'Tab Group'}`;
-  selectedGroupColor = group.color || '#ef4444';
-  selectedGroupEmoji = group.icon || '📁';
-
-  document.querySelectorAll('.modal-group-color-dot').forEach(d => {
-    d.classList.toggle('active', d.dataset.color === selectedGroupColor);
-  });
-
-  document.querySelectorAll('.modal-group-emoji-dot').forEach(d => {
-    d.classList.toggle('active', d.dataset.emoji === selectedGroupEmoji);
-    d.onclick = () => {
-      playSFX('tb_clicks');
-      document.querySelectorAll('.modal-group-emoji-dot').forEach(x => x.classList.remove('active'));
-      d.classList.add('active');
-      selectedGroupEmoji = d.dataset.emoji || '📁';
-    };
-  });
-
-  const favIcon = document.getElementById('group-fav-star-icon');
-  const favText = document.getElementById('group-fav-star-text');
-  if (favIcon) favIcon.textContent = group.isFavorite ? '⭐' : '☆';
-  if (favText) favText.textContent = group.isFavorite ? 'Favorited' : 'Favorite';
-
-  modal.style.setProperty('display', 'flex', 'important');
-  modal.style.setProperty('pointer-events', 'auto', 'important');
-  modal.style.setProperty('visibility', 'visible', 'important');
-
-  const closeX = document.getElementById('group-modal-close-x');
-  const cancelBtn = document.getElementById('group-modal-cancel-btn');
-  const closeModal = () => {
-    playSFX('tb_modal');
-    modal.style.display = 'none';
-    editingGroupId = null;
-  };
-  if (closeX) closeX.onclick = closeModal;
-  if (cancelBtn) cancelBtn.onclick = closeModal;
-
-  const favBtn = document.getElementById('group-modal-favorite-btn');
-  if (favBtn) {
-    favBtn.onclick = () => {
-      playSFX('tb_clicks');
-      group.isFavorite = !group.isFavorite;
-      saveTabGroups();
-      if (window.CaspianBridge && typeof window.CaspianBridge.setGroupTabsFavorite === 'function') {
-        window.CaspianBridge.setGroupTabsFavorite(JSON.stringify(group.tabIds), group.isFavorite);
-      }
-      if (favIcon) favIcon.textContent = group.isFavorite ? '⭐' : '☆';
-      if (favText) favText.textContent = group.isFavorite ? 'Favorited' : 'Favorite';
-      if (window.CaspianBridge && typeof window.CaspianBridge.showToast === 'function') {
-        window.CaspianBridge.showToast(group.isFavorite ? `⭐ Group "${group.title}" Favorited!` : `Group "${group.title}" Unfavorited`);
-      }
-      renderOpenTabs();
-    };
-  }
-
-  const ungroupBtn = document.getElementById('group-modal-ungroup-btn');
-  if (ungroupBtn) {
-    ungroupBtn.onclick = () => {
-      playSFX('tb_modal');
-      tabGroups = tabGroups.filter(g => g.id !== group.id);
-      saveTabGroups();
-      modal.style.display = 'none';
-      editingGroupId = null;
-      renderOpenTabs();
-      if (window.CaspianBridge && typeof window.CaspianBridge.showToast === 'function') {
-        window.CaspianBridge.showToast(`📂 Group "${group.title}" dissolved. Tabs remain open.`);
-      }
-    };
-  }
-
-  const deleteBtn = document.getElementById('group-modal-delete-btn');
-  if (deleteBtn) {
-    deleteBtn.onclick = () => {
-      playSFX('tb_close');
-      lastDeletedGroup = { group: Object.assign({}, group), tabIds: [...group.tabIds] };
-      if (window.CaspianBridge && typeof window.CaspianBridge.closeMultipleTabs === 'function') {
-        window.CaspianBridge.closeMultipleTabs(JSON.stringify(group.tabIds));
-      }
-      tabGroups = tabGroups.filter(g => g.id !== group.id);
-      saveTabGroups();
-      modal.style.display = 'none';
-      editingGroupId = null;
-      showUndoToast(`Group "${group.title}" deleted`);
-      renderOpenTabs();
-    };
-  }
-
-  const saveBtn = document.getElementById('group-modal-save-btn');
-  if (saveBtn) {
-    saveBtn.onclick = () => {
-      playSFX('tb_modal');
-      group.title = titleInput.value.trim() || 'Tab Group';
-      group.color = selectedGroupColor;
-      group.icon = selectedGroupEmoji;
-      saveTabGroups();
-      modal.style.display = 'none';
-      editingGroupId = null;
-      renderOpenTabs();
-      if (window.CaspianBridge && typeof window.CaspianBridge.showToast === 'function') {
-        window.CaspianBridge.showToast(`Saved Group "${group.title}"!`);
-      }
-    };
-  }
-}
-
-function openTabOptionsMenu(tab) {
-  const modal = document.getElementById('tab-options-modal');
-  const nicknameInput = document.getElementById('tab-nickname-input');
-  const urlDisplay = document.getElementById('tab-url-display');
-  if (!modal || !nicknameInput || !urlDisplay) return;
-
-  editingTabId = tab.id;
-  nicknameInput.value = tab.nickname || '';
-  urlDisplay.value = tab.url || '';
-  modal.style.display = 'flex';
-
-  const groupActionsRow = document.getElementById('modal-group-actions-row');
-  const leaveGroupBtn = document.getElementById('modal-leave-group-btn');
-  const parentGroup = tabGroups.find(g => g.tabIds.includes(tab.id));
-  if (groupActionsRow) {
-    if (parentGroup) {
-      groupActionsRow.style.display = 'block';
-      if (leaveGroupBtn) {
-        leaveGroupBtn.onclick = () => {
-          playSFX('tb_modal');
-          parentGroup.tabIds = parentGroup.tabIds.filter(id => id !== tab.id);
-          saveTabGroups();
-          if (parentGroup.tabIds.length === 0 && activeGroupId === parentGroup.id) {
-            activeGroupId = null;
-          }
-          modal.style.display = 'none';
-          if (window.CaspianBridge && typeof window.CaspianBridge.showToast === 'function') {
-            window.CaspianBridge.showToast(`Moved tab out of "${parentGroup.title}"!`);
-          }
-          setTimeout(renderOpenTabs, 50);
-        };
-      }
-    } else {
-      groupActionsRow.style.display = 'none';
     }
-  }
 
-  const favBtn = document.getElementById('modal-favorite-btn');
-  const favIcon = document.getElementById('fav-star-icon');
-  const favText = document.getElementById('fav-star-text');
-  if (favIcon) favIcon.textContent = tab.isFavorite ? '⭐' : '☆';
-  if (favText) favText.textContent = tab.isFavorite ? 'Favorited' : 'Favorite';
+    const favBtn = document.getElementById('modal-favorite-btn');
+    const favIcon = document.getElementById('fav-star-icon');
+    const favText = document.getElementById('fav-star-text');
+    if (favIcon) favIcon.textContent = tab.isFavorite ? '⭐' : '☆';
+    if (favText) favText.textContent = tab.isFavorite ? 'Favorited' : 'Favorite';
 
-  if (favBtn) {
-    favBtn.onclick = () => {
-      playSFX('tb_clicks');
-      if (window.CaspianBridge && typeof window.CaspianBridge.toggleTabFavorite === 'function') {
-        window.CaspianBridge.toggleTabFavorite(tab.id);
-      }
-      tab.isFavorite = !tab.isFavorite;
-      if (favIcon) favIcon.textContent = tab.isFavorite ? '⭐' : '☆';
-      if (favText) favText.textContent = tab.isFavorite ? 'Favorited' : 'Favorite';
-    };
-  }
-
-  // Modal actions
-  const cancelBtn = document.getElementById('modal-cancel-btn');
-  cancelBtn.onclick = () => {
-    playSFX('tb_modal');
-    nicknameInput.blur();
-    urlDisplay.blur();
-    modal.style.display = 'none';
-    if (typeof window.renderOpenTabs === 'function') {
-      window.renderOpenTabs();
+    if (favBtn) {
+      favBtn.onclick = () => {
+        playSFX('tb_clicks');
+        if (window.CaspianBridge && typeof window.CaspianBridge.toggleTabFavorite === 'function') {
+          window.CaspianBridge.toggleTabFavorite(tab.id);
+        }
+        tab.isFavorite = !tab.isFavorite;
+        if (favIcon) favIcon.textContent = tab.isFavorite ? '⭐' : '☆';
+        if (favText) favText.textContent = tab.isFavorite ? 'Favorited' : 'Favorite';
+      };
     }
-  };
 
-  const copyUrlBtn = document.getElementById('modal-copy-url-btn');
-  copyUrlBtn.onclick = () => {
-    playSFX('tb_modal');
-    if (window.CaspianBridge && typeof window.CaspianBridge.copyToClipboard === 'function') {
-      window.CaspianBridge.copyToClipboard(urlDisplay.value);
-    }
-  };
-
-  const clearNicknameBtn = document.getElementById('modal-clear-nickname-btn');
-  if (clearNicknameBtn) {
-    clearNicknameBtn.onclick = () => {
+    // Modal actions
+    const cancelBtn = document.getElementById('modal-cancel-btn');
+    cancelBtn.onclick = () => {
       playSFX('tb_modal');
       nicknameInput.blur();
       urlDisplay.blur();
-      nicknameInput.value = '';
-      const url = urlDisplay.value.trim();
-      if (window.CaspianBridge && typeof window.CaspianBridge.updateTabDetails === 'function') {
-        window.CaspianBridge.updateTabDetails(tab.id, '', url);
-      }
       modal.style.display = 'none';
-      setTimeout(() => {
-        if (typeof window.renderOpenTabs === 'function') {
-          window.renderOpenTabs();
-        }
-      }, 100);
-    };
-  }
-
-  const saveBtn = document.getElementById('modal-save-btn');
-  if (saveBtn) {
-    saveBtn.onclick = () => {
-      playSFX('tb_modal');
-      nicknameInput.blur();
-      urlDisplay.blur();
-      const nick = nicknameInput.value.trim();
-      const url = urlDisplay.value.trim();
-      if (window.CaspianBridge && typeof window.CaspianBridge.updateTabDetails === 'function') {
-        window.CaspianBridge.updateTabDetails(tab.id, nick, url);
-      }
-      modal.style.display = 'none';
-      setTimeout(() => {
-        if (typeof window.renderOpenTabs === 'function') {
-          window.renderOpenTabs();
-        }
-      }, 100);
-    };
-  }
-}
-
-function triggerCloseTab(tabId) {
-  playSFX('tb_close');
-  showUndoToast();
-  if (window.CaspianBridge && typeof window.CaspianBridge.closeTab === 'function') {
-    window.CaspianBridge.closeTab(tabId);
-    setTimeout(() => {
       if (typeof window.renderOpenTabs === 'function') {
         window.renderOpenTabs();
       }
-    }, 300);
+    };
+
+    const copyUrlBtn = document.getElementById('modal-copy-url-btn');
+    copyUrlBtn.onclick = () => {
+      playSFX('tb_modal');
+      if (window.CaspianBridge && typeof window.CaspianBridge.copyToClipboard === 'function') {
+        window.CaspianBridge.copyToClipboard(urlDisplay.value);
+      }
+    };
+
+    const clearNicknameBtn = document.getElementById('modal-clear-nickname-btn');
+    if (clearNicknameBtn) {
+      clearNicknameBtn.onclick = () => {
+        playSFX('tb_modal');
+        nicknameInput.blur();
+        urlDisplay.blur();
+        nicknameInput.value = '';
+        const url = urlDisplay.value.trim();
+        if (window.CaspianBridge && typeof window.CaspianBridge.updateTabDetails === 'function') {
+          window.CaspianBridge.updateTabDetails(tab.id, '', url);
+        }
+        modal.style.display = 'none';
+        setTimeout(() => {
+          if (typeof window.renderOpenTabs === 'function') {
+            window.renderOpenTabs();
+          }
+        }, 100);
+      };
+    }
+
+    const saveBtn = document.getElementById('modal-save-btn');
+    if (saveBtn) {
+      saveBtn.onclick = () => {
+        playSFX('tb_modal');
+        nicknameInput.blur();
+        urlDisplay.blur();
+        const nick = nicknameInput.value.trim();
+        const url = urlDisplay.value.trim();
+        if (window.CaspianBridge && typeof window.CaspianBridge.updateTabDetails === 'function') {
+          window.CaspianBridge.updateTabDetails(tab.id, nick, url);
+        }
+        modal.style.display = 'none';
+        setTimeout(() => {
+          if (typeof window.renderOpenTabs === 'function') {
+            window.renderOpenTabs();
+          }
+        }, 100);
+      };
+    }
   }
-}
 
-let undoTimeout = null;
-
-function showUndoToast() {
-  const toast = document.getElementById('undo-toast-container');
-  if (!toast) return;
-
-  clearTimeout(undoTimeout);
-  toast.style.display = 'flex';
-  toast.style.transform = '';
-
-  // Swipe to dismiss undo toast touch listeners
-  let startX = 0;
-  toast.ontouchstart = (e) => {
-    startX = e.touches[0].clientX;
-  };
-  toast.ontouchmove = (e) => {
-    let diff = e.touches[0].clientX - startX;
-    if (Math.abs(diff) > 10) {
-      toast.style.transform = `translateX(${diff}px)`;
-    }
-  };
-  toast.ontouchend = (e) => {
-    let diff = e.changedTouches[0].clientX - startX;
-    if (Math.abs(diff) > 100) {
-      toast.style.display = 'none';
-    } else {
-      toast.style.transform = '';
-    }
-  };
-
-  const undoBtn = document.getElementById('undo-toast-btn');
-  undoBtn.onclick = () => {
-    playSFX('tb_clicks');
-    if (window.CaspianBridge && typeof window.CaspianBridge.restoreLastClosedTab === 'function') {
-      window.CaspianBridge.restoreLastClosedTab();
+  function triggerCloseTab(tabId) {
+    playSFX('tb_close');
+    showUndoToast();
+    if (window.CaspianBridge && typeof window.CaspianBridge.closeTab === 'function') {
+      window.CaspianBridge.closeTab(tabId);
       setTimeout(() => {
         if (typeof window.renderOpenTabs === 'function') {
           window.renderOpenTabs();
         }
       }, 300);
     }
-    toast.style.display = 'none';
-  };
-
-  const closeBtn = document.getElementById('close-undo-btn');
-  closeBtn.onclick = () => {
-    playSFX('tb_clicks');
-    toast.style.display = 'none';
-  };
-
-  undoTimeout = setTimeout(() => {
-    toast.style.display = 'none';
-  }, 6000); // Allow 6 seconds to undo
-}
-
-// YouTube Controls & AdBlocker Event Listeners
-document.addEventListener('DOMContentLoaded', () => {
-  const ytSeekBackBtn = document.getElementById('yt-seek-back-btn');
-  if (ytSeekBackBtn) {
-    ytSeekBackBtn.addEventListener('click', () => {
-      playSFX('tb_clicks');
-      if (window.CaspianBridge && typeof window.CaspianBridge.seekYouTube === 'function') {
-        window.CaspianBridge.seekYouTube(-5);
-      }
-    });
   }
 
-  const ytSeekFwdBtn = document.getElementById('yt-seek-fwd-btn');
-  if (ytSeekFwdBtn) {
-    ytSeekFwdBtn.addEventListener('click', () => {
-      playSFX('tb_clicks');
-      if (window.CaspianBridge && typeof window.CaspianBridge.seekYouTube === 'function') {
-        window.CaspianBridge.seekYouTube(5);
+  let undoTimeout = null;
+
+  function showUndoToast() {
+    const toast = document.getElementById('undo-toast-container');
+    if (!toast) return;
+
+    clearTimeout(undoTimeout);
+    toast.style.display = 'flex';
+    toast.style.transform = '';
+
+    // Swipe to dismiss undo toast touch listeners
+    let startX = 0;
+    toast.ontouchstart = (e) => {
+      startX = e.touches[0].clientX;
+    };
+    toast.ontouchmove = (e) => {
+      let diff = e.touches[0].clientX - startX;
+      if (Math.abs(diff) > 10) {
+        toast.style.transform = `translateX(${diff}px)`;
       }
-    });
+    };
+    toast.ontouchend = (e) => {
+      let diff = e.changedTouches[0].clientX - startX;
+      if (Math.abs(diff) > 100) {
+        toast.style.display = 'none';
+      } else {
+        toast.style.transform = '';
+      }
+    };
+
+    const undoBtn = document.getElementById('undo-toast-btn');
+    undoBtn.onclick = () => {
+      playSFX('tb_clicks');
+      if (window.CaspianBridge && typeof window.CaspianBridge.restoreLastClosedTab === 'function') {
+        window.CaspianBridge.restoreLastClosedTab();
+        setTimeout(() => {
+          if (typeof window.renderOpenTabs === 'function') {
+            window.renderOpenTabs();
+          }
+        }, 300);
+      }
+      toast.style.display = 'none';
+    };
+
+    const closeBtn = document.getElementById('close-undo-btn');
+    closeBtn.onclick = () => {
+      playSFX('tb_clicks');
+      toast.style.display = 'none';
+    };
+
+    undoTimeout = setTimeout(() => {
+      toast.style.display = 'none';
+    }, 6000); // Allow 6 seconds to undo
   }
 
-  document.querySelectorAll('.yt-speed-pill').forEach(pill => {
-    pill.addEventListener('click', () => {
-      playSFX('tb_clicks');
-      const speed = pill.dataset.speed;
-      document.querySelectorAll('.yt-speed-pill').forEach(p => p.classList.toggle('active', p === pill));
-      if (window.CaspianBridge && typeof window.CaspianBridge.setYouTubeSpeed === 'function') {
-        window.CaspianBridge.setYouTubeSpeed(parseFloat(speed));
-      }
-    });
-  });
-
-  document.querySelectorAll('.yt-quality-pill').forEach(pill => {
-    pill.addEventListener('click', () => {
-      playSFX('tb_clicks');
-      const quality = pill.dataset.quality;
-      document.querySelectorAll('.yt-quality-pill').forEach(p => p.classList.toggle('active', p === pill));
-      if (window.CaspianBridge && typeof window.CaspianBridge.setYouTubeQuality === 'function') {
-        window.CaspianBridge.setYouTubeQuality(quality);
-      }
-    });
-  });
-
-  // Engine Tab Cards & Master Power Toggle Logic
-  const cardTS = document.getElementById('card-temp-saver');
-  const cardCL = document.getElementById('card-chat-limit');
-  const cardCC = document.getElementById('card-caspian-current');
-  const cardAB = document.getElementById('card-adblocker');
-
-  const toggleTSBtn = document.getElementById('toggle-temp-saver-btn');
-  const toggleCLBtn = document.getElementById('toggle-chat-limit-btn');
-  const toggleCCBtn = document.getElementById('toggle-caspian-current-btn');
-  const toggleAdblockBtn = document.getElementById('toggle-adblock-btn');
-
-  const chatLimitHeader = document.getElementById('chat-limit-header');
-  const chatLimitBody = document.getElementById('chat-limit-body');
-  const ccHeader = document.getElementById('caspian-current-header');
-  const ccBody = document.getElementById('caspian-current-body');
-  const adblockHeader = document.getElementById('adblock-header');
-  const adblockBody = document.getElementById('adblock-body');
-
-  // Helper to update card states
-  function updateEngineCardUI(card, toggleBtn, body, dotEl, key) {
-    const isEnabled = localStorage.getItem(key) !== 'false';
-    if (card) {
-      card.classList.toggle('disabled', !isEnabled);
-      card.style.opacity = isEnabled ? '1' : '0.45';
-      card.style.filter = isEnabled ? 'none' : 'grayscale(0.6)';
+  // YouTube Controls & AdBlocker Event Listeners
+  document.addEventListener('DOMContentLoaded', () => {
+    const ytSeekBackBtn = document.getElementById('yt-seek-back-btn');
+    if (ytSeekBackBtn) {
+      ytSeekBackBtn.addEventListener('click', () => {
+        playSFX('tb_clicks');
+        if (window.CaspianBridge && typeof window.CaspianBridge.seekYouTube === 'function') {
+          window.CaspianBridge.seekYouTube(-5);
+        }
+      });
     }
-    if (body) body.style.display = isEnabled ? 'block' : 'none';
-    if (dotEl) dotEl.classList.toggle('active', isEnabled);
-    if (toggleBtn) {
-      toggleBtn.textContent = isEnabled ? 'ON' : 'OFF';
-      toggleBtn.className = isEnabled ? 'oneui-pill-btn primary' : 'oneui-pill-btn secondary';
+
+    const ytSeekFwdBtn = document.getElementById('yt-seek-fwd-btn');
+    if (ytSeekFwdBtn) {
+      ytSeekFwdBtn.addEventListener('click', () => {
+        playSFX('tb_clicks');
+        if (window.CaspianBridge && typeof window.CaspianBridge.seekYouTube === 'function') {
+          window.CaspianBridge.seekYouTube(5);
+        }
+      });
     }
-    if (key === 'chat_limit_enabled') {
-      const statusTitle = document.getElementById('status-title');
-      if (statusTitle) statusTitle.textContent = 'Chat Message Limit: ' + (isEnabled ? 'ON' : 'OFF');
+
+    document.querySelectorAll('.yt-speed-pill').forEach(pill => {
+      pill.addEventListener('click', () => {
+        playSFX('tb_clicks');
+        const speed = pill.dataset.speed;
+        document.querySelectorAll('.yt-speed-pill').forEach(p => p.classList.toggle('active', p === pill));
+        if (window.CaspianBridge && typeof window.CaspianBridge.setYouTubeSpeed === 'function') {
+          window.CaspianBridge.setYouTubeSpeed(parseFloat(speed));
+        }
+      });
+    });
+
+    document.querySelectorAll('.yt-quality-pill').forEach(pill => {
+      pill.addEventListener('click', () => {
+        playSFX('tb_clicks');
+        const quality = pill.dataset.quality;
+        document.querySelectorAll('.yt-quality-pill').forEach(p => p.classList.toggle('active', p === pill));
+        if (window.CaspianBridge && typeof window.CaspianBridge.setYouTubeQuality === 'function') {
+          window.CaspianBridge.setYouTubeQuality(quality);
+        }
+      });
+    });
+
+    // Engine Tab Cards & Master Power Toggle Logic
+    const cardTS = document.getElementById('card-temp-saver');
+    const cardCL = document.getElementById('card-chat-limit');
+    const cardCC = document.getElementById('card-caspian-current');
+    const cardAB = document.getElementById('card-adblocker');
+
+    const toggleTSBtn = document.getElementById('toggle-temp-saver-btn');
+    const toggleCLBtn = document.getElementById('toggle-chat-limit-btn');
+    const toggleCCBtn = document.getElementById('toggle-caspian-current-btn');
+    const toggleAdblockBtn = document.getElementById('toggle-adblock-btn');
+
+    const chatLimitHeader = document.getElementById('chat-limit-header');
+    const chatLimitBody = document.getElementById('chat-limit-body');
+    const ccHeader = document.getElementById('caspian-current-header');
+    const ccBody = document.getElementById('caspian-current-body');
+    const adblockHeader = document.getElementById('adblock-header');
+    const adblockBody = document.getElementById('adblock-body');
+
+    // Helper to update card states
+    function updateEngineCardUI(card, toggleBtn, body, dotEl, key) {
+      const isEnabled = localStorage.getItem(key) !== 'false';
+      if (card) {
+        card.classList.toggle('disabled', !isEnabled);
+        card.style.opacity = isEnabled ? '1' : '0.45';
+        card.style.filter = isEnabled ? 'none' : 'grayscale(0.6)';
+      }
+      if (body) body.style.display = isEnabled ? 'block' : 'none';
+      if (dotEl) dotEl.classList.toggle('active', isEnabled);
+      if (toggleBtn) {
+        toggleBtn.textContent = isEnabled ? 'ON' : 'OFF';
+        toggleBtn.className = isEnabled ? 'oneui-pill-btn primary' : 'oneui-pill-btn secondary';
+      }
+      if (key === 'chat_limit_enabled') {
+        const statusTitle = document.getElementById('status-title');
+        if (statusTitle) statusTitle.textContent = 'Chat Message Limit: ' + (isEnabled ? 'ON' : 'OFF');
+      }
     }
-  }
 
-  // Initial Sync
-  updateEngineCardUI(cardTS, toggleTSBtn, null, document.getElementById('ts-status-dot'), 'temp_saver_enabled');
-  updateEngineCardUI(cardCL, toggleCLBtn, chatLimitBody, document.getElementById('status-dot'), 'chat_limit_enabled');
-  updateEngineCardUI(cardCC, toggleCCBtn, ccBody, document.getElementById('cc-status-dot'), 'caspian_current_enabled');
-  updateEngineCardUI(cardAB, toggleAdblockBtn, adblockBody, document.getElementById('adblock-dot'), 'adblock_enabled');
+    // Initial Sync
+    updateEngineCardUI(cardTS, toggleTSBtn, null, document.getElementById('ts-status-dot'), 'temp_saver_enabled');
+    updateEngineCardUI(cardCL, toggleCLBtn, chatLimitBody, document.getElementById('status-dot'), 'chat_limit_enabled');
+    updateEngineCardUI(cardCC, toggleCCBtn, ccBody, document.getElementById('cc-status-dot'), 'caspian_current_enabled');
+    updateEngineCardUI(cardAB, toggleAdblockBtn, adblockBody, document.getElementById('adblock-dot'), 'adblock_enabled');
 
-  // 1. Temporary Chat Saver Toggle
-  if (toggleTSBtn) {
-    toggleTSBtn.addEventListener('click', (e) => {
-      e.stopPropagation();
-      playSFX('tb_clicks');
-      let current = localStorage.getItem('temp_saver_enabled') !== 'false';
-      let next = !current;
-      localStorage.setItem('temp_saver_enabled', next ? 'true' : 'false');
-      if (window.CaspianBridge && typeof window.CaspianBridge.saveSetting === 'function') {
-        window.CaspianBridge.saveSetting('temp_saver_enabled', next ? 'true' : 'false');
-      }
-      updateEngineCardUI(cardTS, toggleTSBtn, null, document.getElementById('ts-status-dot'), 'temp_saver_enabled');
-    });
-  }
-
-  // 2. Chat Limit Accordion & Toggle
-  if (chatLimitHeader && chatLimitBody) {
-    chatLimitHeader.addEventListener('click', (e) => {
-      if (e.target === toggleCLBtn || (toggleCLBtn && toggleCLBtn.contains(e.target))) return;
-      const isOpen = chatLimitBody.style.display !== 'none';
-      chatLimitBody.style.display = isOpen ? 'none' : 'block';
-    });
-  }
-  if (toggleCLBtn) {
-    toggleCLBtn.addEventListener('click', (e) => {
-      e.stopPropagation();
-      playSFX('tb_clicks');
-      let current = localStorage.getItem('chat_limit_enabled') !== 'false';
-      let next = !current;
-      localStorage.setItem('chat_limit_enabled', next ? 'true' : 'false');
-      if (window.CaspianBridge && typeof window.CaspianBridge.saveSetting === 'function') {
-        window.CaspianBridge.saveSetting('chat_limit_enabled', next ? 'true' : 'false');
-      }
-      updateEngineCardUI(cardCL, toggleCLBtn, chatLimitBody, document.getElementById('status-dot'), 'chat_limit_enabled');
-    });
-  }
-
-  // 3. Caspian Current Accordion & Toggle
-  if (ccHeader && ccBody) {
-    ccHeader.addEventListener('click', (e) => {
-      if (e.target === toggleCCBtn || (toggleCCBtn && toggleCCBtn.contains(e.target))) return;
-      const isOpen = ccBody.style.display !== 'none';
-      ccBody.style.display = isOpen ? 'none' : 'block';
-    });
-  }
-  if (toggleCCBtn) {
-    toggleCCBtn.addEventListener('click', (e) => {
-      e.stopPropagation();
-      playSFX('tb_clicks');
-      let current = localStorage.getItem('caspian_current_enabled') !== 'false';
-      let next = !current;
-      localStorage.setItem('caspian_current_enabled', next ? 'true' : 'false');
-      if (window.CaspianBridge && typeof window.CaspianBridge.saveSetting === 'function') {
-        window.CaspianBridge.saveSetting('caspian_current_enabled', next ? 'true' : 'false');
-      }
-      updateEngineCardUI(cardCC, toggleCCBtn, ccBody, document.getElementById('cc-status-dot'), 'caspian_current_enabled');
-    });
-  }
-
-  // Caspian Drift Settings Wiring (API Key, Speech Engine, Language Accent)
-  const apiKeyInput = document.getElementById('whisper-api-key-input');
-  // Language Accent Pills
-  const langPills = document.querySelectorAll('.cc-lang-pill');
-  let savedLang = localStorage.getItem('caspian_drift_lang') || 'auto';
-  if (window.CaspianBridge && typeof window.CaspianBridge.getPref === 'function') {
-    savedLang = window.CaspianBridge.getPref('caspian_drift_lang', savedLang);
-  }
-  langPills.forEach(pill => {
-    if (pill.dataset.lang === savedLang) {
-      pill.classList.add('active');
-    } else {
-      pill.classList.remove('active');
-    }
-    pill.addEventListener('click', () => {
-      playSFX('tb_clicks');
-      langPills.forEach(p => p.classList.remove('active'));
-      pill.classList.add('active');
-      const selected = pill.dataset.lang;
-      localStorage.setItem('caspian_drift_lang', selected);
-      if (window.CaspianBridge && typeof window.CaspianBridge.savePref === 'function') {
-        window.CaspianBridge.savePref('caspian_drift_lang', selected);
-      }
-      if (window.CaspianBridge && typeof window.CaspianBridge.showToast === 'function') {
-        window.CaspianBridge.showToast(`Accent set to: ${pill.textContent.trim()}`);
-      }
-    });
-  });
-
-  // 4. AdBlocker Accordion & Toggle
-  if (adblockHeader && adblockBody) {
-    adblockHeader.addEventListener('click', (e) => {
-      if (e.target === toggleAdblockBtn || (toggleAdblockBtn && toggleAdblockBtn.contains(e.target))) return;
-      const isOpen = adblockBody.style.display !== 'none';
-      adblockBody.style.display = isOpen ? 'none' : 'block';
-    });
-  }
-  if (toggleAdblockBtn) {
-    toggleAdblockBtn.addEventListener('click', (e) => {
-      e.stopPropagation();
-      playSFX('tb_clicks');
-      let current = localStorage.getItem('adblock_enabled') !== 'false';
-      let next = !current;
-      localStorage.setItem('adblock_enabled', next ? 'true' : 'false');
-      if (window.CaspianBridge && typeof window.CaspianBridge.saveSetting === 'function') {
-        window.CaspianBridge.saveSetting('adblock_enabled', next ? 'true' : 'false');
-      }
-      updateEngineCardUI(cardAB, toggleAdblockBtn, adblockBody, document.getElementById('adblock-dot'), 'adblock_enabled');
-    });
-  }
-
-  // 5. Global Top-Right Master Engine Power Toggle Button (#power-toggle-btn / #btn-power-off)
-  const masterPowerBtn = document.getElementById('power-toggle-btn') || document.getElementById('btn-power-off');
-  if (masterPowerBtn) {
-    masterPowerBtn.addEventListener('click', (e) => {
-      e.stopPropagation();
-      playSFX('tb_power');
-      let anyOn = (localStorage.getItem('temp_saver_enabled') !== 'false' ||
-                    localStorage.getItem('chat_limit_enabled') !== 'false' ||
-                    localStorage.getItem('caspian_current_enabled') !== 'false' ||
-                    localStorage.getItem('adblock_enabled') !== 'false');
-      let targetState = !anyOn;
-
-      ['temp_saver_enabled', 'chat_limit_enabled', 'caspian_current_enabled', 'adblock_enabled'].forEach(key => {
-        localStorage.setItem(key, targetState ? 'true' : 'false');
+    // 1. Temporary Chat Saver Toggle
+    if (toggleTSBtn) {
+      toggleTSBtn.addEventListener('click', (e) => {
+        e.stopPropagation();
+        playSFX('tb_clicks');
+        let current = localStorage.getItem('temp_saver_enabled') !== 'false';
+        let next = !current;
+        localStorage.setItem('temp_saver_enabled', next ? 'true' : 'false');
         if (window.CaspianBridge && typeof window.CaspianBridge.saveSetting === 'function') {
-          window.CaspianBridge.saveSetting(key, targetState ? 'true' : 'false');
+          window.CaspianBridge.saveSetting('temp_saver_enabled', next ? 'true' : 'false');
         }
+        updateEngineCardUI(cardTS, toggleTSBtn, null, document.getElementById('ts-status-dot'), 'temp_saver_enabled');
       });
+    }
 
-      updateEngineCardUI(cardTS, toggleTSBtn, null, document.getElementById('ts-status-dot'), 'temp_saver_enabled');
-      updateEngineCardUI(cardCL, toggleCLBtn, chatLimitBody, document.getElementById('status-dot'), 'chat_limit_enabled');
-      updateEngineCardUI(cardCC, toggleCCBtn, ccBody, document.getElementById('cc-status-dot'), 'caspian_current_enabled');
-      updateEngineCardUI(cardAB, toggleAdblockBtn, adblockBody, document.getElementById('adblock-dot'), 'adblock_enabled');
-
-      if (window.CaspianBridge && typeof window.CaspianBridge.showToast === 'function') {
-        window.CaspianBridge.showToast(targetState ? '⚡ All Caspian Engines Activated!' : '🔌 All Engines Disabled');
-      }
-    });
-  }
-
-  // Floating Multi-Select Group Toolbar Event Listeners
-  const toolbarGroupBtn = document.getElementById('toolbar-group-btn');
-  const toolbarDeselectBtn = document.getElementById('toolbar-deselect-btn');
-  const toolbarDeleteBtn = document.getElementById('toolbar-delete-btn');
-  const modalCreateGroup = document.getElementById('modal-create-group');
-  const inputGroupTitle = document.getElementById('input-group-title');
-
-  if (toolbarGroupBtn) {
-    toolbarGroupBtn.addEventListener('click', () => {
-      playSFX('tb_clicks');
-      if (modalCreateGroup && inputGroupTitle) {
-        editingGroupId = null;
-        inputGroupTitle.value = `Tab Group ${tabGroups.length + 1}`;
-        modalCreateGroup.style.display = 'flex';
-      }
-    });
-  }
-
-  if (toolbarDeselectBtn) {
-    toolbarDeselectBtn.addEventListener('click', () => {
-      playSFX('tb_clicks');
-      isMultiSelectMode = false;
-      selectedTabIds.clear();
-      renderOpenTabs();
-    });
-  }
-
-  if (toolbarDeleteBtn) {
-    toolbarDeleteBtn.addEventListener('click', () => {
-      playSFX('tb_close');
-      selectedTabIds.forEach(id => triggerCloseTab(id));
-      isMultiSelectMode = false;
-      selectedTabIds.clear();
-      setTimeout(renderOpenTabs, 150);
-    });
-  }
-
-  // Emoji Palette Dots
-  document.querySelectorAll('.group-emoji-dot').forEach(dot => {
-    dot.addEventListener('click', () => {
-      playSFX('tb_clicks');
-      document.querySelectorAll('.group-emoji-dot').forEach(d => d.classList.remove('active'));
-      dot.classList.add('active');
-      selectedGroupEmoji = dot.dataset.emoji || '📁';
-    });
-  });
-
-  // Color Palette Dots
-  document.querySelectorAll('.group-color-dot').forEach(dot => {
-    dot.addEventListener('click', () => {
-      playSFX('tb_clicks');
-      document.querySelectorAll('.group-color-dot').forEach(d => d.classList.remove('active'));
-      dot.classList.add('active');
-      selectedGroupColor = dot.dataset.color || '#ef4444';
-    });
-  });
-
-  // Modal Confirm & Cancel
-  const btnConfirmCreateGroup = document.getElementById('btn-confirm-create-group');
-  const btnCancelCreateGroup = document.getElementById('btn-cancel-create-group');
-  const modalCloseGroupBtn = document.getElementById('modal-close-group-btn');
-
-  const closeModal = () => {
-    playSFX('tb_modal');
-    if (modalCreateGroup) modalCreateGroup.style.display = 'none';
-  };
-
-  if (btnCancelCreateGroup) btnCancelCreateGroup.addEventListener('click', closeModal);
-  if (modalCloseGroupBtn) modalCloseGroupBtn.addEventListener('click', closeModal);
-
-  if (btnConfirmCreateGroup) {
-    btnConfirmCreateGroup.addEventListener('click', () => {
-      playSFX('tb_modal');
-      const title = inputGroupTitle ? (inputGroupTitle.value.trim() || 'Tab Group') : 'Tab Group';
-      
-      if (editingGroupId) {
-        const group = tabGroups.find(g => g.id === editingGroupId);
-        if (group) {
-          group.title = title;
-          group.color = selectedGroupColor;
-          group.icon = selectedGroupEmoji;
+    // 2. Chat Limit Accordion & Toggle
+    if (chatLimitHeader && chatLimitBody) {
+      chatLimitHeader.addEventListener('click', (e) => {
+        if (e.target === toggleCLBtn || (toggleCLBtn && toggleCLBtn.contains(e.target))) return;
+        const isOpen = chatLimitBody.style.display !== 'none';
+        chatLimitBody.style.display = isOpen ? 'none' : 'block';
+      });
+    }
+    if (toggleCLBtn) {
+      toggleCLBtn.addEventListener('click', (e) => {
+        e.stopPropagation();
+        playSFX('tb_clicks');
+        let current = localStorage.getItem('chat_limit_enabled') !== 'false';
+        let next = !current;
+        localStorage.setItem('chat_limit_enabled', next ? 'true' : 'false');
+        if (window.CaspianBridge && typeof window.CaspianBridge.saveSetting === 'function') {
+          window.CaspianBridge.saveSetting('chat_limit_enabled', next ? 'true' : 'false');
         }
+        updateEngineCardUI(cardCL, toggleCLBtn, chatLimitBody, document.getElementById('status-dot'), 'chat_limit_enabled');
+      });
+    }
+
+    // 3. Caspian Current Accordion & Toggle
+    if (ccHeader && ccBody) {
+      ccHeader.addEventListener('click', (e) => {
+        if (e.target === toggleCCBtn || (toggleCCBtn && toggleCCBtn.contains(e.target))) return;
+        const isOpen = ccBody.style.display !== 'none';
+        ccBody.style.display = isOpen ? 'none' : 'block';
+      });
+    }
+    if (toggleCCBtn) {
+      toggleCCBtn.addEventListener('click', (e) => {
+        e.stopPropagation();
+        playSFX('tb_clicks');
+        let current = localStorage.getItem('caspian_current_enabled') !== 'false';
+        let next = !current;
+        localStorage.setItem('caspian_current_enabled', next ? 'true' : 'false');
+        if (window.CaspianBridge && typeof window.CaspianBridge.saveSetting === 'function') {
+          window.CaspianBridge.saveSetting('caspian_current_enabled', next ? 'true' : 'false');
+        }
+        updateEngineCardUI(cardCC, toggleCCBtn, ccBody, document.getElementById('cc-status-dot'), 'caspian_current_enabled');
+      });
+    }
+
+    // Caspian Drift Settings Wiring (API Key, Speech Engine, Language Accent)
+    const apiKeyInput = document.getElementById('whisper-api-key-input');
+    // Language Accent Pills
+    const langPills = document.querySelectorAll('.cc-lang-pill');
+    let savedLang = localStorage.getItem('caspian_drift_lang') || 'auto';
+    if (window.CaspianBridge && typeof window.CaspianBridge.getPref === 'function') {
+      savedLang = window.CaspianBridge.getPref('caspian_drift_lang', savedLang);
+    }
+    langPills.forEach(pill => {
+      if (pill.dataset.lang === savedLang) {
+        pill.classList.add('active');
       } else {
-        const newGroup = {
-          id: `group_${Date.now()}`,
-          title: title,
-          color: selectedGroupColor,
-          icon: selectedGroupEmoji,
-          tabIds: Array.from(selectedTabIds)
-        };
-        tabGroups.push(newGroup);
+        pill.classList.remove('active');
       }
-
-      saveTabGroups();
-      isMultiSelectMode = false;
-      selectedTabIds.clear();
-      closeModal();
-      renderOpenTabs();
-      if (window.CaspianBridge && typeof window.CaspianBridge.showToast === 'function') {
-        window.CaspianBridge.showToast(`📁 Saved Group "${title}"!`);
-      }
-    });
-  }
-
-  // Inside Group Banner Action Buttons
-  const btnCloseGroupView = document.getElementById('btn-close-group-view');
-  const btnEditGroup = document.getElementById('btn-edit-group');
-  const btnLeaveGroup = document.getElementById('btn-leave-group');
-  const btnDeleteGroup = document.getElementById('btn-delete-group');
-
-  if (btnCloseGroupView) {
-    btnCloseGroupView.addEventListener('click', () => {
-      playSFX('tb_clicks');
-      activeGroupId = null;
-      renderOpenTabs();
-    });
-  }
-
-  if (btnEditGroup) {
-    btnEditGroup.addEventListener('click', () => {
-      playSFX('tb_clicks');
-      const group = tabGroups.find(g => g.id === activeGroupId);
-      if (group && modalCreateGroup && inputGroupTitle) {
-        editingGroupId = group.id;
-        inputGroupTitle.value = group.title;
-        selectedGroupColor = group.color || '#ef4444';
-        document.querySelectorAll('.group-color-dot').forEach(d => {
-          d.classList.toggle('active', d.dataset.color === selectedGroupColor);
-        });
-        modalCreateGroup.style.display = 'flex';
-      }
-    });
-  }
-
-  if (btnLeaveGroup) {
-    btnLeaveGroup.addEventListener('click', () => {
-      playSFX('tb_clicks');
-      const group = tabGroups.find(g => g.id === activeGroupId);
-      const title = group ? group.title : 'Group';
-      tabGroups = tabGroups.filter(g => g.id !== activeGroupId);
-      saveTabGroups();
-      activeGroupId = null;
-      renderOpenTabs();
-      if (window.CaspianBridge && typeof window.CaspianBridge.showToast === 'function') {
-        window.CaspianBridge.showToast(`📂 Dissolved "${title}". Tabs separated to main view.`);
-      }
-    });
-  }
-
-  // Tab Filter Pills (All / Groups / Single - Fix #8)
-  document.querySelectorAll('.tab-filter-pill').forEach(pill => {
-    pill.addEventListener('click', () => {
-      playSFX('tb_clicks');
-      document.querySelectorAll('.tab-filter-pill').forEach(p => {
-        p.classList.remove('active');
-        p.style.background = 'transparent';
-        p.style.color = 'var(--text-sub)';
-      });
-      pill.classList.add('active');
-      pill.style.background = 'var(--accent)';
-      pill.style.color = '#fff';
-      activeTabFilter = pill.dataset.filter || 'all';
-      renderOpenTabs();
-    });
-  });
-
-  // Modal Group Color Dots Binding
-  document.querySelectorAll('.modal-group-color-dot').forEach(dot => {
-    dot.addEventListener('click', () => {
-      playSFX('tb_clicks');
-      document.querySelectorAll('.modal-group-color-dot').forEach(d => d.classList.remove('active'));
-      dot.classList.add('active');
-      selectedGroupColor = dot.dataset.color || '#ef4444';
-      const colorDot = document.getElementById('group-modal-color-dot');
-      if (colorDot) colorDot.style.background = selectedGroupColor;
-    });
-  });
-
-  // Toast Undo Handler for Group & Single Tab Restoration (Fix #5)
-  const undoToastBtn = document.getElementById('undo-toast-btn');
-  if (undoToastBtn) {
-    undoToastBtn.addEventListener('click', () => {
-      playSFX('tb_clicks');
-      if (lastDeletedGroup) {
-        if (window.CaspianBridge && typeof window.CaspianBridge.restoreLastClosedGroupTabs === 'function') {
-          window.CaspianBridge.restoreLastClosedGroupTabs();
+      pill.addEventListener('click', () => {
+        playSFX('tb_clicks');
+        langPills.forEach(p => p.classList.remove('active'));
+        pill.classList.add('active');
+        const selected = pill.dataset.lang;
+        localStorage.setItem('caspian_drift_lang', selected);
+        if (window.CaspianBridge && typeof window.CaspianBridge.savePref === 'function') {
+          window.CaspianBridge.savePref('caspian_drift_lang', selected);
         }
-        tabGroups.push(lastDeletedGroup.group);
-        saveTabGroups();
-        lastDeletedGroup = null;
         if (window.CaspianBridge && typeof window.CaspianBridge.showToast === 'function') {
-          window.CaspianBridge.showToast(`Restored group "${lastDeletedGroup ? lastDeletedGroup.group.title : 'Group'}"!`);
+          window.CaspianBridge.showToast(`Accent set to: ${pill.textContent.trim()}`);
         }
-      } else {
-        if (window.CaspianBridge && typeof window.CaspianBridge.restoreLastClosedTab === 'function') {
-          window.CaspianBridge.restoreLastClosedTab();
-        }
-      }
-      const toastContainer = document.getElementById('undo-toast-container');
-      if (toastContainer) toastContainer.style.display = 'none';
-      setTimeout(renderOpenTabs, 200);
+      });
     });
-  }
 
-  if (btnDeleteGroup) {
-    btnDeleteGroup.addEventListener('click', () => {
-      playSFX('tb_close');
-      const group = tabGroups.find(g => g.id === activeGroupId);
-      if (group) {
-        lastDeletedGroup = { group: Object.assign({}, group), tabIds: [...group.tabIds] };
-        if (window.CaspianBridge && typeof window.CaspianBridge.closeMultipleTabs === 'function') {
-          window.CaspianBridge.closeMultipleTabs(JSON.stringify(group.tabIds));
+    // 4. AdBlocker Accordion & Toggle
+    if (adblockHeader && adblockBody) {
+      adblockHeader.addEventListener('click', (e) => {
+        if (e.target === toggleAdblockBtn || (toggleAdblockBtn && toggleAdblockBtn.contains(e.target))) return;
+        const isOpen = adblockBody.style.display !== 'none';
+        adblockBody.style.display = isOpen ? 'none' : 'block';
+      });
+    }
+    if (toggleAdblockBtn) {
+      toggleAdblockBtn.addEventListener('click', (e) => {
+        e.stopPropagation();
+        playSFX('tb_clicks');
+        let current = localStorage.getItem('adblock_enabled') !== 'false';
+        let next = !current;
+        localStorage.setItem('adblock_enabled', next ? 'true' : 'false');
+        if (window.CaspianBridge && typeof window.CaspianBridge.saveSetting === 'function') {
+          window.CaspianBridge.saveSetting('adblock_enabled', next ? 'true' : 'false');
         }
+        updateEngineCardUI(cardAB, toggleAdblockBtn, adblockBody, document.getElementById('adblock-dot'), 'adblock_enabled');
+      });
+    }
+
+    // 5. Global Top-Right Master Engine Power Toggle Button (#power-toggle-btn / #btn-power-off)
+    const masterPowerBtn = document.getElementById('power-toggle-btn') || document.getElementById('btn-power-off');
+    if (masterPowerBtn) {
+      masterPowerBtn.addEventListener('click', (e) => {
+        e.stopPropagation();
+        playSFX('tb_power');
+        let anyOn = (localStorage.getItem('temp_saver_enabled') !== 'false' ||
+          localStorage.getItem('chat_limit_enabled') !== 'false' ||
+          localStorage.getItem('caspian_current_enabled') !== 'false' ||
+          localStorage.getItem('adblock_enabled') !== 'false');
+        let targetState = !anyOn;
+
+        ['temp_saver_enabled', 'chat_limit_enabled', 'caspian_current_enabled', 'adblock_enabled'].forEach(key => {
+          localStorage.setItem(key, targetState ? 'true' : 'false');
+          if (window.CaspianBridge && typeof window.CaspianBridge.saveSetting === 'function') {
+            window.CaspianBridge.saveSetting(key, targetState ? 'true' : 'false');
+          }
+        });
+
+        updateEngineCardUI(cardTS, toggleTSBtn, null, document.getElementById('ts-status-dot'), 'temp_saver_enabled');
+        updateEngineCardUI(cardCL, toggleCLBtn, chatLimitBody, document.getElementById('status-dot'), 'chat_limit_enabled');
+        updateEngineCardUI(cardCC, toggleCCBtn, ccBody, document.getElementById('cc-status-dot'), 'caspian_current_enabled');
+        updateEngineCardUI(cardAB, toggleAdblockBtn, adblockBody, document.getElementById('adblock-dot'), 'adblock_enabled');
+
+        if (window.CaspianBridge && typeof window.CaspianBridge.showToast === 'function') {
+          window.CaspianBridge.showToast(targetState ? '⚡ All Caspian Engines Activated!' : '🔌 All Engines Disabled');
+        }
+      });
+    }
+
+    // Floating Multi-Select Group Toolbar Event Listeners
+    const toolbarGroupBtn = document.getElementById('toolbar-group-btn');
+    const toolbarDeselectBtn = document.getElementById('toolbar-deselect-btn');
+    const toolbarDeleteBtn = document.getElementById('toolbar-delete-btn');
+    const modalCreateGroup = document.getElementById('modal-create-group');
+    const inputGroupTitle = document.getElementById('input-group-title');
+
+    if (toolbarGroupBtn) {
+      toolbarGroupBtn.addEventListener('click', () => {
+        playSFX('tb_clicks');
+        if (modalCreateGroup && inputGroupTitle) {
+          editingGroupId = null;
+          inputGroupTitle.value = `Tab Group ${tabGroups.length + 1}`;
+          modalCreateGroup.style.display = 'flex';
+        }
+      });
+    }
+
+    if (toolbarDeselectBtn) {
+      toolbarDeselectBtn.addEventListener('click', () => {
+        playSFX('tb_clicks');
+        isMultiSelectMode = false;
+        selectedTabIds.clear();
+        renderOpenTabs();
+      });
+    }
+
+    if (toolbarDeleteBtn) {
+      toolbarDeleteBtn.addEventListener('click', () => {
+        playSFX('tb_close');
+        selectedTabIds.forEach(id => triggerCloseTab(id));
+        isMultiSelectMode = false;
+        selectedTabIds.clear();
+        setTimeout(renderOpenTabs, 150);
+      });
+    }
+
+    // Emoji Palette Dots
+    document.querySelectorAll('.group-emoji-dot').forEach(dot => {
+      dot.addEventListener('click', () => {
+        playSFX('tb_clicks');
+        document.querySelectorAll('.group-emoji-dot').forEach(d => d.classList.remove('active'));
+        dot.classList.add('active');
+        selectedGroupEmoji = dot.dataset.emoji || '📁';
+      });
+    });
+
+    // Color Palette Dots
+    document.querySelectorAll('.group-color-dot').forEach(dot => {
+      dot.addEventListener('click', () => {
+        playSFX('tb_clicks');
+        document.querySelectorAll('.group-color-dot').forEach(d => d.classList.remove('active'));
+        dot.classList.add('active');
+        selectedGroupColor = dot.dataset.color || '#ef4444';
+      });
+    });
+
+    // Modal Confirm & Cancel
+    const btnConfirmCreateGroup = document.getElementById('btn-confirm-create-group');
+    const btnCancelCreateGroup = document.getElementById('btn-cancel-create-group');
+    const modalCloseGroupBtn = document.getElementById('modal-close-group-btn');
+
+    const closeModal = () => {
+      playSFX('tb_modal');
+      if (modalCreateGroup) modalCreateGroup.style.display = 'none';
+    };
+
+    if (btnCancelCreateGroup) btnCancelCreateGroup.addEventListener('click', closeModal);
+    if (modalCloseGroupBtn) modalCloseGroupBtn.addEventListener('click', closeModal);
+
+    if (btnConfirmCreateGroup) {
+      btnConfirmCreateGroup.addEventListener('click', () => {
+        playSFX('tb_modal');
+        const title = inputGroupTitle ? (inputGroupTitle.value.trim() || 'Tab Group') : 'Tab Group';
+
+        if (editingGroupId) {
+          const group = tabGroups.find(g => g.id === editingGroupId);
+          if (group) {
+            group.title = title;
+            group.color = selectedGroupColor;
+            group.icon = selectedGroupEmoji;
+          }
+        } else {
+          const newGroup = {
+            id: `group_${Date.now()}`,
+            title: title,
+            color: selectedGroupColor,
+            icon: selectedGroupEmoji,
+            tabIds: Array.from(selectedTabIds)
+          };
+          tabGroups.push(newGroup);
+        }
+
+        saveTabGroups();
+        isMultiSelectMode = false;
+        selectedTabIds.clear();
+        closeModal();
+        renderOpenTabs();
+        if (window.CaspianBridge && typeof window.CaspianBridge.showToast === 'function') {
+          window.CaspianBridge.showToast(`📁 Saved Group "${title}"!`);
+        }
+      });
+    }
+
+    // Inside Group Banner Action Buttons
+    const btnCloseGroupView = document.getElementById('btn-close-group-view');
+    const btnEditGroup = document.getElementById('btn-edit-group');
+    const btnLeaveGroup = document.getElementById('btn-leave-group');
+    const btnDeleteGroup = document.getElementById('btn-delete-group');
+
+    if (btnCloseGroupView) {
+      btnCloseGroupView.addEventListener('click', () => {
+        playSFX('tb_clicks');
+        activeGroupId = null;
+        renderOpenTabs();
+      });
+    }
+
+    if (btnEditGroup) {
+      btnEditGroup.addEventListener('click', () => {
+        playSFX('tb_clicks');
+        const group = tabGroups.find(g => g.id === activeGroupId);
+        if (group && modalCreateGroup && inputGroupTitle) {
+          editingGroupId = group.id;
+          inputGroupTitle.value = group.title;
+          selectedGroupColor = group.color || '#ef4444';
+          document.querySelectorAll('.group-color-dot').forEach(d => {
+            d.classList.toggle('active', d.dataset.color === selectedGroupColor);
+          });
+          modalCreateGroup.style.display = 'flex';
+        }
+      });
+    }
+
+    if (btnLeaveGroup) {
+      btnLeaveGroup.addEventListener('click', () => {
+        playSFX('tb_clicks');
+        const group = tabGroups.find(g => g.id === activeGroupId);
+        const title = group ? group.title : 'Group';
         tabGroups = tabGroups.filter(g => g.id !== activeGroupId);
         saveTabGroups();
-        showUndoToast(`Group "${group.title}" deleted`);
-      }
-      activeGroupId = null;
-      setTimeout(renderOpenTabs, 150);
-    });
-  }
+        activeGroupId = null;
+        renderOpenTabs();
+        if (window.CaspianBridge && typeof window.CaspianBridge.showToast === 'function') {
+          window.CaspianBridge.showToast(`📂 Dissolved "${title}". Tabs separated to main view.`);
+        }
+      });
+    }
 
-  // Force clean state & render retries on startup so tabs are never locked after app restart
-  isMultiSelectMode = false;
-  selectedTabIds.clear();
-  renderOpenTabs();
-  setTimeout(renderOpenTabs, 150);
-  setTimeout(renderOpenTabs, 400);
-  setTimeout(renderOpenTabs, 1000);
-});
+    // Tab Filter Pills (All / Groups / Single - Fix #8)
+    document.querySelectorAll('.tab-filter-pill').forEach(pill => {
+      pill.addEventListener('click', () => {
+        playSFX('tb_clicks');
+        document.querySelectorAll('.tab-filter-pill').forEach(p => {
+          p.classList.remove('active');
+          p.style.background = 'transparent';
+          p.style.color = 'var(--text-sub)';
+        });
+        pill.classList.add('active');
+        pill.style.background = 'var(--accent)';
+        pill.style.color = '#fff';
+        activeTabFilter = pill.dataset.filter || 'all';
+        renderOpenTabs();
+      });
+    });
+
+    // Modal Group Color Dots Binding
+    document.querySelectorAll('.modal-group-color-dot').forEach(dot => {
+      dot.addEventListener('click', () => {
+        playSFX('tb_clicks');
+        document.querySelectorAll('.modal-group-color-dot').forEach(d => d.classList.remove('active'));
+        dot.classList.add('active');
+        selectedGroupColor = dot.dataset.color || '#ef4444';
+        const colorDot = document.getElementById('group-modal-color-dot');
+        if (colorDot) colorDot.style.background = selectedGroupColor;
+      });
+    });
+
+    // Toast Undo Handler for Group & Single Tab Restoration (Fix #5)
+    const undoToastBtn = document.getElementById('undo-toast-btn');
+    if (undoToastBtn) {
+      undoToastBtn.addEventListener('click', () => {
+        playSFX('tb_clicks');
+        if (lastDeletedGroup) {
+          if (window.CaspianBridge && typeof window.CaspianBridge.restoreLastClosedGroupTabs === 'function') {
+            window.CaspianBridge.restoreLastClosedGroupTabs();
+          }
+          tabGroups.push(lastDeletedGroup.group);
+          saveTabGroups();
+          lastDeletedGroup = null;
+          if (window.CaspianBridge && typeof window.CaspianBridge.showToast === 'function') {
+            window.CaspianBridge.showToast(`Restored group "${lastDeletedGroup ? lastDeletedGroup.group.title : 'Group'}"!`);
+          }
+        } else {
+          if (window.CaspianBridge && typeof window.CaspianBridge.restoreLastClosedTab === 'function') {
+            window.CaspianBridge.restoreLastClosedTab();
+          }
+        }
+        const toastContainer = document.getElementById('undo-toast-container');
+        if (toastContainer) toastContainer.style.display = 'none';
+        setTimeout(renderOpenTabs, 200);
+      });
+    }
+
+    if (btnDeleteGroup) {
+      btnDeleteGroup.addEventListener('click', () => {
+        playSFX('tb_close');
+        const group = tabGroups.find(g => g.id === activeGroupId);
+        if (group) {
+          lastDeletedGroup = { group: Object.assign({}, group), tabIds: [...group.tabIds] };
+          if (window.CaspianBridge && typeof window.CaspianBridge.closeMultipleTabs === 'function') {
+            window.CaspianBridge.closeMultipleTabs(JSON.stringify(group.tabIds));
+          }
+          tabGroups = tabGroups.filter(g => g.id !== activeGroupId);
+          saveTabGroups();
+          showUndoToast(`Group "${group.title}" deleted`);
+        }
+        activeGroupId = null;
+        setTimeout(renderOpenTabs, 150);
+      });
+    }
+
+    // Force clean state & render retries on startup so tabs are never locked after app restart
+    isMultiSelectMode = false;
+    selectedTabIds.clear();
+    renderOpenTabs();
+    setTimeout(renderOpenTabs, 150);
+    setTimeout(renderOpenTabs, 400);
+    setTimeout(renderOpenTabs, 1000);
+  });
 })();

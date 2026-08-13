@@ -12,12 +12,12 @@
         android:layout_width="match_parent"
         android:layout_height="match_parent" />
 
-    <!-- 2. Overlay Control Sheet Container (Elevation 10dp) -->
+    <!-- 2. Overlay Control Sheet Container (Pre-warmed with INVISIBLE layout) -->
     <FrameLayout
         android:id="@+id/sheet_overlay_container"
         android:layout_width="match_parent"
         android:layout_height="match_parent"
-        android:visibility="gone"
+        android:visibility="invisible"
         android:elevation="10dp">
 
         <!-- Semi-transparent Backdrop -->

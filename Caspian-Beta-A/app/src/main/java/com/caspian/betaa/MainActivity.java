@@ -218,6 +218,17 @@ public class MainActivity extends AppCompatActivity {
         controlWebView = findViewById(R.id.control_webview);
         sheetOverlayContainer = findViewById(R.id.sheet_overlay_container);
         sheetBackdrop = findViewById(R.id.sheet_backdrop);
+        if (sheetOverlayContainer != null) {
+            sheetOverlayContainer.setVisibility(View.INVISIBLE);
+            sheetOverlayContainer.setClickable(false);
+            sheetOverlayContainer.setFocusable(false);
+        }
+        if (sheetBackdrop != null) {
+            sheetBackdrop.setAlpha(0f);
+        }
+        if (controlWebView != null) {
+            controlWebView.setAlpha(0f);
+        }
         floatingCaspianCard = findViewById(R.id.floating_caspian_card);
 
         // Persistent Cookie Sync across all tabs and Google / ChatGPT OAuth
@@ -1374,9 +1385,15 @@ public class MainActivity extends AppCompatActivity {
 
     @SuppressLint("SetJavaScriptEnabled")
     private void setupControlWebView() {
-        controlWebView.getSettings().setJavaScriptEnabled(true);
-        controlWebView.getSettings().setDomStorageEnabled(true);
-        controlWebView.getSettings().setAllowFileAccess(true);
+        WebSettings settings = controlWebView.getSettings();
+        settings.setJavaScriptEnabled(true);
+        settings.setDomStorageEnabled(true);
+        settings.setAllowFileAccess(true);
+        settings.setOffscreenPreRaster(true);
+        settings.setRenderPriority(WebSettings.RenderPriority.HIGH);
+        settings.setCacheMode(WebSettings.LOAD_DEFAULT);
+        
+        controlWebView.setLayerType(View.LAYER_TYPE_HARDWARE, null);
         controlWebView.setBackgroundColor(0);
         controlWebView.addJavascriptInterface(new CaspianBridge(this), "CaspianBridge");
 
@@ -1483,8 +1500,9 @@ public class MainActivity extends AppCompatActivity {
                     }
 
                     // Otherwise, normal tap toggles Caspian Control Sheet
-                    playAssetSound("sfx/tap_alternate.wav");
                     SharedPreferences prefs = getSharedPreferences("CaspianMobilePrefs", MODE_PRIVATE);
+                    String chosenTaSfx = prefs.getString("sfx_file_ta", "pop_click.wav");
+                    playAssetSound("sfx/" + chosenTaSfx);
                     int tapDurationVal = 100;
                     try {
                         String tapDurStr = prefs.getString("theme_button_tap_duration", "100");
@@ -1735,7 +1753,6 @@ public class MainActivity extends AppCompatActivity {
                 if (item.id == targetTabId) {
                     item.webView.setVisibility(View.VISIBLE);
                     item.webView.onResume();
-                    item.webView.resumeTimers();
                     item.webView.bringToFront();
                     item.webView.requestFocus();
                 } else {
@@ -1743,9 +1760,6 @@ public class MainActivity extends AppCompatActivity {
                     boolean isYT = (item.service != null && item.service.toLowerCase().contains("youtube"));
                     if (!isYT) {
                         item.webView.onPause();
-                        if (!anyYouTubeTabActive) {
-                            item.webView.pauseTimers();
-                        }
                     }
                 }
             }
@@ -1839,7 +1853,7 @@ public class MainActivity extends AppCompatActivity {
     public void updateSearchNavVisibility() {
         runOnUiThread(() -> {
             TabItem active = getActiveTab();
-            boolean isSheetOpen = (sheetOverlayContainer != null && sheetOverlayContainer.getVisibility() == View.VISIBLE);
+            boolean isSheetOpen = this.isSheetOpen;
             if (active != null && searchNavContainer != null) {
                 String u = active.url != null ? active.url.toLowerCase() : "";
                 String s = active.service != null ? active.service.toLowerCase() : "";
@@ -2002,8 +2016,10 @@ public class MainActivity extends AppCompatActivity {
         }
     }
 
+    private boolean isSheetOpen = false;
+
     public void toggleControlSheet() {
-        if (sheetOverlayContainer.getVisibility() == View.VISIBLE) {
+        if (isSheetOpen) {
             closeControlSheet();
         } else {
             openControlSheet();
@@ -2011,20 +2027,29 @@ public class MainActivity extends AppCompatActivity {
     }
 
     public void openControlSheet() {
+        isSheetOpen = true;
         sheetOverlayContainer.setVisibility(View.VISIBLE);
+        sheetOverlayContainer.setClickable(true);
+        sheetOverlayContainer.setFocusable(true);
+        sheetOverlayContainer.setScaleX(1f);
+        sheetOverlayContainer.setScaleY(1f);
+        sheetOverlayContainer.setAlpha(1f);
+        sheetOverlayContainer.setTranslationY(0f);
+
         if (searchNavContainer != null) {
             searchNavContainer.setVisibility(View.GONE);
         }
         
         SharedPreferences prefs = getSharedPreferences("CaspianMobilePrefs", MODE_PRIVATE);
-        int openDuration = 150;
+        int openDuration = 180;
         try {
-            String openDurStr = prefs.getString("sheetOpenDuration", "150");
+            String openDurStr = prefs.getString("sheetOpenDuration", "180");
             openDuration = Integer.parseInt(openDurStr);
         } catch(Exception e) {}
         String animStyle = prefs.getString("sheetAnimationStyle", "genie");
 
-        sheetBackdrop.setAlpha(0f);
+        // 1. Smooth In-Place Backdrop Fade
+        sheetBackdrop.animate().cancel();
         sheetBackdrop.animate()
                 .alpha(1f)
                 .setDuration(openDuration)
@@ -2035,30 +2060,32 @@ public class MainActivity extends AppCompatActivity {
             controlWebView.evaluateJavascript("if (typeof restoreSavedSettings === 'function') { restoreSavedSettings(); }", null);
         };
 
+        // 2. Animate Control WebView independently (Never scale or translate the backdrop!)
+        controlWebView.animate().cancel();
         if ("none".equalsIgnoreCase(animStyle) || openDuration <= 0) {
             sheetBackdrop.setAlpha(1f);
-            sheetOverlayContainer.setScaleX(1f);
-            sheetOverlayContainer.setScaleY(1f);
-            sheetOverlayContainer.setAlpha(1f);
-            sheetOverlayContainer.setTranslationY(0f);
+            controlWebView.setScaleX(1f);
+            controlWebView.setScaleY(1f);
+            controlWebView.setAlpha(1f);
+            controlWebView.setTranslationY(0f);
             onOpenComplete.run();
         } else if ("genie".equalsIgnoreCase(animStyle)) {
             float buttonCenterX = floatingCaspianCard.getX() + floatingCaspianCard.getWidth() / 2f;
             float buttonCenterY = floatingCaspianCard.getY() + floatingCaspianCard.getHeight() / 2f;
             
-            sheetOverlayContainer.setPivotX(buttonCenterX);
-            sheetOverlayContainer.setPivotY(buttonCenterY);
-            sheetOverlayContainer.setScaleX(0.05f);
-            sheetOverlayContainer.setScaleY(0.05f);
-            sheetOverlayContainer.setAlpha(0f);
-            sheetOverlayContainer.setTranslationY(0f);
+            controlWebView.setPivotX(buttonCenterX);
+            controlWebView.setPivotY(buttonCenterY);
+            controlWebView.setScaleX(0.05f);
+            controlWebView.setScaleY(0.05f);
+            controlWebView.setAlpha(0f);
+            controlWebView.setTranslationY(0f);
             
-            sheetOverlayContainer.animate()
+            controlWebView.animate()
                     .scaleX(1f)
                     .scaleY(1f)
                     .alpha(1f)
                     .setDuration(openDuration)
-                    .setInterpolator(new android.view.animation.DecelerateInterpolator(1.5f))
+                    .setInterpolator(new android.view.animation.DecelerateInterpolator(1.8f))
                     .withEndAction(onOpenComplete)
                     .start();
         } else {
@@ -2066,54 +2093,65 @@ public class MainActivity extends AppCompatActivity {
             if (height <= 0) {
                 height = getResources().getDisplayMetrics().heightPixels;
             }
-            sheetOverlayContainer.setScaleX(1f);
-            sheetOverlayContainer.setScaleY(1f);
-            sheetOverlayContainer.setAlpha(1f);
-            sheetOverlayContainer.setTranslationY(height);
-            sheetOverlayContainer.animate()
+            controlWebView.setScaleX(1f);
+            controlWebView.setScaleY(1f);
+            controlWebView.setAlpha(1f);
+            controlWebView.setTranslationY(height);
+            controlWebView.animate()
                     .translationY(0)
                     .setDuration(openDuration)
-                    .setInterpolator(new android.view.animation.PathInterpolator(0.22f, 1f, 0.36f, 1f))
+                    .setInterpolator(new android.view.animation.PathInterpolator(0.2f, 0f, 0f, 1f))
                     .withEndAction(onOpenComplete)
                     .start();
         }
     }
 
     public void closeControlSheet() {
+        isSheetOpen = false;
         SharedPreferences prefs = getSharedPreferences("CaspianMobilePrefs", MODE_PRIVATE);
-        int closeDuration = 150;
+        int closeDuration = 160;
         try {
-            String closeDurStr = prefs.getString("sheetCloseDuration", "150");
+            String closeDurStr = prefs.getString("sheetCloseDuration", "160");
             closeDuration = Integer.parseInt(closeDurStr);
         } catch(Exception e) {}
         String animStyle = prefs.getString("sheetAnimationStyle", "genie");
 
+        // 1. Smooth In-Place Backdrop Fade Out
+        sheetBackdrop.animate().cancel();
         sheetBackdrop.animate()
                 .alpha(0f)
                 .setDuration(closeDuration)
                 .start();
 
+        // 2. Animate Control WebView independently
+        controlWebView.animate().cancel();
         if ("none".equalsIgnoreCase(animStyle) || closeDuration <= 0) {
             sheetBackdrop.setAlpha(0f);
-            sheetOverlayContainer.setVisibility(View.GONE);
+            sheetOverlayContainer.setVisibility(View.INVISIBLE);
+            sheetOverlayContainer.setClickable(false);
+            sheetOverlayContainer.setFocusable(false);
             applyPrunerInMainWebView();
         } else if ("genie".equalsIgnoreCase(animStyle)) {
             float buttonCenterX = floatingCaspianCard.getX() + floatingCaspianCard.getWidth() / 2f;
             float buttonCenterY = floatingCaspianCard.getY() + floatingCaspianCard.getHeight() / 2f;
             
-            sheetOverlayContainer.setPivotX(buttonCenterX);
-            sheetOverlayContainer.setPivotY(buttonCenterY);
+            controlWebView.setPivotX(buttonCenterX);
+            controlWebView.setPivotY(buttonCenterY);
             
-            sheetOverlayContainer.animate()
+            controlWebView.animate()
                     .scaleX(0.05f)
                     .scaleY(0.05f)
                     .alpha(0f)
                     .setDuration(closeDuration)
                     .setInterpolator(new android.view.animation.PathInterpolator(0.3f, 0f, 0.8f, 0.15f))
                     .withEndAction(() -> {
-                        sheetOverlayContainer.setVisibility(View.GONE);
-                        applyPrunerInMainWebView();
-                        updateSearchNavVisibility();
+                        if (!isSheetOpen) {
+                            sheetOverlayContainer.setVisibility(View.INVISIBLE);
+                            sheetOverlayContainer.setClickable(false);
+                            sheetOverlayContainer.setFocusable(false);
+                            applyPrunerInMainWebView();
+                            updateSearchNavVisibility();
+                        }
                     })
                     .start();
         } else {
@@ -2121,14 +2159,18 @@ public class MainActivity extends AppCompatActivity {
             if (height <= 0) {
                 height = getResources().getDisplayMetrics().heightPixels;
             }
-            sheetOverlayContainer.animate()
+            controlWebView.animate()
                     .translationY(height)
                     .setDuration(closeDuration)
                     .setInterpolator(new android.view.animation.PathInterpolator(0.3f, 0f, 0.8f, 0.15f))
                     .withEndAction(() -> {
-                        sheetOverlayContainer.setVisibility(View.GONE);
-                        applyPrunerInMainWebView();
-                        updateSearchNavVisibility();
+                        if (!isSheetOpen) {
+                            sheetOverlayContainer.setVisibility(View.INVISIBLE);
+                            sheetOverlayContainer.setClickable(false);
+                            sheetOverlayContainer.setFocusable(false);
+                            applyPrunerInMainWebView();
+                            updateSearchNavVisibility();
+                        }
                     })
                     .start();
         }
@@ -2740,25 +2782,25 @@ public class MainActivity extends AppCompatActivity {
             hideCustomView();
             return;
         }
-        if (sheetOverlayContainer.getVisibility() == View.VISIBLE) {
+        if (isSheetOpen) {
             closeControlSheet();
-        } else {
-            TabItem activeTab = getActiveTab();
-            if (activeTab != null && activeTab.webView != null) {
-                String curUrl = activeTab.webView.getUrl();
-                if (curUrl != null && (curUrl.contains("accounts.google.com") || curUrl.contains("auth.openai.com/api/accounts"))) {
-                    appendDebugLog("BACK_PRUNE_OAUTH", "Prevented back-navigation history trap on OAuth page. Returning directly to login.");
-                    activeTab.webView.loadUrl("https://chatgpt.com/");
-                    return;
-                }
-                if (activeTab.webView.canGoBack()) {
-                    activeTab.webView.goBack();
-                } else {
-                    super.onBackPressed();
-                }
+            return;
+        }
+        TabItem activeTab = getActiveTab();
+        if (activeTab != null && activeTab.webView != null) {
+            String curUrl = activeTab.webView.getUrl();
+            if (curUrl != null && (curUrl.contains("accounts.google.com") || curUrl.contains("auth.openai.com/api/accounts"))) {
+                appendDebugLog("BACK_PRUNE_OAUTH", "Prevented back-navigation history trap on OAuth page. Returning directly to login.");
+                activeTab.webView.loadUrl("https://chatgpt.com/");
+                return;
+            }
+            if (activeTab.webView.canGoBack()) {
+                activeTab.webView.goBack();
             } else {
                 super.onBackPressed();
             }
+        } else {
+            super.onBackPressed();
         }
     }
 

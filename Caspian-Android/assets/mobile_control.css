@@ -14,11 +14,7 @@
 }
 
 [data-theme="dark"], .dark {
-  --accent: #A2A9A9;
-  --secondary: #1B4264;
-  --accent-glow: rgba(162, 169, 169, 0.35);
-  --accent-gradient: linear-gradient(135deg, var(--accent), var(--secondary));
-  --sheet-bg: #050811 !important;
+  --sheet-bg: #050811;
   --card-bg: rgba(28, 37, 65, 0.75);
   --border-glass: rgba(255, 255, 255, 0.12);
   --text-main: #f8fafc !important;
@@ -29,11 +25,7 @@
 }
 
 [data-theme="light"], .light {
-  --accent: #1B4264;
-  --secondary: #0f2b48;
-  --accent-glow: rgba(27, 66, 100, 0.25);
-  --accent-gradient: linear-gradient(135deg, #1B4264, #A2A9A9);
-  --sheet-bg: #ffffff !important;
+  --sheet-bg: #ffffff;
   --card-bg: rgba(255, 255, 255, 0.88);
   --border-glass: rgba(0, 0, 0, 0.08);
   --text-main: #0f172a !important;
@@ -239,7 +231,8 @@ body {
   bottom: 0;
   left: 0;
   width: 100vw;
-  max-height: 85vh;
+  height: 88vh;
+  max-height: 92vh;
   z-index: 999999;
   background: var(--sheet-bg);
   backdrop-filter: blur(16px);
@@ -552,20 +545,23 @@ body {
   gap: 6px;
 }
 
-.limit-pill {
+.limit-pill, .cc-lang-pill, .cc-stt-pill {
   border: 1px solid var(--border-glass);
   background: var(--input-bg);
   color: var(--text-main);
-  padding: 8px 0;
+  padding: 8px 4px;
   border-radius: 14px;
-  font-size: 12px;
+  font-size: 11.5px;
   font-weight: 700;
   cursor: pointer;
   transition: all 0.2s ease;
   text-align: center;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 
-.limit-pill.active {
+.limit-pill.active, .cc-lang-pill.active, .cc-stt-pill.active {
   background: var(--accent-gradient);
   color: #ffffff;
   border: none;
@@ -1115,14 +1111,18 @@ select option {
   transform: scale(1.02);
 }
 
-/* GPU-accelerated tab switching animation */
+/* GPU-accelerated tab switching animation with layout containment */
 .tab-pane {
-  animation: fadeInPane 0.25s cubic-bezier(0.22, 1, 0.36, 1) forwards;
+  display: none;
+  opacity: 0;
+  contain: layout style paint;
+  will-change: opacity;
+  transition: opacity 0.12s cubic-bezier(0.2, 0, 0, 1);
 }
 
-@keyframes fadeInPane {
-  from { opacity: 0; transform: translateY(4px); }
-  to { opacity: 1; transform: translateY(0); }
+.tab-pane.active {
+  display: block;
+  opacity: 1;
 }
 
 /* OneUI Toggle Switch Styles */

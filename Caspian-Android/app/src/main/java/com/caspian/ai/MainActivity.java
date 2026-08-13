@@ -218,6 +218,17 @@ public class MainActivity extends AppCompatActivity {
         controlWebView = findViewById(R.id.control_webview);
         sheetOverlayContainer = findViewById(R.id.sheet_overlay_container);
         sheetBackdrop = findViewById(R.id.sheet_backdrop);
+        if (sheetOverlayContainer != null) {
+            sheetOverlayContainer.setVisibility(View.INVISIBLE);
+            sheetOverlayContainer.setClickable(false);
+            sheetOverlayContainer.setFocusable(false);
+        }
+        if (sheetBackdrop != null) {
+            sheetBackdrop.setAlpha(0f);
+        }
+        if (controlWebView != null) {
+            controlWebView.setAlpha(0f);
+        }
         floatingCaspianCard = findViewById(R.id.floating_caspian_card);
 
         // Persistent Cookie Sync across all tabs and Google / ChatGPT OAuth
@@ -239,7 +250,7 @@ public class MainActivity extends AppCompatActivity {
                 speechContainer.setVisibility(View.GONE);
             }
         } catch (Throwable t) {
-            Log.e("CaspianDebugA", "SpeechWaveformView dynamic init error: " + t.getMessage());
+            Log.e("CaspianDebug", "SpeechWaveformView dynamic init error: " + t.getMessage());
         }
 
         if (navBackBtn != null) {
@@ -282,7 +293,7 @@ public class MainActivity extends AppCompatActivity {
             updateRefreshTimer();
             setupSplashScreen();
         } catch (Throwable t) {
-            Log.e("CaspianDebugA", "Error during onCreate startup: " + t.getMessage(), t);
+            Log.e("CaspianDebug", "Error during onCreate startup: " + t.getMessage(), t);
         }
     }
 
@@ -480,14 +491,23 @@ public class MainActivity extends AppCompatActivity {
     private boolean isRecordingPcmAudio = false;
     private ByteArrayOutputStream pcmAudioBuffer;
     private Thread pcmRecordingThread;
+    private boolean isRecordingSpeechMode = false;
+    private boolean justStartedSpeechDictation = false;
 
     public void startSpeechToText() {
+        SharedPreferences prefs = getSharedPreferences("CaspianMobilePrefs", MODE_PRIVATE);
+        boolean isDriftEnabled = !"false".equalsIgnoreCase(prefs.getString("caspian_current_enabled", "true"));
+        if (!isDriftEnabled) {
+            isRecordingSpeechMode = false;
+            Toast.makeText(this, "⚠️ Caspian Drift Engine is OFF. Enable it in Caspian Engines tab.", Toast.LENGTH_SHORT).show();
+            return;
+        }
+
         if (ContextCompat.checkSelfPermission(this, Manifest.permission.RECORD_AUDIO) != PackageManager.PERMISSION_GRANTED) {
             ActivityCompat.requestPermissions(this, new String[]{Manifest.permission.RECORD_AUDIO}, MIC_PERMISSION_REQUEST_CODE);
             return;
         }
 
-        SharedPreferences prefs = getSharedPreferences("CaspianMobilePrefs", MODE_PRIVATE);
         String sttEngine = prefs.getString("stt_engine_mode", "android_native");
 
         try {
@@ -520,7 +540,11 @@ public class MainActivity extends AppCompatActivity {
     }
 
     public void stopSpeechToText() {
+        isRecordingSpeechMode = false;
         silenceSystemAudioForSpeech(false);
+        if (floatingCaspianCard != null) {
+            floatingCaspianCard.animate().scaleX(1.0f).scaleY(1.0f).setDuration(150).start();
+        }
         FrameLayout speechContainer = findViewById(R.id.speech_waveform_container);
         if (speechContainer != null) {
             speechContainer.setVisibility(View.GONE);
@@ -565,6 +589,19 @@ public class MainActivity extends AppCompatActivity {
                     int read = audioRecord.read(data, 0, data.length);
                     if (read > 0 && pcmAudioBuffer != null) {
                         pcmAudioBuffer.write(data, 0, read);
+
+                        // Calculate RMS amplitude normalized to (-2.0 to 10.0) dB matching Android SpeechRecognizer
+                        long sum = 0;
+                        int samples = read / 2;
+                        for (int i = 0; i < read - 1; i += 2) {
+                            short sample = (short) ((data[i + 1] << 8) | (data[i] & 0xff));
+                            sum += sample * sample;
+                        }
+                        double rms = Math.sqrt((double) sum / Math.max(1, samples));
+                        final float rmsdB = (float) Math.max(-2.0, Math.min(10.0, (rms / 350.0) - 2.0));
+                        if (speechWaveformView != null && speechWaveformView.getVisibility() == View.VISIBLE) {
+                            runOnUiThread(() -> speechWaveformView.setAmplitude(rmsdB));
+                        }
                     }
                 }
             });
@@ -643,6 +680,21 @@ public class MainActivity extends AppCompatActivity {
                         return;
                     }
                     recognizedText = queryDeepgramApi(wavBytes, apiKey);
+                    if (recognizedText != null) {
+                        int pcmLen = wavBytes.length - 44;
+                        int durationSec = Math.max(1, pcmLen / (16000 * 2));
+                        long newTotal = prefs.getLong("deepgram_used_seconds", 0L) + durationSec;
+                        SharedPreferences.Editor ed = prefs.edit();
+                        ed.putLong("deepgram_used_seconds", newTotal);
+                        ed.apply();
+
+                        final long finalTotalSec = newTotal;
+                        runOnUiThread(() -> {
+                            if (controlWebView != null) {
+                                controlWebView.evaluateJavascript("if(typeof window.updateDeepgramUsageBadge === 'function') { window.updateDeepgramUsageBadge(" + finalTotalSec + "); }", null);
+                            }
+                        });
+                    }
                 } else if ("huggingface".equalsIgnoreCase(engineMode)) {
                     String apiKey = prefs.getString("huggingface_api_key", "").trim();
                     if (apiKey.isEmpty()) {
@@ -650,13 +702,6 @@ public class MainActivity extends AppCompatActivity {
                         return;
                     }
                     recognizedText = queryHuggingFaceApi(wavBytes, apiKey);
-                } else if ("groq".equalsIgnoreCase(engineMode)) {
-                    String apiKey = prefs.getString("groq_api_key", "").trim();
-                    if (apiKey.isEmpty()) {
-                        runOnUiThread(() -> new CaspianBridge(MainActivity.this).showToast("⚠️ Groq API Key missing! Enter in Settings."));
-                        return;
-                    }
-                    recognizedText = queryGroqApi(wavBytes, apiKey);
                 }
 
                 final String finalText = recognizedText;
@@ -711,26 +756,59 @@ public class MainActivity extends AppCompatActivity {
     }
 
     private String queryHuggingFaceApi(byte[] wavBytes, String apiKey) throws Exception {
-        URL url = new URL("https://api-inference.huggingface.co/models/openai/whisper-large-v3");
-        HttpURLConnection conn = (HttpURLConnection) url.openConnection();
-        conn.setRequestMethod("POST");
-        conn.setRequestProperty("Authorization", "Bearer " + apiKey);
-        conn.setRequestProperty("Content-Type", "audio/wav");
-        conn.setConnectTimeout(10000);
-        conn.setReadTimeout(20000);
-        conn.setDoOutput(true);
+        String[] endpoints = new String[]{
+            "https://router.huggingface.co/hf-inference/models/openai/whisper-large-v3",
+            "https://api-inference.huggingface.co/models/openai/whisper-large-v3",
+            "https://api-inference.huggingface.co/models/openai/whisper-large-v3-turbo"
+        };
 
-        try (OutputStream os = conn.getOutputStream()) {
-            os.write(wavBytes);
-        }
+        Exception lastErr = null;
+        for (String endpointUrl : endpoints) {
+            try {
+                URL url = new URL(endpointUrl);
+                HttpURLConnection conn = (HttpURLConnection) url.openConnection();
+                conn.setRequestMethod("POST");
+                conn.setRequestProperty("Authorization", "Bearer " + apiKey);
+                conn.setRequestProperty("Content-Type", "audio/flac");
+                conn.setConnectTimeout(8000);
+                conn.setReadTimeout(15000);
+                conn.setDoOutput(true);
 
-        int code = conn.getResponseCode();
-        InputStream is = (code >= 200 && code < 300) ? conn.getInputStream() : conn.getErrorStream();
-        String resp = readStreamString(is);
-        JSONObject json = new JSONObject(resp);
-        if (json.has("text")) {
-            return json.getString("text");
+                try (OutputStream os = conn.getOutputStream()) {
+                    os.write(wavBytes);
+                }
+
+                int code = conn.getResponseCode();
+                InputStream is = (code >= 200 && code < 300) ? conn.getInputStream() : conn.getErrorStream();
+                String resp = readStreamString(is);
+
+                if (code == 401) {
+                    throw new Exception("HF Token Invalid (401). Check Token in Settings.");
+                } else if (code == 503) {
+                    throw new Exception("HF Model Loading (503). Try again in a moment.");
+                }
+
+                if (resp != null && !resp.trim().isEmpty()) {
+                    String trimmed = resp.trim();
+                    if (trimmed.startsWith("{")) {
+                        JSONObject json = new JSONObject(trimmed);
+                        if (json.has("text")) {
+                            return json.getString("text");
+                        } else if (json.has("error")) {
+                            lastErr = new Exception("HF: " + json.getString("error"));
+                        }
+                    } else if (trimmed.startsWith("[")) {
+                        JSONArray arr = new JSONArray(trimmed);
+                        if (arr.length() > 0 && arr.getJSONObject(0).has("text")) {
+                            return arr.getJSONObject(0).getString("text");
+                        }
+                    }
+                }
+            } catch (Exception e) {
+                lastErr = e;
+            }
         }
+        if (lastErr != null) throw lastErr;
         return null;
     }
 
@@ -871,7 +949,7 @@ public class MainActivity extends AppCompatActivity {
         if (!isDebugRecording) return;
         String timeStr = new SimpleDateFormat("HH:mm:ss.SSS", Locale.US).format(new Date());
         debugLogBuffer.append("[").append(timeStr).append("] [").append(tag).append("] ").append(message).append("\n");
-        Log.d("CaspianDebugA", "[" + tag + "] " + message);
+        Log.d("CaspianDebug", "[" + tag + "] " + message);
     }
 
     public TabItem getActiveTab() {
@@ -936,7 +1014,7 @@ public class MainActivity extends AppCompatActivity {
                 }
             }
         } catch (Throwable t) {
-            Log.e("CaspianDebugA", "Error loading saved tabs: " + t.getMessage(), t);
+            Log.e("CaspianDebug", "Error loading saved tabs: " + t.getMessage(), t);
         }
 
         // Fallback default initial Tab
@@ -1307,9 +1385,15 @@ public class MainActivity extends AppCompatActivity {
 
     @SuppressLint("SetJavaScriptEnabled")
     private void setupControlWebView() {
-        controlWebView.getSettings().setJavaScriptEnabled(true);
-        controlWebView.getSettings().setDomStorageEnabled(true);
-        controlWebView.getSettings().setAllowFileAccess(true);
+        WebSettings settings = controlWebView.getSettings();
+        settings.setJavaScriptEnabled(true);
+        settings.setDomStorageEnabled(true);
+        settings.setAllowFileAccess(true);
+        settings.setOffscreenPreRaster(true);
+        settings.setRenderPriority(WebSettings.RenderPriority.HIGH);
+        settings.setCacheMode(WebSettings.LOAD_DEFAULT);
+        
+        controlWebView.setLayerType(View.LAYER_TYPE_HARDWARE, null);
         controlWebView.setBackgroundColor(0);
         controlWebView.addJavascriptInterface(new CaspianBridge(this), "CaspianBridge");
 
@@ -1335,24 +1419,34 @@ public class MainActivity extends AppCompatActivity {
                     startRawX = event.getRawX();
                     startRawY = event.getRawY();
                     isDragging = false;
-                    isLongPressing = false;
+                    justStartedSpeechDictation = false;
 
-                    if (longPressRunnable != null) {
-                        longPressHandler.removeCallbacks(longPressRunnable);
-                    }
-                    longPressRunnable = () -> {
-                        if (!isDragging) {
-                            isLongPressing = true;
-                            triggerVibration();
-                            startSpeechToText();
-                            floatingCaspianCard.animate()
-                                    .scaleX(1.2f)
-                                    .scaleY(1.2f)
-                                    .setDuration(150)
-                                    .start();
+                    if (!isRecordingSpeechMode) {
+                        if (longPressRunnable != null) {
+                            longPressHandler.removeCallbacks(longPressRunnable);
                         }
-                    };
-                    longPressHandler.postDelayed(longPressRunnable, 500);
+                        longPressRunnable = () -> {
+                            if (!isDragging) {
+                                SharedPreferences prefs = getSharedPreferences("CaspianMobilePrefs", MODE_PRIVATE);
+                                boolean isDriftEnabled = !"false".equalsIgnoreCase(prefs.getString("caspian_current_enabled", "true"));
+                                if (!isDriftEnabled) {
+                                    triggerVibration();
+                                    Toast.makeText(MainActivity.this, "⚠️ Caspian Drift Engine is OFF. Enable it in Caspian Engines tab.", Toast.LENGTH_SHORT).show();
+                                    return;
+                                }
+                                isRecordingSpeechMode = true;
+                                justStartedSpeechDictation = true;
+                                triggerVibration();
+                                startSpeechToText();
+                                floatingCaspianCard.animate()
+                                        .scaleX(1.25f)
+                                        .scaleY(1.25f)
+                                        .setDuration(150)
+                                        .start();
+                            }
+                        };
+                        longPressHandler.postDelayed(longPressRunnable, 450);
+                    }
                     return true;
 
                 case MotionEvent.ACTION_MOVE:
@@ -1364,11 +1458,6 @@ public class MainActivity extends AppCompatActivity {
                             longPressHandler.removeCallbacks(longPressRunnable);
                         }
                         isDragging = true;
-                        if (isLongPressing) {
-                            stopSpeechToText();
-                            isLongPressing = false;
-                            floatingCaspianCard.animate().scaleX(1.0f).scaleY(1.0f).setDuration(150).start();
-                        }
                         float newX = event.getRawX() + dX;
                         float newY = event.getRawY() + dY;
 
@@ -1391,42 +1480,55 @@ public class MainActivity extends AppCompatActivity {
                     if (longPressRunnable != null) {
                         longPressHandler.removeCallbacks(longPressRunnable);
                     }
-                    if (isLongPressing) {
-                        stopSpeechToText();
-                        isLongPressing = false;
-                        floatingCaspianCard.animate().scaleX(1.0f).scaleY(1.0f).setDuration(150).start();
-                    } else if (!isDragging) {
-                        playAssetSound("sfx/tap_alternate.wav");
-                        SharedPreferences prefs = getSharedPreferences("CaspianMobilePrefs", MODE_PRIVATE);
-                        int tapDurationVal = 100;
-                        try {
-                            String tapDurStr = prefs.getString("theme_button_tap_duration", "100");
-                            tapDurationVal = Integer.parseInt(tapDurStr);
-                        } catch(Exception e) {}
 
-                        final int finalTapDur = tapDurationVal;
-                        if (finalTapDur > 0) {
-                            floatingCaspianCard.animate()
-                                    .scaleX(0.88f)
-                                    .scaleY(0.88f)
-                                    .setDuration(finalTapDur)
-                                    .withEndAction(() -> {
-                                        floatingCaspianCard.animate()
-                                                .scaleX(1.0f)
-                                                .scaleY(1.0f)
-                                                .setDuration(finalTapDur)
-                                                .setInterpolator(new android.view.animation.OvershootInterpolator(1.2f))
-                                                .start();
-                                    })
-                                    .start();
-                        }
-                        toggleControlSheet();
+                    if (isDragging) {
+                        return true;
                     }
-                    return true;
 
-                default:
-                    return false;
+                    // If long-press just fired to start dictation, user released finger -> keep recording in background!
+                    if (justStartedSpeechDictation) {
+                        justStartedSpeechDictation = false;
+                        return true;
+                    }
+
+                    // If speech recording is ACTIVE, tapping the button STOPS recording & sends audio!
+                    if (isRecordingSpeechMode) {
+                        isRecordingSpeechMode = false;
+                        triggerVibration();
+                        stopSpeechToText();
+                        return true;
+                    }
+
+                    // Otherwise, normal tap toggles Caspian Control Sheet
+                    SharedPreferences prefs = getSharedPreferences("CaspianMobilePrefs", MODE_PRIVATE);
+                    String chosenTaSfx = prefs.getString("sfx_file_ta", "pop_click.wav");
+                    playAssetSound("sfx/" + chosenTaSfx);
+                    int tapDurationVal = 100;
+                    try {
+                        String tapDurStr = prefs.getString("theme_button_tap_duration", "100");
+                        tapDurationVal = Integer.parseInt(tapDurStr);
+                    } catch(Exception e) {}
+
+                    final int finalTapDur = tapDurationVal;
+                    if (finalTapDur > 0) {
+                        floatingCaspianCard.animate()
+                                .scaleX(0.88f)
+                                .scaleY(0.88f)
+                                .setDuration(finalTapDur)
+                                .withEndAction(() -> {
+                                    floatingCaspianCard.animate()
+                                            .scaleX(1.0f)
+                                            .scaleY(1.0f)
+                                            .setDuration(finalTapDur)
+                                            .setInterpolator(new android.view.animation.OvershootInterpolator(1.2f))
+                                            .start();
+                                })
+                                .start();
+                    }
+                    toggleControlSheet();
+                    return true;
             }
+            return false;
         });
     }
 
@@ -1651,7 +1753,6 @@ public class MainActivity extends AppCompatActivity {
                 if (item.id == targetTabId) {
                     item.webView.setVisibility(View.VISIBLE);
                     item.webView.onResume();
-                    item.webView.resumeTimers();
                     item.webView.bringToFront();
                     item.webView.requestFocus();
                 } else {
@@ -1659,9 +1760,6 @@ public class MainActivity extends AppCompatActivity {
                     boolean isYT = (item.service != null && item.service.toLowerCase().contains("youtube"));
                     if (!isYT) {
                         item.webView.onPause();
-                        if (!anyYouTubeTabActive) {
-                            item.webView.pauseTimers();
-                        }
                     }
                 }
             }
@@ -1755,7 +1853,7 @@ public class MainActivity extends AppCompatActivity {
     public void updateSearchNavVisibility() {
         runOnUiThread(() -> {
             TabItem active = getActiveTab();
-            boolean isSheetOpen = (sheetOverlayContainer != null && sheetOverlayContainer.getVisibility() == View.VISIBLE);
+            boolean isSheetOpen = this.isSheetOpen;
             if (active != null && searchNavContainer != null) {
                 String u = active.url != null ? active.url.toLowerCase() : "";
                 String s = active.service != null ? active.service.toLowerCase() : "";
@@ -1918,8 +2016,10 @@ public class MainActivity extends AppCompatActivity {
         }
     }
 
+    private boolean isSheetOpen = false;
+
     public void toggleControlSheet() {
-        if (sheetOverlayContainer.getVisibility() == View.VISIBLE) {
+        if (isSheetOpen) {
             closeControlSheet();
         } else {
             openControlSheet();
@@ -1927,20 +2027,29 @@ public class MainActivity extends AppCompatActivity {
     }
 
     public void openControlSheet() {
+        isSheetOpen = true;
         sheetOverlayContainer.setVisibility(View.VISIBLE);
+        sheetOverlayContainer.setClickable(true);
+        sheetOverlayContainer.setFocusable(true);
+        sheetOverlayContainer.setScaleX(1f);
+        sheetOverlayContainer.setScaleY(1f);
+        sheetOverlayContainer.setAlpha(1f);
+        sheetOverlayContainer.setTranslationY(0f);
+
         if (searchNavContainer != null) {
             searchNavContainer.setVisibility(View.GONE);
         }
         
         SharedPreferences prefs = getSharedPreferences("CaspianMobilePrefs", MODE_PRIVATE);
-        int openDuration = 150;
+        int openDuration = 180;
         try {
-            String openDurStr = prefs.getString("sheetOpenDuration", "150");
+            String openDurStr = prefs.getString("sheetOpenDuration", "180");
             openDuration = Integer.parseInt(openDurStr);
         } catch(Exception e) {}
         String animStyle = prefs.getString("sheetAnimationStyle", "genie");
 
-        sheetBackdrop.setAlpha(0f);
+        // 1. Smooth In-Place Backdrop Fade
+        sheetBackdrop.animate().cancel();
         sheetBackdrop.animate()
                 .alpha(1f)
                 .setDuration(openDuration)
@@ -1951,30 +2060,32 @@ public class MainActivity extends AppCompatActivity {
             controlWebView.evaluateJavascript("if (typeof restoreSavedSettings === 'function') { restoreSavedSettings(); }", null);
         };
 
+        // 2. Animate Control WebView independently (Never scale or translate the backdrop!)
+        controlWebView.animate().cancel();
         if ("none".equalsIgnoreCase(animStyle) || openDuration <= 0) {
             sheetBackdrop.setAlpha(1f);
-            sheetOverlayContainer.setScaleX(1f);
-            sheetOverlayContainer.setScaleY(1f);
-            sheetOverlayContainer.setAlpha(1f);
-            sheetOverlayContainer.setTranslationY(0f);
+            controlWebView.setScaleX(1f);
+            controlWebView.setScaleY(1f);
+            controlWebView.setAlpha(1f);
+            controlWebView.setTranslationY(0f);
             onOpenComplete.run();
         } else if ("genie".equalsIgnoreCase(animStyle)) {
             float buttonCenterX = floatingCaspianCard.getX() + floatingCaspianCard.getWidth() / 2f;
             float buttonCenterY = floatingCaspianCard.getY() + floatingCaspianCard.getHeight() / 2f;
             
-            sheetOverlayContainer.setPivotX(buttonCenterX);
-            sheetOverlayContainer.setPivotY(buttonCenterY);
-            sheetOverlayContainer.setScaleX(0.05f);
-            sheetOverlayContainer.setScaleY(0.05f);
-            sheetOverlayContainer.setAlpha(0f);
-            sheetOverlayContainer.setTranslationY(0f);
+            controlWebView.setPivotX(buttonCenterX);
+            controlWebView.setPivotY(buttonCenterY);
+            controlWebView.setScaleX(0.05f);
+            controlWebView.setScaleY(0.05f);
+            controlWebView.setAlpha(0f);
+            controlWebView.setTranslationY(0f);
             
-            sheetOverlayContainer.animate()
+            controlWebView.animate()
                     .scaleX(1f)
                     .scaleY(1f)
                     .alpha(1f)
                     .setDuration(openDuration)
-                    .setInterpolator(new android.view.animation.DecelerateInterpolator(1.5f))
+                    .setInterpolator(new android.view.animation.DecelerateInterpolator(1.8f))
                     .withEndAction(onOpenComplete)
                     .start();
         } else {
@@ -1982,54 +2093,65 @@ public class MainActivity extends AppCompatActivity {
             if (height <= 0) {
                 height = getResources().getDisplayMetrics().heightPixels;
             }
-            sheetOverlayContainer.setScaleX(1f);
-            sheetOverlayContainer.setScaleY(1f);
-            sheetOverlayContainer.setAlpha(1f);
-            sheetOverlayContainer.setTranslationY(height);
-            sheetOverlayContainer.animate()
+            controlWebView.setScaleX(1f);
+            controlWebView.setScaleY(1f);
+            controlWebView.setAlpha(1f);
+            controlWebView.setTranslationY(height);
+            controlWebView.animate()
                     .translationY(0)
                     .setDuration(openDuration)
-                    .setInterpolator(new android.view.animation.PathInterpolator(0.22f, 1f, 0.36f, 1f))
+                    .setInterpolator(new android.view.animation.PathInterpolator(0.2f, 0f, 0f, 1f))
                     .withEndAction(onOpenComplete)
                     .start();
         }
     }
 
     public void closeControlSheet() {
+        isSheetOpen = false;
         SharedPreferences prefs = getSharedPreferences("CaspianMobilePrefs", MODE_PRIVATE);
-        int closeDuration = 150;
+        int closeDuration = 160;
         try {
-            String closeDurStr = prefs.getString("sheetCloseDuration", "150");
+            String closeDurStr = prefs.getString("sheetCloseDuration", "160");
             closeDuration = Integer.parseInt(closeDurStr);
         } catch(Exception e) {}
         String animStyle = prefs.getString("sheetAnimationStyle", "genie");
 
+        // 1. Smooth In-Place Backdrop Fade Out
+        sheetBackdrop.animate().cancel();
         sheetBackdrop.animate()
                 .alpha(0f)
                 .setDuration(closeDuration)
                 .start();
 
+        // 2. Animate Control WebView independently
+        controlWebView.animate().cancel();
         if ("none".equalsIgnoreCase(animStyle) || closeDuration <= 0) {
             sheetBackdrop.setAlpha(0f);
-            sheetOverlayContainer.setVisibility(View.GONE);
+            sheetOverlayContainer.setVisibility(View.INVISIBLE);
+            sheetOverlayContainer.setClickable(false);
+            sheetOverlayContainer.setFocusable(false);
             applyPrunerInMainWebView();
         } else if ("genie".equalsIgnoreCase(animStyle)) {
             float buttonCenterX = floatingCaspianCard.getX() + floatingCaspianCard.getWidth() / 2f;
             float buttonCenterY = floatingCaspianCard.getY() + floatingCaspianCard.getHeight() / 2f;
             
-            sheetOverlayContainer.setPivotX(buttonCenterX);
-            sheetOverlayContainer.setPivotY(buttonCenterY);
+            controlWebView.setPivotX(buttonCenterX);
+            controlWebView.setPivotY(buttonCenterY);
             
-            sheetOverlayContainer.animate()
+            controlWebView.animate()
                     .scaleX(0.05f)
                     .scaleY(0.05f)
                     .alpha(0f)
                     .setDuration(closeDuration)
                     .setInterpolator(new android.view.animation.PathInterpolator(0.3f, 0f, 0.8f, 0.15f))
                     .withEndAction(() -> {
-                        sheetOverlayContainer.setVisibility(View.GONE);
-                        applyPrunerInMainWebView();
-                        updateSearchNavVisibility();
+                        if (!isSheetOpen) {
+                            sheetOverlayContainer.setVisibility(View.INVISIBLE);
+                            sheetOverlayContainer.setClickable(false);
+                            sheetOverlayContainer.setFocusable(false);
+                            applyPrunerInMainWebView();
+                            updateSearchNavVisibility();
+                        }
                     })
                     .start();
         } else {
@@ -2037,14 +2159,18 @@ public class MainActivity extends AppCompatActivity {
             if (height <= 0) {
                 height = getResources().getDisplayMetrics().heightPixels;
             }
-            sheetOverlayContainer.animate()
+            controlWebView.animate()
                     .translationY(height)
                     .setDuration(closeDuration)
                     .setInterpolator(new android.view.animation.PathInterpolator(0.3f, 0f, 0.8f, 0.15f))
                     .withEndAction(() -> {
-                        sheetOverlayContainer.setVisibility(View.GONE);
-                        applyPrunerInMainWebView();
-                        updateSearchNavVisibility();
+                        if (!isSheetOpen) {
+                            sheetOverlayContainer.setVisibility(View.INVISIBLE);
+                            sheetOverlayContainer.setClickable(false);
+                            sheetOverlayContainer.setFocusable(false);
+                            applyPrunerInMainWebView();
+                            updateSearchNavVisibility();
+                        }
                     })
                     .start();
         }
@@ -2656,25 +2782,25 @@ public class MainActivity extends AppCompatActivity {
             hideCustomView();
             return;
         }
-        if (sheetOverlayContainer.getVisibility() == View.VISIBLE) {
+        if (isSheetOpen) {
             closeControlSheet();
-        } else {
-            TabItem activeTab = getActiveTab();
-            if (activeTab != null && activeTab.webView != null) {
-                String curUrl = activeTab.webView.getUrl();
-                if (curUrl != null && (curUrl.contains("accounts.google.com") || curUrl.contains("auth.openai.com/api/accounts"))) {
-                    appendDebugLog("BACK_PRUNE_OAUTH", "Prevented back-navigation history trap on OAuth page. Returning directly to login.");
-                    activeTab.webView.loadUrl("https://chatgpt.com/");
-                    return;
-                }
-                if (activeTab.webView.canGoBack()) {
-                    activeTab.webView.goBack();
-                } else {
-                    super.onBackPressed();
-                }
+            return;
+        }
+        TabItem activeTab = getActiveTab();
+        if (activeTab != null && activeTab.webView != null) {
+            String curUrl = activeTab.webView.getUrl();
+            if (curUrl != null && (curUrl.contains("accounts.google.com") || curUrl.contains("auth.openai.com/api/accounts"))) {
+                appendDebugLog("BACK_PRUNE_OAUTH", "Prevented back-navigation history trap on OAuth page. Returning directly to login.");
+                activeTab.webView.loadUrl("https://chatgpt.com/");
+                return;
+            }
+            if (activeTab.webView.canGoBack()) {
+                activeTab.webView.goBack();
             } else {
                 super.onBackPressed();
             }
+        } else {
+            super.onBackPressed();
         }
     }
 
