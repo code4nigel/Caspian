@@ -58,83 +58,220 @@
             android:contentDescription="Caspian Mobile Menu" />
     </androidx.cardview.widget.CardView>
 
-    <!-- 4. Floating Search Dock (Google Tabs Navigation & URL Pill - Elevation 40dp) -->
+    <!-- 3.5 Floating YouTube Quick Remote Container (Elevation 35dp - Liquid Glass) -->
+    <!-- 3.5 Floating YouTube Quick Remote Container (Elevation 35dp - Liquid Glass) -->
     <FrameLayout
-        android:id="@+id/search_nav_container"
+        android:id="@+id/yt_floating_remote_container"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
-        android:layout_gravity="bottom|start"
-        android:layout_marginBottom="90dp"
-        android:layout_marginStart="20dp"
-        android:elevation="40dp"
+        android:layout_gravity="bottom|end"
+        android:layout_marginBottom="140dp"
+        android:layout_marginEnd="8dp"
+        android:clickable="true"
+        android:focusable="true"
+        android:elevation="35dp"
         android:visibility="gone">
 
-        <!-- Expanded Full Dock Layout -->
-        <LinearLayout
-            android:id="@+id/search_dock_expanded"
+        <!-- Expanded Full Remote Dock Layout (Liquid Glass Capsule with Horizontal Scroll) -->
+        <HorizontalScrollView
+            android:id="@+id/yt_floating_remote_scroll"
             android:layout_width="wrap_content"
-            android:layout_height="42dp"
-            android:background="@drawable/bg_nav_pill"
-            android:orientation="horizontal"
-            android:paddingStart="8dp"
-            android:paddingEnd="8dp"
-            android:gravity="center_vertical">
+            android:layout_height="48dp"
+            android:background="@drawable/bg_liquid_glass"
+            android:clipToOutline="true"
+            android:scrollbars="none"
+            android:overScrollMode="never"
+            android:fillViewport="true"
+            android:clickable="true"
+            android:focusable="true">
 
-            <ImageButton
-                android:id="@+id/nav_back_btn"
-                android:layout_width="34dp"
-                android:layout_height="34dp"
-                android:background="?attr/selectableItemBackgroundBorderless"
-                android:src="@android:drawable/ic_media_previous"
-                android:tint="#FFFFFF"
-                android:contentDescription="Back Navigation" />
-
-            <View
-                android:layout_width="1dp"
-                android:layout_height="18dp"
-                android:layout_marginStart="2dp"
-                android:layout_marginEnd="4dp"
-                android:background="#44FFFFFF" />
-
-            <TextView
-                android:id="@+id/search_dock_url"
-                android:layout_width="130dp"
+            <LinearLayout
+                android:id="@+id/yt_floating_remote_dock"
+                android:layout_width="wrap_content"
                 android:layout_height="match_parent"
-                android:gravity="center"
-                android:ellipsize="end"
-                android:singleLine="true"
-                android:textColor="#FFFFFF"
-                android:textSize="11sp"
-                android:textStyle="bold"
-                android:text="google.com"
-                android:background="?attr/selectableItemBackground"
+                android:background="@android:color/transparent"
+                android:orientation="horizontal"
+                android:paddingStart="8dp"
+                android:paddingEnd="6dp"
+                android:gravity="center_vertical"
                 android:clickable="true"
                 android:focusable="true"
-                android:contentDescription="Drag to Move Search Dock" />
+                android:visibility="visible">
 
-            <View
-                android:layout_width="1dp"
-                android:layout_height="18dp"
-                android:layout_marginStart="4dp"
-                android:layout_marginEnd="2dp"
-                android:background="#44FFFFFF" />
+                <!-- 1. Close Cross Button (Left Side) -->
+                <ImageButton
+                    android:id="@+id/yt_remote_close"
+                    android:layout_width="26dp"
+                    android:layout_height="26dp"
+                    android:background="?attr/selectableItemBackgroundBorderless"
+                    android:src="@drawable/ic_pod_close"
+                    android:tint="#88FFFFFF"
+                    android:contentDescription="Close Remote" />
 
-            <ImageButton
-                android:id="@+id/nav_forward_btn"
-                android:layout_width="34dp"
-                android:layout_height="34dp"
-                android:background="?attr/selectableItemBackgroundBorderless"
-                android:src="@android:drawable/ic_media_next"
-                android:tint="#FFFFFF"
-                android:contentDescription="Forward Navigation" />
-        </LinearLayout>
+                <View
+                    android:layout_width="1dp"
+                    android:layout_height="16dp"
+                    android:layout_marginStart="3dp"
+                    android:layout_marginEnd="3dp"
+                    android:background="#33FFFFFF" />
 
-        <!-- Collapsed Floating Circle Button (Shown when Scrolling Down) -->
+                <!-- 2. Reload Tab Button -->
+                <ImageButton
+                    android:id="@+id/yt_remote_reload"
+                    android:layout_width="26dp"
+                    android:layout_height="26dp"
+                    android:background="?attr/selectableItemBackgroundBorderless"
+                    android:src="@drawable/ic_pod_reload"
+                    android:tint="#FFFFFF"
+                    android:contentDescription="Reload YouTube Tab" />
+
+                <!-- 3. Fullscreen Button -->
+                <ImageButton
+                    android:id="@+id/yt_remote_fullscreen"
+                    android:layout_width="26dp"
+                    android:layout_height="26dp"
+                    android:layout_marginStart="2dp"
+                    android:background="?attr/selectableItemBackgroundBorderless"
+                    android:src="@drawable/ic_pod_fullscreen"
+                    android:tint="#FFFFFF"
+                    android:contentDescription="Fullscreen Toggle" />
+
+                <!-- 4. Previous Video -->
+                <ImageButton
+                    android:id="@+id/yt_remote_prev_video"
+                    android:layout_width="26dp"
+                    android:layout_height="26dp"
+                    android:layout_marginStart="2dp"
+                    android:background="?attr/selectableItemBackgroundBorderless"
+                    android:src="@drawable/ic_pod_prev"
+                    android:tint="#FFFFFF"
+                    android:contentDescription="Previous Video" />
+
+                <!-- 5. Rewind -5s -->
+                <ImageButton
+                    android:id="@+id/yt_remote_seek_back"
+                    android:layout_width="26dp"
+                    android:layout_height="26dp"
+                    android:layout_marginStart="2dp"
+                    android:background="?attr/selectableItemBackgroundBorderless"
+                    android:src="@drawable/ic_pod_rewind"
+                    android:tint="#FFFFFF"
+                    android:contentDescription="-5s Seek" />
+
+                <!-- 6. Play / Pause -->
+                <ImageButton
+                    android:id="@+id/yt_remote_play_pause"
+                    android:layout_width="32dp"
+                    android:layout_height="32dp"
+                    android:layout_marginStart="2dp"
+                    android:layout_marginEnd="2dp"
+                    android:background="?attr/selectableItemBackgroundBorderless"
+                    android:src="@drawable/ic_pod_play"
+                    android:tint="#FFFFFF"
+                    android:contentDescription="Play/Pause" />
+
+                <!-- 7. Forward +5s -->
+                <ImageButton
+                    android:id="@+id/yt_remote_seek_fwd"
+                    android:layout_width="26dp"
+                    android:layout_height="26dp"
+                    android:background="?attr/selectableItemBackgroundBorderless"
+                    android:src="@drawable/ic_pod_fastfwd"
+                    android:tint="#FFFFFF"
+                    android:contentDescription="+5s Seek" />
+
+                <!-- 8. Next Video -->
+                <ImageButton
+                    android:id="@+id/yt_remote_next_video"
+                    android:layout_width="26dp"
+                    android:layout_height="26dp"
+                    android:layout_marginStart="2dp"
+                    android:background="?attr/selectableItemBackgroundBorderless"
+                    android:src="@drawable/ic_pod_next"
+                    android:tint="#FFFFFF"
+                    android:contentDescription="Next Video" />
+
+                <!-- 9. Mute / Unmute Button -->
+                <ImageButton
+                    android:id="@+id/yt_remote_mute"
+                    android:layout_width="26dp"
+                    android:layout_height="26dp"
+                    android:layout_marginStart="2dp"
+                    android:background="?attr/selectableItemBackgroundBorderless"
+                    android:src="@drawable/ic_pod_unmute"
+                    android:tint="#FFFFFF"
+                    android:contentDescription="Mute / Unmute Toggle" />
+
+                <!-- 10. Speed Toggle Pill -->
+                <TextView
+                    android:id="@+id/yt_remote_speed_btn"
+                    android:layout_width="wrap_content"
+                    android:layout_height="26dp"
+                    android:layout_marginStart="4dp"
+                    android:paddingStart="6dp"
+                    android:paddingEnd="6dp"
+                    android:gravity="center"
+                    android:background="@drawable/bg_liquid_glass_pill"
+                    android:text="1x"
+                    android:textColor="#FFFFFF"
+                    android:textSize="11sp"
+                    android:textStyle="bold" />
+
+                <!-- 11. Quality Toggle Pill -->
+                <TextView
+                    android:id="@+id/yt_remote_quality_btn"
+                    android:layout_width="wrap_content"
+                    android:layout_height="26dp"
+                    android:layout_marginStart="4dp"
+                    android:paddingStart="6dp"
+                    android:paddingEnd="6dp"
+                    android:gravity="center"
+                    android:background="@drawable/bg_liquid_glass_pill"
+                    android:text="Auto"
+                    android:textColor="#FFFFFF"
+                    android:textSize="11sp"
+                    android:textStyle="bold" />
+
+                <View
+                    android:layout_width="1dp"
+                    android:layout_height="16dp"
+                    android:layout_marginStart="4dp"
+                    android:layout_marginEnd="2dp"
+                    android:background="#33FFFFFF" />
+
+                <!-- 12. Drag & Move Handle (Right Side - Large Touch Hitbox) -->
+                <TextView
+                    android:id="@+id/yt_remote_drag_handle"
+                    android:layout_width="32dp"
+                    android:layout_height="32dp"
+                    android:gravity="center"
+                    android:text="⠿"
+                    android:textColor="#B3FFFFFF"
+                    android:textSize="16sp"
+                    android:clickable="true"
+                    android:focusable="true"
+                    android:contentDescription="Drag Remote" />
+
+                <!-- 13. Shrink to Ball Button (Far Right Side, After Mover) -->
+                <ImageButton
+                    android:id="@+id/yt_remote_shrink_btn"
+                    android:layout_width="28dp"
+                    android:layout_height="28dp"
+                    android:layout_marginStart="1dp"
+                    android:background="?attr/selectableItemBackgroundBorderless"
+                    android:src="@drawable/ic_shrink_bubble"
+                    android:tint="#CCFFFFFF"
+                    android:contentDescription="Shrink to Ball" />
+            </LinearLayout>
+        </HorizontalScrollView>
+
+        <!-- Collapsed Floating Liquid Glass Ball (Shrink State) -->
         <FrameLayout
-            android:id="@+id/search_dock_collapsed_btn"
-            android:layout_width="42dp"
-            android:layout_height="42dp"
-            android:background="@drawable/bg_nav_pill"
+            android:id="@+id/yt_floating_remote_ball"
+            android:layout_width="44dp"
+            android:layout_height="44dp"
+            android:layout_gravity="center_vertical|end"
+            android:background="@drawable/bg_liquid_glass_ball"
             android:clickable="true"
             android:focusable="true"
             android:visibility="gone">
@@ -143,9 +280,247 @@
                 android:layout_width="match_parent"
                 android:layout_height="match_parent"
                 android:gravity="center"
-                android:text="🔍"
-                android:textColor="#FFFFFF"
-                android:textSize="16sp" />
+                android:text="🎬"
+                android:textSize="18sp" />
+        </FrameLayout>
+    </FrameLayout>
+
+    <!-- 4. Floating Google Toolbar (Search Navigation, Liquid Glass, In-Page Finder, Elevation 40dp) -->
+    <FrameLayout
+        android:id="@+id/search_nav_container"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_gravity="bottom|end"
+        android:layout_marginBottom="90dp"
+        android:layout_marginEnd="8dp"
+        android:elevation="40dp"
+        android:clickable="true"
+        android:focusable="true"
+        android:visibility="gone">
+
+        <!-- Expanded Full Dock Layout (Liquid Glass Capsule with Horizontal Scroll) -->
+        <HorizontalScrollView
+            android:id="@+id/search_dock_scroll"
+            android:layout_width="wrap_content"
+            android:layout_height="48dp"
+            android:background="@drawable/bg_liquid_glass"
+            android:clipToOutline="true"
+            android:scrollbars="none"
+            android:overScrollMode="never"
+            android:fillViewport="true"
+            android:clickable="true"
+            android:focusable="true">
+
+            <LinearLayout
+                android:id="@+id/search_dock_expanded"
+                android:layout_width="wrap_content"
+                android:layout_height="match_parent"
+                android:background="@android:color/transparent"
+                android:orientation="horizontal"
+                android:paddingStart="8dp"
+                android:paddingEnd="6dp"
+                android:gravity="center_vertical"
+                android:clickable="true"
+                android:focusable="true">
+
+                <!-- 1. Close Button (Left Side) -->
+                <ImageButton
+                    android:id="@+id/nav_dock_close"
+                    android:layout_width="26dp"
+                    android:layout_height="26dp"
+                    android:background="?attr/selectableItemBackgroundBorderless"
+                    android:src="@drawable/ic_pod_close"
+                    android:tint="#88FFFFFF"
+                    android:contentDescription="Close Google Toolbar" />
+
+                <View
+                    android:layout_width="1dp"
+                    android:layout_height="16dp"
+                    android:layout_marginStart="3dp"
+                    android:layout_marginEnd="3dp"
+                    android:background="#33FFFFFF" />
+
+                <!-- 1.5 Reload Tab Button -->
+                <ImageButton
+                    android:id="@+id/nav_dock_reload"
+                    android:layout_width="26dp"
+                    android:layout_height="26dp"
+                    android:background="?attr/selectableItemBackgroundBorderless"
+                    android:src="@drawable/ic_pod_reload"
+                    android:tint="#FFFFFF"
+                    android:contentDescription="Reload Active Tab" />
+
+                <!-- 2. Back Navigation Button -->
+                <ImageButton
+                    android:id="@+id/nav_back_btn"
+                    android:layout_width="26dp"
+                    android:layout_height="26dp"
+                    android:layout_marginStart="2dp"
+                    android:background="?attr/selectableItemBackgroundBorderless"
+                    android:src="@drawable/ic_pod_back"
+                    android:tint="#FFFFFF"
+                    android:contentDescription="Back Navigation" />
+
+                <!-- 3. Forward Navigation Button -->
+                <ImageButton
+                    android:id="@+id/nav_forward_btn"
+                    android:layout_width="26dp"
+                    android:layout_height="26dp"
+                    android:layout_marginStart="2dp"
+                    android:background="?attr/selectableItemBackgroundBorderless"
+                    android:src="@drawable/ic_pod_fwd"
+                    android:tint="#FFFFFF"
+                    android:contentDescription="Forward Navigation" />
+
+                <View
+                    android:layout_width="1dp"
+                    android:layout_height="16dp"
+                    android:layout_marginStart="3dp"
+                    android:layout_marginEnd="3dp"
+                    android:background="#33FFFFFF" />
+
+                <!-- 4. URL / Host Pill (Displayed in Normal Mode) -->
+                <TextView
+                    android:id="@+id/search_dock_url"
+                    android:layout_width="wrap_content"
+                    android:minWidth="70dp"
+                    android:maxWidth="120dp"
+                    android:layout_height="26dp"
+                    android:paddingStart="8dp"
+                    android:paddingEnd="8dp"
+                    android:gravity="center"
+                    android:ellipsize="end"
+                    android:singleLine="true"
+                    android:textColor="#FFFFFF"
+                    android:textSize="11sp"
+                    android:textStyle="bold"
+                    android:text="google.com"
+                    android:background="@drawable/bg_liquid_glass_pill"
+                    android:clickable="true"
+                    android:focusable="true"
+                    android:contentDescription="Current URL" />
+
+                <!-- 4.1 In-Page Finder Input Box (Displayed in Finder Mode) -->
+                <LinearLayout
+                    android:id="@+id/nav_finder_box"
+                    android:layout_width="wrap_content"
+                    android:layout_height="26dp"
+                    android:background="@drawable/bg_liquid_glass_pill"
+                    android:orientation="horizontal"
+                    android:gravity="center_vertical"
+                    android:paddingStart="6dp"
+                    android:paddingEnd="6dp"
+                    android:visibility="gone">
+
+                    <EditText
+                        android:id="@+id/nav_finder_input"
+                        android:layout_width="90dp"
+                        android:layout_height="match_parent"
+                        android:background="@android:color/transparent"
+                        android:hint="Find in page..."
+                        android:textColorHint="#88FFFFFF"
+                        android:textColor="#FFFFFF"
+                        android:textSize="11sp"
+                        android:singleLine="true"
+                        android:imeOptions="actionSearch"
+                        android:inputType="text"
+                        android:padding="0dp" />
+
+                    <TextView
+                        android:id="@+id/nav_finder_count"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:text="0/0"
+                        android:textColor="#FFCC00"
+                        android:textSize="10sp"
+                        android:textStyle="bold"
+                        android:layout_marginStart="4dp" />
+                </LinearLayout>
+
+                <!-- 5. Search / Finder Toggle Button -->
+                <ImageButton
+                    android:id="@+id/nav_finder_btn"
+                    android:layout_width="26dp"
+                    android:layout_height="26dp"
+                    android:layout_marginStart="4dp"
+                    android:background="?attr/selectableItemBackgroundBorderless"
+                    android:src="@drawable/ic_pod_search"
+                    android:tint="#FFFFFF"
+                    android:contentDescription="Find in Page" />
+
+                <!-- 6. Up Arrow Button (Normal: Scroll Top | Finder: Prev Match) -->
+                <ImageButton
+                    android:id="@+id/nav_arrow_up_btn"
+                    android:layout_width="26dp"
+                    android:layout_height="26dp"
+                    android:layout_marginStart="2dp"
+                    android:background="?attr/selectableItemBackgroundBorderless"
+                    android:src="@drawable/ic_pod_arrow_up"
+                    android:tint="#FFFFFF"
+                    android:contentDescription="Scroll Top / Prev Match" />
+
+                <!-- 7. Down Arrow Button (Normal: Scroll Bottom | Finder: Next Match) -->
+                <ImageButton
+                    android:id="@+id/nav_arrow_down_btn"
+                    android:layout_width="26dp"
+                    android:layout_height="26dp"
+                    android:layout_marginStart="2dp"
+                    android:background="?attr/selectableItemBackgroundBorderless"
+                    android:src="@drawable/ic_pod_arrow_down"
+                    android:tint="#FFFFFF"
+                    android:contentDescription="Scroll Bottom / Next Match" />
+
+                <View
+                    android:layout_width="1dp"
+                    android:layout_height="16dp"
+                    android:layout_marginStart="4dp"
+                    android:layout_marginEnd="2dp"
+                    android:background="#33FFFFFF" />
+
+                <!-- 8. Drag & Move Handle (Right Side) -->
+                <TextView
+                    android:id="@+id/nav_drag_handle"
+                    android:layout_width="32dp"
+                    android:layout_height="32dp"
+                    android:gravity="center"
+                    android:text="⠿"
+                    android:textColor="#B3FFFFFF"
+                    android:textSize="16sp"
+                    android:clickable="true"
+                    android:focusable="true"
+                    android:contentDescription="Drag Google Toolbar" />
+
+                <!-- 9. Shrink / Minimize to Ball Button (Far Right) -->
+                <ImageButton
+                    android:id="@+id/nav_shrink_btn"
+                    android:layout_width="28dp"
+                    android:layout_height="28dp"
+                    android:layout_marginStart="1dp"
+                    android:background="?attr/selectableItemBackgroundBorderless"
+                    android:src="@drawable/ic_shrink_bubble"
+                    android:tint="#CCFFFFFF"
+                    android:contentDescription="Minimize to Ball" />
+            </LinearLayout>
+        </HorizontalScrollView>
+
+        <!-- Collapsed Floating Liquid Glass Ball (Shrink State) -->
+        <FrameLayout
+            android:id="@+id/search_dock_collapsed_btn"
+            android:layout_width="44dp"
+            android:layout_height="44dp"
+            android:layout_gravity="center_vertical|end"
+            android:background="@drawable/bg_liquid_glass_ball"
+            android:clickable="true"
+            android:focusable="true"
+            android:visibility="gone">
+
+            <ImageView
+                android:layout_width="match_parent"
+                android:layout_height="match_parent"
+                android:padding="11dp"
+                android:scaleType="fitCenter"
+                android:src="@drawable/ic_pod_search"
+                android:tint="#FFFFFF" />
         </FrameLayout>
     </FrameLayout>
 
@@ -167,8 +542,8 @@
         android:elevation="50dp"
         android:visibility="visible">
 
-        <VideoView
-            android:id="@+id/splash_videoview"
+        <TextureView
+            android:id="@+id/splash_textureview"
             android:layout_width="match_parent"
             android:layout_height="match_parent"
             android:layout_gravity="center" />

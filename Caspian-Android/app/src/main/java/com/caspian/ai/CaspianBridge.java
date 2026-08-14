@@ -80,6 +80,13 @@ public class CaspianBridge {
     }
 
     @JavascriptInterface
+    public void openTab(String url) {
+        if (activity != null) {
+            activity.runOnUiThread(() -> activity.openNewTab(url));
+        }
+    }
+
+    @JavascriptInterface
     public void switchTab(int tabId) {
         if (activity != null) {
             activity.runOnUiThread(() -> activity.switchTab(tabId));
@@ -257,7 +264,7 @@ public class CaspianBridge {
                         savedPath = targetFile.getAbsolutePath();
                     }
                 } catch (Exception e2) {
-                    // TIER 3: Safe fallback to getExternalFilesDir (Android/data/com.caspian.ai/files)
+                    // TIER 3: Safe fallback to getExternalFilesDir (Android/data/com.caspian.betaa/files)
                     try {
                         File fallbackFolder = activity.getExternalFilesDir(Environment.DIRECTORY_DOWNLOADS);
                         File targetFolder = new File(fallbackFolder, "Caspian/" + subFolder);
@@ -515,13 +522,104 @@ public class CaspianBridge {
     }
 
     @JavascriptInterface
+    public void togglePlayYouTube() {
+        if (activity != null) {
+            activity.runOnUiThread(() -> {
+                MainActivity.TabItem activeTab = activity.getActiveTab();
+                if (activeTab != null && activeTab.webView != null) {
+                    activeTab.webView.evaluateJavascript(
+                        "if (window.__CaspianYouTube && typeof window.__CaspianYouTube.togglePlay === 'function') { window.__CaspianYouTube.togglePlay(); } else { const v = document.querySelector('video'); if (v) { if (v.paused) v.play(); else v.pause(); } }", null
+                    );
+                }
+            });
+        }
+    }
+
+    @JavascriptInterface
+    public void toggleFullscreenYouTube() {
+        if (activity != null) {
+            activity.runOnUiThread(() -> {
+                if (activity.getCustomView() != null) {
+                    activity.hideCustomView();
+                    return;
+                }
+                MainActivity.TabItem activeTab = activity.getActiveTab();
+                if (activeTab != null && activeTab.webView != null) {
+                    activeTab.webView.evaluateJavascript(
+                        "if (window.__CaspianYouTube && typeof window.__CaspianYouTube.toggleFullscreen === 'function') { window.__CaspianYouTube.toggleFullscreen(); } else { const btn = document.querySelector('.ytp-fullscreen-button, button.ytp-fullscreen-button, .fullscreen-icon, ytm-fullscreen-button'); if (btn) btn.click(); else { const v = document.querySelector('video'); if (v) { if (v.webkitEnterFullscreen) v.webkitEnterFullscreen(); else if (v.requestFullscreen) v.requestFullscreen(); } } }", null
+                    );
+                }
+            });
+        }
+    }
+
+    @JavascriptInterface
+    public void toggleMuteYouTube() {
+        if (activity != null) {
+            activity.runOnUiThread(() -> {
+                MainActivity.TabItem activeTab = activity.getActiveTab();
+                if (activeTab != null && activeTab.webView != null) {
+                    activeTab.webView.evaluateJavascript(
+                        "if (window.__CaspianYouTube && typeof window.__CaspianYouTube.toggleMute === 'function') { window.__CaspianYouTube.toggleMute(); } else { const v = document.querySelector('video'); if (v) { v.muted = !v.muted; if (window.CaspianBridge) window.CaspianBridge.updateYouTubeState(!v.paused, v.muted); } }", null
+                    );
+                }
+            });
+        }
+    }
+
+    @JavascriptInterface
+    public void updateYouTubeState(boolean isPlaying, boolean isMuted) {
+        if (activity != null) {
+            activity.runOnUiThread(() -> {
+                activity.updateYouTubePodState(isPlaying, isMuted);
+            });
+        }
+    }
+
+    @JavascriptInterface
+    public void setWidgetScale(String type, double scale) {
+        if (activity != null) {
+            activity.runOnUiThread(() -> {
+                activity.applyWidgetScale(type, (float) scale);
+            });
+        }
+    }
+
+    @JavascriptInterface
+    public void toggleFloatingYouTubeRemote(boolean show) {
+        if (activity != null) {
+            activity.runOnUiThread(() -> {
+                activity.toggleFloatingYTRemote(show);
+            });
+        }
+    }
+
+    @JavascriptInterface
+    public void toggleGoogleSearchDock(boolean show) {
+        if (activity != null) {
+            activity.runOnUiThread(() -> {
+                activity.toggleGoogleSearchDock(show);
+            });
+        }
+    }
+
+    @JavascriptInterface
+    public void setGoogleDockAutoCollapse(boolean enabled) {
+        if (activity != null) {
+            activity.runOnUiThread(() -> {
+                activity.setGoogleDockAutoCollapse(enabled);
+            });
+        }
+    }
+
+    @JavascriptInterface
     public void seekYouTube(double seconds) {
         if (activity != null) {
             activity.runOnUiThread(() -> {
                 MainActivity.TabItem activeTab = activity.getActiveTab();
                 if (activeTab != null && activeTab.webView != null) {
                     activeTab.webView.evaluateJavascript(
-                        "if (window.__CaspianYouTube) { window.__CaspianYouTube.seekBy(" + seconds + "); }", null
+                        "if (window.__CaspianYouTube && typeof window.__CaspianYouTube.seekBy === 'function') { window.__CaspianYouTube.seekBy(" + seconds + "); } else { const v = document.querySelector('video'); if (v) { v.currentTime += " + seconds + "; } }", null
                     );
                 }
             });
@@ -602,6 +700,13 @@ public class CaspianBridge {
                     }
                 }
             });
+        }
+    }
+
+    @JavascriptInterface
+    public void playAssetSound(String assetPath) {
+        if (activity != null && assetPath != null && !assetPath.isEmpty()) {
+            activity.runOnUiThread(() -> activity.playAssetSound(assetPath));
         }
     }
 

@@ -200,55 +200,74 @@ def build_html(version_name):
         </div>
       </div>
 
-      <!-- YouTube Control Center Card (Dynamic for YouTube Tabs) -->
-      <div id="youtube-control-card" class="m3-card" style="display: none; margin-top: 14px;">
-        <div class="m3-card-row">
+      <!-- YouTube Control Center Card (Expandable Engine Card) -->
+      <div id="youtube-control-card" class="m3-card engine-card expandable" style="margin-top: 14px;">
+        <div id="yt-control-header" class="m3-card-row" style="cursor: pointer;">
           <div class="m3-card-left">
-            <div class="status-dot active"></div>
+            <div id="yt-live-status-dot" class="status-dot active"></div>
             <div>
               <div class="m3-card-title">YouTube Player Controls</div>
-              <div class="m3-card-sub">Quick seeking, playback speed, and resolution selector.</div>
+              <div class="m3-card-sub">Quick seeking, playback speed, Float Pod, and resolution.</div>
             </div>
+          </div>
+          <div class="card-controls" style="display: flex; align-items: center; gap: 8px;">
+            <button id="yt-toggle-popup-btn" class="oneui-pill-btn secondary" style="font-size: 11px; padding: 4px 10px; gap: 4px;" onclick="event.stopPropagation();">
+              <span>🚀 Float Pod</span>
+            </button>
+            <button id="toggle-yt-engine-btn" class="oneui-pill-btn primary" style="font-size: 11px; padding: 4px 10px;" onclick="event.stopPropagation();">
+              ON
+            </button>
           </div>
         </div>
 
-        <!-- Seek Buttons Row -->
-        <div class="mobile-action-row" style="margin-top: 10px;">
-          <button id="yt-seek-back-btn" class="oneui-pill-btn secondary" style="flex: 1; justify-content: center;">
-            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polygon points="11 19 2 12 11 5 11 19"></polygon><polygon points="22 19 13 12 22 5 22 19"></polygon></svg>
-            <span>-5s Seek</span>
-          </button>
-          <button id="yt-seek-fwd-btn" class="oneui-pill-btn secondary" style="flex: 1; justify-content: center;">
-            <span>+5s Seek</span>
-            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polygon points="13 19 22 12 13 5 13 19"></polygon><polygon points="2 19 11 12 2 5 2 19"></polygon></svg>
-          </button>
-        </div>
+        <!-- Accordion Body -->
+        <div id="yt-control-body" style="display: none; margin-top: 12px; border-top: 1px solid var(--border-glass); padding-top: 10px;">
+          <!-- Primary Playback & Seek Row -->
+          <div style="display: flex; gap: 6px; align-items: center; justify-content: space-between;">
+            <button id="yt-seek-back-10-btn" class="oneui-pill-btn secondary" style="flex: 1; justify-content: center; padding: 8px 4px; font-size: 11px;">
+              <span>-10s</span>
+            </button>
+            <button id="yt-seek-back-btn" class="oneui-pill-btn secondary" style="flex: 1; justify-content: center; padding: 8px 4px; font-size: 11px;">
+              <span>-5s</span>
+            </button>
+            <button id="yt-play-pause-btn" class="oneui-pill-btn primary" style="flex: 1.6; justify-content: center; padding: 8px 10px; font-size: 12px; font-weight: 700; gap: 6px;">
+              <span id="yt-play-icon">▶️ / ⏸️</span>
+              <span id="yt-play-text">Play</span>
+            </button>
+            <button id="yt-seek-fwd-btn" class="oneui-pill-btn secondary" style="flex: 1; justify-content: center; padding: 8px 4px; font-size: 11px;">
+              <span>+5s</span>
+            </button>
+            <button id="yt-seek-fwd-10-btn" class="oneui-pill-btn secondary" style="flex: 1; justify-content: center; padding: 8px 4px; font-size: 11px;">
+              <span>+10s</span>
+            </button>
+          </div>
 
-        <!-- Playback Speed Section -->
-        <div class="limit-section-title" style="margin-top: 12px;">PLAYBACK SPEED</div>
-        <div class="pill-grid" style="grid-template-columns: repeat(4, 1fr); gap: 6px;">
-          <button class="yt-speed-pill" data-speed="0.25">0.25x</button>
-          <button class="yt-speed-pill" data-speed="0.5">0.5x</button>
-          <button class="yt-speed-pill" data-speed="0.75">0.75x</button>
-          <button class="yt-speed-pill active" data-speed="1.0">1x</button>
-          <button class="yt-speed-pill" data-speed="1.25">1.25x</button>
-          <button class="yt-speed-pill" data-speed="1.5">1.5x</button>
-          <button class="yt-speed-pill" data-speed="1.75">1.75x</button>
-          <button class="yt-speed-pill" data-speed="2.0">2x</button>
-          <button class="yt-speed-pill" data-speed="2.5">2.5x</button>
-          <button class="yt-speed-pill" data-speed="3.0">3x</button>
-          <button class="yt-speed-pill" data-speed="4.0">4x</button>
-        </div>
+          <!-- Playback Speed Section -->
+          <div class="limit-section-title" style="margin-top: 14px; margin-bottom: 6px;">PLAYBACK SPEED</div>
+          <div class="pill-grid" style="grid-template-columns: repeat(4, 1fr); gap: 6px;">
+            <button class="yt-speed-pill" data-speed="0.25">0.25x</button>
+            <button class="yt-speed-pill" data-speed="0.5">0.5x</button>
+            <button class="yt-speed-pill" data-speed="0.75">0.75x</button>
+            <button class="yt-speed-pill active" data-speed="1.0">1x</button>
+            <button class="yt-speed-pill" data-speed="1.25">1.25x</button>
+            <button class="yt-speed-pill" data-speed="1.5">1.5x</button>
+            <button class="yt-speed-pill" data-speed="1.75">1.75x</button>
+            <button class="yt-speed-pill" data-speed="2.0">2x</button>
+            <button class="yt-speed-pill" data-speed="2.5">2.5x</button>
+            <button class="yt-speed-pill" data-speed="3.0">3x</button>
+            <button class="yt-speed-pill" data-speed="4.0">4x</button>
+          </div>
 
-        <!-- Quality Selector Section -->
-        <div class="limit-section-title" style="margin-top: 12px;">VIDEO QUALITY</div>
-        <div class="pill-grid" style="grid-template-columns: repeat(3, 1fr); gap: 6px;">
-          <button class="yt-quality-pill" data-quality="hd1080">1080p</button>
-          <button class="yt-quality-pill" data-quality="hd720">720p</button>
-          <button class="yt-quality-pill" data-quality="large">480p</button>
-          <button class="yt-quality-pill" data-quality="medium">360p</button>
-          <button class="yt-quality-pill" data-quality="small">240p</button>
-          <button class="yt-quality-pill active" data-quality="auto">Auto</button>
+          <!-- Quality Selector Section -->
+          <div class="limit-section-title" style="margin-top: 14px; margin-bottom: 6px;">VIDEO QUALITY</div>
+          <div class="pill-grid" style="grid-template-columns: repeat(3, 1fr); gap: 6px;">
+            <button class="yt-quality-pill" data-quality="hd1080">1080p</button>
+            <button class="yt-quality-pill" data-quality="hd720">720p</button>
+            <button class="yt-quality-pill" data-quality="large">480p</button>
+            <button class="yt-quality-pill" data-quality="medium">360p</button>
+            <button class="yt-quality-pill" data-quality="small">240p</button>
+            <button class="yt-quality-pill active" data-quality="auto">Auto</button>
+          </div>
         </div>
       </div>
 
@@ -274,28 +293,24 @@ def build_html(version_name):
             <button class="cc-stt-pill" data-engine="android_native">📱 Native Android</button>
           </div>
 
-          <!-- Deepgram Key & Usage Tracker Badge -->
-          <div id="stt-key-container-deepgram" style="margin-bottom: 10px;">
-            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 4px;">
-              <div class="limit-section-title">DEEPGRAM API KEY ($200 Free Credit)</div>
-              <span id="deepgram-usage-badge" style="font-size: 9.5px; font-weight: 800; color: #10b981; background: rgba(16,185,129,0.15); padding: 2px 7px; border-radius: 6px;">
-                ⏱️ 0s Used (~$200.00 Credit)
-              </span>
-            </div>
-            <input type="password" id="input-deepgram-key" class="caspian-text-input" placeholder="Paste Deepgram API Key (Token ...)" style="width: 100%; box-sizing: border-box; padding: 8px 12px; font-size: 11px; border-radius: 8px; background: var(--input-bg); border: 1px solid var(--border-glass); color: var(--text-main);" />
+          <!-- STT API Key Row -->
+          <div class="limit-section-title" id="cc-api-key-label" style="margin-bottom: 6px;">DEEPGRAM API KEY</div>
+          <div id="cc-api-key-container" style="display: flex; gap: 6px; align-items: center; margin-bottom: 10px;">
+            <input type="password" id="whisper-api-key-input" placeholder="Paste your API key here..." style="flex: 1; background: rgba(0,0,0,0.3); border: 1px solid var(--border-glass); border-radius: 8px; padding: 8px 10px; color: var(--text-main); font-size: 11px; outline: none;" />
+            <button id="save-whisper-api-key-btn" class="oneui-pill-btn primary" style="font-size: 11px; padding: 8px 12px;">Save</button>
           </div>
 
-          <!-- Hugging Face Token Input -->
-          <div id="stt-key-container-huggingface" style="margin-bottom: 10px; display: none;">
-            <div class="limit-section-title" style="margin-bottom: 4px;">HUGGING FACE ACCESS TOKEN (hf_...)</div>
-            <input type="password" id="input-huggingface-key" class="caspian-text-input" placeholder="Paste Hugging Face Token (hf_...)" style="width: 100%; box-sizing: border-box; padding: 8px 12px; font-size: 11px; border-radius: 8px; background: var(--input-bg); border: 1px solid var(--border-glass); color: var(--text-main);" />
-          </div>
-
-          <div class="limit-section-title" style="margin-bottom: 6px;">PRIMARY LANGUAGE ACCENT</div>
-          <div class="pill-grid" style="grid-template-columns: repeat(3, 1fr); gap: 6px;">
-            <button class="cc-lang-pill active" data-lang="auto">Auto Detect</button>
-            <button class="cc-lang-pill" data-lang="hinglish">Hinglish / Hindi</button>
-            <button class="cc-lang-pill" data-lang="en">English (US/IN)</button>
+          <!-- Accent / Language selector -->
+          <div class="limit-section-title" style="margin-bottom: 6px;">SPEECH LANGUAGE & ACCENT</div>
+          <div class="pill-grid" style="grid-template-columns: repeat(4, 1fr); gap: 6px;">
+            <button class="cc-lang-pill active" data-lang="auto">🌐 Auto</button>
+            <button class="cc-lang-pill" data-lang="en-US">🇺🇸 EN (US)</button>
+            <button class="cc-lang-pill" data-lang="en-GB">🇬🇧 EN (UK)</button>
+            <button class="cc-lang-pill" data-lang="en-IN">🇮🇳 EN (IN)</button>
+            <button class="cc-lang-pill" data-lang="hi">🇮🇳 Hindi</button>
+            <button class="cc-lang-pill" data-lang="es">🇪🇸 Spanish</button>
+            <button class="cc-lang-pill" data-lang="fr">🇫🇷 French</button>
+            <button class="cc-lang-pill" data-lang="de">🇩🇪 German</button>
           </div>
         </div>
       </div>
@@ -306,8 +321,8 @@ def build_html(version_name):
           <div class="m3-card-left">
             <div id="adblock-dot" class="status-dot active"></div>
             <div>
-              <div class="m3-card-title">AdBlocker Engine</div>
-              <div class="m3-card-sub">Blocks video ads, trackers, and banners. Tap card to expand filters.</div>
+              <div class="m3-card-title">AdBlock Engine</div>
+              <div class="m3-card-sub">AdBlock for peaceful internet.</div>
             </div>
           </div>
           <button id="toggle-adblock-btn" class="oneui-pill-btn primary" style="font-size: 11px; padding: 4px 10px;">ON</button>
@@ -315,23 +330,82 @@ def build_html(version_name):
 
         <!-- Accordion Body -->
         <div id="adblock-body" style="display: none; margin-top: 12px; border-top: 1px solid var(--border-glass); padding-top: 10px;">
-          <div style="display: flex; flex-direction: column; gap: 8px;">
-            <label style="display: flex; align-items: center; justify-content: space-between; font-size: 11px; color: var(--text-main);">
-              <span>🎬 Block YouTube Video Ads</span>
-              <input type="checkbox" id="chk-adblock-yt" checked style="accent-color: var(--accent);" />
-            </label>
-            <label style="display: flex; align-items: center; justify-content: space-between; font-size: 11px; color: var(--text-main);">
-              <span>🚫 Block Banners & Popups</span>
-              <input type="checkbox" id="chk-adblock-banner" checked style="accent-color: var(--accent);" />
-            </label>
-            <label style="display: flex; align-items: center; justify-content: space-between; font-size: 11px; color: var(--text-main);">
-              <span>⚡ Auto-Skip Video Ads</span>
-              <input type="checkbox" id="chk-adblock-skip" checked style="accent-color: var(--accent);" />
-            </label>
-            <label style="display: flex; align-items: center; justify-content: space-between; font-size: 11px; color: var(--text-main);">
-              <span>🔒 Block Trackers & Telemetry</span>
-              <input type="checkbox" id="chk-adblock-trackers" checked style="accent-color: var(--accent);" />
-            </label>
+          <!-- Video Defuser Sub-Section -->
+          <div style="background: rgba(255,255,255,0.03); border: 1px solid var(--border-glass); border-radius: 12px; padding: 10px; margin-bottom: 10px;">
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 6px;">
+              <div style="display: flex; align-items: center; gap: 6px;">
+                <span style="font-size: 12px; font-weight: 700; color: var(--text-main);">🎬 Video Defuser</span>
+              </div>
+            </div>
+            <div style="font-size: 10px; color: var(--text-muted); line-height: 1.4; margin-bottom: 8px;">
+              Purges player adPlacements, intercepts SPA fetch streams, and skips server-injected ads in 0ms.
+            </div>
+            <div style="display: flex; flex-direction: column; gap: 6px;">
+              <label style="display: flex; align-items: center; justify-content: space-between; font-size: 11px; color: var(--text-main); cursor: pointer;">
+                <span>⚡ Defuse Video Ad Placements</span>
+                <input type="checkbox" id="chk-adblock-yt" checked style="accent-color: var(--accent);" />
+              </label>
+              <label style="display: flex; align-items: center; justify-content: space-between; font-size: 11px; color: var(--text-main); cursor: pointer;">
+                <span>⏩ 0ms Auto-Fast-Forward Fallback</span>
+                <input type="checkbox" id="chk-adblock-skip" checked style="accent-color: var(--accent);" />
+              </label>
+            </div>
+          </div>
+
+          <!-- General Web AdBlock Sub-Section -->
+          <div style="background: rgba(255,255,255,0.02); border: 1px solid var(--border-glass); border-radius: 12px; padding: 10px;">
+            <div style="font-size: 11px; font-weight: 700; color: var(--text-main); margin-bottom: 6px;">🌐 Universal Web Filters</div>
+            <div style="display: flex; flex-direction: column; gap: 6px;">
+              <label style="display: flex; align-items: center; justify-content: space-between; font-size: 11px; color: var(--text-main); cursor: pointer;">
+                <span>🚫 Block Banners & Overlays</span>
+                <input type="checkbox" id="chk-adblock-banner" checked style="accent-color: var(--accent);" />
+              </label>
+              <label style="display: flex; align-items: center; justify-content: space-between; font-size: 11px; color: var(--text-main); cursor: pointer;">
+                <span>🔒 Block Trackers & Telemetry</span>
+                <input type="checkbox" id="chk-adblock-trackers" checked style="accent-color: var(--accent);" />
+              </label>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- 5. Expandable Google Search Engine Card -->
+      <div id="google-search-card" class="m3-card engine-card expandable" style="margin-top: 14px;">
+        <div id="google-dock-header" class="m3-card-row" style="cursor: pointer;">
+          <div class="m3-card-left">
+            <div id="google-dock-status-dot" class="status-dot active"></div>
+            <div>
+              <div class="m3-card-title">Google Search Dock</div>
+              <div class="m3-card-sub">Liquid Glass floating toolbar for search navigation & in-page finder.</div>
+            </div>
+          </div>
+          <div class="card-controls" style="display: flex; align-items: center; gap: 8px;">
+            <button id="google-dock-toggle-popup-btn" class="oneui-pill-btn secondary" style="font-size: 11px; padding: 4px 10px; gap: 4px;" onclick="event.stopPropagation();">
+              <span>🚀 Toolbar</span>
+            </button>
+            <button id="toggle-google-dock-btn" class="oneui-pill-btn primary" style="font-size: 11px; padding: 4px 10px;" onclick="event.stopPropagation();">
+              ON
+            </button>
+          </div>
+        </div>
+
+        <!-- Accordion Body -->
+        <div id="google-dock-body" style="display: none; margin-top: 12px; border-top: 1px solid var(--border-glass); padding-top: 10px;">
+          <!-- Quick Options Sub-Section -->
+          <div style="background: rgba(255,255,255,0.03); border: 1px solid var(--border-glass); border-radius: 12px; padding: 10px;">
+            <div style="font-size: 11px; font-weight: 700; color: var(--text-main); margin-bottom: 6px;">🧭 Toolbar Capabilities</div>
+            <div style="font-size: 10px; color: var(--text-muted); line-height: 1.4; margin-bottom: 8px;">
+              • <b>Tap URL Pill</b>: Focuses Google's search box on the webpage to quickly search new queries in the same tab.<br/>
+              • <b>Tap 🔍 Finder</b>: Activates in-page word finder to highlight matches and smoothly jump using ⬆️ / ⬇️ arrows.<br/>
+              • <b>Quick Jump Scroll</b>: In normal mode, tap ⬆️ to scroll to top of page and ⬇️ to scroll to bottom of page.<br/>
+              • <b>Two-Finger Repositioning</b>: Drag anywhere with 2 fingers to move toolbar across the screen.
+            </div>
+            <div style="display: flex; flex-direction: column; gap: 6px;">
+              <label style="display: flex; align-items: center; justify-content: space-between; font-size: 11px; color: var(--text-main); cursor: pointer;">
+                <span>🔽 Auto-Collapse into Floating Ball on Scroll</span>
+                <input type="checkbox" id="chk-google-dock-autocollapse" checked style="accent-color: var(--accent);" />
+              </label>
+            </div>
           </div>
         </div>
       </div>
@@ -581,6 +655,44 @@ def build_html(version_name):
             <button id="btn-tap-dur-plus" class="oneui-pill-btn secondary icon-only" style="width: 28px; height: 28px; border-radius: 8px; font-weight: bold; font-size: 14px;">+</button>
           </div>
         </div>
+
+        <!-- Widget Size & Scale Controls -->
+        <div style="margin-top: 14px; border-top: 1px dashed var(--border-glass); padding-top: 10px;">
+          <div style="font-size: 10px; color: var(--text-muted); margin-bottom: 8px; font-weight: 700; letter-spacing: 0.5px;">WIDGET SIZE & SCALE</div>
+          
+          <!-- Caspian Action Button Scale -->
+          <div class="setting-row" style="margin-bottom: 10px;">
+            <span class="setting-label">Caspian Action Button</span>
+            <div class="pill-group" style="display: flex; gap: 4px;">
+              <button class="limit-pill btn-action-btn-scale" data-scale="0.85">85%</button>
+              <button class="limit-pill btn-action-btn-scale active" data-scale="1.0">100%</button>
+              <button class="limit-pill btn-action-btn-scale" data-scale="1.15">115%</button>
+              <button class="limit-pill btn-action-btn-scale" data-scale="1.3">130%</button>
+            </div>
+          </div>
+
+          <!-- YouTube Float Pod Scale -->
+          <div class="setting-row" style="margin-bottom: 10px;">
+            <span class="setting-label">YouTube Float Pod</span>
+            <div class="pill-group" style="display: flex; gap: 4px;">
+              <button class="limit-pill btn-yt-pod-scale" data-scale="0.85">85%</button>
+              <button class="limit-pill btn-yt-pod-scale active" data-scale="1.0">100%</button>
+              <button class="limit-pill btn-yt-pod-scale" data-scale="1.15">115%</button>
+              <button class="limit-pill btn-yt-pod-scale" data-scale="1.3">130%</button>
+            </div>
+          </div>
+
+          <!-- Google Search Toolbar Scale -->
+          <div class="setting-row">
+            <span class="setting-label">Google Search Toolbar</span>
+            <div class="pill-group" style="display: flex; gap: 4px;">
+              <button class="limit-pill btn-google-dock-scale" data-scale="0.85">85%</button>
+              <button class="limit-pill btn-google-dock-scale active" data-scale="1.0">100%</button>
+              <button class="limit-pill btn-google-dock-scale" data-scale="1.15">115%</button>
+              <button class="limit-pill btn-google-dock-scale" data-scale="1.3">130%</button>
+            </div>
+          </div>
+        </div>
       </div>
       </details>
 
@@ -628,12 +740,12 @@ def build_html(version_name):
               <span style="font-size: 9.5px; color: var(--text-muted);">Sound Effect:</span>
               <select id="select-sfx-tm-tabs" class="sfx-sound-select" style="background: var(--card-bg); color: var(--text-main); border: 1px solid var(--border-glass); border-radius: 6px; padding: 3px 8px; font-size: 10px; outline: none;">
                 <option value="pop_button.mp3">pop_button.mp3 (Default)</option>
-                <option value="tap_main.wav">tap_main.wav</option>
-                <option value="tap_button.wav">tap_button.wav</option>
-                <option value="tap_alternate.wav">tap_alternate.wav</option>
-                <option value="pop_button_v2.wav">pop_button_v2.wav</option>
-                <option value="pop_click.wav">pop_click.wav</option>
-                <option value="pop_unknown_v1.wav">pop_unknown_v1.wav</option>
+                <option value="tap_main.mp3">tap_main.mp3</option>
+                <option value="tap_button.mp3">tap_button.mp3</option>
+                <option value="tap_alternate.mp3">tap_alternate.mp3</option>
+                <option value="pop_button_v2.mp3">pop_button_v2.mp3</option>
+                <option value="pop_click.mp3">pop_click.mp3</option>
+                <option value="pop_unknown_v1.mp3">pop_unknown_v1.mp3</option>
               </select>
             </div>
           </div>
@@ -650,13 +762,13 @@ def build_html(version_name):
             <div style="display: flex; align-items: center; justify-content: space-between;">
               <span style="font-size: 9.5px; color: var(--text-muted);">Sound Effect:</span>
               <select id="select-sfx-ta" class="sfx-sound-select" style="background: var(--card-bg); color: var(--text-main); border: 1px solid var(--border-glass); border-radius: 6px; padding: 3px 8px; font-size: 10px; outline: none;">
-                <option value="pop_click.wav">pop_click.wav (Default)</option>
-                <option value="tap_alternate.wav">tap_alternate.wav</option>
-                <option value="tap_main.wav">tap_main.wav</option>
-                <option value="tap_button.wav">tap_button.wav</option>
+                <option value="pop_click.mp3">pop_click.mp3 (Default)</option>
+                <option value="tap_alternate.mp3">tap_alternate.mp3</option>
+                <option value="tap_main.mp3">tap_main.mp3</option>
+                <option value="tap_button.mp3">tap_button.mp3</option>
                 <option value="pop_button.mp3">pop_button.mp3</option>
-                <option value="pop_button_v2.wav">pop_button_v2.wav</option>
-                <option value="pop_unknown_v1.wav">pop_unknown_v1.wav</option>
+                <option value="pop_button_v2.mp3">pop_button_v2.mp3</option>
+                <option value="pop_unknown_v1.mp3">pop_unknown_v1.mp3</option>
               </select>
             </div>
           </div>
@@ -673,13 +785,13 @@ def build_html(version_name):
             <div style="display: flex; align-items: center; justify-content: space-between;">
               <span style="font-size: 9.5px; color: var(--text-muted);">Sound Effect:</span>
               <select id="select-sfx-tb-clicks" class="sfx-sound-select" style="background: var(--card-bg); color: var(--text-main); border: 1px solid var(--border-glass); border-radius: 6px; padding: 3px 8px; font-size: 10px; outline: none;">
-                <option value="tap_button.wav">tap_button.wav (Default)</option>
-                <option value="tap_main.wav">tap_main.wav</option>
-                <option value="tap_alternate.wav">tap_alternate.wav</option>
+                <option value="tap_button.mp3">tap_button.mp3 (Default)</option>
+                <option value="tap_main.mp3">tap_main.mp3</option>
+                <option value="tap_alternate.mp3">tap_alternate.mp3</option>
                 <option value="pop_button.mp3">pop_button.mp3</option>
-                <option value="pop_button_v2.wav">pop_button_v2.wav</option>
-                <option value="pop_click.wav">pop_click.wav</option>
-                <option value="pop_unknown_v1.wav">pop_unknown_v1.wav</option>
+                <option value="pop_button_v2.mp3">pop_button_v2.mp3</option>
+                <option value="pop_click.mp3">pop_click.mp3</option>
+                <option value="pop_unknown_v1.mp3">pop_unknown_v1.mp3</option>
               </select>
             </div>
           </div>
@@ -696,13 +808,13 @@ def build_html(version_name):
             <div style="display: flex; align-items: center; justify-content: space-between;">
               <span style="font-size: 9.5px; color: var(--text-muted);">Sound Effect:</span>
               <select id="select-sfx-tm-header" class="sfx-sound-select" style="background: var(--card-bg); color: var(--text-main); border: 1px solid var(--border-glass); border-radius: 6px; padding: 3px 8px; font-size: 10px; outline: none;">
-                <option value="tap_main.wav">tap_main.wav (Default)</option>
-                <option value="tap_button.wav">tap_button.wav</option>
-                <option value="tap_alternate.wav">tap_alternate.wav</option>
+                <option value="tap_main.mp3">tap_main.mp3 (Default)</option>
+                <option value="tap_button.mp3">tap_button.mp3</option>
+                <option value="tap_alternate.mp3">tap_alternate.mp3</option>
                 <option value="pop_button.mp3">pop_button.mp3</option>
-                <option value="pop_button_v2.wav">pop_button_v2.wav</option>
-                <option value="pop_click.wav">pop_click.wav</option>
-                <option value="pop_unknown_v1.wav">pop_unknown_v1.wav</option>
+                <option value="pop_button_v2.mp3">pop_button_v2.mp3</option>
+                <option value="pop_click.mp3">pop_click.mp3</option>
+                <option value="pop_unknown_v1.mp3">pop_unknown_v1.mp3</option>
               </select>
             </div>
           </div>
@@ -719,13 +831,13 @@ def build_html(version_name):
             <div style="display: flex; align-items: center; justify-content: space-between;">
               <span style="font-size: 9.5px; color: var(--text-muted);">Sound Effect:</span>
               <select id="select-sfx-tb-close" class="sfx-sound-select" style="background: var(--card-bg); color: var(--text-main); border: 1px solid var(--border-glass); border-radius: 6px; padding: 3px 8px; font-size: 10px; outline: none;">
-                <option value="tap_button.wav">tap_button.wav (Default)</option>
-                <option value="tap_main.wav">tap_main.wav</option>
-                <option value="tap_alternate.wav">tap_alternate.wav</option>
+                <option value="tap_button.mp3">tap_button.mp3 (Default)</option>
+                <option value="tap_main.mp3">tap_main.mp3</option>
+                <option value="tap_alternate.mp3">tap_alternate.mp3</option>
                 <option value="pop_button.mp3">pop_button.mp3</option>
-                <option value="pop_button_v2.wav">pop_button_v2.wav</option>
-                <option value="pop_click.wav">pop_click.wav</option>
-                <option value="pop_unknown_v1.wav">pop_unknown_v1.wav</option>
+                <option value="pop_button_v2.mp3">pop_button_v2.mp3</option>
+                <option value="pop_click.mp3">pop_click.mp3</option>
+                <option value="pop_unknown_v1.mp3">pop_unknown_v1.mp3</option>
               </select>
             </div>
           </div>
@@ -742,13 +854,13 @@ def build_html(version_name):
             <div style="display: flex; align-items: center; justify-content: space-between;">
               <span style="font-size: 9.5px; color: var(--text-muted);">Sound Effect:</span>
               <select id="select-sfx-tb-modal" class="sfx-sound-select" style="background: var(--card-bg); color: var(--text-main); border: 1px solid var(--border-glass); border-radius: 6px; padding: 3px 8px; font-size: 10px; outline: none;">
-                <option value="tap_button.wav">tap_button.wav (Default)</option>
-                <option value="tap_main.wav">tap_main.wav</option>
-                <option value="tap_alternate.wav">tap_alternate.wav</option>
+                <option value="tap_button.mp3">tap_button.mp3 (Default)</option>
+                <option value="tap_main.mp3">tap_main.mp3</option>
+                <option value="tap_alternate.mp3">tap_alternate.mp3</option>
                 <option value="pop_button.mp3">pop_button.mp3</option>
-                <option value="pop_button_v2.wav">pop_button_v2.wav</option>
-                <option value="pop_click.wav">pop_click.wav</option>
-                <option value="pop_unknown_v1.wav">pop_unknown_v1.wav</option>
+                <option value="pop_button_v2.mp3">pop_button_v2.mp3</option>
+                <option value="pop_click.mp3">pop_click.mp3</option>
+                <option value="pop_unknown_v1.mp3">pop_unknown_v1.mp3</option>
               </select>
             </div>
           </div>

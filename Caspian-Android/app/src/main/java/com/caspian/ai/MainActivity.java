@@ -44,6 +44,8 @@ import android.content.Context;
 import androidx.appcompat.app.AppCompatActivity;
 import androidx.cardview.widget.CardView;
 import android.widget.TextView;
+import android.widget.EditText;
+import android.widget.ImageButton;
 import android.content.ClipboardManager;
 import android.content.ClipData;
 import android.widget.Toast;
@@ -148,7 +150,30 @@ public class MainActivity extends AppCompatActivity {
 
     // Video Splash Screen Overlay
     private FrameLayout splashOverlay;
-    private android.widget.VideoView splashVideoView;
+    private android.view.TextureView splashTextureView;
+    private android.media.MediaPlayer splashPlayer;
+
+    // Native SoundPool for simultaneous, non-interrupting UI sound effects (never pauses background music)
+    private android.media.SoundPool soundPool;
+    private final java.util.Map<String, Integer> soundIdMap = new java.util.concurrent.ConcurrentHashMap<>();
+
+    private void initSoundPool() {
+        try {
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.LOLLIPOP) {
+                android.media.AudioAttributes attributes = new android.media.AudioAttributes.Builder()
+                        .setUsage(android.media.AudioAttributes.USAGE_ASSISTANCE_SONIFICATION)
+                        .setContentType(android.media.AudioAttributes.CONTENT_TYPE_SONIFICATION)
+                        .setFlags(android.media.AudioAttributes.FLAG_AUDIBILITY_ENFORCED)
+                        .build();
+                soundPool = new android.media.SoundPool.Builder()
+                        .setMaxStreams(10)
+                        .setAudioAttributes(attributes)
+                        .build();
+            } else {
+                soundPool = new android.media.SoundPool(10, android.media.AudioManager.STREAM_MUSIC, 0);
+            }
+        } catch (Exception ignored) {}
+    }
 
     // WebView active layout refresh timer
     private final Handler refreshHandler = new Handler(Looper.getMainLooper());
@@ -214,6 +239,33 @@ public class MainActivity extends AppCompatActivity {
 
         setContentView(R.layout.activity_main);
 
+        initSoundPool();
+        new Thread(() -> {
+            try {
+                String[] commonSfx = {
+                    "sfx/pop_click.mp3",
+                    "sfx/tap_button.mp3",
+                    "sfx/tap_main.mp3",
+                    "sfx/tap_alternate.mp3",
+                    "sfx/pop_button.mp3",
+                    "sfx/pop_button_v2.mp3",
+                    "sfx/pop_unknown_v1.mp3"
+                };
+                for (String path : commonSfx) {
+                    try {
+                        android.content.res.AssetFileDescriptor afd = getAssets().openFd(path);
+                        int sid = soundPool.load(afd, 1);
+                        afd.close();
+                        soundIdMap.put(path, sid);
+                    } catch (Exception ignored) {}
+                }
+
+                // In-Memory Static Script Caching (Zero disk I/O on tab switches & page navigations)
+                try { readAssetFile("mobile_pruner.js"); } catch (Exception ignored) {}
+                try { readAssetFile("youtube_helper.js"); } catch (Exception ignored) {}
+            } catch (Exception ignored) {}
+        }).start();
+
         webViewContainer = findViewById(R.id.webview_container);
         controlWebView = findViewById(R.id.control_webview);
         sheetOverlayContainer = findViewById(R.id.sheet_overlay_container);
@@ -250,7 +302,7 @@ public class MainActivity extends AppCompatActivity {
                 speechContainer.setVisibility(View.GONE);
             }
         } catch (Throwable t) {
-            Log.e("CaspianDebug", "SpeechWaveformView dynamic init error: " + t.getMessage());
+            Log.e("CaspianDebugA", "SpeechWaveformView dynamic init error: " + t.getMessage());
         }
 
         if (navBackBtn != null) {
@@ -276,6 +328,7 @@ public class MainActivity extends AppCompatActivity {
             setupNativeFloatingButton();
             setupSmartKeyboardAvoidance();
             setupSearchDock();
+            setupFloatingYouTubeRemote();
 
             if (sheetBackdrop != null) {
                 sheetBackdrop.setOnClickListener(v -> closeControlSheet());
@@ -290,78 +343,125 @@ public class MainActivity extends AppCompatActivity {
             String endColor = prefs.getString("theme_end_color", "#1B4264");
             String iconShape = prefs.getString("theme_icon_shape", "circle");
             applyFloatingTheme(startColor, endColor, iconShape);
+
+            try {
+                float actionBtnScale = Float.parseFloat(prefs.getString("action_button_scale", "1.0"));
+                float ytPodScale = Float.parseFloat(prefs.getString("yt_pod_scale", "1.0"));
+                float googleDockScale = Float.parseFloat(prefs.getString("google_dock_scale", "1.0"));
+                applyWidgetScale("action_button", actionBtnScale);
+                applyWidgetScale("yt_pod", ytPodScale);
+                applyWidgetScale("google_dock", googleDockScale);
+            } catch (Exception e) {}
+
             updateRefreshTimer();
             setupSplashScreen();
         } catch (Throwable t) {
-            Log.e("CaspianDebug", "Error during onCreate startup: " + t.getMessage(), t);
+            Log.e("CaspianDebugA", "Error during onCreate startup: " + t.getMessage(), t);
         }
     }
 
     private void setupSplashScreen() {
         splashOverlay = findViewById(R.id.splash_overlay);
-        splashVideoView = findViewById(R.id.splash_videoview);
-        if (splashOverlay != null && splashVideoView != null) {
+        splashTextureView = findViewById(R.id.splash_textureview);
+        if (splashOverlay != null && splashTextureView != null) {
             try {
-                Uri videoUri = Uri.parse("android.resource://" + getPackageName() + "/" + R.raw.caspian_splash_v22);
-                splashVideoView.setVideoURI(videoUri);
+                final boolean[] dismissed = {false};
                 Runnable dismissSplash = new Runnable() {
                     @Override
                     public void run() {
+                        if (dismissed[0]) return;
+                        dismissed[0] = true;
+                        if (splashPlayer != null) {
+                            try {
+                                splashPlayer.stop();
+                                splashPlayer.release();
+                            } catch (Exception e) {}
+                            splashPlayer = null;
+                        }
                         if (splashOverlay != null && splashOverlay.getVisibility() == View.VISIBLE) {
                             splashOverlay.animate()
                                     .alpha(0f)
-                                    .setDuration(300)
-                                    .withEndAction(() -> {
-                                        splashOverlay.setVisibility(View.GONE);
-                                        if (splashVideoView != null) {
-                                            try { splashVideoView.stopPlayback(); } catch (Exception e) {}
-                                        }
-                                    })
+                                    .setDuration(250)
+                                    .withEndAction(() -> splashOverlay.setVisibility(View.GONE))
                                     .start();
                         }
                     }
                 };
 
-                // Center Crop Math to Cover 100% Display Edge-to-Edge with Zero Black Bars
-                splashVideoView.setOnPreparedListener(mp -> {
-                    try {
-                        mp.setLooping(false);
-                        int videoWidth = mp.getVideoWidth();
-                        int videoHeight = mp.getVideoHeight();
-                        if (videoWidth > 0 && videoHeight > 0) {
-                            float videoAspect = (float) videoWidth / (float) videoHeight;
-                            int screenWidth = splashOverlay.getWidth();
-                            int screenHeight = splashOverlay.getHeight();
-                            if (screenWidth == 0 || screenHeight == 0) {
-                                android.util.DisplayMetrics metrics = getResources().getDisplayMetrics();
-                                screenWidth = metrics.widthPixels;
-                                screenHeight = metrics.heightPixels;
+                splashTextureView.setSurfaceTextureListener(new android.view.TextureView.SurfaceTextureListener() {
+                    @Override
+                    public void onSurfaceTextureAvailable(android.graphics.SurfaceTexture surfaceTexture, int width, int height) {
+                        try {
+                            android.view.Surface surface = new android.view.Surface(surfaceTexture);
+                            splashPlayer = new android.media.MediaPlayer();
+                            splashPlayer.setSurface(surface);
+
+                            // Configure as Sonification with ZERO volume so it NEVER claims Audio Focus or pauses background music!
+                            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.LOLLIPOP) {
+                                android.media.AudioAttributes attr = new android.media.AudioAttributes.Builder()
+                                        .setUsage(android.media.AudioAttributes.USAGE_ASSISTANCE_SONIFICATION)
+                                        .setContentType(android.media.AudioAttributes.CONTENT_TYPE_SONIFICATION)
+                                        .build();
+                                splashPlayer.setAudioAttributes(attr);
                             }
-                            float screenAspect = (float) screenWidth / (float) screenHeight;
-                            FrameLayout.LayoutParams lp = (FrameLayout.LayoutParams) splashVideoView.getLayoutParams();
-                            if (videoAspect > screenAspect) {
-                                lp.width = (int) (screenHeight * videoAspect);
-                                lp.height = screenHeight;
-                            } else {
-                                lp.width = screenWidth;
-                                lp.height = (int) (screenWidth / videoAspect);
-                            }
-                            lp.gravity = android.view.Gravity.CENTER;
-                            splashVideoView.setLayoutParams(lp);
+                            splashPlayer.setVolume(0f, 0f);
+
+                            Uri videoUri = Uri.parse("android.resource://" + getPackageName() + "/" + R.raw.caspian_splash_v22);
+                            splashPlayer.setDataSource(MainActivity.this, videoUri);
+
+                            splashPlayer.setOnVideoSizeChangedListener((mp, videoWidth, videoHeight) -> {
+                                if (videoWidth > 0 && videoHeight > 0 && splashOverlay != null) {
+                                    float videoAspect = (float) videoWidth / (float) videoHeight;
+                                    int screenWidth = splashOverlay.getWidth();
+                                    int screenHeight = splashOverlay.getHeight();
+                                    if (screenWidth == 0 || screenHeight == 0) {
+                                        android.util.DisplayMetrics metrics = getResources().getDisplayMetrics();
+                                        screenWidth = metrics.widthPixels;
+                                        screenHeight = metrics.heightPixels;
+                                    }
+                                    float screenAspect = (float) screenWidth / (float) screenHeight;
+                                    FrameLayout.LayoutParams lp = (FrameLayout.LayoutParams) splashTextureView.getLayoutParams();
+                                    if (videoAspect > screenAspect) {
+                                        lp.width = (int) (screenHeight * videoAspect);
+                                        lp.height = screenHeight;
+                                    } else {
+                                        lp.width = screenWidth;
+                                        lp.height = (int) (screenWidth / videoAspect);
+                                    }
+                                    lp.gravity = android.view.Gravity.CENTER;
+                                    splashTextureView.setLayoutParams(lp);
+                                }
+                            });
+
+                            splashPlayer.setOnPreparedListener(mp -> {
+                                mp.setLooping(false);
+                                mp.start();
+                            });
+                            splashPlayer.setOnCompletionListener(mp -> dismissSplash.run());
+                            splashPlayer.setOnErrorListener((mp, what, extra) -> {
+                                dismissSplash.run();
+                                return true;
+                            });
+
+                            splashPlayer.prepareAsync();
+                        } catch (Throwable t) {
+                            dismissSplash.run();
                         }
-                    } catch (Exception e) {}
+                    }
+
+                    @Override public void onSurfaceTextureSizeChanged(android.graphics.SurfaceTexture surface, int width, int height) {}
+                    @Override public boolean onSurfaceTextureDestroyed(android.graphics.SurfaceTexture surface) {
+                        if (splashPlayer != null) {
+                            try { splashPlayer.release(); } catch (Exception e) {}
+                            splashPlayer = null;
+                        }
+                        return true;
+                    }
+                    @Override public void onSurfaceTextureUpdated(android.graphics.SurfaceTexture surface) {}
                 });
 
-                splashVideoView.setOnCompletionListener(mp -> dismissSplash.run());
-                splashVideoView.setOnErrorListener((mp, what, extra) -> {
-                    dismissSplash.run();
-                    return true;
-                });
                 splashOverlay.setOnClickListener(v -> dismissSplash.run());
-                splashVideoView.start();
-
-                // Timeout fallback after 4.5s
-                splashOverlay.postDelayed(dismissSplash, 4500);
+                splashOverlay.postDelayed(dismissSplash, 4000);
             } catch (Throwable t) {
                 splashOverlay.setVisibility(View.GONE);
             }
@@ -400,6 +500,10 @@ public class MainActivity extends AppCompatActivity {
                 | View.SYSTEM_UI_FLAG_LAYOUT_HIDE_NAVIGATION
         );
         setRequestedOrientation(android.content.pm.ActivityInfo.SCREEN_ORIENTATION_SENSOR_LANDSCAPE);
+
+        if (ytRemoteFullscreen != null) {
+            ytRemoteFullscreen.setImageResource(R.drawable.ic_pod_fullscreen_exit);
+        }
     }
 
     public void hideCustomView() {
@@ -417,6 +521,14 @@ public class MainActivity extends AppCompatActivity {
 
         getWindow().getDecorView().setSystemUiVisibility(View.SYSTEM_UI_FLAG_VISIBLE);
         setRequestedOrientation(android.content.pm.ActivityInfo.SCREEN_ORIENTATION_UNSPECIFIED);
+
+        if (ytRemoteFullscreen != null) {
+            ytRemoteFullscreen.setImageResource(R.drawable.ic_pod_fullscreen);
+        }
+    }
+
+    public View getCustomView() {
+        return customView;
     }
 
     private void triggerVibration() {
@@ -949,7 +1061,7 @@ public class MainActivity extends AppCompatActivity {
         if (!isDebugRecording) return;
         String timeStr = new SimpleDateFormat("HH:mm:ss.SSS", Locale.US).format(new Date());
         debugLogBuffer.append("[").append(timeStr).append("] [").append(tag).append("] ").append(message).append("\n");
-        Log.d("CaspianDebug", "[" + tag + "] " + message);
+        Log.d("CaspianDebugA", "[" + tag + "] " + message);
     }
 
     public TabItem getActiveTab() {
@@ -1014,7 +1126,7 @@ public class MainActivity extends AppCompatActivity {
                 }
             }
         } catch (Throwable t) {
-            Log.e("CaspianDebug", "Error loading saved tabs: " + t.getMessage(), t);
+            Log.e("CaspianDebugA", "Error loading saved tabs: " + t.getMessage(), t);
         }
 
         // Fallback default initial Tab
@@ -1049,6 +1161,7 @@ public class MainActivity extends AppCompatActivity {
         // Hardware Performance Optimizations
         settings.setRenderPriority(WebSettings.RenderPriority.HIGH);
         settings.setEnableSmoothTransition(true);
+        settings.setMediaPlaybackRequiresUserGesture(true);
 
         // Single-Window OAuth Transport for Instant Google Account Login ("Continue with Google")
         settings.setSupportMultipleWindows(true);
@@ -1063,6 +1176,12 @@ public class MainActivity extends AppCompatActivity {
                 CookieManager.getInstance().flush();
                 appendDebugLog("URL_PAGE_START", url);
                 view.evaluateJavascript("window.__caspian_tab_id = " + tab.id + ";", null);
+                if (url != null && url.toLowerCase().contains("youtube.com")) {
+                    try {
+                        String ytEarlyDefuser = readAssetFile("youtube_helper.js");
+                        view.evaluateJavascript(ytEarlyDefuser, null);
+                    } catch(Exception e) {}
+                }
             }
 
             @Override
@@ -1189,7 +1308,6 @@ public class MainActivity extends AppCompatActivity {
                             url.contains("doubleclick.net") ||
                             url.contains("googlesyndication.com") ||
                             url.contains("adservice.google.com") ||
-                            url.contains("youtube.com/api/stats/ads") ||
                             url.contains("/pagead/") ||
                             url.contains("/pcs/activeview")) {
                             return new WebResourceResponse("text/plain", "UTF-8", new java.io.ByteArrayInputStream(new byte[0]));
@@ -1210,6 +1328,7 @@ public class MainActivity extends AppCompatActivity {
                 }
                 tab.url = url;
                 updateSearchNavVisibility();
+                updateFloatingYTRemoteVisibility();
             }
         });
 
@@ -1367,12 +1486,26 @@ public class MainActivity extends AppCompatActivity {
             }
         });
 
+        wv.setFindListener((activeMatchOrdinal, numberOfMatches, isDoneCounting) -> {
+            runOnUiThread(() -> {
+                if (navFinderCount != null) {
+                    if (numberOfMatches > 0) {
+                        navFinderCount.setText((activeMatchOrdinal + 1) + "/" + numberOfMatches);
+                    } else {
+                        navFinderCount.setText("0/0");
+                    }
+                }
+            });
+        });
+
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
             wv.setOnScrollChangeListener((v, scrollX, scrollY, oldScrollX, oldScrollY) -> {
-                if (scrollY - oldScrollY > 15) {
-                    collapseSearchDock();
-                } else if (oldScrollY - scrollY > 15 || scrollY <= 10) {
-                    expandSearchDock();
+                if (isGoogleDockScrollCollapseEnabled && !isFinderModeActive) {
+                    if (scrollY - oldScrollY > 15) {
+                        collapseSearchDock();
+                    } else if (oldScrollY - scrollY > 15 || scrollY <= 10) {
+                        expandSearchDock();
+                    }
                 }
             });
         }
@@ -1391,6 +1524,7 @@ public class MainActivity extends AppCompatActivity {
         settings.setAllowFileAccess(true);
         settings.setOffscreenPreRaster(true);
         settings.setRenderPriority(WebSettings.RenderPriority.HIGH);
+        settings.setMediaPlaybackRequiresUserGesture(true);
         settings.setCacheMode(WebSettings.LOAD_DEFAULT);
         
         controlWebView.setLayerType(View.LAYER_TYPE_HARDWARE, null);
@@ -1398,6 +1532,29 @@ public class MainActivity extends AppCompatActivity {
         controlWebView.addJavascriptInterface(new CaspianBridge(this), "CaspianBridge");
 
         controlWebView.setWebViewClient(new WebViewClient() {
+            @Override
+            public boolean shouldOverrideUrlLoading(WebView view, WebResourceRequest request) {
+                if (request != null && request.getUrl() != null) {
+                    String url = request.getUrl().toString();
+                    if (!url.startsWith("file:///android_asset/")) {
+                        openNewTab(url, "browser");
+                        closeControlSheet();
+                        return true;
+                    }
+                }
+                return false;
+            }
+
+            @Override
+            public boolean shouldOverrideUrlLoading(WebView view, String url) {
+                if (url != null && !url.startsWith("file:///android_asset/")) {
+                    openNewTab(url, "browser");
+                    closeControlSheet();
+                    return true;
+                }
+                return false;
+            }
+
             @Override
             public void onPageFinished(WebView view, String url) {
                 super.onPageFinished(view, url);
@@ -1501,7 +1658,7 @@ public class MainActivity extends AppCompatActivity {
 
                     // Otherwise, normal tap toggles Caspian Control Sheet
                     SharedPreferences prefs = getSharedPreferences("CaspianMobilePrefs", MODE_PRIVATE);
-                    String chosenTaSfx = prefs.getString("sfx_file_ta", "pop_click.wav");
+                    String chosenTaSfx = prefs.getString("sfx_file_ta", "pop_click.mp3");
                     playAssetSound("sfx/" + chosenTaSfx);
                     int tapDurationVal = 100;
                     try {
@@ -1511,14 +1668,15 @@ public class MainActivity extends AppCompatActivity {
 
                     final int finalTapDur = tapDurationVal;
                     if (finalTapDur > 0) {
+                        float targetScale = currentActionBtnScale;
                         floatingCaspianCard.animate()
-                                .scaleX(0.88f)
-                                .scaleY(0.88f)
+                                .scaleX(targetScale * 0.88f)
+                                .scaleY(targetScale * 0.88f)
                                 .setDuration(finalTapDur)
                                 .withEndAction(() -> {
                                     floatingCaspianCard.animate()
-                                            .scaleX(1.0f)
-                                            .scaleY(1.0f)
+                                            .scaleX(targetScale)
+                                            .scaleY(targetScale)
                                             .setDuration(finalTapDur)
                                             .setInterpolator(new android.view.animation.OvershootInterpolator(1.2f))
                                             .start();
@@ -1674,6 +1832,37 @@ public class MainActivity extends AppCompatActivity {
         return tabsList;
     }
 
+    public void openNewTab(String url) {
+        openNewTab(url, "browser");
+    }
+
+    public void openNewTab(String url, String service) {
+        runOnUiThread(() -> {
+            int newId = nextTabId++;
+            String tabService = service != null ? service : "browser";
+            String title = "Web";
+            if (url != null) {
+                if (url.contains("youtube.com") || url.contains("youtu.be")) {
+                    tabService = "youtube";
+                    title = "YouTube";
+                } else if (url.contains("chatgpt.com")) {
+                    tabService = "chatgpt";
+                    title = "ChatGPT";
+                } else if (url.contains("gemini.google.com")) {
+                    tabService = "gemini";
+                    title = "Google Gemini";
+                } else if (url.contains("github.com")) {
+                    tabService = "github";
+                    title = "GitHub";
+                }
+            }
+            TabItem newTab = new TabItem(newId, title, url != null ? url : "https://www.google.com/", tabService, null);
+            createTabWebView(newTab);
+            tabsList.add(newTab);
+            switchTab(newId);
+        });
+    }
+
     public void createNewTab(String service) {
         int newId = nextTabId++;
         String url = "https://chatgpt.com/";
@@ -1769,25 +1958,214 @@ public class MainActivity extends AppCompatActivity {
         }
 
         updateSearchNavVisibility();
+        updateFloatingYTRemoteVisibility();
         saveTabsToPrefs();
     }
 
+    private View searchDockScroll;
     private View searchDockExpanded;
     private View searchDockCollapsed;
     private TextView searchDockUrl;
+    private ImageButton navDockClose;
+    private ImageButton navDockReload;
+    private ImageButton navFinderBtn;
+    private View navFinderBox;
+    private EditText navFinderInput;
+    private TextView navFinderCount;
+    private ImageButton navArrowUpBtn;
+    private ImageButton navArrowDownBtn;
+    private TextView navDragHandle;
+    private ImageButton navShrinkBtn;
     private float searchDockDX = 0f, searchDockDY = 0f;
+    private boolean isGoogleDockEnabled = true;
+    private boolean isGoogleDockScrollCollapseEnabled = true;
+    private boolean isFinderModeActive = false;
+    private boolean isTwoFingerDraggingSearch = false;
+    private float currentGoogleDockScale = 1.0f;
 
     @SuppressLint("ClickableViewAccessibility")
     private void setupSearchDock() {
+        SharedPreferences prefs = getSharedPreferences("CaspianMobilePrefs", MODE_PRIVATE);
+        isGoogleDockEnabled = !"false".equalsIgnoreCase(prefs.getString("google_dock_enabled", "true"));
+        isGoogleDockScrollCollapseEnabled = !"false".equalsIgnoreCase(prefs.getString("google_dock_autocollapse", "true"));
+
         searchNavContainer = findViewById(R.id.search_nav_container);
+        searchDockScroll = findViewById(R.id.search_dock_scroll);
         searchDockExpanded = findViewById(R.id.search_dock_expanded);
         searchDockCollapsed = findViewById(R.id.search_dock_collapsed_btn);
         searchDockUrl = findViewById(R.id.search_dock_url);
+        navDockClose = findViewById(R.id.nav_dock_close);
+        navDockReload = findViewById(R.id.nav_dock_reload);
         navBackBtn = findViewById(R.id.nav_back_btn);
         navForwardBtn = findViewById(R.id.nav_forward_btn);
+        navFinderBtn = findViewById(R.id.nav_finder_btn);
+        navFinderBox = findViewById(R.id.nav_finder_box);
+        navFinderInput = findViewById(R.id.nav_finder_input);
+        navFinderCount = findViewById(R.id.nav_finder_count);
+        navArrowUpBtn = findViewById(R.id.nav_arrow_up_btn);
+        navArrowDownBtn = findViewById(R.id.nav_arrow_down_btn);
+        navDragHandle = findViewById(R.id.nav_drag_handle);
+        navShrinkBtn = findViewById(R.id.nav_shrink_btn);
 
-        if (searchDockUrl != null && searchNavContainer != null) {
-            searchDockUrl.setOnTouchListener((view, event) -> {
+        // Touch Absorption on Dock background to prevent webview pass-through
+        if (searchDockExpanded != null) {
+            searchDockExpanded.setOnTouchListener((v, event) -> true);
+        }
+
+        // 1. Close Button (Left Side)
+        if (navDockClose != null) {
+            navDockClose.setOnClickListener(v -> {
+                playAssetSound("sfx/tap_button.mp3");
+                toggleGoogleSearchDock(false);
+            });
+        }
+
+        // 1.5 Reload Tab Button
+        if (navDockReload != null) {
+            navDockReload.setOnClickListener(v -> {
+                playAssetSound("sfx/pop_click.mp3");
+                TabItem activeTab = getActiveTab();
+                if (activeTab != null && activeTab.webView != null) {
+                    activeTab.webView.reload();
+                    new CaspianBridge(MainActivity.this).showToast("🔄 Reloading Tab...");
+                }
+            });
+        }
+
+        // 2. Back Navigation
+        if (navBackBtn != null) {
+            navBackBtn.setOnClickListener(v -> {
+                playAssetSound("sfx/pop_click.mp3");
+                TabItem activeTab = getActiveTab();
+                if (activeTab != null && activeTab.webView != null && activeTab.webView.canGoBack()) {
+                    activeTab.webView.goBack();
+                    new CaspianBridge(MainActivity.this).showToast("⬅️ Back");
+                } else {
+                    new CaspianBridge(MainActivity.this).showToast("Already at initial search page");
+                }
+            });
+        }
+
+        // 3. Forward Navigation
+        if (navForwardBtn != null) {
+            navForwardBtn.setOnClickListener(v -> {
+                playAssetSound("sfx/pop_click.mp3");
+                TabItem activeTab = getActiveTab();
+                if (activeTab != null && activeTab.webView != null && activeTab.webView.canGoForward()) {
+                    activeTab.webView.goForward();
+                    new CaspianBridge(MainActivity.this).showToast("➡️ Forward");
+                } else {
+                    new CaspianBridge(MainActivity.this).showToast("No forward history");
+                }
+            });
+        }
+
+        // 3.5 URL Pill Click -> Focuses and opens Google Search Box on the active page
+        if (searchDockUrl != null) {
+            searchDockUrl.setOnClickListener(v -> {
+                playAssetSound("sfx/pop_click.mp3");
+                TabItem activeTab = getActiveTab();
+                if (activeTab != null && activeTab.webView != null) {
+                    activeTab.webView.requestFocus();
+                    activeTab.webView.evaluateJavascript(
+                        "(function() {" +
+                        "  var el = document.querySelector('textarea[name=\"q\"], input[name=\"q\"], input[type=\"search\"], textarea[aria-label*=\"Search\"], input[aria-label*=\"Search\"], input[name=\"p\"], #sb_form_q');" +
+                        "  if (el) {" +
+                        "    el.scrollIntoView({behavior: 'smooth', block: 'center'});" +
+                        "    el.focus();" +
+                        "    el.click();" +
+                        "    if (typeof el.select === 'function') el.select();" +
+                        "  } else {" +
+                        "    window.scrollTo({top: 0, behavior: 'smooth'});" +
+                        "  }" +
+                        "})();",
+                        null
+                    );
+                    try {
+                        android.view.inputmethod.InputMethodManager imm = (android.view.inputmethod.InputMethodManager) getSystemService(Context.INPUT_METHOD_SERVICE);
+                        if (imm != null) {
+                            imm.showSoftInput(activeTab.webView, android.view.inputmethod.InputMethodManager.SHOW_IMPLICIT);
+                        }
+                    } catch (Exception ignored) {}
+                    new CaspianBridge(MainActivity.this).showToast("🔍 Focusing Search Box...");
+                }
+            });
+        }
+
+        // 4. Finder Toggle Button
+        if (navFinderBtn != null) {
+            navFinderBtn.setOnClickListener(v -> {
+                playAssetSound("sfx/pop_click.mp3");
+                toggleFinderMode(!isFinderModeActive);
+            });
+        }
+
+        // 4.1 Finder Input live search
+        if (navFinderInput != null) {
+            navFinderInput.addTextChangedListener(new android.text.TextWatcher() {
+                @Override
+                public void beforeTextChanged(CharSequence s, int start, int count, int after) {}
+                @Override
+                public void onTextChanged(CharSequence s, int start, int before, int count) {
+                    TabItem activeTab = getActiveTab();
+                    if (activeTab != null && activeTab.webView != null) {
+                        String query = s.toString().trim();
+                        if (!query.isEmpty()) {
+                            activeTab.webView.findAllAsync(query);
+                        } else {
+                            activeTab.webView.clearMatches();
+                            if (navFinderCount != null) navFinderCount.setText("0/0");
+                        }
+                    }
+                }
+                @Override
+                public void afterTextChanged(android.text.Editable s) {}
+            });
+
+            navFinderInput.setOnEditorActionListener((v, actionId, event) -> {
+                TabItem activeTab = getActiveTab();
+                if (activeTab != null && activeTab.webView != null) {
+                    activeTab.webView.findNext(true);
+                }
+                return true;
+            });
+        }
+
+        // 5. Up Arrow (Finder: Prev Match | Normal: Scroll to Top)
+        if (navArrowUpBtn != null) {
+            navArrowUpBtn.setOnClickListener(v -> {
+                playAssetSound("sfx/pop_click.mp3");
+                TabItem activeTab = getActiveTab();
+                if (activeTab != null && activeTab.webView != null) {
+                    if (isFinderModeActive) {
+                        activeTab.webView.findNext(false);
+                    } else {
+                        activeTab.webView.evaluateJavascript("window.scrollTo({top: 0, behavior: 'smooth'});", null);
+                        new CaspianBridge(MainActivity.this).showToast("⬆️ Top of page");
+                    }
+                }
+            });
+        }
+
+        // 6. Down Arrow (Finder: Next Match | Normal: Scroll to Bottom)
+        if (navArrowDownBtn != null) {
+            navArrowDownBtn.setOnClickListener(v -> {
+                playAssetSound("sfx/pop_click.mp3");
+                TabItem activeTab = getActiveTab();
+                if (activeTab != null && activeTab.webView != null) {
+                    if (isFinderModeActive) {
+                        activeTab.webView.findNext(true);
+                    } else {
+                        activeTab.webView.evaluateJavascript("window.scrollTo({top: document.body.scrollHeight, behavior: 'smooth'});", null);
+                        new CaspianBridge(MainActivity.this).showToast("⬇️ Bottom of page");
+                    }
+                }
+            });
+        }
+
+        // 7. Drag Handle (Single-Finger Move)
+        if (navDragHandle != null && searchNavContainer != null) {
+            navDragHandle.setOnTouchListener((view, event) -> {
                 switch (event.getAction()) {
                     case MotionEvent.ACTION_DOWN:
                         searchDockDX = searchNavContainer.getX() - event.getRawX();
@@ -1803,62 +2181,154 @@ public class MainActivity extends AppCompatActivity {
             });
         }
 
-        if (searchDockCollapsed != null) {
-            searchDockCollapsed.setOnClickListener(v -> expandSearchDock());
-        }
-
-        if (navBackBtn != null) {
-            navBackBtn.setOnClickListener(v -> {
-                TabItem activeTab = getActiveTab();
-                if (activeTab != null && activeTab.webView != null && activeTab.webView.canGoBack()) {
-                    activeTab.webView.goBack();
-                    new CaspianBridge(MainActivity.this).showToast("⬅️ Back");
-                } else {
-                    new CaspianBridge(MainActivity.this).showToast("Already at initial search page");
-                }
+        // 8. Shrink Button -> Ball
+        if (navShrinkBtn != null) {
+            navShrinkBtn.setOnClickListener(v -> {
+                playAssetSound("sfx/tap_button.mp3");
+                collapseSearchDock();
             });
         }
 
-        if (navForwardBtn != null) {
-            navForwardBtn.setOnClickListener(v -> {
-                TabItem activeTab = getActiveTab();
-                if (activeTab != null && activeTab.webView != null && activeTab.webView.canGoForward()) {
-                    activeTab.webView.goForward();
-                    new CaspianBridge(MainActivity.this).showToast("➡️ Forward");
-                } else {
-                    new CaspianBridge(MainActivity.this).showToast("No forward history");
+        // 9. Collapsed Ball (Touch & Drag / Click to Expand)
+        if (searchDockCollapsed != null && searchNavContainer != null) {
+            searchDockCollapsed.setOnTouchListener(new View.OnTouchListener() {
+                private float startX, startY;
+                private boolean isDragging = false;
+
+                @Override
+                public boolean onTouch(View v, MotionEvent event) {
+                    switch (event.getAction()) {
+                        case MotionEvent.ACTION_DOWN:
+                            startX = event.getRawX();
+                            startY = event.getRawY();
+                            searchDockDX = searchNavContainer.getX() - event.getRawX();
+                            searchDockDY = searchNavContainer.getY() - event.getRawY();
+                            isDragging = false;
+                            return true;
+                        case MotionEvent.ACTION_MOVE:
+                            if (Math.hypot(event.getRawX() - startX, event.getRawY() - startY) > 10) {
+                                isDragging = true;
+                                searchNavContainer.setX(event.getRawX() + searchDockDX);
+                                searchNavContainer.setY(event.getRawY() + searchDockDY);
+                            }
+                            return true;
+                        case MotionEvent.ACTION_UP:
+                            if (!isDragging) {
+                                playAssetSound("sfx/pop_click.mp3");
+                                expandSearchDock();
+                            }
+                            return true;
+                        default:
+                            return false;
+                    }
                 }
             });
         }
     }
 
+    private void toggleFinderMode(boolean active) {
+        isFinderModeActive = active;
+        runOnUiThread(() -> {
+            if (active) {
+                if (searchDockUrl != null) searchDockUrl.setVisibility(View.GONE);
+                if (navFinderBox != null) navFinderBox.setVisibility(View.VISIBLE);
+                if (navFinderBtn != null) navFinderBtn.setColorFilter(0xFFFFCC00);
+                if (navFinderInput != null) {
+                    navFinderInput.requestFocus();
+                    android.view.inputmethod.InputMethodManager imm = (android.view.inputmethod.InputMethodManager) getSystemService(Context.INPUT_METHOD_SERVICE);
+                    if (imm != null) imm.showSoftInput(navFinderInput, android.view.inputmethod.InputMethodManager.SHOW_IMPLICIT);
+                    String text = navFinderInput.getText().toString().trim();
+                    TabItem tab = getActiveTab();
+                    if (tab != null && tab.webView != null && !text.isEmpty()) {
+                        tab.webView.findAllAsync(text);
+                    }
+                }
+                new CaspianBridge(MainActivity.this).showToast("🔍 Finder Active (Use ⬆️/⬇️ to jump)");
+            } else {
+                if (navFinderBox != null) navFinderBox.setVisibility(View.GONE);
+                if (searchDockUrl != null) searchDockUrl.setVisibility(View.VISIBLE);
+                if (navFinderBtn != null) navFinderBtn.setColorFilter(0xFFFFFFFF);
+                android.view.inputmethod.InputMethodManager imm = (android.view.inputmethod.InputMethodManager) getSystemService(Context.INPUT_METHOD_SERVICE);
+                if (imm != null && navFinderInput != null) imm.hideSoftInputFromWindow(navFinderInput.getWindowToken(), 0);
+                TabItem tab = getActiveTab();
+                if (tab != null && tab.webView != null) {
+                    tab.webView.clearMatches();
+                }
+                if (navFinderCount != null) navFinderCount.setText("0/0");
+            }
+        });
+    }
+
     public void collapseSearchDock() {
         runOnUiThread(() -> {
-            if (searchDockExpanded != null && searchDockCollapsed != null && searchDockExpanded.getVisibility() == View.VISIBLE) {
-                searchDockExpanded.setVisibility(View.GONE);
+            View dockView = (searchDockScroll != null) ? searchDockScroll : searchDockExpanded;
+            if (dockView != null && searchDockCollapsed != null) {
+                dockView.setVisibility(View.GONE);
                 searchDockCollapsed.setVisibility(View.VISIBLE);
+                searchDockCollapsed.setAlpha(0f);
+                searchDockCollapsed.setScaleX(0.7f);
+                searchDockCollapsed.setScaleY(0.7f);
+                searchDockCollapsed.animate()
+                    .alpha(1f)
+                    .scaleX(1f)
+                    .scaleY(1f)
+                    .setDuration(200)
+                    .start();
             }
         });
     }
 
     public void expandSearchDock() {
         runOnUiThread(() -> {
-            if (searchDockExpanded != null && searchDockCollapsed != null && searchDockCollapsed.getVisibility() == View.VISIBLE) {
+            View dockView = (searchDockScroll != null) ? searchDockScroll : searchDockExpanded;
+            if (dockView != null && searchDockCollapsed != null) {
                 searchDockCollapsed.setVisibility(View.GONE);
-                searchDockExpanded.setVisibility(View.VISIBLE);
+                dockView.setVisibility(View.VISIBLE);
+                dockView.setAlpha(0f);
+                dockView.setScaleX(0.85f);
+                dockView.setScaleY(0.85f);
+                dockView.animate()
+                    .alpha(1f)
+                    .scaleX(1f)
+                    .scaleY(1f)
+                    .setDuration(200)
+                    .start();
             }
         });
+    }
+
+    public void toggleGoogleSearchDock(boolean show) {
+        isGoogleDockEnabled = show;
+        SharedPreferences prefs = getSharedPreferences("CaspianMobilePrefs", MODE_PRIVATE);
+        prefs.edit().putString("google_dock_enabled", show ? "true" : "false").apply();
+        runOnUiThread(() -> {
+            if (show) {
+                expandSearchDock();
+            }
+            updateSearchNavVisibility();
+            if (controlWebView != null) {
+                controlWebView.evaluateJavascript("if (typeof window.syncGoogleDockState === 'function') { window.syncGoogleDockState(" + show + "); }", null);
+            }
+        });
+    }
+
+    public void setGoogleDockAutoCollapse(boolean enabled) {
+        isGoogleDockScrollCollapseEnabled = enabled;
+        SharedPreferences prefs = getSharedPreferences("CaspianMobilePrefs", MODE_PRIVATE);
+        prefs.edit().putString("google_dock_autocollapse", enabled ? "true" : "false").apply();
     }
 
     public void updateSearchNavVisibility() {
         runOnUiThread(() -> {
             TabItem active = getActiveTab();
             boolean isSheetOpen = this.isSheetOpen;
+            SharedPreferences prefs = getSharedPreferences("CaspianMobilePrefs", MODE_PRIVATE);
+            isGoogleDockEnabled = !"false".equalsIgnoreCase(prefs.getString("google_dock_enabled", "true"));
             if (active != null && searchNavContainer != null) {
                 String u = active.url != null ? active.url.toLowerCase() : "";
                 String s = active.service != null ? active.service.toLowerCase() : "";
-                boolean isGoogleSearch = (s.equals("google") || u.contains("google.com/search") || u.contains("google.co") || u.contains("www.google.")) && !u.contains("gemini.google.com");
-                boolean showPill = isGoogleSearch && !isSheetOpen;
+                boolean isGoogleSearch = (s.equals("google") || u.contains("google.com") || u.contains("google.co") || u.contains("bing.com") || u.contains("duckduckgo.com") || u.contains("search")) && !u.contains("gemini.google.com") && !u.contains("youtube.com") && !u.contains("youtu.be");
+                boolean showPill = isGoogleDockEnabled && isGoogleSearch && !isSheetOpen;
                 searchNavContainer.setVisibility(showPill ? View.VISIBLE : View.GONE);
                 if (showPill) {
                     searchNavContainer.bringToFront();
@@ -1876,6 +2346,448 @@ public class MainActivity extends AppCompatActivity {
                         }
                     }
                 }
+            }
+        });
+    }
+
+    private View ytFloatingRemoteContainer;
+    private View ytFloatingRemoteScroll;
+    private View ytFloatingRemoteDock;
+    private View ytFloatingRemoteBall;
+    private TextView ytRemoteDragHandle;
+    private ImageButton ytRemoteReload;
+    private ImageButton ytRemoteFullscreen;
+    private ImageButton ytRemotePrevVideo;
+    private ImageButton ytRemoteSeekBack;
+    private ImageButton ytRemotePlayPause;
+    private ImageButton ytRemoteSeekFwd;
+    private ImageButton ytRemoteNextVideo;
+    private ImageButton ytRemoteMute;
+    private TextView ytRemoteSpeedBtn;
+    private TextView ytRemoteQualityBtn;
+    private ImageButton ytRemoteShrinkBtn;
+    private ImageButton ytRemoteClose;
+    private float ytRemoteDX = 0f, ytRemoteDY = 0f;
+    private boolean isYtFloatingRemoteEnabled = true;
+    private boolean isTwoFingerDragging = false;
+    private Boolean lastYtPlayingState = null;
+    private Boolean lastYtMutedState = null;
+    private float currentActionBtnScale = 1.0f;
+    private float currentYtPodScale = 1.0f;
+
+    @Override
+    public boolean dispatchTouchEvent(MotionEvent ev) {
+        int action = ev.getActionMasked();
+        int pointerCount = ev.getPointerCount();
+
+        // 1. Handle Active Two-Finger Drag Continuation
+        if (isTwoFingerDragging) {
+            if (action == MotionEvent.ACTION_MOVE) {
+                if (ytFloatingRemoteContainer != null) {
+                    ytFloatingRemoteContainer.setX(ev.getRawX() + ytRemoteDX);
+                    ytFloatingRemoteContainer.setY(ev.getRawY() + ytRemoteDY);
+                }
+                return true;
+            } else if (action == MotionEvent.ACTION_UP || action == MotionEvent.ACTION_CANCEL || action == MotionEvent.ACTION_POINTER_UP) {
+                isTwoFingerDragging = false;
+                return true;
+            }
+        }
+
+        if (isTwoFingerDraggingSearch) {
+            if (action == MotionEvent.ACTION_MOVE) {
+                if (searchNavContainer != null) {
+                    searchNavContainer.setX(ev.getRawX() + searchDockDX);
+                    searchNavContainer.setY(ev.getRawY() + searchDockDY);
+                }
+                return true;
+            } else if (action == MotionEvent.ACTION_UP || action == MotionEvent.ACTION_CANCEL || action == MotionEvent.ACTION_POINTER_UP) {
+                isTwoFingerDraggingSearch = false;
+                return true;
+            }
+        }
+
+        // Fast path for all standard 1-finger touches (scrolling, clicking, typing) - zero overhead
+        if (pointerCount < 2) {
+            return super.dispatchTouchEvent(ev);
+        }
+
+        // 2. Multi-Touch Gesture Detection (only evaluated when pointerCount >= 2 on pointer down)
+        if (action == MotionEvent.ACTION_POINTER_DOWN || action == MotionEvent.ACTION_DOWN) {
+            float x = ev.getRawX();
+            float y = ev.getRawY();
+
+            if (ytFloatingRemoteContainer != null && ytFloatingRemoteContainer.getVisibility() == View.VISIBLE) {
+                int[] loc = new int[2];
+                ytFloatingRemoteContainer.getLocationOnScreen(loc);
+                int w = ytFloatingRemoteContainer.getWidth();
+                int h = ytFloatingRemoteContainer.getHeight();
+                if (x >= loc[0] - 30 && x <= loc[0] + w + 30 && y >= loc[1] - 30 && y <= loc[1] + h + 30) {
+                    isTwoFingerDragging = true;
+                    ytRemoteDX = ytFloatingRemoteContainer.getX() - ev.getRawX();
+                    ytRemoteDY = ytFloatingRemoteContainer.getY() - ev.getRawY();
+                    return true;
+                }
+            }
+
+            if (searchNavContainer != null && searchNavContainer.getVisibility() == View.VISIBLE) {
+                int[] loc = new int[2];
+                searchNavContainer.getLocationOnScreen(loc);
+                int w = searchNavContainer.getWidth();
+                int h = searchNavContainer.getHeight();
+                if (x >= loc[0] - 30 && x <= loc[0] + w + 30 && y >= loc[1] - 30 && y <= loc[1] + h + 30) {
+                    isTwoFingerDraggingSearch = true;
+                    searchDockDX = searchNavContainer.getX() - ev.getRawX();
+                    searchDockDY = searchNavContainer.getY() - ev.getRawY();
+                    return true;
+                }
+            }
+        }
+
+        return super.dispatchTouchEvent(ev);
+    }
+
+    public boolean isYouTubeTab(TabItem tab) {
+        if (tab == null) return false;
+        String s = tab.service != null ? tab.service.toLowerCase() : "";
+        String u = tab.url != null ? tab.url.toLowerCase() : "";
+        return s.contains("youtube") || u.contains("youtube.com") || u.contains("youtu.be");
+    }
+
+    public void updateFloatingYTRemoteVisibility() {
+        runOnUiThread(() -> {
+            TabItem active = getActiveTab();
+            boolean isYT = isYouTubeTab(active);
+            SharedPreferences prefs = getSharedPreferences("CaspianMobilePrefs", MODE_PRIVATE);
+            boolean isYtEngineEnabled = !"false".equalsIgnoreCase(prefs.getString("yt_engine_enabled", "true"));
+            boolean show = isYtFloatingRemoteEnabled && isYT && isYtEngineEnabled && !isSheetOpen;
+            if (ytFloatingRemoteContainer != null) {
+                if (show) {
+                    ytFloatingRemoteContainer.setVisibility(View.VISIBLE);
+                    ytFloatingRemoteContainer.bringToFront();
+                    if (active != null && active.webView != null) {
+                        active.webView.evaluateJavascript(
+                            "if (window.__CaspianYouTube && typeof window.__CaspianYouTube.notifyState === 'function') { window.__CaspianYouTube.notifyState(); }", null
+                        );
+                    }
+                } else {
+                    ytFloatingRemoteContainer.setVisibility(View.GONE);
+                }
+            }
+        });
+    }
+
+    @SuppressLint("ClickableViewAccessibility")
+    private void setupFloatingYouTubeRemote() {
+        ytFloatingRemoteContainer = findViewById(R.id.yt_floating_remote_container);
+        ytFloatingRemoteScroll = findViewById(R.id.yt_floating_remote_scroll);
+        ytFloatingRemoteDock = findViewById(R.id.yt_floating_remote_dock);
+        ytFloatingRemoteBall = findViewById(R.id.yt_floating_remote_ball);
+        ytRemoteDragHandle = findViewById(R.id.yt_remote_drag_handle);
+        ytRemoteReload = findViewById(R.id.yt_remote_reload);
+        ytRemoteFullscreen = findViewById(R.id.yt_remote_fullscreen);
+        ytRemotePrevVideo = findViewById(R.id.yt_remote_prev_video);
+        ytRemoteSeekBack = findViewById(R.id.yt_remote_seek_back);
+        ytRemotePlayPause = findViewById(R.id.yt_remote_play_pause);
+        ytRemoteSeekFwd = findViewById(R.id.yt_remote_seek_fwd);
+        ytRemoteNextVideo = findViewById(R.id.yt_remote_next_video);
+        ytRemoteMute = findViewById(R.id.yt_remote_mute);
+        ytRemoteSpeedBtn = findViewById(R.id.yt_remote_speed_btn);
+        ytRemoteQualityBtn = findViewById(R.id.yt_remote_quality_btn);
+        ytRemoteShrinkBtn = findViewById(R.id.yt_remote_shrink_btn);
+        ytRemoteClose = findViewById(R.id.yt_remote_close);
+
+        // Touch Absorption on Dock to prevent touch pass-through into underlying YouTube WebView
+        if (ytFloatingRemoteDock != null) {
+            ytFloatingRemoteDock.setOnTouchListener((v, event) -> true);
+        }
+        if (ytFloatingRemoteScroll != null) {
+            ytFloatingRemoteScroll.setOnTouchListener((v, event) -> false);
+        }
+
+        // Draggable Move via Drag Handle (Enlarged Hitbox)
+        if (ytRemoteDragHandle != null && ytFloatingRemoteContainer != null) {
+            ytRemoteDragHandle.setOnTouchListener((view, event) -> {
+                switch (event.getAction()) {
+                    case MotionEvent.ACTION_DOWN:
+                        ytRemoteDX = ytFloatingRemoteContainer.getX() - event.getRawX();
+                        ytRemoteDY = ytFloatingRemoteContainer.getY() - event.getRawY();
+                        return true;
+                    case MotionEvent.ACTION_MOVE:
+                        ytFloatingRemoteContainer.setX(event.getRawX() + ytRemoteDX);
+                        ytFloatingRemoteContainer.setY(event.getRawY() + ytRemoteDY);
+                        return true;
+                    default:
+                        return false;
+                }
+            });
+        }
+
+        // Draggable Move on Collapsed Ball
+        if (ytFloatingRemoteBall != null && ytFloatingRemoteContainer != null) {
+            ytFloatingRemoteBall.setOnTouchListener(new View.OnTouchListener() {
+                private float startX, startY;
+                private boolean isDragging = false;
+
+                @Override
+                public boolean onTouch(View v, MotionEvent event) {
+                    switch (event.getAction()) {
+                        case MotionEvent.ACTION_DOWN:
+                            startX = event.getRawX();
+                            startY = event.getRawY();
+                            ytRemoteDX = ytFloatingRemoteContainer.getX() - event.getRawX();
+                            ytRemoteDY = ytFloatingRemoteContainer.getY() - event.getRawY();
+                            isDragging = false;
+                            return true;
+                        case MotionEvent.ACTION_MOVE:
+                            if (Math.hypot(event.getRawX() - startX, event.getRawY() - startY) > 10) {
+                                isDragging = true;
+                                ytFloatingRemoteContainer.setX(event.getRawX() + ytRemoteDX);
+                                ytFloatingRemoteContainer.setY(event.getRawY() + ytRemoteDY);
+                            }
+                            return true;
+                        case MotionEvent.ACTION_UP:
+                            if (!isDragging) {
+                                playAssetSound("sfx/pop_click.mp3");
+                                expandYTRemoteDock();
+                            }
+                            return true;
+                        default:
+                            return false;
+                    }
+                }
+            });
+        }
+
+        // Shrink Button -> Ball
+        if (ytRemoteShrinkBtn != null) {
+            ytRemoteShrinkBtn.setOnClickListener(v -> {
+                playAssetSound("sfx/tap_button.mp3");
+                shrinkYTRemoteToBall();
+            });
+        }
+
+        if (ytRemoteReload != null) {
+            ytRemoteReload.setOnClickListener(v -> {
+                playAssetSound("sfx/pop_click.mp3");
+                TabItem activeTab = getActiveTab();
+                if (activeTab != null && activeTab.webView != null) {
+                    activeTab.webView.reload();
+                    new CaspianBridge(MainActivity.this).showToast("🔄 Reloading YouTube Tab");
+                }
+            });
+        }
+
+        if (ytRemoteFullscreen != null) {
+            ytRemoteFullscreen.setOnClickListener(v -> {
+                playAssetSound("sfx/pop_click.mp3");
+                new CaspianBridge(MainActivity.this).toggleFullscreenYouTube();
+            });
+        }
+
+        if (ytRemotePrevVideo != null) {
+            ytRemotePrevVideo.setOnClickListener(v -> {
+                playAssetSound("sfx/pop_click.mp3");
+                TabItem activeTab = getActiveTab();
+                if (activeTab != null && activeTab.webView != null) {
+                    activeTab.webView.evaluateJavascript(
+                        "if (window.__CaspianYouTube && typeof window.__CaspianYouTube.previousVideo === 'function') { window.__CaspianYouTube.previousVideo(); } else if (window.history.length > 1) { window.history.back(); }", null
+                    );
+                }
+            });
+        }
+
+        if (ytRemoteSeekBack != null) {
+            ytRemoteSeekBack.setOnClickListener(v -> {
+                playAssetSound("sfx/pop_click.mp3");
+                new CaspianBridge(MainActivity.this).seekYouTube(-5);
+            });
+        }
+
+        if (ytRemotePlayPause != null) {
+            ytRemotePlayPause.setOnClickListener(v -> {
+                playAssetSound("sfx/pop_click.mp3");
+                new CaspianBridge(MainActivity.this).togglePlayYouTube();
+            });
+        }
+
+        if (ytRemoteSeekFwd != null) {
+            ytRemoteSeekFwd.setOnClickListener(v -> {
+                playAssetSound("sfx/pop_click.mp3");
+                new CaspianBridge(MainActivity.this).seekYouTube(5);
+            });
+        }
+
+        if (ytRemoteNextVideo != null) {
+            ytRemoteNextVideo.setOnClickListener(v -> {
+                playAssetSound("sfx/pop_click.mp3");
+                TabItem activeTab = getActiveTab();
+                if (activeTab != null && activeTab.webView != null) {
+                    activeTab.webView.evaluateJavascript(
+                        "if (window.__CaspianYouTube && typeof window.__CaspianYouTube.nextVideo === 'function') { window.__CaspianYouTube.nextVideo(); } else if (window.history.length > 1) { window.history.forward(); }", null
+                    );
+                }
+            });
+        }
+
+        if (ytRemoteMute != null) {
+            ytRemoteMute.setOnClickListener(v -> {
+                playAssetSound("sfx/pop_click.mp3");
+                new CaspianBridge(MainActivity.this).toggleMuteYouTube();
+            });
+        }
+
+        if (ytRemoteSpeedBtn != null) {
+            ytRemoteSpeedBtn.setOnClickListener(v -> {
+                playAssetSound("sfx/pop_click.mp3");
+                showSpeedSelectionDialog();
+            });
+        }
+
+        if (ytRemoteQualityBtn != null) {
+            ytRemoteQualityBtn.setOnClickListener(v -> {
+                playAssetSound("sfx/pop_click.mp3");
+                showQualitySelectionDialog();
+            });
+        }
+
+        if (ytRemoteClose != null) {
+            ytRemoteClose.setOnClickListener(v -> {
+                playAssetSound("sfx/tap_button.mp3");
+                toggleFloatingYTRemote(false);
+            });
+        }
+    }
+
+    public void updateYouTubePodState(boolean isPlaying, boolean isMuted) {
+        runOnUiThread(() -> {
+            if (lastYtPlayingState == null || lastYtPlayingState != isPlaying) {
+                lastYtPlayingState = isPlaying;
+                if (ytRemotePlayPause != null) {
+                    ytRemotePlayPause.setImageResource(isPlaying ? R.drawable.ic_pod_pause : R.drawable.ic_pod_play);
+                    ytRemotePlayPause.setContentDescription(isPlaying ? "Pause Video" : "Play Video");
+                }
+            }
+            if (lastYtMutedState == null || lastYtMutedState != isMuted) {
+                lastYtMutedState = isMuted;
+                if (ytRemoteMute != null) {
+                    ytRemoteMute.setImageResource(isMuted ? R.drawable.ic_pod_mute : R.drawable.ic_pod_unmute);
+                    ytRemoteMute.setContentDescription(isMuted ? "Unmute Video" : "Mute Video");
+                }
+            }
+            if (ytRemoteFullscreen != null) {
+                boolean isFs = customView != null;
+                ytRemoteFullscreen.setImageResource(isFs ? R.drawable.ic_pod_fullscreen_exit : R.drawable.ic_pod_fullscreen);
+            }
+        });
+    }
+
+    private void showSpeedSelectionDialog() {
+        String[] speedLabels = { "0.25x", "0.5x", "0.75x", "1.0x (Normal)", "1.25x", "1.5x", "1.75x", "2.0x", "2.5x", "3.0x", "4.0x" };
+        float[] speedVals = { 0.25f, 0.5f, 0.75f, 1.0f, 1.25f, 1.5f, 1.75f, 2.0f, 2.5f, 3.0f, 4.0f };
+
+        new androidx.appcompat.app.AlertDialog.Builder(this, androidx.appcompat.R.style.Theme_AppCompat_Dialog_Alert)
+            .setTitle("⚡ Select Playback Speed")
+            .setItems(speedLabels, (dialog, which) -> {
+                playAssetSound("sfx/pop_click.mp3");
+                float selectedSpeed = speedVals[which];
+                String text = (selectedSpeed == (int)selectedSpeed ? String.valueOf((int)selectedSpeed) : String.valueOf(selectedSpeed)) + "x";
+                if (ytRemoteSpeedBtn != null) {
+                    ytRemoteSpeedBtn.setText(text);
+                }
+                new CaspianBridge(MainActivity.this).setYouTubeSpeed(selectedSpeed);
+                new CaspianBridge(MainActivity.this).showToast("⚡ Speed: " + text);
+            })
+            .show();
+    }
+
+    private void showQualitySelectionDialog() {
+        String[] qualityLabels = { "Auto (Recommended)", "1080p (Full HD)", "720p (HD)", "480p (Standard)", "360p (Medium)", "240p (Data Saver)" };
+        String[] qualityPillLabels = { "Auto", "1080p", "720p", "480p", "360p", "240p" };
+        String[] qualityCodes = { "auto", "hd1080", "hd720", "large", "medium", "small" };
+
+        new androidx.appcompat.app.AlertDialog.Builder(this, androidx.appcompat.R.style.Theme_AppCompat_Dialog_Alert)
+            .setTitle("🎬 Select Video Quality")
+            .setItems(qualityLabels, (dialog, which) -> {
+                playAssetSound("sfx/pop_click.mp3");
+                String qPill = qualityPillLabels[which];
+                String qCode = qualityCodes[which];
+                if (ytRemoteQualityBtn != null) {
+                    ytRemoteQualityBtn.setText(qPill);
+                }
+                new CaspianBridge(MainActivity.this).setYouTubeQuality(qCode);
+                new CaspianBridge(MainActivity.this).showToast("🎬 Quality: " + qPill);
+            })
+            .show();
+    }
+
+    public void applyWidgetScale(String type, float scale) {
+        runOnUiThread(() -> {
+            if ("action_button".equalsIgnoreCase(type)) {
+                currentActionBtnScale = scale;
+                if (floatingCaspianCard != null) {
+                    floatingCaspianCard.setScaleX(scale);
+                    floatingCaspianCard.setScaleY(scale);
+                }
+            } else if ("yt_pod".equalsIgnoreCase(type)) {
+                currentYtPodScale = scale;
+                if (ytFloatingRemoteContainer != null) {
+                    ytFloatingRemoteContainer.setScaleX(scale);
+                    ytFloatingRemoteContainer.setScaleY(scale);
+                }
+            } else if ("google_dock".equalsIgnoreCase(type)) {
+                currentGoogleDockScale = scale;
+                if (searchNavContainer != null) {
+                    searchNavContainer.setScaleX(scale);
+                    searchNavContainer.setScaleY(scale);
+                }
+            }
+        });
+    }
+
+    private void shrinkYTRemoteToBall() {
+        View dockView = (ytFloatingRemoteScroll != null) ? ytFloatingRemoteScroll : ytFloatingRemoteDock;
+        if (dockView != null && ytFloatingRemoteBall != null) {
+            dockView.setVisibility(View.GONE);
+            ytFloatingRemoteBall.setVisibility(View.VISIBLE);
+            ytFloatingRemoteBall.setAlpha(0f);
+            ytFloatingRemoteBall.setScaleX(0.7f);
+            ytFloatingRemoteBall.setScaleY(0.7f);
+            ytFloatingRemoteBall.animate()
+                .alpha(1f)
+                .scaleX(1f)
+                .scaleY(1f)
+                .setDuration(200)
+                .start();
+        }
+    }
+
+    private void expandYTRemoteDock() {
+        View dockView = (ytFloatingRemoteScroll != null) ? ytFloatingRemoteScroll : ytFloatingRemoteDock;
+        if (dockView != null && ytFloatingRemoteBall != null) {
+            ytFloatingRemoteBall.setVisibility(View.GONE);
+            dockView.setVisibility(View.VISIBLE);
+            dockView.setAlpha(0f);
+            dockView.setScaleX(0.85f);
+            dockView.setScaleY(0.85f);
+            dockView.animate()
+                .alpha(1f)
+                .scaleX(1f)
+                .scaleY(1f)
+                .setDuration(200)
+                .start();
+        }
+    }
+
+    public void toggleFloatingYTRemote(boolean show) {
+        isYtFloatingRemoteEnabled = show;
+        runOnUiThread(() -> {
+            if (show) {
+                expandYTRemoteDock();
+            }
+            updateFloatingYTRemoteVisibility();
+            if (controlWebView != null) {
+                controlWebView.evaluateJavascript("if (typeof window.syncYtFloatPodState === 'function') { window.syncYtFloatPodState(" + show + "); }", null);
             }
         });
     }
@@ -2039,6 +2951,7 @@ public class MainActivity extends AppCompatActivity {
         if (searchNavContainer != null) {
             searchNavContainer.setVisibility(View.GONE);
         }
+        updateFloatingYTRemoteVisibility();
         
         SharedPreferences prefs = getSharedPreferences("CaspianMobilePrefs", MODE_PRIVATE);
         int openDuration = 180;
@@ -2131,6 +3044,7 @@ public class MainActivity extends AppCompatActivity {
             sheetOverlayContainer.setClickable(false);
             sheetOverlayContainer.setFocusable(false);
             applyPrunerInMainWebView();
+            updateFloatingYTRemoteVisibility();
         } else if ("genie".equalsIgnoreCase(animStyle)) {
             float buttonCenterX = floatingCaspianCard.getX() + floatingCaspianCard.getWidth() / 2f;
             float buttonCenterY = floatingCaspianCard.getY() + floatingCaspianCard.getHeight() / 2f;
@@ -2151,6 +3065,7 @@ public class MainActivity extends AppCompatActivity {
                             sheetOverlayContainer.setFocusable(false);
                             applyPrunerInMainWebView();
                             updateSearchNavVisibility();
+                            updateFloatingYTRemoteVisibility();
                         }
                     })
                     .start();
@@ -2170,6 +3085,7 @@ public class MainActivity extends AppCompatActivity {
                             sheetOverlayContainer.setFocusable(false);
                             applyPrunerInMainWebView();
                             updateSearchNavVisibility();
+                            updateFloatingYTRemoteVisibility();
                         }
                     })
                     .start();
@@ -2319,6 +3235,65 @@ public class MainActivity extends AppCompatActivity {
                 "    return text;\n" +
                 "  }\n" +
                 "\n" +
+                "  function extractGeminiTurnHtml(targetEl) {\n" +
+                "    if (!targetEl) return '';\n" +
+                "    try {\n" +
+                "      var clone = targetEl.cloneNode(true);\n" +
+                "      var removeEls = clone.querySelectorAll('button, mat-icon, .action-buttons, .copy-button, .response-feedback, .tts-button, .bottom-container, .sources-container, .drafts-container, [aria-label*=\"Copy\"], [aria-label*=\"draft\"], [aria-label*=\"Listen\"]');\n" +
+                "      removeEls.forEach(function(el) { try { el.remove(); } catch(e){} });\n" +
+                "      var codeBlocks = Array.from(clone.querySelectorAll('code-block, pre'));\n" +
+                "      codeBlocks.forEach(function(cb) {\n" +
+                "        if (!cb.parentNode) return;\n" +
+                "        var lang = cb.getAttribute('language') || cb.getAttribute('data-language') || cb.getAttribute('ng-reflect-language') || '';\n" +
+                "        if (!lang) {\n" +
+                "          var langEl = cb.querySelector('.code-title, .code-header, .language-header, .header span, span');\n" +
+                "          if (langEl && langEl.innerText) {\n" +
+                "            var lt = langEl.innerText.trim();\n" +
+                "            if (lt.length < 25 && !lt.includes('\\n')) lang = lt;\n" +
+                "          }\n" +
+                "        }\n" +
+                "        if (!lang) lang = 'code';\n" +
+                "        var codeEl = cb.querySelector('code') || cb.querySelector('pre') || cb;\n" +
+                "        var rawCode = (codeEl.innerText || codeEl.textContent || '').trim();\n" +
+                "        var replacement = document.createElement('div');\n" +
+                "        replacement.className = 'code-block';\n" +
+                "        replacement.setAttribute('style', 'background: #202123; color: #ececf1; padding: 14px; border-radius: 8px; font-family: monospace; font-size: 13px; margin: 14px 0;');\n" +
+                "        replacement.innerHTML = '<div class=\"code-header\" style=\"font-weight: bold; margin-bottom: 8px; color: #8e8ea0; font-size: 11px; text-transform: uppercase;\">' + escapeHtml(lang) + '</div><pre style=\"margin:0; overflow-x:auto; white-space: pre-wrap; word-break: break-all; font-family: monospace;\"><code>' + escapeHtml(rawCode) + '</code></pre>';\n" +
+                "        if (cb.parentNode) {\n" +
+                "          cb.parentNode.replaceChild(replacement, cb);\n" +
+                "        }\n" +
+                "      });\n" +
+                "      var tables = Array.from(clone.querySelectorAll('table'));\n" +
+                "      tables.forEach(function(tbl) {\n" +
+                "        tbl.setAttribute('style', 'width: 100%; border-collapse: collapse; margin: 14px 0; font-size: 13px; border: 1px solid #cbd5e1;');\n" +
+                "        tbl.querySelectorAll('th').forEach(function(th) {\n" +
+                "          th.setAttribute('style', 'padding: 8px 12px; background-color: #f8fafc; border: 1px solid #cbd5e1; font-weight: 700; color: #0f172a;');\n" +
+                "        });\n" +
+                "        tbl.querySelectorAll('td').forEach(function(td) {\n" +
+                "          td.setAttribute('style', 'padding: 8px 12px; border: 1px solid #cbd5e1; color: #334155;');\n" +
+                "        });\n" +
+                "      });\n" +
+                "      clone.querySelectorAll('h1, h2, h3, h4, h5, h6').forEach(function(h) {\n" +
+                "        h.setAttribute('style', 'font-weight: 700; color: #0f172a; margin: 16px 0 8px 0; font-size: 15px;');\n" +
+                "      });\n" +
+                "      clone.querySelectorAll('p').forEach(function(p) {\n" +
+                "        p.setAttribute('style', 'margin: 8px 0; line-height: 1.6;');\n" +
+                "      });\n" +
+                "      clone.querySelectorAll('ul, ol').forEach(function(l) {\n" +
+                "        l.setAttribute('style', 'margin: 10px 0; padding-left: 22px;');\n" +
+                "      });\n" +
+                "      clone.querySelectorAll('li').forEach(function(li) {\n" +
+                "        li.setAttribute('style', 'margin-bottom: 4px; color: #334155; line-height: 1.6;');\n" +
+                "      });\n" +
+                "      clone.querySelectorAll('code:not(.code-block code):not(pre code)').forEach(function(c) {\n" +
+                "        c.setAttribute('style', 'background: rgba(175,184,193,0.2); padding: 2px 6px; border-radius: 4px; font-family: monospace; font-size: 13px;');\n" +
+                "      });\n" +
+                "      return clone.innerHTML ? clone.innerHTML.trim() : '';\n" +
+                "    } catch(e) {\n" +
+                "      return '';\n" +
+                "    }\n" +
+                "  }\n" +
+                "\n" +
                 "  async function imgToBase64(imgEl) {\n" +
                 "    return new Promise((resolve) => {\n" +
                 "      try {\n" +
@@ -2465,17 +3440,48 @@ public class MainActivity extends AppCompatActivity {
                 "  }\n" +
                 "\n" +
                 "  if (turns.length === 0) {\n" +
-                "    // DOM Layout Sweeper for both ChatGPT and Gemini\n" +
+                "    // DOM Layout Sweeper & Deep Crawler for ChatGPT and Gemini\n" +
                 "    try {\n" +
                 "      if (activeService === 'gemini') {\n" +
-                "        var elements = Array.from(document.querySelectorAll('.query-content, .user-query, div.query-text, .model-response, .model-reply, .reply-text-container'));\n" +
-                "        for (var i = 0; i < elements.length; i++) {\n" +
-                "          var el = elements[i];\n" +
-                "          var isUser = el.classList.contains('query-content') || el.classList.contains('user-query') || el.classList.contains('query-text') || el.querySelector('.user-query');\n" +
-                "          var text = el.innerText.trim();\n" +
+                "        var geminiNodes = Array.from(document.querySelectorAll('user-query, model-response, .user-query, .model-response, [data-test-id=\"user-query\"], [data-test-id=\"model-response\"], .conversation-turn'));\n" +
+                "        if (geminiNodes.length === 0 || !geminiNodes.some(function(n) { return (n.tagName && n.tagName.toLowerCase() === 'model-response') || n.classList.contains('model-response'); })) {\n" +
+                "          var chatTurns = Array.from(document.querySelectorAll('chat-turn, .chat-turn, .conversation-container, div[role=\"region\"]'));\n" +
+                "          for (var c = 0; c < chatTurns.length; c++) {\n" +
+                "            var ct = chatTurns[c];\n" +
+                "            var uq = ct.querySelector('user-query, .user-query, .query-content, .query-text');\n" +
+                "            var mr = ct.querySelector('model-response, .model-response, message-content, .model-response-text, .response-container');\n" +
+                "            if (uq && geminiNodes.indexOf(uq) === -1) geminiNodes.push(uq);\n" +
+                "            if (mr && geminiNodes.indexOf(mr) === -1) geminiNodes.push(mr);\n" +
+                "          }\n" +
+                "        }\n" +
+                "        if (geminiNodes.length === 0) {\n" +
+                "          geminiNodes = Array.from(document.querySelectorAll('.query-content, .query-text, message-content, .model-response-text, .markdown, .presented-response-container, .response-content-wrapper'));\n" +
+                "        }\n" +
+                "        for (var i = 0; i < geminiNodes.length; i++) {\n" +
+                "          var el = geminiNodes[i];\n" +
+                "          var tag = el.tagName ? el.tagName.toLowerCase() : '';\n" +
+                "          var isUser = tag === 'user-query' || el.classList.contains('user-query') || el.classList.contains('query-content') || el.classList.contains('query-text') || (el.hasAttribute('data-test-id') && el.getAttribute('data-test-id') === 'user-query');\n" +
+                "          var text = '';\n" +
+                "          if (isUser) {\n" +
+                "            var qEl = el.querySelector('.query-text, .query-content, .user-query-container') || el;\n" +
+                "            text = (qEl.innerText || qEl.textContent || '').trim();\n" +
+                "          } else {\n" +
+                "            var rEl = el.querySelector('message-content, .model-response-text, .response-container-content, .markdown, .presented-response-container, .response-content-wrapper') || el;\n" +
+                "            text = (rEl.innerText || rEl.textContent || '').trim();\n" +
+                "          }\n" +
+                "          text = text.replace(/^(Show drafts|Google it|Share|Copy\\s*code|Modify\\s*response)\\b/gim, '').trim();\n" +
                 "          if (text && !seen.has(text)) {\n" +
                 "            seen.add(text);\n" +
-                "            var parsedHtml = parseMarkdownAndLaTeX(text);\n" +
+                "            var parsedHtml = '';\n" +
+                "            if (isUser) {\n" +
+                "              parsedHtml = parseMarkdownAndLaTeX(text);\n" +
+                "            } else {\n" +
+                "              var rEl = el.querySelector('message-content, .model-response-text, .response-container-content, .markdown, .presented-response-container, .response-content-wrapper') || el;\n" +
+                "              parsedHtml = extractGeminiTurnHtml(rEl);\n" +
+                "              if (!parsedHtml || parsedHtml.trim().length === 0) {\n" +
+                "                parsedHtml = parseMarkdownAndLaTeX(text);\n" +
+                "              }\n" +
+                "            }\n" +
                 "            var localImgs = await getTurnImages(turns.length);\n" +
                 "            localImgs.forEach(b64 => {\n" +
                 "              parsedHtml += '<div style=\"margin-top:12px; text-align:center;\"><img src=\"' + b64 + '\" style=\"max-width:100%; border-radius:8px; box-shadow:0 4px 12px rgba(0,0,0,0.1);\" /></div>';\n" +
@@ -2486,7 +3492,7 @@ public class MainActivity extends AppCompatActivity {
                 "              role: isUser ? 'User' : 'Gemini',\n" +
                 "              text: text,\n" +
                 "              html: parsedHtml,\n" +
-"              service: 'gemini'\n" +
+                "              service: 'gemini'\n" +
                 "            });\n" +
                 "          }\n" +
                 "        }\n" +
@@ -2763,7 +3769,12 @@ public class MainActivity extends AppCompatActivity {
         }
     }
 
+    private final java.util.Map<String, String> assetScriptCache = new java.util.concurrent.ConcurrentHashMap<>();
+
     private String readAssetFile(String fileName) throws Exception {
+        String cached = assetScriptCache.get(fileName);
+        if (cached != null) return cached;
+
         InputStream is = getAssets().open(fileName);
         BufferedReader reader = new BufferedReader(new InputStreamReader(is));
         StringBuilder sb = new StringBuilder();
@@ -2773,7 +3784,9 @@ public class MainActivity extends AppCompatActivity {
         }
         reader.close();
         is.close();
-        return sb.toString();
+        String result = sb.toString();
+        assetScriptCache.put(fileName, result);
+        return result;
     }
 
     @Override
@@ -2971,23 +3984,32 @@ public class MainActivity extends AppCompatActivity {
                 String volStr = prefs.getString("sfx_volume", "0.5");
                 volume = Float.parseFloat(volStr);
             } catch (Exception e) {}
-            
-            String enabledStr = prefs.getString("sfx_enabled_ta", "true");
-            boolean enabled = !"false".equalsIgnoreCase(enabledStr);
-            if (!enabled) return;
 
-            float effectiveVolume = (float) Math.pow(volume, 2.5);
+            if (volume <= 0.001f) return;
 
-            android.media.MediaPlayer mp = new android.media.MediaPlayer();
-            android.content.res.AssetFileDescriptor afd = getAssets().openFd(assetPath);
-            mp.setDataSource(afd.getFileDescriptor(), afd.getStartOffset(), afd.getLength());
-            afd.close();
-            mp.setVolume(effectiveVolume, effectiveVolume);
-            mp.prepare();
-            mp.setOnCompletionListener(android.media.MediaPlayer::release);
-            mp.start();
-        } catch (Exception e) {
-            e.printStackTrace();
-        }
+            // UI Master Attenuation: Scale 0..1 slider to a comfortable, gentle 0..0.40f ambient gain
+            float effectiveVolume = Math.max(0.001f, Math.min(1.0f, volume)) * 0.40f;
+
+            if (soundPool == null) {
+                initSoundPool();
+            }
+
+            if (soundPool != null) {
+                Integer soundId = soundIdMap.get(assetPath);
+                if (soundId != null && soundId > 0) {
+                    soundPool.play(soundId, effectiveVolume, effectiveVolume, 1, 0, 1.0f);
+                } else {
+                    android.content.res.AssetFileDescriptor afd = getAssets().openFd(assetPath);
+                    int newSoundId = soundPool.load(afd, 1);
+                    afd.close();
+                    soundIdMap.put(assetPath, newSoundId);
+                    soundPool.setOnLoadCompleteListener((sp, sampleId, status) -> {
+                        if (status == 0) {
+                            sp.play(sampleId, effectiveVolume, effectiveVolume, 1, 0, 1.0f);
+                        }
+                    });
+                }
+            }
+        } catch (Exception ignored) {}
     }
 }

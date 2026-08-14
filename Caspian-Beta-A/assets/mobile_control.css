@@ -45,6 +45,8 @@
 /* Master SFX Muted Immediate CSS State */
 html.sfx-muted #mute-icon-unmuted { display: none !important; }
 html.sfx-muted #mute-icon-muted { display: block !important; }
+html:not(.sfx-muted) #mute-icon-unmuted { display: block !important; }
+html:not(.sfx-muted) #mute-icon-muted { display: none !important; }
 
 /* Disabled Engine Card Fading */
 .engine-card.disabled {
@@ -244,11 +246,19 @@ body {
   box-shadow: var(--shadow-glass);
   padding: 12px 20px 32px 20px;
   transform: translate3d(0, 0, 0) !important;
+  contain: paint layout;
   will-change: transform, opacity;
   display: block !important;
   visibility: visible !important;
   opacity: 1 !important;
   overflow-y: auto;
+}
+
+/* GPU Hardware Layers for 120Hz/60Hz Butter-Smooth Sheet Drag & Sub-Tab Transitions */
+.chrome-tab-card, .app-icon-card, .tab-pane, .settings-group {
+  contain: layout;
+  transform: translateZ(0);
+  will-change: transform;
 }
 
 /* Drag Handle */
@@ -370,13 +380,20 @@ body {
 }
 
 .mobile-tab-nav {
+  position: sticky;
+  top: -12px;
+  z-index: 1000;
   display: flex;
-  background: var(--input-bg);
+  background: var(--sheet-bg);
+  backdrop-filter: blur(20px);
+  -webkit-backdrop-filter: blur(20px);
   border: 1px solid var(--border-glass);
-  border-radius: 18px;
-  padding: 3px;
+  border-radius: 20px;
+  padding: 4px;
+  margin-top: -4px;
   margin-bottom: 16px;
   gap: 4px;
+  box-shadow: 0 4px 18px rgba(0, 0, 0, 0.3);
 }
 
 .tab-nav-btn {
@@ -399,8 +416,35 @@ body {
 .tab-nav-btn.active {
   background: var(--card-bg);
   color: var(--text-main);
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15);
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.2);
   border: 1px solid var(--border-glass);
+}
+
+/* YouTube Command Center Buttons */
+.yt-speed-pill, .yt-quality-pill {
+  background: rgba(255, 255, 255, 0.05);
+  border: 1px solid var(--border-glass);
+  color: var(--text-muted);
+  border-radius: 12px;
+  padding: 8px 4px;
+  font-size: 11px;
+  font-weight: 700;
+  cursor: pointer;
+  transition: all 0.2s cubic-bezier(0.34, 1.56, 0.64, 1);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.yt-speed-pill:active, .yt-quality-pill:active {
+  transform: scale(0.94);
+}
+
+.yt-speed-pill.active, .yt-quality-pill.active {
+  background: var(--accent-gradient);
+  color: #ffffff;
+  border-color: transparent;
+  box-shadow: 0 4px 14px var(--accent-glow);
 }
 
 .m3-card {

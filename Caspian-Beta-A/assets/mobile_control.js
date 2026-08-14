@@ -15,6 +15,8 @@
       }
     } catch (e) { }
 
+    document.documentElement.classList.toggle('sfx-muted', masterSFXMuted);
+
     const unmutedIcon = document.getElementById('mute-icon-unmuted');
     const mutedIcon = document.getElementById('mute-icon-muted');
     const masterToggle = document.getElementById('toggle-sfx-master');
@@ -34,22 +36,22 @@
   } catch (e) { }
 
   const ALL_SFX_FILES = [
-    'tap_main.wav',
-    'tap_button.wav',
-    'tap_alternate.wav',
+    'tap_main.mp3',
+    'tap_button.mp3',
+    'tap_alternate.mp3',
     'pop_button.mp3',
-    'pop_button_v2.wav',
-    'pop_click.wav',
-    'pop_unknown_v1.wav'
+    'pop_button_v2.mp3',
+    'pop_click.mp3',
+    'pop_unknown_v1.mp3'
   ];
 
   let sfxConfig = {
     tm_tabs: localStorage.getItem('sfx_file_tm_tabs') || 'pop_button.mp3',
-    ta: localStorage.getItem('sfx_file_ta') || 'pop_click.wav',
-    tb_clicks: localStorage.getItem('sfx_file_tb_clicks') || 'tap_button.wav',
-    tm_header: localStorage.getItem('sfx_file_tm_header') || 'tap_main.wav',
-    tb_close: localStorage.getItem('sfx_file_tb_close') || 'tap_button.wav',
-    tb_modal: localStorage.getItem('sfx_file_tb_modal') || 'tap_button.wav'
+    ta: localStorage.getItem('sfx_file_ta') || 'pop_click.mp3',
+    tb_clicks: localStorage.getItem('sfx_file_tb_clicks') || 'tap_button.mp3',
+    tm_header: localStorage.getItem('sfx_file_tm_header') || 'tap_main.mp3',
+    tb_close: localStorage.getItem('sfx_file_tb_close') || 'tap_button.mp3',
+    tb_modal: localStorage.getItem('sfx_file_tb_modal') || 'tap_button.mp3'
   };
 
   const sfxAudioPool = {};
@@ -74,9 +76,9 @@
     const saved = localStorage.getItem(`sfx_file_${type}`);
     if (saved) return saved;
     if (type === 'tm_tabs') return 'pop_button.mp3';
-    if (type === 'tm_header') return 'tap_main.wav';
-    if (type === 'ta') return 'pop_click.wav';
-    return 'tap_button.wav';
+    if (type === 'tm_header') return 'tap_main.mp3';
+    if (type === 'ta') return 'pop_click.mp3';
+    return 'tap_button.mp3';
   }
 
   function playSFX(type) {
@@ -93,33 +95,18 @@
       if (!enabled) return;
 
       const fileName = getSFXFileForType(type);
-      let audio = sfxAudioPool[fileName];
-      if (!audio) {
-        audio = new Audio(`sfx/${fileName}`);
-        audio.load();
-        sfxAudioPool[fileName] = audio;
+      if (window.CaspianBridge && typeof window.CaspianBridge.playAssetSound === 'function') {
+        window.CaspianBridge.playAssetSound(`sfx/${fileName}`);
       }
-
-      audio.currentTime = 0;
-      const effectiveVol = Math.pow(sfxVolume, 2.5);
-      audio.volume = effectiveVol;
-      audio.play().catch(() => { });
     } catch (e) { }
   }
 
   function previewSFXFile(fileName) {
     try {
       if (masterSFXMuted) return;
-      let audio = sfxAudioPool[fileName];
-      if (!audio) {
-        audio = new Audio(`sfx/${fileName}`);
-        audio.load();
-        sfxAudioPool[fileName] = audio;
+      if (window.CaspianBridge && typeof window.CaspianBridge.playAssetSound === 'function') {
+        window.CaspianBridge.playAssetSound(`sfx/${fileName}`);
       }
-      audio.currentTime = 0;
-      const effectiveVol = Math.pow(sfxVolume, 2.5);
-      audio.volume = effectiveVol;
-      audio.play().catch(() => { });
     } catch(e) {}
   }
 
@@ -833,21 +820,33 @@
           }
           if (adblockDot) adblockDot.classList.toggle('active', adblockVal);
 
-          // Check active tab to toggle YouTube Control Card
-          try {
-            if (window.CaspianBridge && typeof window.CaspianBridge.getOpenTabs === 'function') {
-              const openTabsStr = window.CaspianBridge.getOpenTabs();
-              if (openTabsStr) {
-                const tabs = JSON.parse(openTabsStr);
-                const activeTab = tabs.find(t => t.active);
-                const ytCard = document.getElementById('youtube-control-card');
-                if (ytCard) {
-                  const isYT = activeTab && ((activeTab.service && activeTab.service.toLowerCase().includes('youtube')) || (activeTab.url && activeTab.url.toLowerCase().includes('youtube.com')));
-                  ytCard.style.display = isYT ? 'block' : 'none';
-                }
+          // Restore AdBlocker Sub-options
+          const adblockSubOptions = [
+            { id: 'chk-adblock-yt', key: 'adblock_yt_enabled' },
+            { id: 'chk-adblock-skip', key: 'adblock_yt_autoskip_enabled' },
+            { id: 'chk-adblock-banner', key: 'adblock_banner_enabled' },
+            { id: 'chk-adblock-trackers', key: 'adblock_trackers_enabled' }
+          ];
+
+          adblockSubOptions.forEach(opt => {
+            const el = document.getElementById(opt.id);
+            if (el) {
+              const isChk = (prefs && prefs[opt.key] !== undefined) ? (prefs[opt.key] !== 'false' && prefs[opt.key] !== false) : (localStorage.getItem(opt.key) !== 'false');
+              el.checked = isChk;
+              if (!el.dataset.bound) {
+                el.dataset.bound = 'true';
+                el.addEventListener('change', () => {
+                  playSFX('tb_clicks');
+                  const val = el.checked ? 'true' : 'false';
+                  localStorage.setItem(opt.key, val);
+                  if (window.CaspianBridge && typeof window.CaspianBridge.saveSetting === 'function') {
+                    window.CaspianBridge.saveSetting(opt.key, val);
+                  }
+                });
               }
             }
-          } catch (e) { }
+          });
+
           const startCol = prefs.theme_start_color || localStorage.getItem('theme_start_color') || '#A2A9A9';
           const endCol = prefs.theme_end_color || localStorage.getItem('theme_end_color') || '#1B4264';
           const bgCol = prefs.theme_bg_color || localStorage.getItem('theme_bg_color') || '#050811';
@@ -905,6 +904,12 @@
           var tapDur = prefs.theme_button_tap_duration !== undefined ? parseInt(prefs.theme_button_tap_duration) : 100;
           var txtTapDur = document.getElementById('txt-tap-dur');
           if (txtTapDur) txtTapDur.textContent = `${tapDur} ms`;
+
+          const actScale = prefs.action_button_scale || localStorage.getItem('action_button_scale') || '1.0';
+          document.querySelectorAll('.btn-action-btn-scale').forEach(b => b.classList.toggle('active', b.dataset.scale === actScale));
+
+          const ytScale = prefs.yt_pod_scale || localStorage.getItem('yt_pod_scale') || '1.0';
+          document.querySelectorAll('.btn-yt-pod-scale').forEach(b => b.classList.toggle('active', b.dataset.scale === ytScale));
 
           var animStyle = prefs.sheetAnimationStyle !== undefined ? prefs.sheetAnimationStyle : 'genie';
           var selectAnimStyle = document.getElementById('select-anim-style');
@@ -1246,13 +1251,16 @@
     } catch (e) { }
   }
 
-  // Custom Dropdown Handling
+  // Custom Dropdown Handling (Action Button Shape)
   var customShapeSelect = document.getElementById('custom-shape-select');
   var selectedShapeText = document.getElementById('selected-shape-text');
 
   if (customShapeSelect && selectedShapeText) {
     customShapeSelect.querySelector('.caspian-select-trigger').addEventListener('click', (e) => {
       e.stopPropagation();
+      document.querySelectorAll('.caspian-select').forEach(other => {
+        if (other !== customShapeSelect) other.classList.remove('open');
+      });
       customShapeSelect.classList.toggle('open');
     });
 
@@ -1270,11 +1278,73 @@
         updateIconPreview(sp ? sp.value : '#A2A9A9', ep ? ep.value : '#1B4264', selectedShapeVal);
       });
     });
-
-    document.addEventListener('click', () => {
-      customShapeSelect.classList.remove('open');
-    });
   }
+
+  // Caspian Export Configurator Dropdowns (ChatGPT & Gemini Normal / Temp Chat Engines)
+  const exportSelectConfigs = [
+    { id: 'select-export-chatgpt-normal', key: 'export_chatgpt_normal', defaultVal: 'api', name: 'ChatGPT Normal Chat' },
+    { id: 'select-export-chatgpt-temp', key: 'export_chatgpt_temp', defaultVal: 'fiber', name: 'ChatGPT Temp Chat' },
+    { id: 'select-export-gemini-normal', key: 'export_gemini_normal', defaultVal: 'sweeper', name: 'Gemini Normal Chat' },
+    { id: 'select-export-gemini-temp', key: 'export_gemini_temp', defaultVal: 'sweeper', name: 'Gemini Temp Chat' }
+  ];
+
+  exportSelectConfigs.forEach(cfg => {
+    const el = document.getElementById(cfg.id);
+    if (!el) return;
+
+    let savedVal = localStorage.getItem(cfg.key) || cfg.defaultVal;
+    if (window.CaspianBridge && typeof window.CaspianBridge.getSettings === 'function') {
+      try {
+        const s = JSON.parse(window.CaspianBridge.getSettings());
+        if (s && s[cfg.key]) savedVal = s[cfg.key];
+      } catch (e) {}
+    }
+
+    const triggerText = el.querySelector('.caspian-select-trigger span');
+    el.querySelectorAll('.caspian-select-option').forEach(opt => {
+      if (opt.dataset.val === savedVal) {
+        opt.classList.add('active');
+        if (triggerText) triggerText.textContent = opt.textContent;
+      } else {
+        opt.classList.remove('active');
+      }
+    });
+
+    const trigger = el.querySelector('.caspian-select-trigger');
+    if (trigger) {
+      trigger.addEventListener('click', (e) => {
+        e.stopPropagation();
+        document.querySelectorAll('.caspian-select').forEach(other => {
+          if (other !== el) other.classList.remove('open');
+        });
+        el.classList.toggle('open');
+      });
+    }
+
+    el.querySelectorAll('.caspian-select-option').forEach(opt => {
+      opt.addEventListener('click', (e) => {
+        e.stopPropagation();
+        playSFX('tb_clicks');
+        el.querySelectorAll('.caspian-select-option').forEach(o => o.classList.remove('active'));
+        opt.classList.add('active');
+        const selectedVal = opt.dataset.val;
+        if (triggerText) triggerText.textContent = opt.textContent;
+        el.classList.remove('open');
+
+        localStorage.setItem(cfg.key, selectedVal);
+        if (window.CaspianBridge && typeof window.CaspianBridge.saveSetting === 'function') {
+          window.CaspianBridge.saveSetting(cfg.key, selectedVal);
+        }
+        if (window.CaspianBridge && typeof window.CaspianBridge.showToast === 'function') {
+          window.CaspianBridge.showToast(`⚙️ ${cfg.name}: ${opt.textContent.trim()}`);
+        }
+      });
+    });
+  });
+
+  document.addEventListener('click', () => {
+    document.querySelectorAll('.caspian-select').forEach(el => el.classList.remove('open'));
+  });
 
   document.querySelectorAll('.preset-theme-chip').forEach(chip => {
     chip.addEventListener('click', () => {
@@ -1668,9 +1738,44 @@
     });
   }
 
-  // Mobile Tab Navigation (Engine, Tabs, Settings)
+  // Mobile Tab Navigation (Engine, Tabs, Settings) with Scroll-to-Top & Memory Return
+  const tabSavedScrollPos = { engine: 0, sites: 0, settings: 0 };
+
+  const getSheetScroll = () => {
+    const sc = document.querySelector('.mobile-sheet-content') || document.querySelector('.mobile-content') || document.documentElement || document.body;
+    return window.scrollY || document.documentElement.scrollTop || document.body.scrollTop || (sc ? sc.scrollTop : 0);
+  };
+
+  const setSheetScroll = (y) => {
+    window.scrollTo({ top: y, behavior: 'smooth' });
+    const sc = document.querySelector('.mobile-sheet-content') || document.querySelector('.mobile-content');
+    if (sc && sc.scrollTo) {
+      sc.scrollTo({ top: y, behavior: 'smooth' });
+    }
+  };
+
   document.querySelectorAll('.tab-nav-btn').forEach(btn => {
     btn.addEventListener('click', () => {
+      const targetTab = btn.dataset.tab;
+      const isAlreadyActive = btn.classList.contains('active');
+      const pane = document.getElementById(`tab-pane-${targetTab}`);
+
+      if (isAlreadyActive && pane) {
+        playSFX('tm_tabs');
+        const currentY = getSheetScroll();
+        if (currentY > 30) {
+          tabSavedScrollPos[targetTab] = currentY;
+          setSheetScroll(0);
+        } else if (tabSavedScrollPos[targetTab] > 30) {
+          const targetY = tabSavedScrollPos[targetTab];
+          setSheetScroll(targetY);
+          tabSavedScrollPos[targetTab] = 0;
+        } else {
+          setSheetScroll(0);
+        }
+        return;
+      }
+
       playSFX('tm_tabs');
       document.querySelectorAll('.tab-nav-btn').forEach(b => b.classList.remove('active'));
       document.querySelectorAll('.tab-pane').forEach(p => {
@@ -1679,8 +1784,6 @@
       });
 
       btn.classList.add('active');
-      const targetTab = btn.dataset.tab;
-      const pane = document.getElementById(`tab-pane-${targetTab}`);
       if (pane) {
         pane.style.display = 'block';
         requestAnimationFrame(() => {
@@ -1877,10 +1980,6 @@
     });
   }
 
-  initCustomSelect('select-export-chatgpt-normal', 'export_chatgpt_normal');
-  initCustomSelect('select-export-chatgpt-temp', 'export_chatgpt_temp');
-  initCustomSelect('select-export-gemini-normal', 'export_gemini_normal');
-  initCustomSelect('select-export-gemini-temp', 'export_gemini_temp');
   initCustomSelect('select-refresh-rate', 'active_refresh_rate');
   initCustomSelect('select-anim-style', 'sheetAnimationStyle');
 
@@ -1934,7 +2033,7 @@
         if (el.checked) {
           if (item.key === 'sfx_enabled_ta') {
             if (window.CaspianBridge && typeof window.CaspianBridge.playAssetSound === 'function') {
-              window.CaspianBridge.playAssetSound("sfx/tap_alternate.wav");
+              window.CaspianBridge.playAssetSound("sfx/tap_alternate.mp3");
             }
           } else {
             playSFX(item.key.replace('sfx_enabled_', ''));
@@ -2248,6 +2347,16 @@
 
   // YouTube Controls & AdBlocker Event Listeners
   document.addEventListener('DOMContentLoaded', () => {
+    const ytSeekBack10Btn = document.getElementById('yt-seek-back-10-btn');
+    if (ytSeekBack10Btn) {
+      ytSeekBack10Btn.addEventListener('click', () => {
+        playSFX('tb_clicks');
+        if (window.CaspianBridge && typeof window.CaspianBridge.seekYouTube === 'function') {
+          window.CaspianBridge.seekYouTube(-10);
+        }
+      });
+    }
+
     const ytSeekBackBtn = document.getElementById('yt-seek-back-btn');
     if (ytSeekBackBtn) {
       ytSeekBackBtn.addEventListener('click', () => {
@@ -2258,12 +2367,56 @@
       });
     }
 
+    const ytPlayPauseBtn = document.getElementById('yt-play-pause-btn');
+    if (ytPlayPauseBtn) {
+      ytPlayPauseBtn.addEventListener('click', () => {
+        playSFX('tb_clicks');
+        if (window.CaspianBridge && typeof window.CaspianBridge.togglePlayYouTube === 'function') {
+          window.CaspianBridge.togglePlayYouTube();
+        }
+      });
+    }
+
     const ytSeekFwdBtn = document.getElementById('yt-seek-fwd-btn');
     if (ytSeekFwdBtn) {
       ytSeekFwdBtn.addEventListener('click', () => {
         playSFX('tb_clicks');
         if (window.CaspianBridge && typeof window.CaspianBridge.seekYouTube === 'function') {
           window.CaspianBridge.seekYouTube(5);
+        }
+      });
+    }
+
+    const ytSeekFwd10Btn = document.getElementById('yt-seek-fwd-10-btn');
+    if (ytSeekFwd10Btn) {
+      ytSeekFwd10Btn.addEventListener('click', () => {
+        playSFX('tb_clicks');
+        if (window.CaspianBridge && typeof window.CaspianBridge.seekYouTube === 'function') {
+          window.CaspianBridge.seekYouTube(10);
+        }
+      });
+    }
+
+    let isYtFloatingRemoteOpen = true;
+    const ytTogglePopupBtn = document.getElementById('yt-toggle-popup-btn');
+
+    window.syncYtFloatPodState = function (isOpen) {
+      isYtFloatingRemoteOpen = !!isOpen;
+      if (ytTogglePopupBtn) {
+        ytTogglePopupBtn.classList.toggle('active', isYtFloatingRemoteOpen);
+        ytTogglePopupBtn.style.opacity = isYtFloatingRemoteOpen ? '1' : '0.7';
+      }
+    };
+
+    if (ytTogglePopupBtn) {
+      ytTogglePopupBtn.addEventListener('click', () => {
+        playSFX('tb_clicks');
+        isYtFloatingRemoteOpen = !isYtFloatingRemoteOpen;
+        if (window.CaspianBridge && typeof window.CaspianBridge.toggleFloatingYouTubeRemote === 'function') {
+          window.CaspianBridge.toggleFloatingYouTubeRemote(isYtFloatingRemoteOpen);
+        }
+        if (window.CaspianBridge && typeof window.CaspianBridge.showToast === 'function') {
+          window.CaspianBridge.showToast(isYtFloatingRemoteOpen ? "🚀 YouTube Float Pod Opened!" : "YouTube Float Pod Closed");
         }
       });
     }
@@ -2295,11 +2448,15 @@
     const cardCL = document.getElementById('card-chat-limit');
     const cardCC = document.getElementById('card-caspian-current');
     const cardAB = document.getElementById('card-adblocker');
+    const cardYT = document.getElementById('youtube-control-card');
+    const cardGoogle = document.getElementById('google-search-card');
 
     const toggleTSBtn = document.getElementById('toggle-temp-saver-btn');
     const toggleCLBtn = document.getElementById('toggle-chat-limit-btn');
     const toggleCCBtn = document.getElementById('toggle-caspian-current-btn');
     const toggleAdblockBtn = document.getElementById('toggle-adblock-btn');
+    const toggleYTBtn = document.getElementById('toggle-yt-engine-btn');
+    const toggleGoogleDockBtn = document.getElementById('toggle-google-dock-btn');
 
     const chatLimitHeader = document.getElementById('chat-limit-header');
     const chatLimitBody = document.getElementById('chat-limit-body');
@@ -2307,6 +2464,13 @@
     const ccBody = document.getElementById('caspian-current-body');
     const adblockHeader = document.getElementById('adblock-header');
     const adblockBody = document.getElementById('adblock-body');
+    const ytControlHeader = document.getElementById('yt-control-header');
+    const ytControlBody = document.getElementById('yt-control-body');
+    const ytStatusDot = document.getElementById('yt-live-status-dot');
+    const googleDockHeader = document.getElementById('google-dock-header');
+    const googleDockBody = document.getElementById('google-dock-body');
+    const googleDockDot = document.getElementById('google-dock-status-dot');
+    const chkGoogleDockAutoCollapse = document.getElementById('chk-google-dock-autocollapse');
 
     // Helper to update card states
     function updateEngineCardUI(card, toggleBtn, body, dotEl, key) {
@@ -2333,6 +2497,8 @@
     updateEngineCardUI(cardCL, toggleCLBtn, chatLimitBody, document.getElementById('status-dot'), 'chat_limit_enabled');
     updateEngineCardUI(cardCC, toggleCCBtn, ccBody, document.getElementById('cc-status-dot'), 'caspian_current_enabled');
     updateEngineCardUI(cardAB, toggleAdblockBtn, adblockBody, document.getElementById('adblock-dot'), 'adblock_enabled');
+    updateEngineCardUI(cardYT, toggleYTBtn, ytControlBody, ytStatusDot, 'yt_engine_enabled');
+    updateEngineCardUI(cardGoogle, toggleGoogleDockBtn, googleDockBody, googleDockDot, 'google_dock_enabled');
 
     // 1. Temporary Chat Saver Toggle
     if (toggleTSBtn) {
@@ -2394,7 +2560,98 @@
     }
 
     // Caspian Drift Settings Wiring (API Key, Speech Engine, Language Accent)
+    const sttPills = document.querySelectorAll('.cc-stt-pill');
+    const apiKeyLabel = document.getElementById('cc-api-key-label');
+    const apiKeyContainer = document.getElementById('cc-api-key-container');
     const apiKeyInput = document.getElementById('whisper-api-key-input');
+    const saveApiKeyBtn = document.getElementById('save-whisper-api-key-btn');
+
+    let currentSttEngine = localStorage.getItem('stt_engine_mode') || 'deepgram';
+    if (window.CaspianBridge && typeof window.CaspianBridge.getPref === 'function') {
+      currentSttEngine = window.CaspianBridge.getPref('stt_engine_mode', currentSttEngine);
+    }
+
+    function updateSttEngineUI(engine) {
+      currentSttEngine = engine;
+      sttPills.forEach(p => {
+        if (p.dataset.engine === engine) p.classList.add('active');
+        else p.classList.remove('active');
+      });
+
+      if (engine === 'deepgram') {
+        if (apiKeyLabel) apiKeyLabel.textContent = 'DEEPGRAM API KEY';
+        if (apiKeyContainer) apiKeyContainer.style.display = 'flex';
+        let savedKey = localStorage.getItem('deepgram_api_key') || '';
+        if (window.CaspianBridge && typeof window.CaspianBridge.getPref === 'function') {
+          savedKey = window.CaspianBridge.getPref('deepgram_api_key', savedKey);
+        }
+        if (apiKeyInput) {
+          apiKeyInput.placeholder = 'Paste Deepgram API Key...';
+          apiKeyInput.value = savedKey;
+        }
+      } else if (engine === 'huggingface') {
+        if (apiKeyLabel) apiKeyLabel.textContent = 'HUGGINGFACE API TOKEN';
+        if (apiKeyContainer) apiKeyContainer.style.display = 'flex';
+        let savedKey = localStorage.getItem('huggingface_api_key') || '';
+        if (window.CaspianBridge && typeof window.CaspianBridge.getPref === 'function') {
+          savedKey = window.CaspianBridge.getPref('huggingface_api_key', savedKey);
+        }
+        if (apiKeyInput) {
+          apiKeyInput.placeholder = 'Paste Hugging Face Token (hf_...)...';
+          apiKeyInput.value = savedKey;
+        }
+      } else if (engine === 'android_native') {
+        if (apiKeyLabel) apiKeyLabel.textContent = 'ON-DEVICE NATIVE RECOGNIZER';
+        if (apiKeyContainer) apiKeyContainer.style.display = 'none';
+      }
+    }
+
+    sttPills.forEach(pill => {
+      pill.addEventListener('click', () => {
+        playSFX('tb_clicks');
+        const selectedEngine = pill.dataset.engine;
+        localStorage.setItem('stt_engine_mode', selectedEngine);
+        if (window.CaspianBridge && typeof window.CaspianBridge.savePref === 'function') {
+          window.CaspianBridge.savePref('stt_engine_mode', selectedEngine);
+        }
+        updateSttEngineUI(selectedEngine);
+        if (window.CaspianBridge && typeof window.CaspianBridge.showToast === 'function') {
+          window.CaspianBridge.showToast(`STT Model: ${pill.textContent.trim()}`);
+        }
+      });
+    });
+
+    updateSttEngineUI(currentSttEngine);
+
+    // Save API Key Handler
+    if (saveApiKeyBtn && apiKeyInput) {
+      const handleSaveKey = () => {
+        playSFX('tb_clicks');
+        const keyVal = (apiKeyInput.value || '').trim();
+        const prefKey = currentSttEngine === 'huggingface' ? 'huggingface_api_key' : 'deepgram_api_key';
+        localStorage.setItem(prefKey, keyVal);
+        if (window.CaspianBridge && typeof window.CaspianBridge.savePref === 'function') {
+          window.CaspianBridge.savePref(prefKey, keyVal);
+        }
+        if (window.CaspianBridge && typeof window.CaspianBridge.showToast === 'function') {
+          const modelName = currentSttEngine === 'huggingface' ? 'HuggingFace' : 'Deepgram';
+          window.CaspianBridge.showToast(keyVal ? `✅ ${modelName} API Key Saved` : `⚠️ ${modelName} Key Cleared`);
+        }
+        saveApiKeyBtn.textContent = '✓ Saved';
+        setTimeout(() => {
+          saveApiKeyBtn.textContent = 'Save';
+        }, 1500);
+      };
+
+      saveApiKeyBtn.addEventListener('click', handleSaveKey);
+      apiKeyInput.addEventListener('keydown', (e) => {
+        if (e.key === 'Enter') {
+          e.preventDefault();
+          handleSaveKey();
+        }
+      });
+    }
+
     // Language Accent Pills
     const langPills = document.querySelectorAll('.cc-lang-pill');
     let savedLang = localStorage.getItem('caspian_drift_lang') || 'auto';
@@ -2444,7 +2701,169 @@
       });
     }
 
-    // 5. Global Top-Right Master Engine Power Toggle Button (#power-toggle-btn / #btn-power-off)
+    // 5. YouTube Player Controls Accordion & Toggle
+    if (ytControlHeader && ytControlBody) {
+      ytControlHeader.addEventListener('click', (e) => {
+        if (e.target === toggleYTBtn || (toggleYTBtn && toggleYTBtn.contains(e.target)) ||
+            (ytTogglePopupBtn && ytTogglePopupBtn.contains(e.target))) return;
+        const isOpen = ytControlBody.style.display !== 'none';
+        ytControlBody.style.display = isOpen ? 'none' : 'block';
+      });
+    }
+    if (toggleYTBtn) {
+      toggleYTBtn.addEventListener('click', (e) => {
+        e.stopPropagation();
+        playSFX('tb_clicks');
+        let current = localStorage.getItem('yt_engine_enabled') !== 'false';
+        let next = !current;
+        localStorage.setItem('yt_engine_enabled', next ? 'true' : 'false');
+        if (window.CaspianBridge && typeof window.CaspianBridge.saveSetting === 'function') {
+          window.CaspianBridge.saveSetting('yt_engine_enabled', next ? 'true' : 'false');
+        }
+        updateEngineCardUI(cardYT, toggleYTBtn, ytControlBody, ytStatusDot, 'yt_engine_enabled');
+        if (window.CaspianBridge && typeof window.CaspianBridge.toggleFloatingYouTubeRemote === 'function') {
+          window.CaspianBridge.toggleFloatingYouTubeRemote(next);
+        }
+      });
+    }
+
+    // 5.5 Google Search Dock Accordion & Toggle
+    const googleDockTogglePopupBtn = document.getElementById('google-dock-toggle-popup-btn');
+    if (googleDockHeader && googleDockBody) {
+      googleDockHeader.addEventListener('click', (e) => {
+        if (e.target === toggleGoogleDockBtn || (toggleGoogleDockBtn && toggleGoogleDockBtn.contains(e.target)) ||
+            (googleDockTogglePopupBtn && googleDockTogglePopupBtn.contains(e.target))) return;
+        const isOpen = googleDockBody.style.display !== 'none';
+        googleDockBody.style.display = isOpen ? 'none' : 'block';
+      });
+    }
+    if (googleDockTogglePopupBtn) {
+      googleDockTogglePopupBtn.addEventListener('click', (e) => {
+        e.stopPropagation();
+        playSFX('tb_clicks');
+        localStorage.setItem('google_dock_enabled', 'true');
+        if (window.CaspianBridge && typeof window.CaspianBridge.saveSetting === 'function') {
+          window.CaspianBridge.saveSetting('google_dock_enabled', 'true');
+        }
+        updateEngineCardUI(cardGoogle, toggleGoogleDockBtn, googleDockBody, googleDockDot, 'google_dock_enabled');
+        if (window.CaspianBridge && typeof window.CaspianBridge.toggleGoogleSearchDock === 'function') {
+          window.CaspianBridge.toggleGoogleSearchDock(true);
+        }
+        if (window.CaspianBridge && typeof window.CaspianBridge.showToast === 'function') {
+          window.CaspianBridge.showToast("🚀 Google Toolbar Opened!");
+        }
+      });
+    }
+    if (toggleGoogleDockBtn) {
+      toggleGoogleDockBtn.addEventListener('click', (e) => {
+        e.stopPropagation();
+        playSFX('tb_clicks');
+        let current = localStorage.getItem('google_dock_enabled') !== 'false';
+        let next = !current;
+        localStorage.setItem('google_dock_enabled', next ? 'true' : 'false');
+        if (window.CaspianBridge && typeof window.CaspianBridge.saveSetting === 'function') {
+          window.CaspianBridge.saveSetting('google_dock_enabled', next ? 'true' : 'false');
+        }
+        updateEngineCardUI(cardGoogle, toggleGoogleDockBtn, googleDockBody, googleDockDot, 'google_dock_enabled');
+        if (window.CaspianBridge && typeof window.CaspianBridge.toggleGoogleSearchDock === 'function') {
+          window.CaspianBridge.toggleGoogleSearchDock(next);
+        }
+      });
+    }
+    if (chkGoogleDockAutoCollapse) {
+      let isAuto = localStorage.getItem('google_dock_autocollapse') !== 'false';
+      chkGoogleDockAutoCollapse.checked = isAuto;
+      chkGoogleDockAutoCollapse.addEventListener('change', () => {
+        playSFX('tb_clicks');
+        let val = chkGoogleDockAutoCollapse.checked;
+        localStorage.setItem('google_dock_autocollapse', val ? 'true' : 'false');
+        if (window.CaspianBridge) {
+          if (typeof window.CaspianBridge.saveSetting === 'function') {
+            window.CaspianBridge.saveSetting('google_dock_autocollapse', val ? 'true' : 'false');
+          }
+          if (typeof window.CaspianBridge.setGoogleDockAutoCollapse === 'function') {
+            window.CaspianBridge.setGoogleDockAutoCollapse(val);
+          }
+          if (typeof window.CaspianBridge.showToast === 'function') {
+            window.CaspianBridge.showToast(val ? "Auto-Collapse to Ball: ON" : "Auto-Collapse to Ball: OFF");
+          }
+        }
+      });
+    }
+
+    window.syncGoogleDockState = function(enabled) {
+      localStorage.setItem('google_dock_enabled', enabled ? 'true' : 'false');
+      updateEngineCardUI(cardGoogle, toggleGoogleDockBtn, googleDockBody, googleDockDot, 'google_dock_enabled');
+    };
+
+    // 6. Widget Scale Controls (Action Button, YouTube Float Pod, Google Search Toolbar)
+    document.querySelectorAll('.btn-action-btn-scale').forEach(btn => {
+      btn.addEventListener('click', () => {
+        playSFX('tb_clicks');
+        const scale = btn.dataset.scale || '1.0';
+        document.querySelectorAll('.btn-action-btn-scale').forEach(b => b.classList.toggle('active', b === btn));
+        localStorage.setItem('action_button_scale', scale);
+        if (window.CaspianBridge) {
+          if (typeof window.CaspianBridge.setWidgetScale === 'function') {
+            window.CaspianBridge.setWidgetScale('action_button', parseFloat(scale));
+          }
+          if (typeof window.CaspianBridge.saveSetting === 'function') {
+            window.CaspianBridge.saveSetting('action_button_scale', scale);
+          }
+        }
+      });
+    });
+
+    document.querySelectorAll('.btn-yt-pod-scale').forEach(btn => {
+      btn.addEventListener('click', () => {
+        playSFX('tb_clicks');
+        const scale = btn.dataset.scale || '1.0';
+        document.querySelectorAll('.btn-yt-pod-scale').forEach(b => b.classList.toggle('active', b === btn));
+        localStorage.setItem('yt_pod_scale', scale);
+        if (window.CaspianBridge) {
+          if (typeof window.CaspianBridge.setWidgetScale === 'function') {
+            window.CaspianBridge.setWidgetScale('yt_pod', parseFloat(scale));
+          }
+          if (typeof window.CaspianBridge.saveSetting === 'function') {
+            window.CaspianBridge.saveSetting('yt_pod_scale', scale);
+          }
+        }
+      });
+    });
+
+    document.querySelectorAll('.btn-google-dock-scale').forEach(btn => {
+      btn.addEventListener('click', () => {
+        playSFX('tb_clicks');
+        const scale = btn.dataset.scale || '1.0';
+        document.querySelectorAll('.btn-google-dock-scale').forEach(b => b.classList.toggle('active', b.dataset.scale === scale));
+        localStorage.setItem('google_dock_scale', scale);
+        if (window.CaspianBridge) {
+          if (typeof window.CaspianBridge.setWidgetScale === 'function') {
+            window.CaspianBridge.setWidgetScale('google_dock', parseFloat(scale));
+          }
+          if (typeof window.CaspianBridge.saveSetting === 'function') {
+            window.CaspianBridge.saveSetting('google_dock_scale', scale);
+          }
+        }
+      });
+    });
+
+    // 7. Developer & External Links Handler (Always open in Caspian Browser Tabs)
+    document.querySelectorAll('a[href^="http"]').forEach(link => {
+      link.addEventListener('click', (e) => {
+        e.preventDefault();
+        const url = link.getAttribute('href');
+        if (url) {
+          if (window.CaspianBridge && typeof window.CaspianBridge.openTab === 'function') {
+            window.CaspianBridge.openTab(url);
+          } else {
+            window.open(url, '_blank');
+          }
+        }
+      });
+    });
+
+    // 8. Global Top-Right Master Engine Power Toggle Button (#power-toggle-btn / #btn-power-off)
     const masterPowerBtn = document.getElementById('power-toggle-btn') || document.getElementById('btn-power-off');
     if (masterPowerBtn) {
       masterPowerBtn.addEventListener('click', (e) => {
@@ -2453,10 +2872,12 @@
         let anyOn = (localStorage.getItem('temp_saver_enabled') !== 'false' ||
           localStorage.getItem('chat_limit_enabled') !== 'false' ||
           localStorage.getItem('caspian_current_enabled') !== 'false' ||
-          localStorage.getItem('adblock_enabled') !== 'false');
+          localStorage.getItem('adblock_enabled') !== 'false' ||
+          localStorage.getItem('yt_engine_enabled') !== 'false' ||
+          localStorage.getItem('google_dock_enabled') !== 'false');
         let targetState = !anyOn;
 
-        ['temp_saver_enabled', 'chat_limit_enabled', 'caspian_current_enabled', 'adblock_enabled'].forEach(key => {
+        ['temp_saver_enabled', 'chat_limit_enabled', 'caspian_current_enabled', 'adblock_enabled', 'yt_engine_enabled', 'google_dock_enabled'].forEach(key => {
           localStorage.setItem(key, targetState ? 'true' : 'false');
           if (window.CaspianBridge && typeof window.CaspianBridge.saveSetting === 'function') {
             window.CaspianBridge.saveSetting(key, targetState ? 'true' : 'false');
@@ -2467,6 +2888,8 @@
         updateEngineCardUI(cardCL, toggleCLBtn, chatLimitBody, document.getElementById('status-dot'), 'chat_limit_enabled');
         updateEngineCardUI(cardCC, toggleCCBtn, ccBody, document.getElementById('cc-status-dot'), 'caspian_current_enabled');
         updateEngineCardUI(cardAB, toggleAdblockBtn, adblockBody, document.getElementById('adblock-dot'), 'adblock_enabled');
+        updateEngineCardUI(cardYT, toggleYTBtn, ytControlBody, ytStatusDot, 'yt_engine_enabled');
+        updateEngineCardUI(cardGoogle, toggleGoogleDockBtn, googleDockBody, googleDockDot, 'google_dock_enabled');
 
         if (window.CaspianBridge && typeof window.CaspianBridge.showToast === 'function') {
           window.CaspianBridge.showToast(targetState ? '⚡ All Caspian Engines Activated!' : '🔌 All Engines Disabled');
