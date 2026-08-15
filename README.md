@@ -1,6 +1,6 @@
 # 🌊 Caspian - AI Chat Pruner, Multi-Service Engine & Universal Document Exporter
 
-> **Caspian is a privacy-first AI productivity suite available as a Desktop Chromium Extension and a Standalone Native Android Application. It eliminates typing lag in massive conversations via real-time DOM pruning, converts temporary chats into permanent account history, supports multiple premier AI engines (ChatGPT, Google Gemini, Claude, Grok, DeepSeek, Perplexity, Google Search, and YouTube), and exports professional multi-format transcripts (.pdf, .md, .txt, .doc, .html) with KaTeX LaTeX math formulas and syntax-highlighted code blocks.**
+> **Caspian is a privacy-first AI productivity suite available as a Desktop Chromium Extension and a Standalone Native Android Application. It eliminates typing lag in massive conversations via real-time DOM pruning, converts temporary chats into permanent account history, supports premier AI engines (ChatGPT & Google Gemini, plus Google Search and YouTube), and exports professional multi-format transcripts (.pdf, .md, .txt, .doc, .html) with KaTeX LaTeX math formulas and syntax-highlighted code blocks.**
 
 ---
 
@@ -81,10 +81,6 @@ Granular control over how conversations are extracted:
 - **Multi-Service Hub**: Seamlessly launch and switch between:
   - 🟢 **ChatGPT** (`chatgpt.com`)
   - 🟣 **Google Gemini** (`gemini.google.com`)
-  - 🟠 **Claude** (`claude.ai`)
-  - ⚪ **Grok** (`x.ai`)
-  - 🔵 **DeepSeek** (`chat.deepseek.com`)
-  - 🌐 **Perplexity** (`perplexity.ai`)
   - 🔍 **Google Search** (`google.com`)
   - 🔴 **YouTube** (`youtube.com` with floating PIP video control pod)
 - **Multi-WebView Tab Manager**: Open unlimited tabs with background state retention, custom favicons, search bar, and 1-click "Close All" protection for starred tabs.

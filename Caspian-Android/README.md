@@ -1,6 +1,6 @@
 # 🌊 Caspian Mobile - Standalone Android Application
 
-> **Caspian Mobile is the native Android application of the Caspian productivity suite. It runs official AI web platforms (ChatGPT, Google Gemini, Claude, Grok, DeepSeek, Perplexity, Google Search, and YouTube) inside high-performance native Android WebViews enhanced with Material 3 Expressive, iOS Glassmorphism, and Samsung One UI design languages. It provides real-time DOM lag pruning, temporary chat auto-saving, Whisper speech-to-text dictation, and direct multi-format exports (.pdf, .md, .txt, .doc, .html) straight to your device storage.**
+> **Caspian Mobile is the native Android application of the Caspian productivity suite. It runs official AI web platforms (ChatGPT & Google Gemini, plus Google Search & YouTube) inside high-performance native Android WebViews enhanced with Material 3 Expressive, iOS Glassmorphism, and Samsung One UI design languages. It provides real-time DOM lag pruning, temporary chat auto-saving, Whisper speech-to-text dictation, and direct multi-format exports (.pdf, .md, .txt, .doc, .html) straight to your device storage.**
 
 ---
 
@@ -45,15 +45,11 @@ Caspian-Android/
 
 ## 📱 Key Features
 
-- 🌟 **Multi-Engine AI Support**:
+- 🌟 **Multi-Service AI Hub**:
   - 🟢 **ChatGPT** (`https://chatgpt.com/`)
   - 🟣 **Google Gemini** (`https://gemini.google.com/`)
-  - 🟠 **Claude** (`https://claude.ai/`)
-  - ⚪ **Grok** (`https://x.ai/`)
-  - 🔵 **DeepSeek** (`https://chat.deepseek.com/`)
-  - 🌐 **Perplexity** (`https://perplexity.ai/`)
   - 🔍 **Google Search** (`https://google.com/`)
-  - 🔴 **YouTube Player** (`https://youtube.com/`)
+  - 🔴 **YouTube Player** (`https://youtube.com/` with floating PIP video controls)
 - ⚡ **Mobile DOM Lag Pruner**: Stops mobile keyboard and scrolling lag in large chat sessions by dynamically pruning offscreen DOM turns (`1`, `3`, `5`, `8`, `15`, `∞`).
 - 🛡️ **Temporary Chat Converter**: Automatically detects temporary chat sessions and converts them into permanent saved chats in your account history.
 - 📥 **Universal Multi-Format Export Engine**:
