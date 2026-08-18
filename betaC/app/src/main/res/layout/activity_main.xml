@@ -1,0 +1,1821 @@
+<?xml version="1.0" encoding="utf-8"?>
+<FrameLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    android:id="@+id/root_container"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:background="#050811">
+
+    <!-- 1. Main Browser Content Column -->
+    <LinearLayout
+        android:id="@+id/browser_content_layout"
+        android:layout_width="match_parent"
+        android:layout_height="match_parent"
+        android:orientation="vertical">
+
+        <!-- Top Liquid Glass Omnibox Header (Frosted Glass Aesthetics) -->
+        <FrameLayout
+            android:id="@+id/omnibox_header_wrapper"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:paddingStart="8dp"
+            android:paddingEnd="8dp"
+            android:paddingTop="6dp"
+            android:paddingBottom="6dp"
+            android:background="#0D1524"
+            android:elevation="6dp">
+
+            <!-- Liquid Glass Capsule Bar -->
+            <LinearLayout
+                android:id="@+id/omnibox_header"
+                android:layout_width="match_parent"
+                android:layout_height="46dp"
+                android:background="@drawable/bg_liquid_glass"
+                android:orientation="horizontal"
+                android:gravity="center_vertical"
+                android:paddingStart="4dp"
+                android:paddingEnd="4dp">
+
+                <!-- Nav Back Button -->
+                <ImageButton
+                    android:id="@+id/omnibox_back_btn"
+                    android:layout_width="26dp"
+                    android:layout_height="26dp"
+                    android:padding="3dp"
+                    android:background="?attr/selectableItemBackgroundBorderless"
+                    android:src="@drawable/ic_pod_back"
+                    android:tint="#A2A9A9"
+                    android:contentDescription="Go Back" />
+
+                <!-- Nav Forward Button -->
+                <ImageButton
+                    android:id="@+id/omnibox_forward_btn"
+                    android:layout_width="26dp"
+                    android:layout_height="26dp"
+                    android:layout_marginStart="2dp"
+                    android:padding="3dp"
+                    android:background="?attr/selectableItemBackgroundBorderless"
+                    android:src="@drawable/ic_pod_fwd"
+                    android:tint="#A2A9A9"
+                    android:contentDescription="Go Forward" />
+
+                <!-- Reload Active Tab Button (Moved to Left) -->
+                <ImageButton
+                    android:id="@+id/omnibox_reload_btn"
+                    android:layout_width="26dp"
+                    android:layout_height="26dp"
+                    android:layout_marginStart="2dp"
+                    android:padding="3dp"
+                    android:background="?attr/selectableItemBackgroundBorderless"
+                    android:src="@drawable/ic_pod_reload"
+                    android:tint="#A2A9A9"
+                    android:contentDescription="Reload Page" />
+
+                <View
+                    android:layout_width="1dp"
+                    android:layout_height="14dp"
+                    android:layout_marginStart="4dp"
+                    android:layout_marginEnd="4dp"
+                    android:background="#33FFFFFF" />
+
+                <!-- Center URL / In-Omnibox Morphing Finder Capsule -->
+                <FrameLayout
+                    android:id="@+id/omnibox_capsule"
+                    android:layout_width="0dp"
+                    android:layout_height="32dp"
+                    android:layout_weight="1"
+                    android:layout_marginStart="2dp"
+                    android:layout_marginEnd="2dp"
+                    android:background="@drawable/bg_liquid_glass_pill">
+
+                    <!-- Default URL Mode View -->
+                    <LinearLayout
+                        android:id="@+id/omnibox_url_container"
+                        android:layout_width="match_parent"
+                        android:layout_height="match_parent"
+                        android:orientation="horizontal"
+                        android:gravity="center_vertical"
+                        android:paddingStart="6dp"
+                        android:paddingEnd="4dp">
+
+                        <!-- Lock / Privacy Shield Indicator -->
+                        <ImageView
+                            android:id="@+id/omnibox_shield_icon"
+                            android:layout_width="14dp"
+                            android:layout_height="14dp"
+                            android:src="@drawable/ic_browser_shield"
+                            android:tint="#00E5FF"
+                            android:contentDescription="Privacy Shield Active" />
+
+                        <!-- URL & AI Search Input -->
+                        <EditText
+                            android:id="@+id/omnibox_edit_text"
+                            android:layout_width="0dp"
+                            android:layout_height="match_parent"
+                            android:layout_weight="1"
+                            android:layout_marginStart="4dp"
+                            android:layout_marginEnd="2dp"
+                            android:background="@android:color/transparent"
+                            android:hint="Search or type URL..."
+                            android:textColorHint="#88A2A9A9"
+                            android:textColor="#FFFFFF"
+                            android:textSize="11sp"
+                            android:singleLine="true"
+                            android:imeOptions="actionGo"
+                            android:inputType="textUri|textNoSuggestions"
+                            android:padding="0dp" />
+
+                        <!-- Clear Text Button -->
+                        <ImageButton
+                            android:id="@+id/omnibox_clear_btn"
+                            android:layout_width="18dp"
+                            android:layout_height="18dp"
+                            android:background="?attr/selectableItemBackgroundBorderless"
+                            android:src="@drawable/ic_pod_close"
+                            android:tint="#88FFFFFF"
+                            android:visibility="gone"
+                            android:contentDescription="Clear Text" />
+
+                        <!-- In-Page Finder Toggle Button in Omnibox -->
+                        <ImageButton
+                            android:id="@+id/omnibox_finder_btn"
+                            android:layout_width="20dp"
+                            android:layout_height="20dp"
+                            android:padding="1dp"
+                            android:background="?attr/selectableItemBackgroundBorderless"
+                            android:src="@drawable/ic_pod_search"
+                            android:tint="#A2A9A9"
+                            android:contentDescription="Find in Page" />
+
+                        <!-- Voice Dictation Button -->
+                        <ImageButton
+                            android:id="@+id/omnibox_voice_btn"
+                            android:layout_width="20dp"
+                            android:layout_height="20dp"
+                            android:layout_marginStart="1dp"
+                            android:padding="1dp"
+                            android:background="?attr/selectableItemBackgroundBorderless"
+                            android:src="@drawable/ic_browser_voice"
+                            android:tint="#00E5FF"
+                            android:contentDescription="Voice Search" />
+                    </LinearLayout>
+
+                    <!-- Morphing In-Omnibox Finder View -->
+                    <LinearLayout
+                        android:id="@+id/omnibox_finder_container"
+                        android:layout_width="match_parent"
+                        android:layout_height="match_parent"
+                        android:orientation="horizontal"
+                        android:gravity="center_vertical"
+                        android:paddingStart="6dp"
+                        android:paddingEnd="4dp"
+                        android:visibility="gone">
+
+                        <ImageButton
+                            android:id="@+id/omnibox_finder_close"
+                            android:layout_width="18dp"
+                            android:layout_height="18dp"
+                            android:background="?attr/selectableItemBackgroundBorderless"
+                            android:src="@drawable/ic_pod_close"
+                            android:tint="#A2A9A9"
+                            android:contentDescription="Close Finder" />
+
+                        <EditText
+                            android:id="@+id/omnibox_finder_input"
+                            android:layout_width="0dp"
+                            android:layout_height="match_parent"
+                            android:layout_weight="1"
+                            android:layout_marginStart="4dp"
+                            android:background="@android:color/transparent"
+                            android:hint="Find in page..."
+                            android:textColorHint="#88A2A9A9"
+                            android:textColor="#FFFFFF"
+                            android:textSize="11sp"
+                            android:singleLine="true"
+                            android:imeOptions="actionSearch"
+                            android:inputType="text"
+                            android:padding="0dp" />
+
+                        <TextView
+                            android:id="@+id/omnibox_finder_count"
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:layout_marginStart="3dp"
+                            android:layout_marginEnd="4dp"
+                            android:text="0/0"
+                            android:textColor="#FFCC00"
+                            android:textSize="10sp"
+                            android:textStyle="bold" />
+
+                        <ImageButton
+                            android:id="@+id/omnibox_finder_prev"
+                            android:layout_width="18dp"
+                            android:layout_height="18dp"
+                            android:background="?attr/selectableItemBackgroundBorderless"
+                            android:src="@drawable/ic_pod_arrow_up"
+                            android:tint="#FFFFFF"
+                            android:contentDescription="Previous" />
+
+                        <ImageButton
+                            android:id="@+id/omnibox_finder_next"
+                            android:layout_width="18dp"
+                            android:layout_height="18dp"
+                            android:layout_marginStart="2dp"
+                            android:background="?attr/selectableItemBackgroundBorderless"
+                            android:src="@drawable/ic_pod_arrow_down"
+                            android:tint="#FFFFFF"
+                            android:contentDescription="Next" />
+                    </LinearLayout>
+                </FrameLayout>
+
+                <View
+                    android:layout_width="1dp"
+                    android:layout_height="14dp"
+                    android:layout_marginStart="4dp"
+                    android:layout_marginEnd="4dp"
+                    android:background="#33FFFFFF" />
+
+                <!-- Quick Toolbars Manager Popup Button -->
+                <ImageButton
+                    android:id="@+id/omnibox_toolbars_btn"
+                    android:layout_width="26dp"
+                    android:layout_height="26dp"
+                    android:padding="3dp"
+                    android:background="?attr/selectableItemBackgroundBorderless"
+                    android:src="@drawable/ic_shrink_bubble"
+                    android:tint="#A2A9A9"
+                    android:contentDescription="Quick Toolbars" />
+
+                <!-- AI Split Screen Button -->
+                <ImageButton
+                    android:id="@+id/omnibox_split_btn"
+                    android:layout_width="26dp"
+                    android:layout_height="26dp"
+                    android:layout_marginStart="3dp"
+                    android:padding="3dp"
+                    android:background="?attr/selectableItemBackgroundBorderless"
+                    android:src="@drawable/ic_browser_split"
+                    android:tint="#A2A9A9"
+                    android:contentDescription="AI Split Mode" />
+
+                <!-- Crisp Tab Counter Pill -->
+                <FrameLayout
+                    android:id="@+id/omnibox_tabs_btn"
+                    android:layout_width="28dp"
+                    android:layout_height="26dp"
+                    android:layout_marginStart="3dp"
+                    android:background="@drawable/bg_liquid_glass_pill"
+                    android:contentDescription="Tab Manager">
+
+                    <TextView
+                        android:id="@+id/omnibox_tabs_count"
+                        android:layout_width="match_parent"
+                        android:layout_height="match_parent"
+                        android:gravity="center"
+                        android:text="1"
+                        android:textColor="#00E5FF"
+                        android:textSize="10sp"
+                        android:textStyle="bold" />
+                </FrameLayout>
+
+                <!-- Browser Overflow Menu Button -->
+                <ImageButton
+                    android:id="@+id/omnibox_menu_btn"
+                    android:layout_width="26dp"
+                    android:layout_height="26dp"
+                    android:layout_marginStart="3dp"
+                    android:padding="3dp"
+                    android:background="?attr/selectableItemBackgroundBorderless"
+                    android:src="@drawable/ic_browser_menu"
+                    android:tint="#FFFFFF"
+                    android:contentDescription="More Options" />
+            </LinearLayout>
+        </FrameLayout>
+
+        <!-- Slim Hardware-Accelerated Loading Progress Bar -->
+        <ProgressBar
+            android:id="@+id/browser_progress_bar"
+            style="?android:attr/progressBarStyleHorizontal"
+            android:layout_width="match_parent"
+            android:layout_height="2.5dp"
+            android:progressDrawable="@drawable/bg_pill_accent"
+            android:visibility="gone" />
+
+        <!-- WebViews Viewport Parent Container -->
+        <FrameLayout
+            android:id="@+id/webviews_parent_container"
+            android:layout_width="match_parent"
+            android:layout_height="0dp"
+            android:layout_weight="1">
+
+            <!-- Single Tab Fullscreen Container -->
+            <FrameLayout
+                android:id="@+id/webview_container"
+                android:layout_width="match_parent"
+                android:layout_height="match_parent" />
+
+            <!-- Dual Split-Screen AI Workspace (Dynamic Horizontal/Vertical) -->
+            <LinearLayout
+                android:id="@+id/split_view_container"
+                android:layout_width="match_parent"
+                android:layout_height="match_parent"
+                android:orientation="horizontal"
+                android:visibility="gone">
+
+                <!-- Left / Top AI Viewport -->
+                <FrameLayout
+                    android:id="@+id/split_left_container"
+                    android:layout_width="0dp"
+                    android:layout_height="match_parent"
+                    android:layout_weight="1">
+
+                    <!-- Non-dominant tap mask to prevent content click/scroll during dominance toggle -->
+                    <View
+                        android:id="@+id/split_left_tap_mask"
+                        android:layout_width="match_parent"
+                        android:layout_height="match_parent"
+                        android:background="@android:color/transparent"
+                        android:clickable="true"
+                        android:focusable="true"
+                        android:elevation="20dp"
+                        android:visibility="gone" />
+
+                    <!-- Floating Control Capsule for Left/Top Viewport (Movable & Touch-isolated) -->
+                    <LinearLayout
+                        android:id="@+id/split_left_control"
+                        android:layout_width="wrap_content"
+                        android:layout_height="34dp"
+                        android:layout_gravity="top|start"
+                        android:layout_margin="8dp"
+                        android:background="@drawable/bg_liquid_glass_pill"
+                        android:orientation="horizontal"
+                        android:gravity="center_vertical"
+                        android:paddingStart="8dp"
+                        android:paddingEnd="8dp"
+                        android:clickable="true"
+                        android:focusable="true"
+                        android:elevation="40dp">
+
+                        <ImageButton
+                            android:id="@+id/split_left_menu_btn"
+                            android:layout_width="24dp"
+                            android:layout_height="24dp"
+                            android:background="?attr/selectableItemBackgroundBorderless"
+                            android:src="@drawable/ic_browser_menu"
+                            android:tint="#FFFFFF"
+                            android:contentDescription="Pane Options" />
+
+                        <ImageButton
+                            android:id="@+id/split_left_close_btn"
+                            android:layout_width="24dp"
+                            android:layout_height="24dp"
+                            android:layout_marginStart="4dp"
+                            android:background="?attr/selectableItemBackgroundBorderless"
+                            android:src="@drawable/ic_pod_close"
+                            android:tint="#CCFFFFFF"
+                            android:contentDescription="Close Left Pane" />
+                    </LinearLayout>
+                </FrameLayout>
+
+                <!-- Draggable Split Screen Divider Bar (Feature 1) -->
+                <FrameLayout
+                    android:id="@+id/split_divider"
+                    android:layout_width="8dp"
+                    android:layout_height="match_parent"
+                    android:clickable="true"
+                    android:focusable="true">
+
+                    <View
+                        android:id="@+id/split_divider_handle"
+                        android:layout_width="6dp"
+                        android:layout_height="44dp"
+                        android:layout_gravity="center"
+                        android:background="@drawable/bg_pill_accent" />
+                </FrameLayout>
+
+                <!-- Right / Bottom AI Viewport -->
+                <FrameLayout
+                    android:id="@+id/split_right_container"
+                    android:layout_width="0dp"
+                    android:layout_height="match_parent"
+                    android:layout_weight="1">
+
+                    <!-- Non-dominant tap mask to prevent content click/scroll during dominance toggle -->
+                    <View
+                        android:id="@+id/split_right_tap_mask"
+                        android:layout_width="match_parent"
+                        android:layout_height="match_parent"
+                        android:background="@android:color/transparent"
+                        android:clickable="true"
+                        android:focusable="true"
+                        android:elevation="20dp"
+                        android:visibility="gone" />
+
+                    <!-- Floating Control Capsule for Right/Bottom Viewport (Movable & Touch-isolated) -->
+                    <LinearLayout
+                        android:id="@+id/split_right_control"
+                        android:layout_width="wrap_content"
+                        android:layout_height="34dp"
+                        android:layout_gravity="top|start"
+                        android:layout_margin="8dp"
+                        android:background="@drawable/bg_liquid_glass_pill"
+                        android:orientation="horizontal"
+                        android:gravity="center_vertical"
+                        android:paddingStart="8dp"
+                        android:paddingEnd="8dp"
+                        android:clickable="true"
+                        android:focusable="true"
+                        android:elevation="40dp">
+
+                        <ImageButton
+                            android:id="@+id/split_right_menu_btn"
+                            android:layout_width="24dp"
+                            android:layout_height="24dp"
+                            android:background="?attr/selectableItemBackgroundBorderless"
+                            android:src="@drawable/ic_browser_menu"
+                            android:tint="#FFFFFF"
+                            android:contentDescription="Pane Options" />
+
+                        <ImageButton
+                            android:id="@+id/split_right_close_btn"
+                            android:layout_width="24dp"
+                            android:layout_height="24dp"
+                            android:layout_marginStart="4dp"
+                            android:background="?attr/selectableItemBackgroundBorderless"
+                            android:src="@drawable/ic_pod_close"
+                            android:tint="#CCFFFFFF"
+                            android:contentDescription="Close Right Pane" />
+                    </LinearLayout>
+                </FrameLayout>
+            </LinearLayout>
+
+            <!-- Modern Aesthetic Dual AI Arena Broadcast Capsule -->
+            <LinearLayout
+                android:id="@+id/split_arena_broadcast_container"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_gravity="bottom"
+                android:layout_margin="14dp"
+                android:background="@drawable/bg_arena_broadcast_neon"
+                android:orientation="horizontal"
+                android:gravity="center_vertical"
+                android:paddingStart="8dp"
+                android:paddingEnd="8dp"
+                android:paddingTop="6dp"
+                android:paddingBottom="6dp"
+                android:elevation="60dp"
+                android:visibility="gone">
+
+                <LinearLayout
+                    android:layout_width="wrap_content"
+                    android:layout_height="32dp"
+                    android:background="@drawable/bg_arena_badge"
+                    android:gravity="center"
+                    android:paddingStart="8dp"
+                    android:paddingEnd="8dp"
+                    android:layout_marginEnd="8dp">
+
+                    <TextView
+                        android:id="@+id/split_arena_label"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:text="⚔️ DUAL AI"
+                        android:textColor="#00E5FF"
+                        android:textSize="10sp"
+                        android:textStyle="bold"
+                        android:letterSpacing="0.05" />
+                </LinearLayout>
+
+                <EditText
+                    android:id="@+id/split_arena_input"
+                    android:layout_width="0dp"
+                    android:layout_height="38dp"
+                    android:layout_weight="1"
+                    android:background="@android:color/transparent"
+                    android:hint="Broadcast prompt to ChatGPT &amp; Gemini..."
+                    android:textColorHint="#6B7280"
+                    android:textColor="#FFFFFF"
+                    android:textSize="13sp"
+                    android:singleLine="true"
+                    android:imeOptions="actionSend"
+                    android:inputType="textShortMessage|textAutoCorrect"
+                    android:paddingStart="4dp"
+                    android:paddingEnd="4dp" />
+
+                <ImageButton
+                    android:id="@+id/split_arena_send_btn"
+                    android:layout_width="34dp"
+                    android:layout_height="34dp"
+                    android:layout_marginStart="4dp"
+                    android:background="@drawable/bg_arena_send_circle"
+                    android:src="@drawable/ic_pod_fwd"
+                    android:tint="#050811"
+                    android:padding="7dp"
+                    android:scaleType="fitCenter"
+                    android:contentDescription="Broadcast Prompt" />
+
+                <ImageButton
+                    android:id="@+id/split_arena_close_btn"
+                    android:layout_width="30dp"
+                    android:layout_height="30dp"
+                    android:layout_marginStart="2dp"
+                    android:background="?attr/selectableItemBackgroundBorderless"
+                    android:src="@drawable/ic_pod_close"
+                    android:tint="#94A3B8"
+                    android:padding="6dp"
+                    android:scaleType="fitCenter"
+                    android:contentDescription="Close Arena Prompt" />
+            </LinearLayout>
+        </FrameLayout>
+    </LinearLayout>
+
+    <!-- 2. Full-Screen Modern Tab Grid Switcher (Elevation 70dp, stays below Caspian Menu) -->
+    <FrameLayout
+        android:id="@+id/tab_grid_overlay"
+        android:layout_width="match_parent"
+        android:layout_height="match_parent"
+        android:background="#050811"
+        android:elevation="70dp"
+        android:clickable="true"
+        android:focusable="true"
+        android:visibility="gone">
+
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="match_parent"
+            android:orientation="vertical"
+            android:paddingTop="12dp"
+            android:paddingStart="14dp"
+            android:paddingEnd="14dp">
+
+            <!-- Top Header Controls Capsule (Touch isolated, Fix 8) -->
+            <LinearLayout
+                android:layout_width="wrap_content"
+                android:layout_height="44dp"
+                android:layout_gravity="center_horizontal"
+                android:background="@drawable/bg_liquid_glass"
+                android:orientation="horizontal"
+                android:gravity="center_vertical"
+                android:paddingStart="14dp"
+                android:paddingEnd="14dp"
+                android:clickable="true"
+                android:focusable="true"
+                android:elevation="96dp">
+
+                <TextView
+                    android:id="@+id/tab_grid_count_badge"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:paddingStart="8dp"
+                    android:paddingEnd="8dp"
+                    android:paddingTop="2dp"
+                    android:paddingBottom="2dp"
+                    android:background="@drawable/bg_liquid_glass_pill"
+                    android:text="1"
+                    android:textColor="#00E5FF"
+                    android:textSize="12sp"
+                    android:textStyle="bold" />
+
+                <ImageButton
+                    android:id="@+id/tab_grid_incognito_btn"
+                    android:layout_width="32dp"
+                    android:layout_height="32dp"
+                    android:layout_marginStart="12dp"
+                    android:background="?attr/selectableItemBackgroundBorderless"
+                    android:src="@drawable/ic_browser_shield"
+                    android:tint="#FFFFFF"
+                    android:padding="4dp"
+                    android:contentDescription="Incognito Tabs" />
+
+                <ImageButton
+                    android:id="@+id/tab_grid_close_view_btn"
+                    android:layout_width="32dp"
+                    android:layout_height="32dp"
+                    android:layout_marginStart="12dp"
+                    android:background="?attr/selectableItemBackgroundBorderless"
+                    android:src="@drawable/ic_pod_close"
+                    android:tint="#A2A9A9"
+                    android:padding="4dp"
+                    android:contentDescription="Close Tab Grid" />
+            </LinearLayout>
+
+            <!-- "Search your tabs" Filter Bar -->
+            <LinearLayout
+                android:layout_width="match_parent"
+                android:layout_height="42dp"
+                android:layout_marginTop="14dp"
+                android:background="@drawable/bg_liquid_glass_pill"
+                android:orientation="horizontal"
+                android:gravity="center_vertical"
+                android:paddingStart="14dp"
+                android:paddingEnd="14dp">
+
+                <ImageView
+                    android:layout_width="16dp"
+                    android:layout_height="16dp"
+                    android:src="@drawable/ic_pod_search"
+                    android:tint="#88A2A9A9" />
+
+                <EditText
+                    android:id="@+id/tab_grid_search_input"
+                    android:layout_width="match_parent"
+                    android:layout_height="match_parent"
+                    android:layout_marginStart="8dp"
+                    android:background="@android:color/transparent"
+                    android:hint="Search your tabs"
+                    android:textColorHint="#88A2A9A9"
+                    android:textColor="#FFFFFF"
+                    android:textSize="13sp"
+                    android:singleLine="true" />
+            </LinearLayout>
+
+            <!-- Inside Group Header Banner (Shown when inside a Tab Group) -->
+            <LinearLayout
+                android:id="@+id/tab_grid_group_banner"
+                android:layout_width="match_parent"
+                android:layout_height="38dp"
+                android:layout_marginTop="10dp"
+                android:background="@drawable/bg_liquid_glass_pill"
+                android:orientation="horizontal"
+                android:gravity="center_vertical"
+                android:paddingStart="10dp"
+                android:paddingEnd="10dp"
+                android:visibility="gone">
+
+                <ImageButton
+                    android:id="@+id/btn_tab_grid_group_back"
+                    android:layout_width="24dp"
+                    android:layout_height="24dp"
+                    android:background="?attr/selectableItemBackgroundBorderless"
+                    android:src="@drawable/ic_pod_back"
+                    android:tint="#00E5FF"
+                    android:contentDescription="Back to All Tabs" />
+
+                <TextView
+                    android:id="@+id/tab_grid_group_banner_title"
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                    android:layout_weight="1"
+                    android:layout_marginStart="8dp"
+                    android:text="Group Name (2 tabs)"
+                    android:textColor="#FFFFFF"
+                    android:textSize="12sp"
+                    android:textStyle="bold"
+                    android:singleLine="true" />
+
+                <Button
+                    android:id="@+id/btn_tab_grid_group_ungroup"
+                    android:layout_width="wrap_content"
+                    android:layout_height="26dp"
+                    android:background="@drawable/bg_liquid_glass_pill"
+                    android:text="Ungroup"
+                    android:textColor="#A2A9A9"
+                    android:textSize="10sp"
+                    android:paddingStart="8dp"
+                    android:paddingEnd="8dp" />
+            </LinearLayout>
+
+            <!-- Scrollable 2-Column Tabs Grid Container -->
+            <ScrollView
+                android:layout_width="match_parent"
+                android:layout_height="0dp"
+                android:layout_weight="1"
+                android:layout_marginTop="10dp"
+                android:scrollbars="none"
+                android:overScrollMode="never">
+
+                <LinearLayout
+                    android:id="@+id/tab_grid_content_layout"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:orientation="vertical"
+                    android:paddingBottom="100dp">
+
+                    <GridLayout
+                        android:id="@+id/tab_grid_container"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:columnCount="2"
+                        android:alignmentMode="alignMargins"
+                        android:columnOrderPreserved="false"
+                        android:useDefaultMargins="true" />
+                </LinearLayout>
+            </ScrollView>
+        </LinearLayout>
+
+        <!-- Multi-Select Floating Split & Group Action Bar (Image 1 Fix) -->
+        <LinearLayout
+            android:id="@+id/tab_grid_split_action_bar"
+            android:layout_width="wrap_content"
+            android:layout_height="48dp"
+            android:layout_gravity="bottom|center_horizontal"
+            android:layout_marginBottom="90dp"
+            android:background="@drawable/bg_liquid_glass"
+            android:orientation="horizontal"
+            android:gravity="center_vertical"
+            android:paddingStart="12dp"
+            android:paddingEnd="12dp"
+            android:elevation="65dp"
+            android:visibility="gone">
+
+            <Button
+                android:id="@+id/btn_tab_grid_split_selected"
+                android:layout_width="wrap_content"
+                android:layout_height="36dp"
+                android:background="@drawable/bg_pill_accent"
+                android:text="🔀 Split (2)"
+                android:textColor="#FFFFFF"
+                android:textSize="11sp"
+                android:textStyle="bold"
+                android:paddingStart="10dp"
+                android:paddingEnd="10dp" />
+
+            <Button
+                android:id="@+id/btn_tab_grid_group_selected"
+                android:layout_width="wrap_content"
+                android:layout_height="36dp"
+                android:layout_marginStart="6dp"
+                android:background="@drawable/bg_liquid_glass_pill"
+                android:text="📁 Group"
+                android:textColor="#00E5FF"
+                android:textSize="11sp"
+                android:textStyle="bold"
+                android:paddingStart="10dp"
+                android:paddingEnd="10dp" />
+
+            <Button
+                android:id="@+id/btn_tab_grid_close_selected"
+                android:layout_width="wrap_content"
+                android:layout_height="36dp"
+                android:layout_marginStart="6dp"
+                android:background="@drawable/bg_liquid_glass_pill"
+                android:text="🗑️ Close"
+                android:textColor="#FF5555"
+                android:textSize="11sp"
+                android:paddingStart="10dp"
+                android:paddingEnd="10dp" />
+
+            <Button
+                android:id="@+id/btn_tab_grid_deselect"
+                android:layout_width="wrap_content"
+                android:layout_height="36dp"
+                android:layout_marginStart="6dp"
+                android:background="@drawable/bg_liquid_glass_pill"
+                android:text="✕"
+                android:textColor="#A2A9A9"
+                android:textSize="12sp"
+                android:paddingStart="8dp"
+                android:paddingEnd="8dp" />
+        </LinearLayout>
+
+        <!-- Floating Bottom '+' New Tab Action Button -->
+        <FrameLayout
+            android:id="@+id/tab_grid_fab_add"
+            android:layout_width="56dp"
+            android:layout_height="56dp"
+            android:layout_gravity="bottom|center_horizontal"
+            android:layout_marginBottom="24dp"
+            android:background="@drawable/bg_liquid_glass_ball"
+            android:elevation="60dp"
+            android:clickable="true"
+            android:focusable="true">
+
+            <TextView
+                android:layout_width="match_parent"
+                android:layout_height="match_parent"
+                android:gravity="center"
+                android:text="+"
+                android:textColor="#FFFFFF"
+                android:textSize="28sp"
+                android:textStyle="bold" />
+        </FrameLayout>
+
+        <!-- Beautiful Card-Based New Platform Tab Selector Modal with Vector Icons (Image 1 Fix) -->
+        <FrameLayout
+            android:id="@+id/modal_new_tab_platform"
+            android:layout_width="match_parent"
+            android:layout_height="match_parent"
+            android:background="#99000000"
+            android:elevation="70dp"
+            android:clickable="true"
+            android:focusable="true"
+            android:visibility="gone">
+
+            <androidx.cardview.widget.CardView
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_gravity="center"
+                android:layout_marginStart="20dp"
+                android:layout_marginEnd="20dp"
+                app:cardCornerRadius="22dp"
+                app:cardBackgroundColor="#0D1524"
+                app:cardElevation="24dp">
+
+                <LinearLayout
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:orientation="vertical"
+                    android:padding="20dp">
+
+                    <!-- Header -->
+                    <LinearLayout
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:orientation="horizontal"
+                        android:gravity="center_vertical">
+
+                        <TextView
+                            android:layout_width="0dp"
+                            android:layout_height="wrap_content"
+                            android:layout_weight="1"
+                            android:text="OPEN NEW PLATFORM TAB"
+                            android:textColor="#FFFFFF"
+                            android:textSize="13sp"
+                            android:textStyle="bold"
+                            android:letterSpacing="0.06" />
+
+                        <ImageButton
+                            android:id="@+id/btn_close_platform_modal"
+                            android:layout_width="26dp"
+                            android:layout_height="26dp"
+                            android:background="?attr/selectableItemBackgroundBorderless"
+                            android:src="@drawable/ic_pod_close"
+                            android:tint="#88FFFFFF" />
+                    </LinearLayout>
+
+                    <!-- App Tiles Grid (3 Columns with Official Vector Icons) -->
+                    <GridLayout
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:layout_marginTop="16dp"
+                        android:columnCount="3"
+                        android:alignmentMode="alignMargins"
+                        android:useDefaultMargins="true">
+
+                        <!-- 1. Caspian Hub -->
+                        <LinearLayout
+                            android:id="@+id/tile_new_tab_hub"
+                            android:layout_width="0dp"
+                            android:layout_height="90dp"
+                            android:layout_columnWeight="1"
+                            android:layout_margin="4dp"
+                            android:background="@drawable/bg_liquid_glass"
+                            android:orientation="vertical"
+                            android:gravity="center"
+                            android:clickable="true"
+                            android:focusable="true">
+
+                            <ImageView
+                                android:layout_width="28dp"
+                                android:layout_height="28dp"
+                                android:src="@drawable/ic_launcher_wave" />
+
+                            <TextView
+                                android:layout_width="wrap_content"
+                                android:layout_height="wrap_content"
+                                android:layout_marginTop="6dp"
+                                android:text="Caspian Hub"
+                                android:textColor="#FFFFFF"
+                                android:textSize="11sp"
+                                android:textStyle="bold" />
+                        </LinearLayout>
+
+                        <!-- 2. ChatGPT -->
+                        <LinearLayout
+                            android:id="@+id/tile_new_tab_chatgpt"
+                            android:layout_width="0dp"
+                            android:layout_height="90dp"
+                            android:layout_columnWeight="1"
+                            android:layout_margin="4dp"
+                            android:background="@drawable/bg_liquid_glass"
+                            android:orientation="vertical"
+                            android:gravity="center"
+                            android:clickable="true"
+                            android:focusable="true">
+
+                            <ImageView
+                                android:layout_width="28dp"
+                                android:layout_height="28dp"
+                                android:src="@drawable/ic_platform_chatgpt" />
+
+                            <TextView
+                                android:layout_width="wrap_content"
+                                android:layout_height="wrap_content"
+                                android:layout_marginTop="6dp"
+                                android:text="ChatGPT"
+                                android:textColor="#FFFFFF"
+                                android:textSize="11sp"
+                                android:textStyle="bold" />
+                        </LinearLayout>
+
+                        <!-- 3. Google Gemini -->
+                        <LinearLayout
+                            android:id="@+id/tile_new_tab_gemini"
+                            android:layout_width="0dp"
+                            android:layout_height="90dp"
+                            android:layout_columnWeight="1"
+                            android:layout_margin="4dp"
+                            android:background="@drawable/bg_liquid_glass"
+                            android:orientation="vertical"
+                            android:gravity="center"
+                            android:clickable="true"
+                            android:focusable="true">
+
+                            <ImageView
+                                android:layout_width="28dp"
+                                android:layout_height="28dp"
+                                android:src="@drawable/ic_platform_gemini" />
+
+                            <TextView
+                                android:layout_width="wrap_content"
+                                android:layout_height="wrap_content"
+                                android:layout_marginTop="6dp"
+                                android:text="Gemini"
+                                android:textColor="#FFFFFF"
+                                android:textSize="11sp"
+                                android:textStyle="bold" />
+                        </LinearLayout>
+
+                        <!-- 4. Google Search -->
+                        <LinearLayout
+                            android:id="@+id/tile_new_tab_google"
+                            android:layout_width="0dp"
+                            android:layout_height="90dp"
+                            android:layout_columnWeight="1"
+                            android:layout_margin="4dp"
+                            android:background="@drawable/bg_liquid_glass"
+                            android:orientation="vertical"
+                            android:gravity="center"
+                            android:clickable="true"
+                            android:focusable="true">
+
+                            <ImageView
+                                android:layout_width="28dp"
+                                android:layout_height="28dp"
+                                android:src="@drawable/ic_platform_google" />
+
+                            <TextView
+                                android:layout_width="wrap_content"
+                                android:layout_height="wrap_content"
+                                android:layout_marginTop="6dp"
+                                android:text="Google"
+                                android:textColor="#FFFFFF"
+                                android:textSize="11sp"
+                                android:textStyle="bold" />
+                        </LinearLayout>
+
+                        <!-- 5. YouTube -->
+                        <LinearLayout
+                            android:id="@+id/tile_new_tab_youtube"
+                            android:layout_width="0dp"
+                            android:layout_height="90dp"
+                            android:layout_columnWeight="1"
+                            android:layout_margin="4dp"
+                            android:background="@drawable/bg_liquid_glass"
+                            android:orientation="vertical"
+                            android:gravity="center"
+                            android:clickable="true"
+                            android:focusable="true">
+
+                            <ImageView
+                                android:layout_width="28dp"
+                                android:layout_height="28dp"
+                                android:src="@drawable/ic_platform_youtube" />
+
+                            <TextView
+                                android:layout_width="wrap_content"
+                                android:layout_height="wrap_content"
+                                android:layout_marginTop="6dp"
+                                android:text="YouTube"
+                                android:textColor="#FFFFFF"
+                                android:textSize="11sp"
+                                android:textStyle="bold" />
+                        </LinearLayout>
+
+                        <!-- 6. Claude -->
+                        <LinearLayout
+                            android:id="@+id/tile_new_tab_claude"
+                            android:layout_width="0dp"
+                            android:layout_height="90dp"
+                            android:layout_columnWeight="1"
+                            android:layout_margin="4dp"
+                            android:background="@drawable/bg_liquid_glass"
+                            android:orientation="vertical"
+                            android:gravity="center"
+                            android:clickable="true"
+                            android:focusable="true">
+
+                            <ImageView
+                                android:layout_width="28dp"
+                                android:layout_height="28dp"
+                                android:src="@drawable/ic_platform_claude" />
+
+                            <TextView
+                                android:layout_width="wrap_content"
+                                android:layout_height="wrap_content"
+                                android:layout_marginTop="6dp"
+                                android:text="Claude"
+                                android:textColor="#FFFFFF"
+                                android:textSize="11sp"
+                                android:textStyle="bold" />
+                        </LinearLayout>
+                    </GridLayout>
+                </LinearLayout>
+            </androidx.cardview.widget.CardView>
+        </FrameLayout>
+    </FrameLayout>
+
+    <!-- 3. Overlay Control Sheet Container (Elevation 80dp) -->
+    <FrameLayout
+        android:id="@+id/sheet_overlay_container"
+        android:layout_width="match_parent"
+        android:layout_height="match_parent"
+        android:visibility="invisible"
+        android:elevation="80dp">
+
+        <View
+            android:id="@+id/sheet_backdrop"
+            android:layout_width="match_parent"
+            android:layout_height="match_parent"
+            android:background="#88000000" />
+
+        <WebView
+            android:id="@+id/control_webview"
+            android:layout_width="match_parent"
+            android:layout_height="match_parent"
+            android:background="@android:color/transparent" />
+    </FrameLayout>
+
+    <!-- 4. Floating Action Pod 2.0 (Elevation 100dp, always on top) -->
+    <androidx.cardview.widget.CardView
+        android:id="@+id/floating_caspian_card"
+        android:layout_width="52dp"
+        android:layout_height="52dp"
+        android:layout_gravity="bottom|end"
+        android:layout_marginBottom="80dp"
+        android:layout_marginEnd="20dp"
+        android:elevation="100dp"
+        app:cardCornerRadius="26dp"
+        app:cardBackgroundColor="#00E5FF"
+        app:cardElevation="100dp"
+        android:clickable="true"
+        android:focusable="true">
+
+        <ImageView
+            android:id="@+id/floating_caspian_icon"
+            android:layout_width="match_parent"
+            android:layout_height="match_parent"
+            android:padding="10dp"
+            android:scaleType="fitCenter"
+            android:src="@drawable/ic_launcher_wave"
+            android:contentDescription="Caspian Flow Menu" />
+    </androidx.cardview.widget.CardView>
+
+    <!-- 5. Floating YouTube Remote Container (Vertically stacked at 205dp) -->
+    <FrameLayout
+        android:id="@+id/yt_floating_remote_container"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_gravity="bottom|end"
+        android:layout_marginBottom="205dp"
+        android:layout_marginEnd="8dp"
+        android:clickable="true"
+        android:focusable="true"
+        android:elevation="45dp"
+        android:visibility="gone">
+
+        <!-- Expanded Full Remote Dock -->
+        <HorizontalScrollView
+            android:id="@+id/yt_floating_remote_scroll"
+            android:layout_width="wrap_content"
+            android:layout_height="48dp"
+            android:background="@drawable/bg_liquid_glass"
+            android:clipToOutline="true"
+            android:scrollbars="none"
+            android:overScrollMode="never"
+            android:fillViewport="true">
+
+            <LinearLayout
+                android:id="@+id/yt_floating_remote_dock"
+                android:layout_width="wrap_content"
+                android:layout_height="match_parent"
+                android:orientation="horizontal"
+                android:paddingStart="8dp"
+                android:paddingEnd="6dp"
+                android:gravity="center_vertical">
+
+                <ImageButton
+                    android:id="@+id/yt_remote_close"
+                    android:layout_width="26dp"
+                    android:layout_height="26dp"
+                    android:background="?attr/selectableItemBackgroundBorderless"
+                    android:src="@drawable/ic_pod_close"
+                    android:tint="#88FFFFFF"
+                    android:contentDescription="Close Remote" />
+
+                <View
+                    android:layout_width="1dp"
+                    android:layout_height="16dp"
+                    android:layout_marginStart="3dp"
+                    android:layout_marginEnd="3dp"
+                    android:background="#33FFFFFF" />
+
+                <ImageButton
+                    android:id="@+id/yt_remote_reload"
+                    android:layout_width="26dp"
+                    android:layout_height="26dp"
+                    android:background="?attr/selectableItemBackgroundBorderless"
+                    android:src="@drawable/ic_pod_reload"
+                    android:tint="#FFFFFF"
+                    android:contentDescription="Reload YouTube Tab" />
+
+                <ImageButton
+                    android:id="@+id/yt_remote_fullscreen"
+                    android:layout_width="26dp"
+                    android:layout_height="26dp"
+                    android:layout_marginStart="2dp"
+                    android:background="?attr/selectableItemBackgroundBorderless"
+                    android:src="@drawable/ic_pod_fullscreen"
+                    android:tint="#FFFFFF"
+                    android:contentDescription="Fullscreen Toggle" />
+
+                <ImageButton
+                    android:id="@+id/yt_remote_prev_video"
+                    android:layout_width="26dp"
+                    android:layout_height="26dp"
+                    android:layout_marginStart="2dp"
+                    android:background="?attr/selectableItemBackgroundBorderless"
+                    android:src="@drawable/ic_pod_prev"
+                    android:tint="#FFFFFF"
+                    android:contentDescription="Previous Video" />
+
+                <ImageButton
+                    android:id="@+id/yt_remote_seek_back"
+                    android:layout_width="26dp"
+                    android:layout_height="26dp"
+                    android:layout_marginStart="2dp"
+                    android:background="?attr/selectableItemBackgroundBorderless"
+                    android:src="@drawable/ic_pod_rewind"
+                    android:tint="#FFFFFF"
+                    android:contentDescription="-5s Seek" />
+
+                <ImageButton
+                    android:id="@+id/yt_remote_play_pause"
+                    android:layout_width="32dp"
+                    android:layout_height="32dp"
+                    android:layout_marginStart="2dp"
+                    android:layout_marginEnd="2dp"
+                    android:background="?attr/selectableItemBackgroundBorderless"
+                    android:src="@drawable/ic_pod_play"
+                    android:tint="#FFFFFF"
+                    android:contentDescription="Play/Pause" />
+
+                <ImageButton
+                    android:id="@+id/yt_remote_seek_fwd"
+                    android:layout_width="26dp"
+                    android:layout_height="26dp"
+                    android:background="?attr/selectableItemBackgroundBorderless"
+                    android:src="@drawable/ic_pod_fastfwd"
+                    android:tint="#FFFFFF"
+                    android:contentDescription="+5s Seek" />
+
+                <ImageButton
+                    android:id="@+id/yt_remote_next_video"
+                    android:layout_width="26dp"
+                    android:layout_height="26dp"
+                    android:layout_marginStart="2dp"
+                    android:background="?attr/selectableItemBackgroundBorderless"
+                    android:src="@drawable/ic_pod_next"
+                    android:tint="#FFFFFF"
+                    android:contentDescription="Next Video" />
+
+                <ImageButton
+                    android:id="@+id/yt_remote_mute"
+                    android:layout_width="26dp"
+                    android:layout_height="26dp"
+                    android:layout_marginStart="2dp"
+                    android:background="?attr/selectableItemBackgroundBorderless"
+                    android:src="@drawable/ic_pod_unmute"
+                    android:tint="#FFFFFF"
+                    android:contentDescription="Mute / Unmute" />
+
+                <TextView
+                    android:id="@+id/yt_remote_speed_btn"
+                    android:layout_width="wrap_content"
+                    android:layout_height="26dp"
+                    android:layout_marginStart="4dp"
+                    android:paddingStart="6dp"
+                    android:paddingEnd="6dp"
+                    android:gravity="center"
+                    android:background="@drawable/bg_liquid_glass_pill"
+                    android:text="1x"
+                    android:textColor="#FFFFFF"
+                    android:textSize="11sp"
+                    android:textStyle="bold" />
+
+                <TextView
+                    android:id="@+id/yt_remote_quality_btn"
+                    android:layout_width="wrap_content"
+                    android:layout_height="26dp"
+                    android:layout_marginStart="4dp"
+                    android:paddingStart="6dp"
+                    android:paddingEnd="6dp"
+                    android:gravity="center"
+                    android:background="@drawable/bg_liquid_glass_pill"
+                    android:text="Auto"
+                    android:textColor="#FFFFFF"
+                    android:textSize="11sp"
+                    android:textStyle="bold" />
+
+                <View
+                    android:layout_width="1dp"
+                    android:layout_height="16dp"
+                    android:layout_marginStart="4dp"
+                    android:layout_marginEnd="2dp"
+                    android:background="#33FFFFFF" />
+
+                <TextView
+                    android:id="@+id/yt_remote_drag_handle"
+                    android:layout_width="32dp"
+                    android:layout_height="32dp"
+                    android:gravity="center"
+                    android:text="⠿"
+                    android:textColor="#B3FFFFFF"
+                    android:textSize="16sp"
+                    android:contentDescription="Drag Remote" />
+
+                <ImageButton
+                    android:id="@+id/yt_remote_shrink_btn"
+                    android:layout_width="28dp"
+                    android:layout_height="28dp"
+                    android:layout_marginStart="1dp"
+                    android:background="?attr/selectableItemBackgroundBorderless"
+                    android:src="@drawable/ic_shrink_bubble"
+                    android:tint="#CCFFFFFF"
+                    android:contentDescription="Shrink to Ball" />
+            </LinearLayout>
+        </HorizontalScrollView>
+
+        <!-- Collapsed Floating Liquid Glass Ball (Draggable) -->
+        <FrameLayout
+            android:id="@+id/yt_floating_remote_ball"
+            android:layout_width="44dp"
+            android:layout_height="44dp"
+            android:layout_gravity="center_vertical|end"
+            android:background="@drawable/bg_liquid_glass_ball"
+            android:clickable="true"
+            android:focusable="true"
+            android:elevation="46dp"
+            android:visibility="gone">
+
+            <TextView
+                android:layout_width="match_parent"
+                android:layout_height="match_parent"
+                android:gravity="center"
+                android:text="🎬"
+                android:textSize="18sp" />
+        </FrameLayout>
+    </FrameLayout>
+
+    <!-- 6. Floating Google Toolbar (Vertically stacked at 145dp, cleanly above action button) -->
+    <FrameLayout
+        android:id="@+id/search_nav_container"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_gravity="bottom|end"
+        android:layout_marginBottom="145dp"
+        android:layout_marginEnd="8dp"
+        android:elevation="40dp"
+        android:clickable="true"
+        android:focusable="true"
+        android:visibility="gone">
+
+        <!-- Expanded Full Dock -->
+        <HorizontalScrollView
+            android:id="@+id/search_dock_scroll"
+            android:layout_width="wrap_content"
+            android:layout_height="48dp"
+            android:background="@drawable/bg_liquid_glass"
+            android:clipToOutline="true"
+            android:scrollbars="none"
+            android:overScrollMode="never"
+            android:fillViewport="true">
+
+            <LinearLayout
+                android:id="@+id/search_dock_expanded"
+                android:layout_width="wrap_content"
+                android:layout_height="match_parent"
+                android:orientation="horizontal"
+                android:paddingStart="8dp"
+                android:paddingEnd="6dp"
+                android:gravity="center_vertical">
+
+                <ImageButton
+                    android:id="@+id/nav_dock_close"
+                    android:layout_width="26dp"
+                    android:layout_height="26dp"
+                    android:background="?attr/selectableItemBackgroundBorderless"
+                    android:src="@drawable/ic_pod_close"
+                    android:tint="#88FFFFFF"
+                    android:contentDescription="Close Toolbar" />
+
+                <View
+                    android:layout_width="1dp"
+                    android:layout_height="16dp"
+                    android:layout_marginStart="3dp"
+                    android:layout_marginEnd="3dp"
+                    android:background="#33FFFFFF" />
+
+                <ImageButton
+                    android:id="@+id/nav_dock_reload"
+                    android:layout_width="26dp"
+                    android:layout_height="26dp"
+                    android:background="?attr/selectableItemBackgroundBorderless"
+                    android:src="@drawable/ic_pod_reload"
+                    android:tint="#FFFFFF"
+                    android:contentDescription="Reload Active Tab" />
+
+                <ImageButton
+                    android:id="@+id/nav_back_btn"
+                    android:layout_width="26dp"
+                    android:layout_height="26dp"
+                    android:layout_marginStart="2dp"
+                    android:background="?attr/selectableItemBackgroundBorderless"
+                    android:src="@drawable/ic_pod_back"
+                    android:tint="#FFFFFF"
+                    android:contentDescription="Back Navigation" />
+
+                <ImageButton
+                    android:id="@+id/nav_forward_btn"
+                    android:layout_width="26dp"
+                    android:layout_height="26dp"
+                    android:layout_marginStart="2dp"
+                    android:background="?attr/selectableItemBackgroundBorderless"
+                    android:src="@drawable/ic_pod_fwd"
+                    android:tint="#FFFFFF"
+                    android:contentDescription="Forward Navigation" />
+
+                <View
+                    android:layout_width="1dp"
+                    android:layout_height="16dp"
+                    android:layout_marginStart="3dp"
+                    android:layout_marginEnd="3dp"
+                    android:background="#33FFFFFF" />
+
+                <!-- URL / Host Pill -->
+                <TextView
+                    android:id="@+id/search_dock_url"
+                    android:layout_width="wrap_content"
+                    android:minWidth="70dp"
+                    android:maxWidth="130dp"
+                    android:layout_height="26dp"
+                    android:paddingStart="8dp"
+                    android:paddingEnd="8dp"
+                    android:gravity="center"
+                    android:ellipsize="end"
+                    android:singleLine="true"
+                    android:textColor="#FFFFFF"
+                    android:textSize="11sp"
+                    android:textStyle="bold"
+                    android:text="google.com"
+                    android:background="@drawable/bg_liquid_glass_pill"
+                    android:contentDescription="Current URL" />
+
+                <!-- In-Page Finder Input Box -->
+                <LinearLayout
+                    android:id="@+id/nav_finder_box"
+                    android:layout_width="wrap_content"
+                    android:layout_height="26dp"
+                    android:background="@drawable/bg_liquid_glass_pill"
+                    android:orientation="horizontal"
+                    android:gravity="center_vertical"
+                    android:paddingStart="6dp"
+                    android:paddingEnd="6dp"
+                    android:visibility="gone">
+
+                    <EditText
+                        android:id="@+id/nav_finder_input"
+                        android:layout_width="90dp"
+                        android:layout_height="match_parent"
+                        android:background="@android:color/transparent"
+                        android:hint="Find in page..."
+                        android:textColorHint="#88FFFFFF"
+                        android:textColor="#FFFFFF"
+                        android:textSize="11sp"
+                        android:singleLine="true"
+                        android:imeOptions="actionSearch"
+                        android:inputType="text"
+                        android:padding="0dp" />
+
+                    <TextView
+                        android:id="@+id/nav_finder_count"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:text="0/0"
+                        android:textColor="#FFCC00"
+                        android:textSize="10sp"
+                        android:textStyle="bold"
+                        android:layout_marginStart="4dp" />
+                </LinearLayout>
+
+                <!-- Search / Finder Toggle Button -->
+                <ImageButton
+                    android:id="@+id/nav_finder_btn"
+                    android:layout_width="26dp"
+                    android:layout_height="26dp"
+                    android:layout_marginStart="4dp"
+                    android:background="?attr/selectableItemBackgroundBorderless"
+                    android:src="@drawable/ic_pod_search"
+                    android:tint="#FFFFFF"
+                    android:contentDescription="Find in Page" />
+
+                <!-- Finder Prev Match -->
+                <ImageButton
+                    android:id="@+id/nav_finder_prev"
+                    android:layout_width="26dp"
+                    android:layout_height="26dp"
+                    android:layout_marginStart="2dp"
+                    android:background="?attr/selectableItemBackgroundBorderless"
+                    android:src="@drawable/ic_pod_arrow_up"
+                    android:tint="#FFFFFF"
+                    android:visibility="gone"
+                    android:contentDescription="Previous Match" />
+
+                <!-- Finder Next Match -->
+                <ImageButton
+                    android:id="@+id/nav_finder_next"
+                    android:layout_width="26dp"
+                    android:layout_height="26dp"
+                    android:layout_marginStart="2dp"
+                    android:background="?attr/selectableItemBackgroundBorderless"
+                    android:src="@drawable/ic_pod_arrow_down"
+                    android:tint="#FFFFFF"
+                    android:visibility="gone"
+                    android:contentDescription="Next Match" />
+
+                <!-- Scroll Top Button -->
+                <ImageButton
+                    android:id="@+id/nav_scroll_top_btn"
+                    android:layout_width="26dp"
+                    android:layout_height="26dp"
+                    android:layout_marginStart="2dp"
+                    android:background="?attr/selectableItemBackgroundBorderless"
+                    android:src="@drawable/ic_pod_arrow_up"
+                    android:tint="#FFFFFF"
+                    android:contentDescription="Scroll to Top" />
+
+                <!-- Scroll Bottom Button -->
+                <ImageButton
+                    android:id="@+id/nav_scroll_bottom_btn"
+                    android:layout_width="26dp"
+                    android:layout_height="26dp"
+                    android:layout_marginStart="2dp"
+                    android:background="?attr/selectableItemBackgroundBorderless"
+                    android:src="@drawable/ic_pod_arrow_down"
+                    android:tint="#FFFFFF"
+                    android:contentDescription="Scroll to Bottom" />
+
+                <View
+                    android:layout_width="1dp"
+                    android:layout_height="16dp"
+                    android:layout_marginStart="4dp"
+                    android:layout_marginEnd="2dp"
+                    android:background="#33FFFFFF" />
+
+                <TextView
+                    android:id="@+id/nav_dock_drag_handle"
+                    android:layout_width="32dp"
+                    android:layout_height="32dp"
+                    android:gravity="center"
+                    android:text="⠿"
+                    android:textColor="#B3FFFFFF"
+                    android:textSize="16sp"
+                    android:contentDescription="Drag Google Toolbar" />
+
+                <ImageButton
+                    android:id="@+id/nav_dock_shrink_btn"
+                    android:layout_width="28dp"
+                    android:layout_height="28dp"
+                    android:layout_marginStart="1dp"
+                    android:background="?attr/selectableItemBackgroundBorderless"
+                    android:src="@drawable/ic_shrink_bubble"
+                    android:tint="#CCFFFFFF"
+                    android:contentDescription="Shrink Google Toolbar" />
+            </LinearLayout>
+        </HorizontalScrollView>
+
+        <!-- Collapsed Floating Liquid Glass Ball (Draggable) -->
+        <FrameLayout
+            android:id="@+id/search_nav_ball"
+            android:layout_width="44dp"
+            android:layout_height="44dp"
+            android:layout_gravity="center_vertical|end"
+            android:background="@drawable/bg_liquid_glass_ball"
+            android:clickable="true"
+            android:focusable="true"
+            android:elevation="42dp"
+            android:visibility="gone">
+
+            <TextView
+                android:layout_width="match_parent"
+                android:layout_height="match_parent"
+                android:gravity="center"
+                android:text="🌐"
+                android:textSize="18sp" />
+        </FrameLayout>
+    </FrameLayout>
+
+    <!-- 6.5 Dedicated Liquid Glass ChatGPT Dock Toolbar (Feature 1-4) -->
+    <FrameLayout
+        android:id="@+id/chatgpt_dock_container"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_gravity="bottom|end"
+        android:layout_marginBottom="145dp"
+        android:layout_marginEnd="8dp"
+        android:elevation="45dp"
+        android:clickable="true"
+        android:focusable="true"
+        android:visibility="gone">
+
+        <!-- Expanded Horizontal Floating Toolbar Dock -->
+        <HorizontalScrollView
+            android:id="@+id/chatgpt_dock_scroll"
+            android:layout_width="wrap_content"
+            android:layout_height="48dp"
+            android:scrollbars="none"
+            android:overScrollMode="never"
+            android:background="@drawable/bg_liquid_glass">
+
+            <LinearLayout
+                android:id="@+id/chatgpt_dock_expanded"
+                android:layout_width="wrap_content"
+                android:layout_height="match_parent"
+                android:orientation="horizontal"
+                android:paddingStart="8dp"
+                android:paddingEnd="6dp"
+                android:gravity="center_vertical">
+
+                <ImageButton
+                    android:id="@+id/chatgpt_dock_close"
+                    android:layout_width="26dp"
+                    android:layout_height="26dp"
+                    android:background="?attr/selectableItemBackgroundBorderless"
+                    android:src="@drawable/ic_pod_close"
+                    android:tint="#88FFFFFF"
+                    android:contentDescription="Close ChatGPT Toolbar" />
+
+                <View
+                    android:layout_width="1dp"
+                    android:layout_height="16dp"
+                    android:layout_marginStart="3dp"
+                    android:layout_marginEnd="3dp"
+                    android:background="#33FFFFFF" />
+
+                <ImageButton
+                    android:id="@+id/chatgpt_dock_reload"
+                    android:layout_width="26dp"
+                    android:layout_height="26dp"
+                    android:background="?attr/selectableItemBackgroundBorderless"
+                    android:src="@drawable/ic_pod_reload"
+                    android:tint="#FFFFFF"
+                    android:contentDescription="Reload Chat" />
+
+                <!-- Pruner Enable Toggle Pill -->
+                <TextView
+                    android:id="@+id/chatgpt_dock_toggle_btn"
+                    android:layout_width="wrap_content"
+                    android:layout_height="26dp"
+                    android:layout_marginStart="3dp"
+                    android:paddingStart="8dp"
+                    android:paddingEnd="8dp"
+                    android:gravity="center"
+                    android:text="✂️ Limit: ON"
+                    android:textColor="#00E5FF"
+                    android:textSize="11sp"
+                    android:textStyle="bold"
+                    android:background="@drawable/bg_liquid_glass_pill" />
+
+                <!-- Mode Switcher Pill (Sliding / Tail) -->
+                <TextView
+                    android:id="@+id/chatgpt_dock_mode_btn"
+                    android:layout_width="wrap_content"
+                    android:layout_height="26dp"
+                    android:layout_marginStart="3dp"
+                    android:paddingStart="8dp"
+                    android:paddingEnd="8dp"
+                    android:gravity="center"
+                    android:text="🪟 Sliding"
+                    android:textColor="#FFFFFF"
+                    android:textSize="11sp"
+                    android:textStyle="bold"
+                    android:background="@drawable/bg_liquid_glass_pill" />
+
+                <!-- Limit Selector Pill (3 / 5 / 10 / ∞) -->
+                <TextView
+                    android:id="@+id/chatgpt_dock_limit_btn"
+                    android:layout_width="wrap_content"
+                    android:layout_height="26dp"
+                    android:layout_marginStart="3dp"
+                    android:paddingStart="8dp"
+                    android:paddingEnd="8dp"
+                    android:gravity="center"
+                    android:text="5 msgs"
+                    android:textColor="#FFCC00"
+                    android:textSize="11sp"
+                    android:textStyle="bold"
+                    android:background="@drawable/bg_liquid_glass_pill" />
+
+                <View
+                    android:layout_width="1dp"
+                    android:layout_height="16dp"
+                    android:layout_marginStart="3dp"
+                    android:layout_marginEnd="3dp"
+                    android:background="#33FFFFFF" />
+
+                <!-- In-Page Word Finder Input Box -->
+                <LinearLayout
+                    android:id="@+id/chatgpt_finder_box"
+                    android:layout_width="wrap_content"
+                    android:layout_height="26dp"
+                    android:background="@drawable/bg_liquid_glass_pill"
+                    android:orientation="horizontal"
+                    android:gravity="center_vertical"
+                    android:paddingStart="6dp"
+                    android:paddingEnd="6dp"
+                    android:visibility="gone">
+
+                    <EditText
+                        android:id="@+id/chatgpt_finder_input"
+                        android:layout_width="90dp"
+                        android:layout_height="match_parent"
+                        android:background="@android:color/transparent"
+                        android:hint="Find in chat..."
+                        android:textColorHint="#88FFFFFF"
+                        android:textColor="#FFFFFF"
+                        android:textSize="11sp"
+                        android:singleLine="true"
+                        android:imeOptions="actionSearch"
+                        android:inputType="text"
+                        android:padding="0dp" />
+
+                    <TextView
+                        android:id="@+id/chatgpt_finder_count"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:text="0/0"
+                        android:textColor="#FFCC00"
+                        android:textSize="10sp"
+                        android:textStyle="bold"
+                        android:layout_marginStart="4dp" />
+                </LinearLayout>
+
+                <!-- Finder Toggle Button -->
+                <ImageButton
+                    android:id="@+id/chatgpt_finder_btn"
+                    android:layout_width="26dp"
+                    android:layout_height="26dp"
+                    android:layout_marginStart="3dp"
+                    android:background="?attr/selectableItemBackgroundBorderless"
+                    android:src="@drawable/ic_pod_search"
+                    android:tint="#FFFFFF"
+                    android:contentDescription="Find in Chat" />
+
+                <!-- Finder Prev Match -->
+                <ImageButton
+                    android:id="@+id/chatgpt_finder_prev"
+                    android:layout_width="26dp"
+                    android:layout_height="26dp"
+                    android:layout_marginStart="2dp"
+                    android:background="?attr/selectableItemBackgroundBorderless"
+                    android:src="@drawable/ic_pod_arrow_up"
+                    android:tint="#FFFFFF"
+                    android:visibility="gone"
+                    android:contentDescription="Previous Match" />
+
+                <!-- Finder Next Match -->
+                <ImageButton
+                    android:id="@+id/chatgpt_finder_next"
+                    android:layout_width="26dp"
+                    android:layout_height="26dp"
+                    android:layout_marginStart="2dp"
+                    android:background="?attr/selectableItemBackgroundBorderless"
+                    android:src="@drawable/ic_pod_arrow_down"
+                    android:tint="#FFFFFF"
+                    android:visibility="gone"
+                    android:contentDescription="Next Match" />
+
+                <View
+                    android:layout_width="1dp"
+                    android:layout_height="16dp"
+                    android:layout_marginStart="3dp"
+                    android:layout_marginEnd="3dp"
+                    android:background="#33FFFFFF" />
+
+                <!-- Step Message Above (1 Turn Up) -->
+                <ImageButton
+                    android:id="@+id/chatgpt_msg_up_btn"
+                    android:layout_width="26dp"
+                    android:layout_height="26dp"
+                    android:layout_marginStart="2dp"
+                    android:background="?attr/selectableItemBackgroundBorderless"
+                    android:src="@drawable/ic_pod_arrow_up"
+                    android:tint="#FFFFFF"
+                    android:contentDescription="1 Message Above" />
+
+                <!-- Step Message Below (1 Turn Down) -->
+                <ImageButton
+                    android:id="@+id/chatgpt_msg_down_btn"
+                    android:layout_width="26dp"
+                    android:layout_height="26dp"
+                    android:layout_marginStart="2dp"
+                    android:background="?attr/selectableItemBackgroundBorderless"
+                    android:src="@drawable/ic_pod_arrow_down"
+                    android:tint="#FFFFFF"
+                    android:contentDescription="1 Message Below" />
+
+                <View
+                    android:layout_width="1dp"
+                    android:layout_height="16dp"
+                    android:layout_marginStart="4dp"
+                    android:layout_marginEnd="2dp"
+                    android:background="#33FFFFFF" />
+
+                <TextView
+                    android:id="@+id/chatgpt_dock_drag_handle"
+                    android:layout_width="32dp"
+                    android:layout_height="32dp"
+                    android:gravity="center"
+                    android:text="⠿"
+                    android:textColor="#B3FFFFFF"
+                    android:textSize="16sp"
+                    android:contentDescription="Drag ChatGPT Toolbar" />
+
+                <ImageButton
+                    android:id="@+id/chatgpt_dock_shrink_btn"
+                    android:layout_width="28dp"
+                    android:layout_height="28dp"
+                    android:layout_marginStart="1dp"
+                    android:background="?attr/selectableItemBackgroundBorderless"
+                    android:src="@drawable/ic_shrink_bubble"
+                    android:tint="#CCFFFFFF"
+                    android:contentDescription="Shrink ChatGPT Toolbar" />
+            </LinearLayout>
+        </HorizontalScrollView>
+
+        <!-- Collapsed Floating Liquid Glass Ball (Draggable) -->
+        <FrameLayout
+            android:id="@+id/chatgpt_dock_ball"
+            android:layout_width="44dp"
+            android:layout_height="44dp"
+            android:layout_gravity="center_vertical|end"
+            android:background="@drawable/bg_liquid_glass_ball"
+            android:clickable="true"
+            android:focusable="true"
+            android:elevation="42dp"
+            android:visibility="gone">
+
+            <TextView
+                android:layout_width="match_parent"
+                android:layout_height="match_parent"
+                android:gravity="center"
+                android:text="🤖"
+                android:textSize="18sp" />
+        </FrameLayout>
+    </FrameLayout>
+
+    <!-- 7. Dictation Audio Wave Screen Overlay View -->
+    <FrameLayout
+        android:id="@+id/speech_waveform_container"
+        android:layout_width="match_parent"
+        android:layout_height="140dp"
+        android:layout_gravity="center_vertical"
+        android:elevation="110dp"
+        android:visibility="gone" />
+
+    <!-- 8. Fullscreen Video Container -->
+    <FrameLayout
+        android:id="@+id/fullscreen_container"
+        android:layout_width="match_parent"
+        android:layout_height="match_parent"
+        android:background="#000000"
+        android:elevation="120dp"
+        android:visibility="gone" />
+
+    <!-- 9. Caspian BetaA Video Splash Screen Overlay -->
+    <FrameLayout
+        android:id="@+id/splash_overlay"
+        android:layout_width="match_parent"
+        android:layout_height="match_parent"
+        android:background="#050811"
+        android:elevation="200dp"
+        android:visibility="visible">
+
+        <TextureView
+            android:id="@+id/splash_textureview"
+            android:layout_width="match_parent"
+            android:layout_height="match_parent"
+            android:layout_gravity="center" />
+    </FrameLayout>
+
+</FrameLayout>

@@ -4,6 +4,8 @@
 .DS_Store
 **/build/
 **/app/build/
+**/.gradle/
+**/.idea/
 **/__pycache__/
 captures/
 .externalNativeBuild/
