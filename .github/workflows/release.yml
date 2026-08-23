@@ -1,4 +1,4 @@
-name: Release APK
+name: Release Multi-Platform Suite
 
 on:
   push:
@@ -12,8 +12,8 @@ permissions:
   contents: write
 
 jobs:
-  release:
-    name: Publish Releases
+  publish-releases:
+    name: Publish Multi-Platform Releases
     runs-on: ubuntu-latest
     steps:
       - name: Checkout Repository
@@ -21,7 +21,23 @@ jobs:
         with:
           fetch-depth: 0
 
-      - name: Publish All Latest APK Releases
+      - name: Prepare Extension & Standardize Assets
+        run: |
+          mkdir -p versions
+          
+          # Create latest Caspian Extension zip if Caspian folder exists
+          if [ -d "Caspian" ]; then
+            cd Caspian
+            zip -r ../versions/Caspian-Extension-v6.0.0.zip ./* -x "*.git*"
+            cd ..
+          fi
+
+          # Standardize mobile naming for collision-free clarity
+          if [ -f "versions/Caspian-v1.2.40.apk" ] && [ ! -f "versions/Caspian-Mobile-v1.2.40.apk" ]; then
+            cp "versions/Caspian-v1.2.40.apk" "versions/Caspian-Mobile-v1.2.40.apk"
+          fi
+
+      - name: Publish Unified & Individual Releases via GitHub API
         uses: actions/github-script@v7
         with:
           github-token: ${{ secrets.GITHUB_TOKEN }}
@@ -29,7 +45,10 @@ jobs:
             const fs = require('fs');
             const path = require('path');
 
-            function getApks(dir) {
+            const { owner, repo } = context.repo;
+
+            // Helper to recursively find release assets
+            function getAssets(dir) {
               let results = [];
               if (!fs.existsSync(dir)) return results;
               const list = fs.readdirSync(dir);
@@ -37,70 +56,83 @@ jobs:
                 const fullPath = path.join(dir, file);
                 const stat = fs.statSync(fullPath);
                 if (stat && stat.isDirectory()) {
-                  results = results.concat(getApks(fullPath));
-                } else if (file.endsWith('.apk')) {
+                  results = results.concat(getAssets(fullPath));
+                } else if (file.endsWith('.apk') || file.endsWith('.zip')) {
                   results.push({ name: file, path: fullPath });
                 }
               }
               return results;
             }
 
-            const apks = getApks('versions').concat(getApks('betaC/versions'));
-            console.log(`Found ${apks.length} APK files in repository.`);
+            const allAssets = getAssets('versions').concat(getAssets('betaC/versions'));
+            console.log(`Found ${allAssets.length} total release assets.`);
 
-            const targetVersions = [
-              'Caspian-Flow-v1.1.15-BetaC',
-              'Caspian-Beta-A-v1.2.48',
-              'Caspian-Beta-B-v1.0.5',
-              'Caspian-v1.2.40',
-              'Caspian-v1.0.98-Release'
+            // Define the 5 primary platforms and their latest files
+            const platformConfigs = [
+              {
+                id: 'flow',
+                productName: 'Caspian Flow (Beta C)',
+                tag: 'Caspian-Flow-v1.1.15-BetaC',
+                title: '[Beta C] Caspian Flow v1.1.15-BetaC',
+                assetPattern: 'Caspian-Flow-v1.1.15-BetaC.apk',
+                isPrerelease: true,
+                desc: 'Ultra high-performance multi-threaded AI workspace browser with virtual sliding window DOM pruning and voice visualizer.'
+              },
+              {
+                id: 'mobile',
+                productName: 'Caspian Mobile',
+                tag: 'Caspian-Mobile-v1.2.40',
+                title: '[Mobile] Caspian Mobile v1.2.40',
+                assetPattern: 'Caspian-Mobile-v1.2.40.apk',
+                isPrerelease: false,
+                desc: 'Official stable Android mobile application for ChatGPT, Gemini, YouTube and Web pruning.'
+              },
+              {
+                id: 'betaA',
+                productName: 'Caspian Beta A',
+                tag: 'Caspian-Beta-A-v1.2.48',
+                title: '[Beta A] Caspian Beta A v1.2.48',
+                assetPattern: 'Caspian-Beta-A-v1.2.48.apk',
+                isPrerelease: true,
+                desc: 'Experimental build featuring rich Gemini HTML formatter, custom SFX mapping and full-height launch.'
+              },
+              {
+                id: 'betaB',
+                productName: 'Caspian Beta B',
+                tag: 'Caspian-Beta-B-v1.0.5',
+                title: '[Beta B] Caspian Beta B v1.0.5',
+                assetPattern: 'Caspian-Beta-B-v1.0.5.apk',
+                isPrerelease: true,
+                desc: 'Compact lightweight build for rapid AI browsing and split window testing.'
+              },
+              {
+                id: 'extension',
+                productName: 'Caspian Extension',
+                tag: 'Caspian-Extension-v6.0.0',
+                title: '[Extension] Caspian Extension v6.0.0',
+                assetPattern: 'Caspian-Extension-v6.0.0.zip',
+                isPrerelease: false,
+                desc: 'Official Chromium Desktop Browser Extension for ChatGPT DOM optimization and pruning.'
+              }
             ];
 
-            const { owner, repo } = context.repo;
+            async function uploadAsset(release, assetItem) {
+              const fileData = fs.readFileSync(assetItem.path);
+              const assetName = assetItem.name;
+              const contentType = assetName.endsWith('.apk') 
+                ? 'application/vnd.android.package-archive' 
+                : 'application/zip';
 
-            for (const tag of targetVersions) {
-              const matchedApk = apks.find(a => a.name.includes(tag) || tag.includes(a.name.replace('.apk', '')));
-              if (!matchedApk) {
-                console.log(`No matching APK found for tag: ${tag}`);
-                continue;
-              }
-
-              console.log(`\n========================================`);
-              console.log(`Processing Release: ${tag}`);
-              console.log(`APK Source: ${matchedApk.path}`);
-
-              let release;
-              try {
-                const res = await github.rest.repos.getReleaseByTag({ owner, repo, tag });
-                release = res.data;
-                console.log(`Existing release found (id: ${release.id})`);
-              } catch (e) {
-                console.log(`Creating new release for ${tag}...`);
-                const res = await github.rest.repos.createRelease({
-                  owner,
-                  repo,
-                  tag_name: tag,
-                  name: tag,
-                  body: `### 📱 Caspian ${tag} Release\n\nOfficial release build.\n\n- **File**: \`${matchedApk.name}\`\n\nDownload the attached APK below to install on your Android device.`,
-                  draft: false,
-                  prerelease: tag.toLowerCase().includes('beta')
-                });
-                release = res.data;
-                console.log(`Release created (id: ${release.id})`);
-              }
-
-              const fileData = fs.readFileSync(matchedApk.path);
-              const assetName = matchedApk.name;
-
+              // Remove existing asset with same name if already uploaded
               if (release.assets && release.assets.length > 0) {
-                const existingAsset = release.assets.find(a => a.name === assetName);
-                if (existingAsset) {
-                  console.log(`Deleting existing asset ${assetName} (id: ${existingAsset.id})...`);
-                  await github.rest.repos.deleteReleaseAsset({ owner, repo, asset_id: existingAsset.id });
+                const existing = release.assets.find(a => a.name === assetName);
+                if (existing) {
+                  console.log(`  - Deleting existing asset ${assetName} (id: ${existing.id})...`);
+                  await github.rest.repos.deleteReleaseAsset({ owner, repo, asset_id: existing.id });
                 }
               }
 
-              console.log(`Uploading ${assetName} (${(fileData.length / 1024 / 1024).toFixed(2)} MB)...`);
+              console.log(`  - Uploading ${assetName} (${(fileData.length / 1024 / 1024).toFixed(2)} MB)...`);
               await github.rest.repos.uploadReleaseAsset({
                 owner,
                 repo,
@@ -108,9 +140,110 @@ jobs:
                 name: assetName,
                 data: fileData,
                 headers: {
-                  'content-type': 'application/vnd.android.package-archive',
+                  'content-type': contentType,
                   'content-length': fileData.length
                 }
               });
-              console.log(`Successfully uploaded ${assetName}!`);
             }
+
+            const matchedLatestFiles = [];
+
+            // 1. Publish Individual Standalone Releases
+            for (const config of platformConfigs) {
+              const matched = allAssets.find(a => a.name === config.assetPattern || a.name.includes(config.tag));
+              if (!matched) {
+                console.log(`Warning: Could not find asset matching ${config.assetPattern}`);
+                continue;
+              }
+
+              matchedLatestFiles.push({ config, asset: matched });
+              console.log(`\n========================================`);
+              console.log(`Publishing: ${config.title}`);
+
+              let release;
+              try {
+                const res = await github.rest.repos.getReleaseByTag({ owner, repo, tag: config.tag });
+                release = res.data;
+                console.log(`Existing release found (id: ${release.id}). Updating title/body...`);
+                await github.rest.repos.updateRelease({
+                  owner,
+                  repo,
+                  release_id: release.id,
+                  name: config.title,
+                  body: `### 📱 ${config.productName}\n\n${config.desc}\n\n- **Version Tag**: \`${config.tag}\`\n- **Artifact**: \`${matched.name}\`\n\nDownload the asset below to install or use.`,
+                  prerelease: config.isPrerelease,
+                  make_latest: "false"
+                });
+              } catch (e) {
+                console.log(`Creating new release for ${config.tag}...`);
+                const res = await github.rest.repos.createRelease({
+                  owner,
+                  repo,
+                  tag_name: config.tag,
+                  name: config.title,
+                  body: `### 📱 ${config.productName}\n\n${config.desc}\n\n- **Version Tag**: \`${config.tag}\`\n- **Artifact**: \`${matched.name}\`\n\nDownload the asset below to install or use.`,
+                  draft: false,
+                  prerelease: config.isPrerelease,
+                  make_latest: "false"
+                });
+                release = res.data;
+              }
+
+              await uploadAsset(release, matched);
+              console.log(`✓ Completed release for ${config.title}`);
+            }
+
+            // 2. Publish Unified "🌟 Caspian Multi-Platform Suite (Latest)" with the "Latest" badge
+            console.log(`\n========================================`);
+            console.log(`Publishing Unified Latest Suite Release...`);
+
+            const latestTag = 'Caspian-Latest-Suite';
+            let suiteBody = `## 🌟 Caspian Multi-Platform Suite (Latest Releases)\n\n`;
+            suiteBody += `This release bundles the **latest official builds** for all Caspian applications across Android and Desktop.\n\n`;
+            suiteBody += `| Application | Latest Version | Platform | Asset Download |\n`;
+            suiteBody += `| :--- | :--- | :--- | :--- |\n`;
+
+            for (const item of matchedLatestFiles) {
+              const platformType = item.asset.name.endsWith('.apk') ? 'Android APK' : 'Chromium Extension ZIP';
+              suiteBody += `| **${item.config.productName}** | \`${item.config.tag}\` | ${platformType} | \`${item.asset.name}\` |\n`;
+            }
+
+            suiteBody += `\n### 📦 Direct Downloads\n`;
+            suiteBody += `Click on any of the attached assets below to download the latest build for your platform.\n`;
+
+            let suiteRelease;
+            try {
+              const res = await github.rest.repos.getReleaseByTag({ owner, repo, tag: latestTag });
+              suiteRelease = res.data;
+              console.log(`Existing Latest Suite release found (id: ${suiteRelease.id}). Updating...`);
+              const updated = await github.rest.repos.updateRelease({
+                owner,
+                repo,
+                release_id: suiteRelease.id,
+                name: '🌟 Caspian Multi-Platform Suite (Latest)',
+                body: suiteBody,
+                prerelease: false,
+                make_latest: "true"
+              });
+              suiteRelease = updated.data;
+            } catch (e) {
+              console.log(`Creating new Latest Suite release...`);
+              const res = await github.rest.repos.createRelease({
+                owner,
+                repo,
+                tag_name: latestTag,
+                name: '🌟 Caspian Multi-Platform Suite (Latest)',
+                body: suiteBody,
+                draft: false,
+                prerelease: false,
+                make_latest: "true"
+              });
+              suiteRelease = res.data;
+            }
+
+            // Attach all latest assets to the unified suite release
+            for (const item of matchedLatestFiles) {
+              await uploadAsset(suiteRelease, item.asset);
+            }
+
+            console.log(`\n🎉 Successfully published all releases and unified Latest Suite!`);
