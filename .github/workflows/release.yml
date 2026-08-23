@@ -1,0 +1,55 @@
+name: Release APK
+
+on:
+  push:
+    tags:
+      - '*'
+
+permissions:
+  contents: write
+
+jobs:
+  release:
+    name: Create GitHub Release
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Locate Matching APK
+        id: find_apk
+        run: |
+          TAG_NAME="${{ github.ref_name }}"
+          echo "Processing Tag: $TAG_NAME"
+          
+          # Clean tag name (remove leading 'v' if present for search)
+          SEARCH_TERM=$(echo "$TAG_NAME" | sed 's/^v//')
+          
+          # Find matching APKs in versions/ and betaC/versions/
+          MATCHES=$(find versions betaC/versions -maxdepth 2 -type f -name "*${SEARCH_TERM}*.apk" 2>/dev/null || true)
+          
+          if [ -z "$MATCHES" ]; then
+            MATCHES=$(find versions betaC/versions -maxdepth 2 -type f -name "*${TAG_NAME}*.apk" 2>/dev/null || true)
+          fi
+          
+          echo "Found APK assets:"
+          echo "$MATCHES"
+          
+          if [ -n "$MATCHES" ]; then
+            echo "apk_files<<EOF" >> $GITHUB_ENV
+            echo "$MATCHES" >> $GITHUB_ENV
+            echo "EOF" >> $GITHUB_ENV
+          fi
+
+      - name: Create Release and Upload Assets
+        uses: softprops/action-gh-release@v2
+        with:
+          name: "${{ github.ref_name }}"
+          files: ${{ env.apk_files }}
+          generate_release_notes: true
+          draft: false
+          prerelease: ${{ contains(github.ref_name, 'beta') || contains(github.ref_name, 'Beta') || contains(github.ref_name, 'rc') }}
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
