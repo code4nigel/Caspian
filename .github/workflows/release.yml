@@ -241,6 +241,21 @@ jobs:
               suiteRelease = res.data;
             }
 
+            // Purge all old/obsolete assets from the Latest Suite release so only the 5 latest files exist
+            if (suiteRelease.assets && suiteRelease.assets.length > 0) {
+              const latestAssetNames = new Set(matchedLatestFiles.map(i => i.asset.name));
+              for (const asset of suiteRelease.assets) {
+                if (!latestAssetNames.has(asset.name)) {
+                  console.log(`Deleting obsolete asset ${asset.name} (id: ${asset.id}) from Latest Suite...`);
+                  try {
+                    await github.rest.repos.deleteReleaseAsset({ owner, repo, asset_id: asset.id });
+                  } catch (err) {
+                    console.log(`Failed to delete asset ${asset.name}:`, err);
+                  }
+                }
+              }
+            }
+
             // Attach all latest assets to the unified suite release
             for (const item of matchedLatestFiles) {
               await uploadAsset(suiteRelease, item.asset);
