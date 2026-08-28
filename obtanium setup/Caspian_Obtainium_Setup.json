@@ -1,0 +1,100 @@
+{
+    "schemaVersion": 2,
+    "exportedAt": "2026-08-28T15:33:46.454766",
+    "appVersion": "0.0.0",
+    "apps": [
+        {
+            "id": "com.caspian.betac",
+            "url": "https://github.com/code4nigel/Caspian",
+            "author": "code4nigel",
+            "name": "Caspian Flow",
+            "installedVersion": "34",
+            "latestVersion": "Caspian-Flow-v1.1.23-BetaC",
+            "apkUrls": "[[\"Caspian-Flow-v1.1.23-BetaC.apk\",\"https://api.github.com/repos/code4nigel/Caspian/releases/assets/533361587\"]]",
+            "otherAssetUrls": "[[\"Caspian-Flow-v1.1.23-BetaC.tar.gz\",\"https://api.github.com/repos/code4nigel/Caspian/tarball/Caspian-Flow-v1.1.23-BetaC\"],[\"Caspian-Flow-v1.1.23-BetaC.zip\",\"https://api.github.com/repos/code4nigel/Caspian/zipball/Caspian-Flow-v1.1.23-BetaC\"]]",
+            "preferredApkIndex": 0,
+            "additionalSettings": "{\"includePrereleases\":true,\"fallbackToOlderReleases\":true,\"filterReleaseTitlesByRegEx\":\".*Flow.*\",\"filterReleaseNotesByRegEx\":\"\",\"verifyLatestTag\":false,\"sortMethodChoice\":\"date\",\"useLatestAssetDateAsReleaseDate\":false,\"releaseTitleAsVersion\":false,\"trackOnly\":false,\"versionExtractionRegEx\":\"\",\"matchGroupToUse\":\"\",\"versionDetection\":true,\"releaseDateAsVersion\":false,\"useVersionCodeAsOSVersion\":true,\"apkFilterRegEx\":\".*Flow.*\\\\.apk$\",\"invertAPKFilter\":false,\"autoApkFilterByArch\":false,\"minimumUpdateAgeDays\":\"\",\"appName\":\"Caspian Flow\",\"appAuthor\":\"Code4nigel\",\"shizukuPretendToBeGooglePlay\":false,\"allowInsecure\":false,\"exemptFromBackgroundUpdates\":false,\"skipUpdateNotifications\":false,\"about\":\"\",\"refreshBeforeDownload\":false,\"includeZips\":false,\"zippedApkFilterRegEx\":\"\",\"includeTarballs\":false,\"tarballedApkFilterRegEx\":\"\"}",
+            "lastUpdateCheck": 1787901062055868,
+            "pinned": false,
+            "categories": [
+                "Caspian Apps"
+            ],
+            "releaseDate": 1787897904000000,
+            "changeLog": "### 📱 Caspian Flow (Beta C)\n\nOmnibox UX refinements, clipboard-only suggestion preview, custom obsidian frosted glass context menus, Browsing History manager with selective clearing, and Dual AI Ask.\n\n- **Version Tag**: `Caspian-Flow-v1.1.23-BetaC`\n- **Artifact**: `Caspian-Flow-v1.1.23-BetaC.apk`\n\nDownload the asset below to install or use.",
+            "overrideSource": null,
+            "allowIdChange": true,
+            "pendingRepoRenameUrl": null
+        },
+        {
+            "id": "com.caspian.ai",
+            "url": "https://github.com/code4nigel/Caspian",
+            "author": "code4nigel",
+            "name": "Caspian Mobile",
+            "installedVersion": "248",
+            "latestVersion": "Caspian-Mobile-v1.2.40",
+            "apkUrls": "[[\"Caspian-Mobile-v1.2.40.apk\",\"https://api.github.com/repos/code4nigel/Caspian/releases/assets/533361615\"]]",
+            "otherAssetUrls": "[[\"Caspian-Mobile-v1.2.40.tar.gz\",\"https://api.github.com/repos/code4nigel/Caspian/tarball/Caspian-Mobile-v1.2.40\"],[\"Caspian-Mobile-v1.2.40.zip\",\"https://api.github.com/repos/code4nigel/Caspian/zipball/Caspian-Mobile-v1.2.40\"]]",
+            "preferredApkIndex": 0,
+            "additionalSettings": "{\"includePrereleases\":true,\"fallbackToOlderReleases\":true,\"filterReleaseTitlesByRegEx\":\".*Mobile.*\",\"filterReleaseNotesByRegEx\":\"\",\"verifyLatestTag\":false,\"sortMethodChoice\":\"date\",\"useLatestAssetDateAsReleaseDate\":false,\"releaseTitleAsVersion\":false,\"trackOnly\":false,\"versionExtractionRegEx\":\"\",\"matchGroupToUse\":\"\",\"versionDetection\":true,\"releaseDateAsVersion\":false,\"useVersionCodeAsOSVersion\":true,\"apkFilterRegEx\":\".*Mobile.*\\\\.apk$\",\"invertAPKFilter\":false,\"autoApkFilterByArch\":false,\"minimumUpdateAgeDays\":\"\",\"appName\":\"Caspian Mobile\",\"appAuthor\":\"Code4nigel\",\"shizukuPretendToBeGooglePlay\":false,\"allowInsecure\":false,\"exemptFromBackgroundUpdates\":false,\"skipUpdateNotifications\":false,\"about\":\"\",\"refreshBeforeDownload\":false,\"includeZips\":false,\"zippedApkFilterRegEx\":\"\",\"includeTarballs\":false,\"tarballedApkFilterRegEx\":\"\"}",
+            "lastUpdateCheck": 1787898962277480,
+            "pinned": false,
+            "categories": [
+                "Caspian Apps"
+            ],
+            "releaseDate": 1787506943000000,
+            "changeLog": "### 📱 Caspian Mobile\n\nOfficial stable Android mobile application for ChatGPT, Gemini, YouTube and Web pruning.\n\n- **Version Tag**: `Caspian-Mobile-v1.2.40`\n- **Artifact**: `Caspian-Mobile-v1.2.40.apk`\n\nDownload the asset below to install or use.",
+            "overrideSource": null,
+            "allowIdChange": true,
+            "pendingRepoRenameUrl": null
+        },
+        {
+            "id": "com.caspian.betaa",
+            "url": "https://github.com/code4nigel/Caspian",
+            "author": "code4nigel",
+            "name": "Caspian Beta A",
+            "installedVersion": "Caspian-Beta-A-v1.2.48",
+            "latestVersion": "Caspian-Beta-A-v1.2.48",
+            "apkUrls": "[[\"Caspian-Beta-A-v1.2.48.apk\",\"https://api.github.com/repos/code4nigel/Caspian/releases/assets/533361639\"]]",
+            "otherAssetUrls": "[[\"Caspian-Beta-A-v1.2.48.tar.gz\",\"https://api.github.com/repos/code4nigel/Caspian/tarball/Caspian-Beta-A-v1.2.48\"],[\"Caspian-Beta-A-v1.2.48.zip\",\"https://api.github.com/repos/code4nigel/Caspian/zipball/Caspian-Beta-A-v1.2.48\"]]",
+            "preferredApkIndex": 0,
+            "additionalSettings": "{\"includePrereleases\":true,\"fallbackToOlderReleases\":true,\"filterReleaseTitlesByRegEx\":\".*Beta. *A.*\",\"filterReleaseNotesByRegEx\":\"\",\"verifyLatestTag\":false,\"sortMethodChoice\":\"date\",\"useLatestAssetDateAsReleaseDate\":false,\"releaseTitleAsVersion\":false,\"trackOnly\":false,\"versionExtractionRegEx\":\"\",\"matchGroupToUse\":\"\",\"versionDetection\":false,\"releaseDateAsVersion\":false,\"useVersionCodeAsOSVersion\":false,\"apkFilterRegEx\":\".*Beta.*A.*\\\\.apk$\",\"invertAPKFilter\":false,\"autoApkFilterByArch\":true,\"minimumUpdateAgeDays\":\"\",\"appName\":\"Caspian Beta A\",\"appAuthor\":\"Code4nigel\",\"shizukuPretendToBeGooglePlay\":false,\"allowInsecure\":false,\"exemptFromBackgroundUpdates\":false,\"skipUpdateNotifications\":false,\"about\":\"\",\"refreshBeforeDownload\":false,\"includeZips\":false,\"zippedApkFilterRegEx\":\"\",\"includeTarballs\":false,\"tarballedApkFilterRegEx\":\"\"}",
+            "lastUpdateCheck": 1787898962281619,
+            "pinned": false,
+            "categories": [
+                "Caspian Apps"
+            ],
+            "releaseDate": 1787506330000000,
+            "changeLog": "### 📱 Caspian Beta A\n\nExperimental build featuring rich Gemini HTML formatter, custom SFX mapping and full-height launch.\n\n- **Version Tag**: `Caspian-Beta-A-v1.2.48`\n- **Artifact**: `Caspian-Beta-A-v1.2.48.apk`\n\nDownload the asset below to install or use.",
+            "overrideSource": null,
+            "allowIdChange": true,
+            "pendingRepoRenameUrl": null
+        },
+        {
+            "id": "dev.imranr.obtainium",
+            "url": "https://github.com/ImranR98/Obtainium",
+            "author": "ImranR98",
+            "name": "Obtainium",
+            "installedVersion": "v1.6.13",
+            "latestVersion": "v1.6.13",
+            "apkUrls": "[[\"app-arm64-v8a-release.apk\",\"https://api.github.com/repos/ImranR98/Obtainium/releases/assets/527138093\"]]",
+            "otherAssetUrls": "[[\"app-arm64-v8a-fdroid-release.apk\",\"https://api.github.com/repos/ImranR98/Obtainium/releases/assets/527138013\"],[\"app-arm64-v8a-fdroid-release.apk.idsig\",\"https://github.com/ImranR98/Obtainium/releases/download/v1.6.13/app-arm64-v8a-fdroid-release.apk.idsig\"],[\"app-arm64-v8a-fdroid-release.apk.sha256\",\"https://github.com/ImranR98/Obtainium/releases/download/v1.6.13/app-arm64-v8a-fdroid-release.apk.sha256\"],[\"app-arm64-v8a-fdroid-release.apk.sha256.sig\",\"https://github.com/ImranR98/Obtainium/releases/download/v1.6.13/app-arm64-v8a-fdroid-release.apk.sha256.sig\"],[\"app-arm64-v8a-release.apk.idsig\",\"https://github.com/ImranR98/Obtainium/releases/download/v1.6.13/app-arm64-v8a-release.apk.idsig\"],[\"app-arm64-v8a-release.apk.sha256\",\"https://github.com/ImranR98/Obtainium/releases/download/v1.6.13/app-arm64-v8a-release.apk.sha256\"],[\"app-arm64-v8a-release.apk.sha256.sig\",\"https://github.com/ImranR98/Obtainium/releases/download/v1.6.13/app-arm64-v8a-release.apk.sha256.sig\"],[\"app-armeabi-v7a-fdroid-release.apk\",\"https://api.github.com/repos/ImranR98/Obtainium/releases/assets/527138153\"],[\"app-armeabi-v7a-fdroid-release.apk.idsig\",\"https://github.com/ImranR98/Obtainium/releases/download/v1.6.13/app-armeabi-v7a-fdroid-release.apk.idsig\"],[\"app-armeabi-v7a-fdroid-release.apk.sha256\",\"https://github.com/ImranR98/Obtainium/releases/download/v1.6.13/app-armeabi-v7a-fdroid-release.apk.sha256\"],[\"app-armeabi-v7a-fdroid-release.apk.sha256.sig\",\"https://github.com/ImranR98/Obtainium/releases/download/v1.6.13/app-armeabi-v7a-fdroid-release.apk.sha256.sig\"],[\"app-armeabi-v7a-release.apk\",\"https://api.github.com/repos/ImranR98/Obtainium/releases/assets/527138194\"],[\"app-armeabi-v7a-release.apk.idsig\",\"https://github.com/ImranR98/Obtainium/releases/download/v1.6.13/app-armeabi-v7a-release.apk.idsig\"],[\"app-armeabi-v7a-release.apk.sha256\",\"https://github.com/ImranR98/Obtainium/releases/download/v1.6.13/app-armeabi-v7a-release.apk.sha256\"],[\"app-armeabi-v7a-release.apk.sha256.sig\",\"https://github.com/ImranR98/Obtainium/releases/download/v1.6.13/app-armeabi-v7a-release.apk.sha256.sig\"],[\"app-fdroid-release.apk\",\"https://api.github.com/repos/ImranR98/Obtainium/releases/assets/527138250\"],[\"app-fdroid-release.apk.idsig\",\"https://github.com/ImranR98/Obtainium/releases/download/v1.6.13/app-fdroid-release.apk.idsig\"],[\"app-fdroid-release.apk.sha256\",\"https://github.com/ImranR98/Obtainium/releases/download/v1.6.13/app-fdroid-release.apk.sha256\"],[\"app-fdroid-release.apk.sha256.sig\",\"https://github.com/ImranR98/Obtainium/releases/download/v1.6.13/app-fdroid-release.apk.sha256.sig\"],[\"app-release.apk\",\"https://api.github.com/repos/ImranR98/Obtainium/releases/assets/527138441\"],[\"app-release.apk.idsig\",\"https://github.com/ImranR98/Obtainium/releases/download/v1.6.13/app-release.apk.idsig\"],[\"app-release.apk.sha256\",\"https://github.com/ImranR98/Obtainium/releases/download/v1.6.13/app-release.apk.sha256\"],[\"app-release.apk.sha256.sig\",\"https://github.com/ImranR98/Obtainium/releases/download/v1.6.13/app-release.apk.sha256.sig\"],[\"app-x86_64-fdroid-release.apk\",\"https://api.github.com/repos/ImranR98/Obtainium/releases/assets/527138679\"],[\"app-x86_64-fdroid-release.apk.idsig\",\"https://github.com/ImranR98/Obtainium/releases/download/v1.6.13/app-x86_64-fdroid-release.apk.idsig\"],[\"app-x86_64-fdroid-release.apk.sha256\",\"https://github.com/ImranR98/Obtainium/releases/download/v1.6.13/app-x86_64-fdroid-release.apk.sha256\"],[\"app-x86_64-fdroid-release.apk.sha256.sig\",\"https://github.com/ImranR98/Obtainium/releases/download/v1.6.13/app-x86_64-fdroid-release.apk.sha256.sig\"],[\"app-x86_64-release.apk\",\"https://api.github.com/repos/ImranR98/Obtainium/releases/assets/527138772\"],[\"app-x86_64-release.apk.idsig\",\"https://github.com/ImranR98/Obtainium/releases/download/v1.6.13/app-x86_64-release.apk.idsig\"],[\"app-x86_64-release.apk.sha256\",\"https://github.com/ImranR98/Obtainium/releases/download/v1.6.13/app-x86_64-release.apk.sha256\"],[\"app-x86_64-release.apk.sha256.sig\",\"https://github.com/ImranR98/Obtainium/releases/download/v1.6.13/app-x86_64-release.apk.sha256.sig\"],[\"v1.6.13.tar.gz\",\"https://api.github.com/repos/ImranR98/Obtainium/tarball/v1.6.13\"],[\"v1.6.13.zip\",\"https://api.github.com/repos/ImranR98/Obtainium/zipball/v1.6.13\"]]",
+            "preferredApkIndex": 0,
+            "additionalSettings": "{\"includePrereleases\":false,\"fallbackToOlderReleases\":true,\"filterReleaseTitlesByRegEx\":\"\",\"filterReleaseNotesByRegEx\":\"\",\"verifyLatestTag\":false,\"sortMethodChoice\":\"date\",\"useLatestAssetDateAsReleaseDate\":false,\"releaseTitleAsVersion\":false,\"trackOnly\":false,\"versionExtractionRegEx\":\"\",\"matchGroupToUse\":\"\",\"versionDetection\":true,\"releaseDateAsVersion\":false,\"useVersionCodeAsOSVersion\":false,\"apkFilterRegEx\":\"fdroid\",\"invertAPKFilter\":true,\"autoApkFilterByArch\":true,\"minimumUpdateAgeDays\":\"\",\"appName\":\"\",\"appAuthor\":\"\",\"shizukuPretendToBeGooglePlay\":false,\"allowInsecure\":false,\"exemptFromBackgroundUpdates\":false,\"skipUpdateNotifications\":false,\"about\":\"\",\"refreshBeforeDownload\":false,\"includeZips\":false,\"zippedApkFilterRegEx\":\"\",\"includeTarballs\":false,\"tarballedApkFilterRegEx\":\"\"}",
+            "lastUpdateCheck": 1787898961978706,
+            "pinned": false,
+            "categories": [],
+            "releaseDate": 1787549628000000,
+            "changeLog": "## What's Changed\r\n- Allow HTTPS-to-HTTP redirect downgrades for sources that opt in, fixing Vivo source downloads (#3229)\r\n- Add minimum age for updates setting (global and per-app) to delay/suppress fresh releases (#3004)\r\n- Add optional setting to skip the bulk update/install confirmation dialog (#3099)\r\n- Add global APK filter regex setting applied when no per-app filter is set (#2979)\r\n- Add setting to collapse all app groups upon startup (#3168)\r\n- Update German translations for background silent installs and hide downgrades settings (#3182)\r\n- Support direct links to zipped APKs and preserve container file extensions on download (#3208)\r\n- Log uncaught framework errors to the in-app log store (#3226)\r\n- Fix continue/cancel confirmation dialog always returning false, breaking log deletion, categorization, and release-date confirmations (#3226, #3213)\r\n- Minor UI tweaks\r\n\r\n\r\n**Full Changelog**: https://github.com/ImranR98/Obtainium/compare/v1.6.12...v1.6.13",
+            "overrideSource": null,
+            "allowIdChange": false,
+            "pendingRepoRenameUrl": null
+        }
+    ],
+    "settings": {
+        "welcomeShown": true,
+        "categories": "{\"Caspian Apps\":4282557941}",
+        "firstRun": false,
+        "exportDir": "content://com.android.externalstorage.documents/tree/primary%3ADownload%2Fobtainum",
+        "googleVerificationWarningShown": true
+    }
+}
