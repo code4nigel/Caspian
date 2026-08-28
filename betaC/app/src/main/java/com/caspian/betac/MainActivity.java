@@ -14,7 +14,9 @@ import android.graphics.Bitmap;
 import android.graphics.Canvas;
 import android.graphics.Color;
 import android.graphics.SurfaceTexture;
+import android.graphics.drawable.ColorDrawable;
 import android.graphics.drawable.GradientDrawable;
+import android.widget.PopupWindow;
 import android.media.AudioAttributes;
 import android.media.AudioFormat;
 import android.media.AudioRecord;
@@ -200,7 +202,6 @@ public class MainActivity extends AppCompatActivity {
     private ImageButton omniboxMenuBtn;
     private ProgressBar browserProgressBar;
 
-    private androidx.swiperefreshlayout.widget.SwipeRefreshLayout swipeRefreshLayout;
     private FrameLayout omniboxSuggestionsContainer;
     private LinearLayout omniboxClipboardChip;
     private TextView omniboxClipboardText;
@@ -414,7 +415,6 @@ public class MainActivity extends AppCompatActivity {
         try { setupSplitDividerDrag(); } catch (Throwable ignored) {}
         try { setupModernTabGridOverlay(); } catch (Throwable ignored) {}
         try { setupPlatformModal(); } catch (Throwable ignored) {}
-        try { setupPullToRefresh(); } catch (Throwable ignored) {}
         try { setupOmniboxSwipeTabSwitcher(); } catch (Throwable ignored) {}
         try { setupOmniboxSuggestions(); } catch (Throwable ignored) {}
         try { initCaspianBetaASplash(); } catch (Throwable ignored) {}
@@ -794,7 +794,6 @@ public class MainActivity extends AppCompatActivity {
             omniboxShieldIcon = findViewById(R.id.omnibox_shield_icon);
             omniboxEditText = findViewById(R.id.omnibox_edit_text);
             omniboxClearBtn = findViewById(R.id.omnibox_clear_btn);
-            omniboxFinderBtn = findViewById(R.id.omnibox_finder_btn);
             omniboxVoiceBtn = findViewById(R.id.omnibox_voice_btn);
 
             omniboxFinderContainer = findViewById(R.id.omnibox_finder_container);
@@ -812,7 +811,6 @@ public class MainActivity extends AppCompatActivity {
             omniboxMenuBtn = findViewById(R.id.omnibox_menu_btn);
             browserProgressBar = findViewById(R.id.browser_progress_bar);
 
-            swipeRefreshLayout = findViewById(R.id.swipe_refresh_layout);
             omniboxSuggestionsContainer = findViewById(R.id.omnibox_suggestions_container);
             omniboxClipboardChip = findViewById(R.id.omnibox_clipboard_chip);
             omniboxClipboardText = findViewById(R.id.omnibox_clipboard_text);
@@ -829,7 +827,6 @@ public class MainActivity extends AppCompatActivity {
             splitDividerHandle = findViewById(R.id.split_divider_handle);
 
             splitArenaBroadcastContainer = findViewById(R.id.split_arena_broadcast_container);
-            splitArenaLabel = findViewById(R.id.split_arena_label);
             splitArenaInput = findViewById(R.id.split_arena_input);
             splitArenaSendBtn = findViewById(R.id.split_arena_send_btn);
             splitArenaCloseBtn = findViewById(R.id.split_arena_close_btn);
@@ -843,7 +840,6 @@ public class MainActivity extends AppCompatActivity {
 
             tabGridOverlay = findViewById(R.id.tab_grid_overlay);
             tabGridCountBadge = findViewById(R.id.tab_grid_count_badge);
-            tabGridIncognitoBtn = findViewById(R.id.tab_grid_incognito_btn);
             tabGridCloseViewBtn = findViewById(R.id.tab_grid_close_view_btn);
             tabGridSearchInput = findViewById(R.id.tab_grid_search_input);
             tabGridGroupBanner = findViewById(R.id.tab_grid_group_banner);
@@ -1001,12 +997,6 @@ public class MainActivity extends AppCompatActivity {
             hideTabGridView();
         });
 
-        tabGridIncognitoBtn.setOnClickListener(v -> {
-            playUiFeedbackSound("tap");
-            addNewIncognitoTab();
-            hideTabGridView();
-        });
-
         if (btnTabGridGroupBack != null) {
             btnTabGridGroupBack.setOnClickListener(v -> {
                 playUiFeedbackSound("tap");
@@ -1155,7 +1145,9 @@ public class MainActivity extends AppCompatActivity {
         tabGridContentLayout.removeAllViews();
 
         int screenWidth = getResources().getDisplayMetrics().widthPixels;
-        int cardWidth = (screenWidth - 44) / 2;
+        // Total horizontal inset = 14dp padding left + 14dp padding right + 6dp margin * 4 = 52dp
+        int totalHorizontalPaddingPx = dpToPx(14 * 2 + 6 * 4);
+        int cardWidth = (screenWidth - totalHorizontalPaddingPx) / 2;
 
         if (currentGridGroupId != null) {
             TabGroup activeGroup = null;
@@ -1177,7 +1169,7 @@ public class MainActivity extends AppCompatActivity {
             grid.setColumnCount(2);
             grid.setAlignmentMode(GridLayout.ALIGN_MARGINS);
             grid.setColumnOrderPreserved(false);
-            grid.setUseDefaultMargins(true);
+            grid.setUseDefaultMargins(false);
 
             if (activeGroup != null) {
                 for (int tabId : activeGroup.tabIds) {
@@ -1201,7 +1193,7 @@ public class MainActivity extends AppCompatActivity {
         grid.setColumnCount(2);
         grid.setAlignmentMode(GridLayout.ALIGN_MARGINS);
         grid.setColumnOrderPreserved(false);
-        grid.setUseDefaultMargins(true);
+        grid.setUseDefaultMargins(false);
 
         for (TabItem tab : tabsList) {
             if (!groupedTabIds.contains(tab.id)) {
@@ -1223,38 +1215,35 @@ public class MainActivity extends AppCompatActivity {
         GridLayout.LayoutParams lp = new GridLayout.LayoutParams();
         lp.width = cardWidth;
         lp.height = (int) (cardWidth * 1.35f);
-        lp.setMargins(6, 6, 6, 6);
+        lp.setMargins(dpToPx(6), dpToPx(6), dpToPx(6), dpToPx(6));
         card.setLayoutParams(lp);
 
         GradientDrawable gd = new GradientDrawable();
-        gd.setColor(0xFF0D1524);
-        gd.setCornerRadius(TypedValue.applyDimension(TypedValue.COMPLEX_UNIT_DIP, 14, getResources().getDisplayMetrics()));
-        gd.setStroke((int) TypedValue.applyDimension(TypedValue.COMPLEX_UNIT_DIP, 2f, getResources().getDisplayMetrics()), Color.parseColor(group.color != null ? group.color : "#3b82f6"));
+        gd.setColor(0xFF181B25); // Stitch Obsidian surface-container-low
+        gd.setCornerRadius(dpToPx(18));
+        gd.setStroke(dpToPx(2), Color.parseColor(group.color != null ? group.color : "#00E5FF"));
         card.setBackground(gd);
-        card.setPadding(8, 8, 8, 8);
+        card.setPadding(dpToPx(10), dpToPx(10), dpToPx(10), dpToPx(10));
 
         LinearLayout header = new LinearLayout(this);
         header.setOrientation(LinearLayout.HORIZONTAL);
         header.setGravity(Gravity.CENTER_VERTICAL);
 
         View colorDot = new View(this);
-        LinearLayout.LayoutParams dotLp = new LinearLayout.LayoutParams(
-                (int) TypedValue.applyDimension(TypedValue.COMPLEX_UNIT_DIP, 10, getResources().getDisplayMetrics()),
-                (int) TypedValue.applyDimension(TypedValue.COMPLEX_UNIT_DIP, 10, getResources().getDisplayMetrics())
-        );
+        LinearLayout.LayoutParams dotLp = new LinearLayout.LayoutParams(dpToPx(10), dpToPx(10));
         colorDot.setLayoutParams(dotLp);
         GradientDrawable dotGd = new GradientDrawable();
         dotGd.setShape(GradientDrawable.OVAL);
-        dotGd.setColor(Color.parseColor(group.color != null ? group.color : "#3b82f6"));
+        dotGd.setColor(Color.parseColor(group.color != null ? group.color : "#00E5FF"));
         colorDot.setBackground(dotGd);
 
         TextView titleView = new TextView(this);
         LinearLayout.LayoutParams titleLp = new LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.WRAP_CONTENT, 1f);
-        titleLp.setMarginStart(6);
+        titleLp.setMarginStart(dpToPx(8));
         titleView.setLayoutParams(titleLp);
         titleView.setText(group.title + " (" + group.tabIds.size() + ")");
-        titleView.setTextColor(0xFFFFFFFF);
-        titleView.setTextSize(11);
+        titleView.setTextColor(0xFFDFE2F0);
+        titleView.setTextSize(TypedValue.COMPLEX_UNIT_SP, 12);
         titleView.setTypeface(null, android.graphics.Typeface.BOLD);
         titleView.setSingleLine(true);
         titleView.setEllipsize(android.text.TextUtils.TruncateAt.END);
@@ -1265,14 +1254,14 @@ public class MainActivity extends AppCompatActivity {
 
         GridLayout miniGrid = new GridLayout(this);
         LinearLayout.LayoutParams gridLp = new LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, 0, 1f);
-        gridLp.topMargin = 6;
+        gridLp.topMargin = dpToPx(8);
         miniGrid.setLayoutParams(gridLp);
         miniGrid.setColumnCount(2);
         miniGrid.setRowCount(2);
         miniGrid.setUseDefaultMargins(false);
 
-        int miniW = (cardWidth - 28) / 2;
-        int miniH = ((int) (cardWidth * 1.35f) - 48) / 2;
+        int miniW = (cardWidth - dpToPx(32)) / 2;
+        int miniH = ((int) (cardWidth * 1.35f) - dpToPx(56)) / 2;
 
         int count = 0;
         for (int tabId : group.tabIds) {
@@ -1282,9 +1271,14 @@ public class MainActivity extends AppCompatActivity {
             GridLayout.LayoutParams tileLp = new GridLayout.LayoutParams();
             tileLp.width = miniW;
             tileLp.height = miniH;
-            tileLp.setMargins(2, 2, 2, 2);
+            tileLp.setMargins(dpToPx(2), dpToPx(2), dpToPx(2), dpToPx(2));
             miniTile.setLayoutParams(tileLp);
-            miniTile.setBackgroundColor(0xFF050811);
+
+            GradientDrawable tileGd = new GradientDrawable();
+            tileGd.setColor(0xFF0A0E17);
+            tileGd.setCornerRadius(dpToPx(8));
+            miniTile.setBackground(tileGd);
+            miniTile.setClipToOutline(true);
 
             if (tab != null && tab.snapshotBitmap != null && !tab.snapshotBitmap.isRecycled()) {
                 ImageView miniImg = new ImageView(this);
@@ -1309,9 +1303,14 @@ public class MainActivity extends AppCompatActivity {
             GridLayout.LayoutParams tileLp = new GridLayout.LayoutParams();
             tileLp.width = miniW;
             tileLp.height = miniH;
-            tileLp.setMargins(2, 2, 2, 2);
+            tileLp.setMargins(dpToPx(2), dpToPx(2), dpToPx(2), dpToPx(2));
             emptyTile.setLayoutParams(tileLp);
-            emptyTile.setBackgroundColor(0xFF08101E);
+
+            GradientDrawable emptyGd = new GradientDrawable();
+            emptyGd.setColor(0xFF0F131D);
+            emptyGd.setCornerRadius(dpToPx(8));
+            emptyTile.setBackground(emptyGd);
+
             miniGrid.addView(emptyTile);
             count++;
         }
@@ -1339,65 +1338,88 @@ public class MainActivity extends AppCompatActivity {
         GridLayout.LayoutParams lp = new GridLayout.LayoutParams();
         lp.width = cardWidth;
         lp.height = (int) (cardWidth * 1.35f);
-        lp.setMargins(6, 6, 6, 6);
+        lp.setMargins(dpToPx(6), dpToPx(6), dpToPx(6), dpToPx(6));
         card.setLayoutParams(lp);
 
         GradientDrawable gd = new GradientDrawable();
-        gd.setColor(0xFF0D1524);
-        gd.setCornerRadius(TypedValue.applyDimension(TypedValue.COMPLEX_UNIT_DIP, 14, getResources().getDisplayMetrics()));
+        gd.setColor(0xFF181B25); // Stitch Obsidian surface-container-low
+        gd.setCornerRadius(dpToPx(18));
         if (isSelected) {
-            gd.setStroke((int) TypedValue.applyDimension(TypedValue.COMPLEX_UNIT_DIP, 3f, getResources().getDisplayMetrics()), 0xFFFFCC00);
+            gd.setStroke(dpToPx(3), 0xFFFFCC00);
         } else if (isActive) {
-            gd.setStroke((int) TypedValue.applyDimension(TypedValue.COMPLEX_UNIT_DIP, 2.5f, getResources().getDisplayMetrics()), Color.parseColor(podStartColor));
+            gd.setStroke(dpToPx(2), 0xFF00E5FF); // Stitch Neon Cyan
         } else {
-            gd.setStroke((int) TypedValue.applyDimension(TypedValue.COMPLEX_UNIT_DIP, 1f, getResources().getDisplayMetrics()), 0x33FFFFFF);
+            gd.setStroke(dpToPx(1), 0x22FFFFFF); // 1px translucent micro-border
         }
         card.setBackground(gd);
-        card.setPadding(8, 8, 8, 8);
+        card.setPadding(dpToPx(10), dpToPx(10), dpToPx(10), dpToPx(10));
 
         LinearLayout header = new LinearLayout(this);
         header.setOrientation(LinearLayout.HORIZONTAL);
         header.setGravity(Gravity.CENTER_VERTICAL);
 
+        // Icon Chip
+        FrameLayout iconChip = new FrameLayout(this);
+        iconChip.setLayoutParams(new LinearLayout.LayoutParams(dpToPx(22), dpToPx(22)));
+        GradientDrawable iconChipGd = new GradientDrawable();
+        iconChipGd.setColor(0xFF1C1F29);
+        iconChipGd.setCornerRadius(dpToPx(6));
+        iconChip.setBackground(iconChipGd);
+
         TextView iconView = new TextView(this);
+        iconView.setLayoutParams(new FrameLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.MATCH_PARENT));
+        iconView.setGravity(Gravity.CENTER);
         iconView.setText(tab.isIncognito ? "🕶️" : (url.contains("youtube.com") ? "🎬" : (url.contains("chatgpt.com") ? "🤖" : (url.contains("gemini.google.com") ? "♊" : "🌐"))));
-        iconView.setTextSize(12);
+        iconView.setTextSize(11);
+        iconChip.addView(iconView);
 
         TextView titleView = new TextView(this);
         LinearLayout.LayoutParams titleLp = new LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.WRAP_CONTENT, 1f);
-        titleLp.setMarginStart(6);
+        titleLp.setMarginStart(dpToPx(8));
         titleView.setLayoutParams(titleLp);
         titleView.setText(tab.nickname != null && !tab.nickname.isEmpty() ? tab.nickname : title);
-        titleView.setTextColor(0xFFFFFFFF);
-        titleView.setTextSize(11);
+        titleView.setTextColor(0xFFDFE2F0);
+        titleView.setTextSize(TypedValue.COMPLEX_UNIT_SP, 12);
+        titleView.setTypeface(null, android.graphics.Typeface.BOLD);
         titleView.setSingleLine(true);
         titleView.setEllipsize(android.text.TextUtils.TruncateAt.END);
 
+        FrameLayout closeCircle = new FrameLayout(this);
+        closeCircle.setLayoutParams(new LinearLayout.LayoutParams(dpToPx(22), dpToPx(22)));
+        GradientDrawable closeGd = new GradientDrawable();
+        closeGd.setColor(0xFF262A34);
+        closeGd.setShape(GradientDrawable.OVAL);
+        closeCircle.setBackground(closeGd);
+
         ImageButton closeBtn = new ImageButton(this);
-        closeBtn.setLayoutParams(new LinearLayout.LayoutParams(
-                (int) TypedValue.applyDimension(TypedValue.COMPLEX_UNIT_DIP, 22, getResources().getDisplayMetrics()),
-                (int) TypedValue.applyDimension(TypedValue.COMPLEX_UNIT_DIP, 22, getResources().getDisplayMetrics())
-        ));
+        closeBtn.setLayoutParams(new FrameLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.MATCH_PARENT));
         closeBtn.setBackgroundResource(android.R.color.transparent);
         closeBtn.setImageResource(R.drawable.ic_pod_close);
-        closeBtn.setColorFilter(0x88FFFFFF);
+        closeBtn.setColorFilter(0xFFBAC9CC);
+        closeBtn.setPadding(dpToPx(4), dpToPx(4), dpToPx(4), dpToPx(4));
         closeBtn.setOnClickListener(v -> {
             playUiFeedbackSound("tap");
             closeTab(tab.id);
             selectedGridTabIds.remove(tab.id);
             renderTabGridCards(tabGridSearchInput.getText().toString());
         });
+        closeCircle.addView(closeBtn);
 
-        header.addView(iconView);
+        header.addView(iconChip);
         header.addView(titleView);
-        header.addView(closeBtn);
+        header.addView(closeCircle);
         card.addView(header);
 
         FrameLayout body = new FrameLayout(this);
         LinearLayout.LayoutParams bodyLp = new LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, 0, 1f);
-        bodyLp.topMargin = 6;
+        bodyLp.topMargin = dpToPx(8);
         body.setLayoutParams(bodyLp);
-        body.setBackgroundColor(0xFF050811);
+
+        GradientDrawable bodyGd = new GradientDrawable();
+        bodyGd.setColor(0xFF0A0E17);
+        bodyGd.setCornerRadius(dpToPx(12));
+        body.setBackground(bodyGd);
+        body.setClipToOutline(true);
 
         if (tab.snapshotBitmap != null && !tab.snapshotBitmap.isRecycled()) {
             ImageView previewImage = new ImageView(this);
@@ -1409,46 +1431,42 @@ public class MainActivity extends AppCompatActivity {
             TextView urlSnippet = new TextView(this);
             urlSnippet.setLayoutParams(new FrameLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT, Gravity.CENTER));
             urlSnippet.setText(cleanDisplayUrl(url));
-            urlSnippet.setTextColor(0x55A2A9A9);
+            urlSnippet.setTextColor(0xFF849396);
             urlSnippet.setTextSize(10);
             urlSnippet.setGravity(Gravity.CENTER);
-            urlSnippet.setPadding(6, 6, 6, 6);
+            urlSnippet.setPadding(dpToPx(8), dpToPx(8), dpToPx(8), dpToPx(8));
             body.addView(urlSnippet);
         }
+
+        // Domain pill badge pinned at bottom-left
+        String displayDomain = cleanDisplayUrl(url);
+        if (!displayDomain.isEmpty()) {
+            TextView domainBadge = new TextView(this);
+            FrameLayout.LayoutParams badgeLp = new FrameLayout.LayoutParams(ViewGroup.LayoutParams.WRAP_CONTENT, ViewGroup.LayoutParams.WRAP_CONTENT);
+            badgeLp.gravity = Gravity.BOTTOM | Gravity.START;
+            badgeLp.setMargins(dpToPx(6), 0, 0, dpToPx(6));
+            domainBadge.setLayoutParams(badgeLp);
+            domainBadge.setText(displayDomain);
+            domainBadge.setTextColor(0xFF00E5FF);
+            domainBadge.setTextSize(TypedValue.COMPLEX_UNIT_SP, 9);
+            domainBadge.setTypeface(null, android.graphics.Typeface.BOLD);
+            domainBadge.setPadding(dpToPx(6), dpToPx(2), dpToPx(6), dpToPx(2));
+            GradientDrawable badgeGd = new GradientDrawable();
+            badgeGd.setColor(0xCC0F131D);
+            badgeGd.setCornerRadius(dpToPx(6));
+            domainBadge.setBackground(badgeGd);
+            body.addView(domainBadge);
+        }
+
         card.addView(body);
 
-        card.setOnTouchListener(new View.OnTouchListener() {
-            private float startX, startY;
-            private long downTime;
-
-            @Override
-            public boolean onTouch(View v, MotionEvent event) {
-                if (event.getPointerCount() >= 2 && event.getActionMasked() == MotionEvent.ACTION_POINTER_DOWN) {
-                    toggleTabSelectionForSplit(tab.id);
-                    return true;
-                }
-
-                switch (event.getActionMasked()) {
-                    case MotionEvent.ACTION_DOWN:
-                        startX = event.getRawX();
-                        startY = event.getRawY();
-                        downTime = System.currentTimeMillis();
-                        return false;
-
-                    case MotionEvent.ACTION_UP:
-                        float delta = Math.abs(event.getRawX() - startX) + Math.abs(event.getRawY() - startY);
-                        if (delta < 15 && System.currentTimeMillis() - downTime < 300) {
-                            if (!selectedGridTabIds.isEmpty()) {
-                                toggleTabSelectionForSplit(tab.id);
-                            } else {
-                                switchToTab(tab.id);
-                                hideTabGridView();
-                            }
-                            return true;
-                        }
-                        break;
-                }
-                return false;
+        card.setOnClickListener(v -> {
+            playUiFeedbackSound("tap");
+            if (!selectedGridTabIds.isEmpty()) {
+                toggleTabSelectionForSplit(tab.id);
+            } else {
+                switchToTab(tab.id);
+                hideTabGridView();
             }
         });
 
@@ -2509,6 +2527,28 @@ public class MainActivity extends AppCompatActivity {
 
         omniboxShieldIcon.setOnClickListener(v -> showShieldStatusDialog());
 
+        omniboxEditText.setOnTouchListener(new View.OnTouchListener() {
+            private long lastTapTime = 0;
+
+            @Override
+            public boolean onTouch(View v, MotionEvent event) {
+                if (event.getAction() == MotionEvent.ACTION_UP) {
+                    long now = System.currentTimeMillis();
+                    if (!omniboxEditText.hasFocus()) {
+                        omniboxEditText.requestFocus();
+                        omniboxEditText.post(() -> omniboxEditText.selectAll());
+                        lastTapTime = now;
+                        return true;
+                    } else if (now - lastTapTime > 400 && omniboxEditText.getSelectionStart() == 0 && omniboxEditText.getSelectionEnd() == omniboxEditText.getText().length()) {
+                        lastTapTime = now;
+                        return false;
+                    }
+                    lastTapTime = now;
+                }
+                return false;
+            }
+        });
+
         omniboxEditText.setOnEditorActionListener((v, actionId, event) -> {
             if (actionId == EditorInfo.IME_ACTION_GO || actionId == EditorInfo.IME_ACTION_SEARCH ||
                     (event != null && event.getKeyCode() == KeyEvent.KEYCODE_ENTER && event.getAction() == KeyEvent.ACTION_DOWN)) {
@@ -2587,22 +2627,6 @@ public class MainActivity extends AppCompatActivity {
 
     private int dpToPx(int dp) {
         return (int) (dp * getResources().getDisplayMetrics().density + 0.5f);
-    }
-
-    private void setupPullToRefresh() {
-        if (swipeRefreshLayout == null) return;
-        swipeRefreshLayout.setColorSchemeColors(0xFF00E5FF, 0xFF10B981, 0xFFFFCC00);
-        swipeRefreshLayout.setProgressBackgroundColorSchemeColor(0xFF0D1524);
-        swipeRefreshLayout.setOnRefreshListener(() -> {
-            TabItem currentTab = getTabById(activeTabId);
-            if (currentTab != null && currentTab.webView != null) {
-                playUiFeedbackSound("tap");
-                currentTab.webView.reload();
-            }
-            swipeRefreshLayout.postDelayed(() -> {
-                if (swipeRefreshLayout != null) swipeRefreshLayout.setRefreshing(false);
-            }, 800);
-        });
     }
 
     private void setupOmniboxSwipeTabSwitcher() {
@@ -2690,6 +2714,7 @@ public class MainActivity extends AppCompatActivity {
 
         omniboxEditText.setOnFocusChangeListener((v, hasFocus) -> {
             if (hasFocus) {
+                omniboxEditText.post(() -> omniboxEditText.selectAll());
                 checkClipboardAndShowSuggestions(omniboxEditText.getText().toString());
             } else {
                 omniboxSuggestionsContainer.setVisibility(View.GONE);
@@ -2713,95 +2738,42 @@ public class MainActivity extends AppCompatActivity {
     }
 
     private void checkClipboardAndShowSuggestions(String currentText) {
-        if (omniboxSuggestionsContainer == null || omniboxSuggestionsList == null) return;
+        if (omniboxSuggestionsContainer == null) return;
 
         ClipboardManager clipboard = (ClipboardManager) getSystemService(CLIPBOARD_SERVICE);
+        boolean hasClipUrl = false;
         if (clipboard != null && clipboard.hasPrimaryClip() && clipboard.getPrimaryClip() != null && clipboard.getPrimaryClip().getItemCount() > 0) {
             CharSequence clipText = clipboard.getPrimaryClip().getItemAt(0).getText();
-            if (clipText != null && !clipText.toString().trim().isEmpty() && (clipText.toString().startsWith("http://") || clipText.toString().startsWith("https://") || clipText.toString().contains("."))) {
+            if (clipText != null && !clipText.toString().trim().isEmpty()) {
                 String link = clipText.toString().trim();
-                omniboxClipboardText.setText(link);
-                omniboxClipboardChip.setVisibility(View.VISIBLE);
-                omniboxClipboardChip.setOnClickListener(v -> {
-                    omniboxEditText.setText(link);
-                    handleOmniboxSubmission(link);
-                    omniboxSuggestionsContainer.setVisibility(View.GONE);
-                    hideKeyboard();
-                    omniboxEditText.clearFocus();
-                });
-            } else {
-                omniboxClipboardChip.setVisibility(View.GONE);
+                if (link.startsWith("http://") || link.startsWith("https://") || link.contains(".")) {
+                    hasClipUrl = true;
+                    if (omniboxClipboardText != null) omniboxClipboardText.setText(link);
+                    if (omniboxClipboardChip != null) {
+                        omniboxClipboardChip.setVisibility(View.VISIBLE);
+                        omniboxClipboardChip.setOnClickListener(v -> {
+                            playUiFeedbackSound("tap");
+                            omniboxEditText.setText(link);
+                            handleOmniboxSubmission(link);
+                            omniboxSuggestionsContainer.setVisibility(View.GONE);
+                            hideKeyboard();
+                            omniboxEditText.clearFocus();
+                        });
+                    }
+                }
             }
-        } else {
-            omniboxClipboardChip.setVisibility(View.GONE);
         }
 
-        SearchSuggestionService.fetchSuggestions(currentText, (query, suggestions) -> {
-            if (suggestions == null || suggestions.isEmpty()) {
-                if (omniboxClipboardChip.getVisibility() == View.GONE) {
-                    omniboxSuggestionsContainer.setVisibility(View.GONE);
-                } else {
-                    omniboxSuggestionsContainer.setVisibility(View.VISIBLE);
-                    omniboxSuggestionsList.removeAllViews();
-                }
-                return;
-            }
-
+        if (omniboxSuggestionsList != null) {
             omniboxSuggestionsList.removeAllViews();
+        }
+
+        if (hasClipUrl) {
             omniboxSuggestionsContainer.setVisibility(View.VISIBLE);
-
-            for (String suggestion : suggestions) {
-                LinearLayout row = new LinearLayout(this);
-                row.setLayoutParams(new LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, dpToPx(38)));
-                row.setOrientation(LinearLayout.HORIZONTAL);
-                row.setGravity(Gravity.CENTER_VERTICAL);
-                row.setPadding(dpToPx(10), 0, dpToPx(10), 0);
-                row.setBackgroundResource(R.drawable.bg_liquid_glass_pill);
-
-                ImageView icon = new ImageView(this);
-                icon.setLayoutParams(new LinearLayout.LayoutParams(dpToPx(16), dpToPx(16)));
-                icon.setImageResource(R.drawable.ic_pod_search);
-                icon.setColorFilter(0xFFA2A9A9);
-
-                TextView tv = new TextView(this);
-                LinearLayout.LayoutParams tvParams = new LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.WRAP_CONTENT, 1.0f);
-                tvParams.setMarginStart(dpToPx(8));
-                tv.setLayoutParams(tvParams);
-                tv.setText(suggestion);
-                tv.setTextColor(0xFFFFFFFF);
-                tv.setTextSize(TypedValue.COMPLEX_UNIT_SP, 12);
-                tv.setSingleLine(true);
-
-                ImageView arrow = new ImageView(this);
-                arrow.setLayoutParams(new LinearLayout.LayoutParams(dpToPx(16), dpToPx(16)));
-                arrow.setImageResource(R.drawable.ic_pod_arrow_up);
-                arrow.setRotation(-45);
-                arrow.setColorFilter(0x88A2A9A9);
-
-                row.addView(icon);
-                row.addView(tv);
-                row.addView(arrow);
-
-                row.setOnClickListener(v -> {
-                    omniboxEditText.setText(suggestion);
-                    handleOmniboxSubmission(suggestion);
-                    omniboxSuggestionsContainer.setVisibility(View.GONE);
-                    hideKeyboard();
-                    omniboxEditText.clearFocus();
-                });
-
-                arrow.setOnClickListener(v -> {
-                    omniboxEditText.setText(suggestion);
-                    omniboxEditText.setSelection(suggestion.length());
-                });
-
-                LinearLayout.LayoutParams rowParams = (LinearLayout.LayoutParams) row.getLayoutParams();
-                rowParams.bottomMargin = dpToPx(4);
-                row.setLayoutParams(rowParams);
-
-                omniboxSuggestionsList.addView(row);
-            }
-        });
+        } else {
+            if (omniboxClipboardChip != null) omniboxClipboardChip.setVisibility(View.GONE);
+            omniboxSuggestionsContainer.setVisibility(View.GONE);
+        }
     }
 
     private void showOmniboxFinder() {
@@ -2824,32 +2796,91 @@ public class MainActivity extends AppCompatActivity {
         }
     }
 
-    private void showQuickToolbarsPopup(View anchor) {
-        PopupMenu popup = new PopupMenu(this, anchor);
-        popup.getMenu().add(0, 1, 0, "🤖 ChatGPT Toolbar: " + (isChatgptDockExplicitlyHidden ? "OFF" : "ON"));
-        popup.getMenu().add(0, 2, 1, "🎬 YouTube Float Pod: " + (isYtRemoteExplicitlyHidden ? "OFF" : "ON"));
-        popup.getMenu().add(0, 3, 2, "🌐 Google Search Dock: " + (isSearchNavExplicitlyHidden ? "OFF" : "ON"));
-        popup.getMenu().add(0, 4, 3, "🛡️ Privacy Shield: " + (adBlockShield.isEnabled() ? "ON" : "OFF"));
+    private static class CaspianMenuItem {
+        final String title;
+        final Runnable action;
+        final boolean isDanger;
 
-        popup.setOnMenuItemClickListener(item -> {
-            switch (item.getItemId()) {
-                case 1:
-                    toggleChatGPTDock(isChatgptDockExplicitlyHidden);
-                    return true;
-                case 2:
-                    toggleFloatingYouTubeRemote(isYtRemoteExplicitlyHidden);
-                    return true;
-                case 3:
-                    toggleGoogleSearchDock(isSearchNavExplicitlyHidden);
-                    return true;
-                case 4:
+        CaspianMenuItem(String title, Runnable action) {
+            this(title, action, false);
+        }
+
+        CaspianMenuItem(String title, Runnable action, boolean isDanger) {
+            this.title = title;
+            this.action = action;
+            this.isDanger = isDanger;
+        }
+    }
+
+    private void showCaspianCustomPopup(View anchor, List<CaspianMenuItem> items) {
+        View popupView = getLayoutInflater().inflate(R.layout.popup_caspian_menu, null);
+        LinearLayout itemsContainer = popupView.findViewById(R.id.menu_items_container);
+
+        PopupWindow popupWindow = new PopupWindow(
+                popupView,
+                dpToPx(230),
+                ViewGroup.LayoutParams.WRAP_CONTENT,
+                true
+        );
+        popupWindow.setBackgroundDrawable(new ColorDrawable(Color.TRANSPARENT));
+        popupWindow.setElevation(dpToPx(20));
+
+        for (CaspianMenuItem item : items) {
+            LinearLayout row = new LinearLayout(this);
+            row.setLayoutParams(new LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, dpToPx(42)));
+            row.setOrientation(LinearLayout.HORIZONTAL);
+            row.setGravity(Gravity.CENTER_VERTICAL);
+            row.setPadding(dpToPx(12), 0, dpToPx(12), 0);
+            row.setBackgroundResource(R.drawable.bg_liquid_glass_pill);
+
+            TextView title = new TextView(this);
+            title.setLayoutParams(new LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT));
+            title.setText(item.title);
+            title.setTextColor(item.isDanger ? 0xFFFF6B6B : 0xFFDFE2F0);
+            title.setTextSize(TypedValue.COMPLEX_UNIT_SP, 13);
+            title.setTypeface(null, android.graphics.Typeface.BOLD);
+
+            row.addView(title);
+
+            row.setOnClickListener(v -> {
+                playUiFeedbackSound("tap");
+                popupWindow.dismiss();
+                if (item.action != null) item.action.run();
+            });
+
+            LinearLayout.LayoutParams rowLp = (LinearLayout.LayoutParams) row.getLayoutParams();
+            rowLp.bottomMargin = dpToPx(4);
+            row.setLayoutParams(rowLp);
+
+            itemsContainer.addView(row);
+        }
+
+        popupWindow.showAsDropDown(anchor, 0, dpToPx(4));
+    }
+
+    private void showQuickToolbarsPopup(View anchor) {
+        List<CaspianMenuItem> menuItems = new ArrayList<>();
+        menuItems.add(new CaspianMenuItem(
+                "🤖 ChatGPT Dock: " + (isChatgptDockExplicitlyHidden ? "OFF" : "ON"),
+                () -> toggleChatGPTDock(isChatgptDockExplicitlyHidden)
+        ));
+        menuItems.add(new CaspianMenuItem(
+                "🎬 YouTube Remote: " + (isYtRemoteExplicitlyHidden ? "OFF" : "ON"),
+                () -> toggleFloatingYouTubeRemote(isYtRemoteExplicitlyHidden)
+        ));
+        menuItems.add(new CaspianMenuItem(
+                "🌐 Google Dock: " + (isSearchNavExplicitlyHidden ? "OFF" : "ON"),
+                () -> toggleGoogleSearchDock(isSearchNavExplicitlyHidden)
+        ));
+        menuItems.add(new CaspianMenuItem(
+                "🛡️ Privacy Shield: " + (adBlockShield.isEnabled() ? "ON" : "OFF"),
+                () -> {
                     adBlockShield.setEnabled(!adBlockShield.isEnabled());
                     updateOmniboxState();
-                    return true;
-            }
-            return false;
-        });
-        popup.show();
+                }
+        ));
+
+        showCaspianCustomPopup(anchor, menuItems);
     }
 
     public void handleOmniboxSubmission(String rawInput) {
@@ -2885,59 +2916,25 @@ public class MainActivity extends AppCompatActivity {
     }
 
     private void showBrowserMenu(View anchor) {
-        PopupMenu popup = new PopupMenu(this, anchor);
         TabItem currentTab = getActiveOrDominantTab();
+        List<CaspianMenuItem> menuItems = new ArrayList<>();
+        menuItems.add(new CaspianMenuItem("➕ New Tab", () -> addNewTab("web", null)));
+        menuItems.add(new CaspianMenuItem(
+                (currentTab != null && currentTab.isDesktop) ? "🖥️ Desktop site [ON]" : "🖥️ Desktop site [OFF]",
+                () -> { if (currentTab != null) toggleDesktopMode(currentTab.id); }
+        ));
+        menuItems.add(new CaspianMenuItem("🔍 Find in page", () -> showOmniboxFinder()));
+        menuItems.add(new CaspianMenuItem("⚡ Dual AI Ask", () -> launchDualAIAsk()));
+        menuItems.add(new CaspianMenuItem("🔀 Split Screen", () -> cycleSplitViewMode()));
+        menuItems.add(new CaspianMenuItem("📜 History", () -> showHistoryDialog()));
+        menuItems.add(new CaspianMenuItem("📤 Share & Export", () -> showExportOptions()));
+        menuItems.add(new CaspianMenuItem("📥 Downloads", () -> openDownloadsFolder()));
+        menuItems.add(new CaspianMenuItem("🔍 Page Zoom (" + currentTextZoom + "%)", () -> showPageZoomDialog()));
 
-        popup.getMenu().add(0, 1, 0, "New tab");
-        popup.getMenu().add(0, 2, 1, "New Incognito tab");
-        popup.getMenu().add(0, 3, 2, (currentTab != null && currentTab.isDesktop) ? "Desktop site  [ON]" : "Desktop site  [OFF]");
-        popup.getMenu().add(0, 4, 3, "Zoom (" + currentTextZoom + "%)");
-        popup.getMenu().add(0, 5, 4, "Find in page");
-        popup.getMenu().add(0, 6, 5, "⚔️ Dual AI Ask Arena");
-        popup.getMenu().add(0, 7, 6, "Split Screen");
-        popup.getMenu().add(0, 8, 7, "Share & Export");
-        popup.getMenu().add(0, 9, 8, "Downloads");
-        popup.getMenu().add(0, 10, 9, "Clear browsing data");
-
-        popup.setOnMenuItemClickListener(item -> {
-            switch (item.getItemId()) {
-                case 1:
-                    addNewTab("web", null);
-                    return true;
-                case 2:
-                    addNewIncognitoTab();
-                    return true;
-                case 3:
-                    if (currentTab != null) toggleDesktopMode(currentTab.id);
-                    return true;
-                case 4:
-                    showPageZoomDialog();
-                    return true;
-                case 5:
-                    showOmniboxFinder();
-                    return true;
-                case 6:
-                    launchDualAIArena();
-                    return true;
-                case 7:
-                    cycleSplitViewMode();
-                    return true;
-                case 8:
-                    showExportOptions();
-                    return true;
-                case 9:
-                    openDownloadsFolder();
-                    return true;
-                case 10:
-                    clearBrowserData();
-                    return true;
-            }
-            return false;
-        });
-        popup.show();
+        showCaspianCustomPopup(anchor, menuItems);
     }
 
-    public void launchDualAIArena() {
+    public void launchDualAIAsk() {
         playUiFeedbackSound("tap");
         if (splitModeState == 0) {
             TabItem gptTab = null;
@@ -2966,7 +2963,138 @@ public class MainActivity extends AppCompatActivity {
             applySplitViewLayout();
         }
         toggleSplitArenaBroadcast(true);
-        Toast.makeText(this, "⚔️ Dual AI Arena Active!", Toast.LENGTH_SHORT).show();
+        Toast.makeText(this, "⚡ Dual AI Ask Active!", Toast.LENGTH_SHORT).show();
+    }
+
+    private void showHistoryDialog() {
+        playUiFeedbackSound("tap");
+        AlertDialog.Builder builder = new AlertDialog.Builder(this, android.R.style.Theme_Black_NoTitleBar_Fullscreen);
+        View dialogView = getLayoutInflater().inflate(R.layout.dialog_history, null);
+        builder.setView(dialogView);
+        AlertDialog dialog = builder.create();
+        if (dialog.getWindow() != null) {
+            dialog.getWindow().setBackgroundDrawable(new ColorDrawable(0xF2050811));
+        }
+
+        ImageButton closeBtn = dialogView.findViewById(R.id.history_close_btn);
+        EditText searchInput = dialogView.findViewById(R.id.history_search_input);
+        LinearLayout listContainer = dialogView.findViewById(R.id.history_list_container);
+        TextView emptyView = dialogView.findViewById(R.id.history_empty_view);
+        Button btn1h = dialogView.findViewById(R.id.btn_clear_history_1h);
+        Button btn24h = dialogView.findViewById(R.id.btn_clear_history_24h);
+        Button btnAll = dialogView.findViewById(R.id.btn_clear_history_all);
+        Button btnCookies = dialogView.findViewById(R.id.btn_clear_cookies);
+
+        Runnable refreshList = () -> {
+            listContainer.removeAllViews();
+            String query = searchInput.getText().toString();
+            List<HistoryManager.HistoryEntry> entries = HistoryManager.getInstance(this).getHistory(query);
+            if (entries.isEmpty()) {
+                emptyView.setVisibility(View.VISIBLE);
+            } else {
+                emptyView.setVisibility(View.GONE);
+                java.text.SimpleDateFormat sdf = new java.text.SimpleDateFormat("MMM dd, HH:mm", java.util.Locale.getDefault());
+                for (HistoryManager.HistoryEntry entry : entries) {
+                    LinearLayout row = new LinearLayout(this);
+                    row.setLayoutParams(new LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT));
+                    row.setOrientation(LinearLayout.VERTICAL);
+                    row.setPadding(dpToPx(12), dpToPx(10), dpToPx(12), dpToPx(10));
+                    row.setBackgroundResource(R.drawable.bg_liquid_glass_pill);
+
+                    TextView titleView = new TextView(this);
+                    titleView.setText(entry.title);
+                    titleView.setTextColor(0xFFDFE2F0);
+                    titleView.setTextSize(TypedValue.COMPLEX_UNIT_SP, 13);
+                    titleView.setTypeface(null, android.graphics.Typeface.BOLD);
+                    titleView.setSingleLine(true);
+                    titleView.setEllipsize(android.text.TextUtils.TruncateAt.END);
+
+                    LinearLayout subRow = new LinearLayout(this);
+                    subRow.setOrientation(LinearLayout.HORIZONTAL);
+                    subRow.setGravity(Gravity.CENTER_VERTICAL);
+                    subRow.setPadding(0, dpToPx(4), 0, 0);
+
+                    TextView urlView = new TextView(this);
+                    LinearLayout.LayoutParams urlLp = new LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.WRAP_CONTENT, 1f);
+                    urlView.setLayoutParams(urlLp);
+                    urlView.setText(cleanDisplayUrl(entry.url));
+                    urlView.setTextColor(0xFF00E5FF);
+                    urlView.setTextSize(TypedValue.COMPLEX_UNIT_SP, 11);
+                    urlView.setSingleLine(true);
+                    urlView.setEllipsize(android.text.TextUtils.TruncateAt.END);
+
+                    TextView timeView = new TextView(this);
+                    timeView.setText(sdf.format(new java.util.Date(entry.timestamp)));
+                    timeView.setTextColor(0xFF849396);
+                    timeView.setTextSize(TypedValue.COMPLEX_UNIT_SP, 10);
+                    timeView.setPadding(dpToPx(8), 0, 0, 0);
+
+                    subRow.addView(urlView);
+                    subRow.addView(timeView);
+
+                    row.addView(titleView);
+                    row.addView(subRow);
+
+                    row.setOnClickListener(v -> {
+                        playUiFeedbackSound("tap");
+                        dialog.dismiss();
+                        TabItem active = getActiveOrDominantTab();
+                        if (active != null) {
+                            active.webView.loadUrl(entry.url);
+                        } else {
+                            addNewTab("web", null, entry.url, false);
+                        }
+                    });
+
+                    LinearLayout.LayoutParams rowLp = (LinearLayout.LayoutParams) row.getLayoutParams();
+                    rowLp.bottomMargin = dpToPx(6);
+                    row.setLayoutParams(rowLp);
+
+                    listContainer.addView(row);
+                }
+            }
+        };
+
+        refreshList.run();
+
+        searchInput.addTextChangedListener(new TextWatcher() {
+            @Override public void beforeTextChanged(CharSequence s, int start, int count, int after) {}
+            @Override public void onTextChanged(CharSequence s, int start, int before, int count) { refreshList.run(); }
+            @Override public void afterTextChanged(Editable s) {}
+        });
+
+        closeBtn.setOnClickListener(v -> dialog.dismiss());
+
+        btn1h.setOnClickListener(v -> {
+            playUiFeedbackSound("tap");
+            long oneHourAgo = System.currentTimeMillis() - (3600 * 1000);
+            HistoryManager.getInstance(this).clearHistorySince(oneHourAgo);
+            refreshList.run();
+            Toast.makeText(this, "🧹 Cleared history from last hour", Toast.LENGTH_SHORT).show();
+        });
+
+        btn24h.setOnClickListener(v -> {
+            playUiFeedbackSound("tap");
+            long twentyFourHoursAgo = System.currentTimeMillis() - (24 * 3600 * 1000);
+            HistoryManager.getInstance(this).clearHistorySince(twentyFourHoursAgo);
+            refreshList.run();
+            Toast.makeText(this, "🧹 Cleared history from last 24 hours", Toast.LENGTH_SHORT).show();
+        });
+
+        btnAll.setOnClickListener(v -> {
+            playUiFeedbackSound("tap");
+            HistoryManager.getInstance(this).clearAllHistory();
+            refreshList.run();
+            Toast.makeText(this, "🗑️ All history cleared", Toast.LENGTH_SHORT).show();
+        });
+
+        btnCookies.setOnClickListener(v -> {
+            playUiFeedbackSound("tap");
+            HistoryManager.clearCookiesAndCache();
+            Toast.makeText(this, "🍪 Cookies and storage cache cleared", Toast.LENGTH_SHORT).show();
+        });
+
+        dialog.show();
     }
 
     public void showPageZoomDialog() {
@@ -3373,7 +3501,7 @@ public class MainActivity extends AppCompatActivity {
             splitModeState = 1;
             splitRatio = 0.5f;
             applySplitViewLayout();
-            Toast.makeText(this, "⚔️ Dual AI Arena: ChatGPT & Gemini Ready!", Toast.LENGTH_SHORT).show();
+            Toast.makeText(this, "⚡ Dual AI Ask: ChatGPT & Gemini Ready!", Toast.LENGTH_SHORT).show();
         }
 
         TabItem curLeft = getTabById(activeTabId);
@@ -4948,9 +5076,6 @@ public class MainActivity extends AppCompatActivity {
         tabItem.pendingPrompt = promptPayload;
 
         webView.setOnScrollChangeListener((v, scrollX, scrollY, oldScrollX, oldScrollY) -> {
-            if (swipeRefreshLayout != null) {
-                swipeRefreshLayout.setEnabled(scrollY <= 0);
-            }
             if (isGoogleDockAutoCollapse && searchNavContainer != null && searchNavContainer.getVisibility() == View.VISIBLE) {
                 int delta = scrollY - oldScrollY;
                 if (delta > 20 && searchDockScroll.getVisibility() == View.VISIBLE) {
@@ -5038,6 +5163,10 @@ public class MainActivity extends AppCompatActivity {
                 }
 
                 captureTabSnapshot(tabItem);
+
+                if (pageUrl != null && !pageUrl.startsWith("file://") && !pageUrl.startsWith("caspian://") && !pageUrl.startsWith("about:")) {
+                    HistoryManager.getInstance(MainActivity.this).addEntry(tabItem.title, pageUrl);
+                }
 
                 if (pageUrl != null && pageUrl.contains("chatgpt.com")) {
                     String interceptorJs = readAssetScript("chatgpt_network_interceptor.js");

@@ -113,7 +113,7 @@ public class AICommandRouter {
         if (lower.contains("chat.deepseek.com")) return "deepseek";
         if (lower.contains("perplexity.ai")) return "perplexity";
         if (lower.contains("youtube.com") || lower.contains("youtu.be")) return "youtube";
-        if (lower.contains("google.com/search")) return "google_search";
+        if (lower.contains("google.com") || lower.contains("google.")) return "google";
         return "web";
     }
 

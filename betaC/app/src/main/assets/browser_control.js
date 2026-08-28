@@ -357,10 +357,12 @@
 
       displayTabs.forEach(tab => {
         let iconB64 = '';
-        if (tab.service === 'gemini') iconB64 = window.GEMINI_ICON_B64 || '';
-        else if (tab.service === 'chatgpt') iconB64 = window.GPT_ICON_B64 || '';
-        else if (tab.service === 'google') iconB64 = window.GOOGLE_ICON_B64 || '';
-        else if (tab.service === 'youtube') iconB64 = window.YOUTUBE_ICON_B64 || '';
+        const urlLower = (tab.url || '').toLowerCase();
+        const serviceLower = (tab.service || '').toLowerCase();
+        if (serviceLower === 'gemini' || urlLower.includes('gemini.google.com')) iconB64 = window.GEMINI_ICON_B64 || '';
+        else if (serviceLower === 'chatgpt' || urlLower.includes('chatgpt.com') || urlLower.includes('openai.com')) iconB64 = window.GPT_ICON_B64 || '';
+        else if (serviceLower === 'google' || serviceLower === 'google_search' || urlLower.includes('google.com') || urlLower.includes('google.')) iconB64 = window.GOOGLE_ICON_B64 || '';
+        else if (serviceLower === 'youtube' || urlLower.includes('youtube.com') || urlLower.includes('youtu.be')) iconB64 = window.YOUTUBE_ICON_B64 || '';
 
         const isSelected = selectedTabIds.has(tab.id);
         const selectedClass = isSelected ? 'selected' : '';

@@ -76,11 +76,11 @@ jobs:
               {
                 id: 'flow',
                 productName: 'Caspian Flow (Beta C)',
-                tag: 'Caspian-Flow-v1.1.17-BetaC',
-                title: '[Beta C] Caspian Flow v1.1.17-BetaC',
-                assetPattern: 'Caspian-Flow-v1.1.17-BetaC.apk',
+                tag: 'Caspian-Flow-v1.1.23-BetaC',
+                title: '[Beta C] Caspian Flow v1.1.23-BetaC',
+                assetPattern: 'Caspian-Flow-v1.1.23-BetaC.apk',
                 isPrerelease: true,
-                desc: 'Chromium gesture fluency: native circular Pull-to-Refresh, Chrome Omnibox live search auto-complete, and toolbar horizontal swipe tab switching.'
+                desc: 'Omnibox UX refinements, clipboard-only suggestion preview, custom obsidian frosted glass context menus, Browsing History manager with selective clearing, and Dual AI Ask.'
               },
               {
                 id: 'mobile',

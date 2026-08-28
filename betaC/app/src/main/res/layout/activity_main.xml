@@ -82,11 +82,11 @@
                 <FrameLayout
                     android:id="@+id/omnibox_capsule"
                     android:layout_width="0dp"
-                    android:layout_height="32dp"
+                    android:layout_height="34dp"
                     android:layout_weight="1"
-                    android:layout_marginStart="2dp"
-                    android:layout_marginEnd="2dp"
-                    android:background="@drawable/bg_liquid_glass_pill">
+                    android:layout_marginStart="3dp"
+                    android:layout_marginEnd="3dp"
+                    android:background="@drawable/bg_omnibox_capsule">
 
                     <!-- Default URL Mode View -->
                     <LinearLayout
@@ -95,8 +95,8 @@
                         android:layout_height="match_parent"
                         android:orientation="horizontal"
                         android:gravity="center_vertical"
-                        android:paddingStart="6dp"
-                        android:paddingEnd="4dp">
+                        android:paddingStart="8dp"
+                        android:paddingEnd="6dp">
 
                         <!-- Lock / Privacy Shield Indicator -->
                         <ImageView
@@ -113,13 +113,13 @@
                             android:layout_width="0dp"
                             android:layout_height="match_parent"
                             android:layout_weight="1"
-                            android:layout_marginStart="4dp"
+                            android:layout_marginStart="6dp"
                             android:layout_marginEnd="2dp"
                             android:background="@android:color/transparent"
                             android:hint="Search or type URL..."
-                            android:textColorHint="#88A2A9A9"
-                            android:textColor="#FFFFFF"
-                            android:textSize="11sp"
+                            android:textColorHint="#849396"
+                            android:textColor="#DFE2F0"
+                            android:textSize="12sp"
                             android:singleLine="true"
                             android:imeOptions="actionGo"
                             android:inputType="textUri|textNoSuggestions"
@@ -136,24 +136,14 @@
                             android:visibility="gone"
                             android:contentDescription="Clear Text" />
 
-                        <!-- In-Page Finder Toggle Button in Omnibox -->
-                        <ImageButton
-                            android:id="@+id/omnibox_finder_btn"
-                            android:layout_width="20dp"
-                            android:layout_height="20dp"
-                            android:padding="1dp"
-                            android:background="?attr/selectableItemBackgroundBorderless"
-                            android:src="@drawable/ic_pod_search"
-                            android:tint="#A2A9A9"
-                            android:contentDescription="Find in Page" />
-
                         <!-- Voice Dictation Button -->
                         <ImageButton
                             android:id="@+id/omnibox_voice_btn"
-                            android:layout_width="20dp"
-                            android:layout_height="20dp"
-                            android:layout_marginStart="1dp"
-                            android:padding="1dp"
+                            android:layout_width="22dp"
+                            android:layout_height="22dp"
+                            android:layout_marginStart="6dp"
+                            android:layout_marginEnd="2dp"
+                            android:padding="2dp"
                             android:background="?attr/selectableItemBackgroundBorderless"
                             android:src="@drawable/ic_browser_voice"
                             android:tint="#00E5FF"
@@ -258,14 +248,15 @@
                     android:tint="#A2A9A9"
                     android:contentDescription="AI Split Mode" />
 
-                <!-- Crisp Tab Counter Pill -->
+                <!-- Chrome Rounded Square Tab Counter Box -->
                 <FrameLayout
                     android:id="@+id/omnibox_tabs_btn"
-                    android:layout_width="28dp"
-                    android:layout_height="26dp"
-                    android:layout_marginStart="3dp"
-                    android:background="@drawable/bg_liquid_glass_pill"
-                    android:contentDescription="Tab Manager">
+                    android:layout_width="22dp"
+                    android:layout_height="22dp"
+                    android:layout_marginStart="6dp"
+                    android:layout_marginEnd="4dp"
+                    android:background="@drawable/bg_chrome_tab_box"
+                    android:contentDescription="Tab Switcher">
 
                     <TextView
                         android:id="@+id/omnibox_tabs_count"
@@ -273,17 +264,17 @@
                         android:layout_height="match_parent"
                         android:gravity="center"
                         android:text="1"
-                        android:textColor="#00E5FF"
-                        android:textSize="10sp"
+                        android:textColor="#FFFFFF"
+                        android:textSize="11sp"
                         android:textStyle="bold" />
                 </FrameLayout>
 
-                <!-- Browser Overflow Menu Button -->
+                <!-- Chrome 3-Dot Overflow Menu Button -->
                 <ImageButton
                     android:id="@+id/omnibox_menu_btn"
                     android:layout_width="26dp"
                     android:layout_height="26dp"
-                    android:layout_marginStart="3dp"
+                    android:layout_marginStart="2dp"
                     android:padding="3dp"
                     android:background="?attr/selectableItemBackgroundBorderless"
                     android:src="@drawable/ic_browser_menu"
@@ -375,17 +366,11 @@
             android:layout_height="0dp"
             android:layout_weight="1">
 
-            <!-- Single Tab Fullscreen Container with Pull-to-Refresh -->
-            <androidx.swiperefreshlayout.widget.SwipeRefreshLayout
-                android:id="@+id/swipe_refresh_layout"
+            <!-- Single Tab Fullscreen Container -->
+            <FrameLayout
+                android:id="@+id/webview_container"
                 android:layout_width="match_parent"
-                android:layout_height="match_parent">
-
-                <FrameLayout
-                    android:id="@+id/webview_container"
-                    android:layout_width="match_parent"
-                    android:layout_height="match_parent" />
-            </androidx.swiperefreshlayout.widget.SwipeRefreshLayout>
+                android:layout_height="match_parent" />
 
             <!-- Dual Split-Screen AI Workspace (Dynamic Horizontal/Vertical) -->
             <LinearLayout
@@ -453,17 +438,17 @@
                 <!-- Draggable Split Screen Divider Bar (Feature 1) -->
                 <FrameLayout
                     android:id="@+id/split_divider"
-                    android:layout_width="8dp"
+                    android:layout_width="10dp"
                     android:layout_height="match_parent"
                     android:clickable="true"
                     android:focusable="true">
 
                     <View
                         android:id="@+id/split_divider_handle"
-                        android:layout_width="6dp"
-                        android:layout_height="44dp"
+                        android:layout_width="5dp"
+                        android:layout_height="56dp"
                         android:layout_gravity="center"
-                        android:background="@drawable/bg_pill_accent" />
+                        android:background="@drawable/bg_glowing_divider_handle" />
                 </FrameLayout>
 
                 <!-- Right / Bottom AI Viewport -->
@@ -522,82 +507,63 @@
                 </FrameLayout>
             </LinearLayout>
 
-            <!-- Modern Aesthetic Dual AI Arena Broadcast Capsule -->
+            <!-- Modern Aesthetic Dual AI Arena Broadcast Capsule (Stitch Universal Input Pod) -->
             <LinearLayout
                 android:id="@+id/split_arena_broadcast_container"
                 android:layout_width="match_parent"
-                android:layout_height="wrap_content"
+                android:layout_height="56dp"
                 android:layout_gravity="bottom"
-                android:layout_margin="14dp"
+                android:layout_marginStart="14dp"
+                android:layout_marginEnd="14dp"
+                android:layout_marginBottom="16dp"
                 android:background="@drawable/bg_arena_broadcast_neon"
                 android:orientation="horizontal"
                 android:gravity="center_vertical"
                 android:paddingStart="8dp"
                 android:paddingEnd="8dp"
-                android:paddingTop="6dp"
-                android:paddingBottom="6dp"
                 android:elevation="60dp"
                 android:visibility="gone">
 
-                <LinearLayout
-                    android:layout_width="wrap_content"
-                    android:layout_height="32dp"
-                    android:background="@drawable/bg_arena_badge"
-                    android:gravity="center"
-                    android:paddingStart="8dp"
-                    android:paddingEnd="8dp"
-                    android:layout_marginEnd="8dp">
+                <!-- Prefix Add Button -->
+                <ImageButton
+                    android:id="@+id/split_arena_close_btn"
+                    android:layout_width="36dp"
+                    android:layout_height="36dp"
+                    android:background="?attr/selectableItemBackgroundBorderless"
+                    android:src="@drawable/ic_arena_plus"
+                    android:tint="#BAC9CC"
+                    android:padding="8dp"
+                    android:scaleType="fitCenter"
+                    android:contentDescription="Options" />
 
-                    <TextView
-                        android:id="@+id/split_arena_label"
-                        android:layout_width="wrap_content"
-                        android:layout_height="wrap_content"
-                        android:text="⚔️ DUAL AI"
-                        android:textColor="#00E5FF"
-                        android:textSize="10sp"
-                        android:textStyle="bold"
-                        android:letterSpacing="0.05" />
-                </LinearLayout>
-
+                <!-- Input Field -->
                 <EditText
                     android:id="@+id/split_arena_input"
                     android:layout_width="0dp"
-                    android:layout_height="38dp"
+                    android:layout_height="match_parent"
                     android:layout_weight="1"
                     android:background="@android:color/transparent"
-                    android:hint="Broadcast prompt to ChatGPT &amp; Gemini..."
-                    android:textColorHint="#6B7280"
-                    android:textColor="#FFFFFF"
-                    android:textSize="13sp"
+                    android:hint="Message both models..."
+                    android:textColorHint="#849396"
+                    android:textColor="#DFE2F0"
+                    android:textSize="14sp"
                     android:singleLine="true"
                     android:imeOptions="actionSend"
                     android:inputType="textShortMessage|textAutoCorrect"
-                    android:paddingStart="4dp"
-                    android:paddingEnd="4dp" />
+                    android:paddingStart="8dp"
+                    android:paddingEnd="8dp" />
 
+                <!-- Upward Arrow Send Button -->
                 <ImageButton
                     android:id="@+id/split_arena_send_btn"
-                    android:layout_width="34dp"
-                    android:layout_height="34dp"
-                    android:layout_marginStart="4dp"
+                    android:layout_width="40dp"
+                    android:layout_height="40dp"
                     android:background="@drawable/bg_arena_send_circle"
-                    android:src="@drawable/ic_pod_fwd"
-                    android:tint="#050811"
-                    android:padding="7dp"
+                    android:src="@drawable/ic_pod_arrow_up"
+                    android:tint="#FFFFFF"
+                    android:padding="8dp"
                     android:scaleType="fitCenter"
                     android:contentDescription="Broadcast Prompt" />
-
-                <ImageButton
-                    android:id="@+id/split_arena_close_btn"
-                    android:layout_width="30dp"
-                    android:layout_height="30dp"
-                    android:layout_marginStart="2dp"
-                    android:background="?attr/selectableItemBackgroundBorderless"
-                    android:src="@drawable/ic_pod_close"
-                    android:tint="#94A3B8"
-                    android:padding="6dp"
-                    android:scaleType="fitCenter"
-                    android:contentDescription="Close Arena Prompt" />
             </LinearLayout>
         </FrameLayout>
     </LinearLayout>
@@ -650,21 +616,10 @@
                     android:textStyle="bold" />
 
                 <ImageButton
-                    android:id="@+id/tab_grid_incognito_btn"
-                    android:layout_width="32dp"
-                    android:layout_height="32dp"
-                    android:layout_marginStart="12dp"
-                    android:background="?attr/selectableItemBackgroundBorderless"
-                    android:src="@drawable/ic_browser_shield"
-                    android:tint="#FFFFFF"
-                    android:padding="4dp"
-                    android:contentDescription="Incognito Tabs" />
-
-                <ImageButton
                     android:id="@+id/tab_grid_close_view_btn"
                     android:layout_width="32dp"
                     android:layout_height="32dp"
-                    android:layout_marginStart="12dp"
+                    android:layout_marginStart="14dp"
                     android:background="?attr/selectableItemBackgroundBorderless"
                     android:src="@drawable/ic_pod_close"
                     android:tint="#A2A9A9"
