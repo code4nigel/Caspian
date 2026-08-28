@@ -1132,74 +1132,17 @@ def build_html(version_name):
             <button id="debug-rec-toggle-btn" class="oneui-pill-btn secondary" style="font-size: 11px; padding: 4px 12px; border-color: #a855f7; color: #9333ea;">Start Rec</button>
           </div>
 
-          <!-- Developer Exclusive Themes Section (10 Progression Themes) -->
+          <!-- Developer Exclusive Themes Section -->
           <div style="margin-top: 10px; border-top: 1px dashed rgba(168, 85, 247, 0.3); padding-top: 10px;">
-            <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 8px;">
-              <div style="font-size: 10px; font-weight: 800; color: #a855f7; letter-spacing: 0.5px;">
-                👑 DEVELOPER EXCLUSIVE THEMES (10 THEMES)
-              </div>
-              <button id="btn-secret-dev-key" class="text-link-btn" style="font-size: 9px; color: #c084fc; cursor: pointer; text-decoration: underline;" title="Enter Secret Developer Passkey">🔑 Key</button>
+            <div style="font-size: 10px; font-weight: 800; color: #a855f7; letter-spacing: 0.5px; margin-bottom: 8px;">
+              👑 DEVELOPER EXCLUSIVE THEMES
             </div>
-            
-            <div id="dev-themes-grid" style="display: grid; grid-template-columns: 1fr 1fr; gap: 6px;">
-              <!-- Theme 1: Lvl 1 -->
-              <button class="preset-theme-chip dev-level-theme" data-req="1" data-start="#A2A9A9" data-end="#1B4264" style="background: linear-gradient(135deg, #A2A9A9, #1B4264); border: 1.2px solid rgba(255,255,255,0.2); color: #fff; padding: 6px 8px; border-radius: 8px; font-size: 9.5px; font-weight: 700; cursor: pointer; text-align: left; display: flex; justify-content: space-between; align-items: center;">
-                <span>🌊 Caspian Ripple</span>
-                <span class="theme-lock-badge" style="font-size: 8px; background: rgba(0,0,0,0.4); padding: 1px 4px; border-radius: 4px;">LVL 1</span>
+            <div style="display: flex; gap: 8px; flex-wrap: wrap;">
+              <button class="preset-theme-chip cosmic-gemini-chip" data-start="#7c3aed" data-end="#1e1b4b" style="cursor: pointer;">
+                <span>✨ Cosmic Gemini (Developer Exclusive)</span>
               </button>
-              
-              <!-- Theme 2: Lvl 2 -->
-              <button class="preset-theme-chip dev-level-theme" data-req="2" data-start="#38bdf8" data-end="#0284c7" style="background: linear-gradient(135deg, #38bdf8, #0284c7); border: 1.2px solid rgba(255,255,255,0.2); color: #fff; padding: 6px 8px; border-radius: 8px; font-size: 9.5px; font-weight: 700; cursor: pointer; text-align: left; display: flex; justify-content: space-between; align-items: center;">
-                <span>💧 Azure Springs</span>
-                <span class="theme-lock-badge" style="font-size: 8px; background: rgba(0,0,0,0.4); padding: 1px 4px; border-radius: 4px;">LVL 2</span>
-              </button>
-
-              <!-- Theme 3: Lvl 3 -->
-              <button class="preset-theme-chip dev-level-theme" data-req="3" data-start="#10b981" data-end="#047857" style="background: linear-gradient(135deg, #10b981, #047857); border: 1.2px solid rgba(255,255,255,0.2); color: #fff; padding: 6px 8px; border-radius: 8px; font-size: 9.5px; font-weight: 700; cursor: pointer; text-align: left; display: flex; justify-content: space-between; align-items: center;">
-                <span>🌿 Emerald Depths</span>
-                <span class="theme-lock-badge" style="font-size: 8px; background: rgba(0,0,0,0.4); padding: 1px 4px; border-radius: 4px;">LVL 3</span>
-              </button>
-
-              <!-- Theme 4: Lvl 4 -->
-              <button class="preset-theme-chip dev-level-theme" data-req="4" data-start="#a855f7" data-end="#6b21a8" style="background: linear-gradient(135deg, #a855f7, #6b21a8); border: 1.2px solid rgba(255,255,255,0.2); color: #fff; padding: 6px 8px; border-radius: 8px; font-size: 9.5px; font-weight: 700; cursor: pointer; text-align: left; display: flex; justify-content: space-between; align-items: center;">
-                <span>🔮 Violet Abyssal</span>
-                <span class="theme-lock-badge" style="font-size: 8px; background: rgba(0,0,0,0.4); padding: 1px 4px; border-radius: 4px;">LVL 4</span>
-              </button>
-
-              <!-- Theme 5: Lvl 5 -->
-              <button class="preset-theme-chip dev-level-theme" data-req="5" data-start="#00E5FF" data-end="#7C3AED" style="background: linear-gradient(135deg, #00E5FF, #7C3AED); border: 1.2px solid rgba(255,255,255,0.2); color: #fff; padding: 6px 8px; border-radius: 8px; font-size: 9.5px; font-weight: 700; cursor: pointer; text-align: left; display: flex; justify-content: space-between; align-items: center;">
-                <span>⚡ Neon Cyber Wave</span>
-                <span class="theme-lock-badge" style="font-size: 8px; background: rgba(0,0,0,0.4); padding: 1px 4px; border-radius: 4px;">LVL 5</span>
-              </button>
-
-              <!-- Theme 6: Lvl 6 -->
-              <button class="preset-theme-chip dev-level-theme" data-req="6" data-start="#64748b" data-end="#0f172a" style="background: linear-gradient(135deg, #64748b, #0f172a); border: 1.2px solid rgba(255,255,255,0.2); color: #fff; padding: 6px 8px; border-radius: 8px; font-size: 9.5px; font-weight: 700; cursor: pointer; text-align: left; display: flex; justify-content: space-between; align-items: center;">
-                <span>🌌 Midnight Obsidian</span>
-                <span class="theme-lock-badge" style="font-size: 8px; background: rgba(0,0,0,0.4); padding: 1px 4px; border-radius: 4px;">LVL 6</span>
-              </button>
-
-              <!-- Theme 7: Lvl 7 -->
-              <button class="preset-theme-chip dev-level-theme" data-req="7" data-start="#f43f5e" data-end="#fb923c" style="background: linear-gradient(135deg, #f43f5e, #fb923c); border: 1.2px solid rgba(255,255,255,0.2); color: #fff; padding: 6px 8px; border-radius: 8px; font-size: 9.5px; font-weight: 700; cursor: pointer; text-align: left; display: flex; justify-content: space-between; align-items: center;">
-                <span>🌅 Caspian Sunset</span>
-                <span class="theme-lock-badge" style="font-size: 8px; background: rgba(0,0,0,0.4); padding: 1px 4px; border-radius: 4px;">LVL 7</span>
-              </button>
-
-              <!-- Theme 8: Lvl 8 -->
-              <button class="preset-theme-chip dev-level-theme" data-req="8" data-start="#06b6d4" data-end="#1e3a8a" style="background: linear-gradient(135deg, #06b6d4, #1e3a8a); border: 1.2px solid rgba(255,255,255,0.2); color: #fff; padding: 6px 8px; border-radius: 8px; font-size: 9.5px; font-weight: 700; cursor: pointer; text-align: left; display: flex; justify-content: space-between; align-items: center;">
-                <span>🐋 Deep Leviathan</span>
-                <span class="theme-lock-badge" style="font-size: 8px; background: rgba(0,0,0,0.4); padding: 1px 4px; border-radius: 4px;">LVL 8</span>
-              </button>
-
-              <!-- Theme 9: Lvl 9 -->
-              <button class="preset-theme-chip dev-level-theme" data-req="9" data-start="#eab308" data-end="#0ea5e9" style="background: linear-gradient(135deg, #eab308, #0ea5e9); border: 1.2px solid rgba(255,255,255,0.2); color: #fff; padding: 6px 8px; border-radius: 8px; font-size: 9.5px; font-weight: 700; cursor: pointer; text-align: left; display: flex; justify-content: space-between; align-items: center;">
-                <span>🔱 Poseidon Tempest</span>
-                <span class="theme-lock-badge" style="font-size: 8px; background: rgba(0,0,0,0.4); padding: 1px 4px; border-radius: 4px;">LVL 9</span>
-              </button>
-
-              <!-- Theme 10: Lvl 10 -->
-              <button class="preset-theme-chip dev-level-theme" data-req="10" data-start="#fbbf24" data-end="#b45309" style="background: linear-gradient(135deg, #fbbf24, #b45309); border: 1.2px solid rgba(255,255,255,0.2); color: #fff; padding: 6px 8px; border-radius: 8px; font-size: 9.5px; font-weight: 700; cursor: pointer; text-align: left; display: flex; justify-content: space-between; align-items: center;">
-                <span>👑 Sovereign Gold</span>
-                <span class="theme-lock-badge" style="font-size: 8px; background: rgba(0,0,0,0.4); padding: 1px 4px; border-radius: 4px;">LVL 10</span>
+              <button class="preset-theme-chip ena-shine-chip" data-start="#fbbf24" data-end="#78350f" style="cursor: pointer;">
+                <span>👑 Ena Shine (Golden Premium)</span>
               </button>
             </div>
           </div>

@@ -1237,7 +1237,7 @@
     } catch (e) { }
 
     renderOpenTabs();
-    initDevLevelThemes();
+    initDevExclusiveThemes();
     if (typeof window.updateDevHudCounters === 'function') {
       window.updateDevHudCounters();
     }
@@ -1433,110 +1433,41 @@
     if (subEl) {
       subEl.textContent = currentQuote;
     }
-
-    updateDevLevelThemes(info.level);
   };
 
-  function updateDevLevelThemes(userLevel) {
-    const isDevMaster = localStorage.getItem('dev_master_unlocked') === 'true';
-    document.querySelectorAll('.dev-level-theme').forEach(btn => {
-      const req = parseInt(btn.dataset.req, 10);
-      const isUnlocked = isDevMaster || (userLevel >= req);
-      const badge = btn.querySelector('.theme-lock-badge');
-
-      if (isUnlocked) {
-        btn.style.opacity = '1.0';
-        btn.style.filter = 'none';
-        if (badge) {
-          badge.textContent = isDevMaster ? '✨ DEV' : 'UNLOCKED';
-          badge.style.background = 'rgba(16, 185, 129, 0.4)';
-          badge.style.color = '#34d399';
-        }
-      } else {
-        btn.style.opacity = '0.55';
-        btn.style.filter = 'grayscale(35%)';
-        if (badge) {
-          badge.textContent = `🔒 LVL ${req}`;
-          badge.style.background = 'rgba(0, 0, 0, 0.6)';
-          badge.style.color = '#f87171';
-        }
-      }
-    });
-  }
-
-  function initDevLevelThemes() {
-    document.querySelectorAll('.dev-level-theme').forEach(btn => {
-      if (btn.dataset.boundTheme) return;
-      btn.dataset.boundTheme = 'true';
-      btn.addEventListener('click', (e) => {
+  function initDevExclusiveThemes() {
+    // Cosmic Gemini
+    const geminiBtn = document.querySelector('.cosmic-gemini-chip');
+    if (geminiBtn && !geminiBtn.dataset.bound) {
+      geminiBtn.dataset.bound = 'true';
+      geminiBtn.addEventListener('click', (e) => {
         e.stopPropagation();
-        const req = parseInt(btn.dataset.req, 10);
-        let clicks = 0;
-        if (window.CaspianBridge && typeof window.CaspianBridge.getActionButtonClicks === 'function') {
-          clicks = window.CaspianBridge.getActionButtonClicks() || 0;
-        } else {
-          clicks = parseInt(localStorage.getItem('action_btn_click_count') || '0', 10);
+        playSFX('tb_clicks');
+        document.documentElement.removeAttribute('data-theme-preset');
+        document.body.classList.remove('theme-ena-shine');
+        localStorage.removeItem('theme_preset');
+        applyCustomGradient('#7c3aed', '#1e1b4b');
+        if (window.CaspianBridge && typeof window.CaspianBridge.showToast === 'function') {
+          window.CaspianBridge.showToast("✨ Cosmic Gemini Theme Activated!");
         }
-        const info = getCaspianLevelInfo(clicks);
-        const isDevMaster = localStorage.getItem('dev_master_unlocked') === 'true';
-
-        if (info.level >= req || isDevMaster) {
-          playSFX('tb_clicks');
-          const start = btn.dataset.start;
-          const end = btn.dataset.end;
-          applyCustomGradient(start, end);
-          if (window.CaspianBridge && typeof window.CaspianBridge.showToast === 'function') {
-            const title = btn.querySelector('span') ? btn.querySelector('span').textContent : 'Theme';
-            window.CaspianBridge.showToast(`🎨 Theme Applied: ${title}`);
-          }
-        } else {
-          playSFX('ta');
-          btn.style.transform = 'scale(0.95)';
-          setTimeout(() => btn.style.transform = 'none', 200);
-          if (window.CaspianBridge && typeof window.CaspianBridge.showToast === 'function') {
-            window.CaspianBridge.showToast(`🔒 Locked! Reach LVL ${req} to unlock this theme.`);
-          }
-        }
-      });
-    });
-
-    const keyBtn = document.getElementById('btn-secret-dev-key');
-    if (keyBtn && !keyBtn.dataset.bound) {
-      keyBtn.dataset.bound = 'true';
-      keyBtn.addEventListener('click', async (e) => {
-        e.stopPropagation();
-        promptDeveloperSecretKey();
       });
     }
 
-    const unlockBadge = document.getElementById('dev-unlocked-badge');
-    if (unlockBadge && !unlockBadge.dataset.boundDevKey) {
-      unlockBadge.dataset.boundDevKey = 'true';
-      unlockBadge.addEventListener('click', async (e) => {
+    // Ena Shine (Golden Premium)
+    const enaBtn = document.querySelector('.ena-shine-chip');
+    if (enaBtn && !enaBtn.dataset.bound) {
+      enaBtn.dataset.bound = 'true';
+      enaBtn.addEventListener('click', (e) => {
         e.stopPropagation();
-        promptDeveloperSecretKey();
+        playSFX('tb_clicks');
+        document.documentElement.setAttribute('data-theme-preset', 'ena_shine');
+        document.body.classList.add('theme-ena-shine');
+        localStorage.setItem('theme_preset', 'ena_shine');
+        applyCustomGradient('#fbbf24', '#78350f');
+        if (window.CaspianBridge && typeof window.CaspianBridge.showToast === 'function') {
+          window.CaspianBridge.showToast("👑 Ena Shine (Golden Premium) Activated! ✨");
+        }
       });
-    }
-  }
-
-  async function promptDeveloperSecretKey() {
-    const input = prompt("🔑 Enter Secret Developer Passkey:");
-    if (!input) return;
-    const hash = await sha256Hex(input);
-    if (hash === DEV_MASTER_KEY_HASH) {
-      playSFX('ta');
-      localStorage.setItem('dev_master_unlocked', 'true');
-      if (window.CaspianBridge && typeof window.CaspianBridge.showToast === 'function') {
-        window.CaspianBridge.showToast("👑 MASTER DEVELOPER OVERRIDE: All 10 Themes Unlocked!");
-      }
-      if (typeof window.updateDevHudCounters === 'function') {
-        window.updateDevHudCounters();
-      }
-    } else {
-      playSFX('ta');
-      if (window.CaspianBridge && typeof window.CaspianBridge.showToast === 'function') {
-        window.CaspianBridge.showToast("❌ Invalid Developer Passkey.");
-      }
     }
   }
 
@@ -1559,6 +1490,16 @@
     if (endPicker) endPicker.value = end;
     if (startHex) startHex.value = start.toUpperCase();
     if (endHex) endHex.value = end.toUpperCase();
+
+    if (start.toLowerCase() === '#fbbf24' && end.toLowerCase() === '#78350f') {
+      document.documentElement.setAttribute('data-theme-preset', 'ena_shine');
+      document.body.classList.add('theme-ena-shine');
+      localStorage.setItem('theme_preset', 'ena_shine');
+    } else {
+      document.documentElement.removeAttribute('data-theme-preset');
+      document.body.classList.remove('theme-ena-shine');
+      localStorage.removeItem('theme_preset');
+    }
 
     localStorage.setItem('theme_start_color', start);
     localStorage.setItem('theme_end_color', end);

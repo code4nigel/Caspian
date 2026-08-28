@@ -1309,3 +1309,111 @@ select option {
   color: var(--text-sub);
   cursor: pointer;
 }
+
+/* ==========================================================================
+   DEVELOPER EXCLUSIVE THEMES: ENA SHINE & COSMIC GEMINI
+   ========================================================================== */
+
+/* Ena Shine Premium Chip Animations */
+.ena-shine-chip {
+  position: relative;
+  background: linear-gradient(135deg, #fbbf24 0%, #d97706 50%, #78350f 100%) !important;
+  border: 1.5px solid #fbbf24 !important;
+  color: #ffffff !important;
+  padding: 8px 14px !important;
+  border-radius: 12px !important;
+  font-size: 11px !important;
+  font-weight: 800 !important;
+  cursor: pointer !important;
+  box-shadow: 0 0 16px rgba(251, 191, 36, 0.45), inset 0 1px 1px rgba(255, 255, 255, 0.6) !important;
+  overflow: hidden;
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  animation: enaPulseAura 3s infinite ease-in-out;
+}
+
+.ena-shine-chip::before {
+  content: '';
+  position: absolute;
+  top: -50%;
+  left: -50%;
+  width: 200%;
+  height: 200%;
+  background: linear-gradient(
+    60deg,
+    transparent 30%,
+    rgba(255, 255, 255, 0.5) 50%,
+    transparent 70%
+  );
+  transform: rotate(25deg);
+  animation: enaLightSweep 3.5s infinite linear;
+  pointer-events: none;
+}
+
+.ena-shine-chip:active {
+  transform: scale(0.96);
+  box-shadow: 0 0 24px rgba(251, 191, 36, 0.7) !important;
+}
+
+@keyframes enaLightSweep {
+  0% { transform: translateX(-150%) rotate(25deg); }
+  50% { transform: translateX(150%) rotate(25deg); }
+  100% { transform: translateX(150%) rotate(25deg); }
+}
+
+@keyframes enaPulseAura {
+  0%, 100% {
+    box-shadow: 0 0 14px rgba(251, 191, 36, 0.4), inset 0 1px 1px rgba(255, 255, 255, 0.6);
+  }
+  50% {
+    box-shadow: 0 0 26px rgba(251, 191, 36, 0.75), 0 0 45px rgba(245, 158, 11, 0.35), inset 0 1px 2px rgba(255, 255, 255, 0.9);
+  }
+}
+
+/* Cosmic Gemini Chip */
+.cosmic-gemini-chip {
+  position: relative;
+  background: linear-gradient(135deg, #7c3aed 0%, #4c1d95 60%, #1e1b4b 100%) !important;
+  border: 1.5px solid #a855f7 !important;
+  color: #ffffff !important;
+  padding: 8px 14px !important;
+  border-radius: 12px !important;
+  font-size: 11px !important;
+  font-weight: 800 !important;
+  cursor: pointer !important;
+  box-shadow: 0 0 14px rgba(168, 85, 247, 0.4), inset 0 1px 1px rgba(255, 255, 255, 0.5) !important;
+  overflow: hidden;
+  transition: all 0.3s ease;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.cosmic-gemini-chip:active {
+  transform: scale(0.96);
+  box-shadow: 0 0 22px rgba(168, 85, 247, 0.7) !important;
+}
+
+/* Global Ena Shine Theme Mode Active Styling */
+html[data-theme-preset="ena_shine"], body.theme-ena-shine {
+  --accent: #FBBF24 !important;
+  --secondary: #B45309 !important;
+  --accent-glow: rgba(251, 191, 36, 0.55) !important;
+  --accent-gradient: linear-gradient(135deg, #FBBF24, #D97706, #78350F) !important;
+}
+
+html[data-theme-preset="ena_shine"] .m3-card,
+body.theme-ena-shine .m3-card {
+  border-color: rgba(251, 191, 36, 0.25) !important;
+  box-shadow: 0 4px 20px rgba(251, 191, 36, 0.08) !important;
+}
+
+html[data-theme-preset="ena_shine"] .oneui-pill-btn.primary,
+body.theme-ena-shine .oneui-pill-btn.primary {
+  background: linear-gradient(135deg, #fbbf24, #d97706) !important;
+  color: #1a0f00 !important;
+  font-weight: 800 !important;
+  box-shadow: 0 0 14px rgba(251, 191, 36, 0.5) !important;
+}

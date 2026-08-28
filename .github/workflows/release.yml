@@ -76,11 +76,11 @@ jobs:
               {
                 id: 'flow',
                 productName: 'Caspian Flow (Beta C)',
-                tag: 'Caspian-Flow-v1.1.26-BetaC',
-                title: '[Beta C] Caspian Flow v1.1.26-BetaC',
-                assetPattern: 'Caspian-Flow-v1.1.26-BetaC.apk',
+                tag: 'Caspian-Flow-v1.1.27-BetaC',
+                title: '[Beta C] Caspian Flow v1.1.27-BetaC',
+                assetPattern: 'Caspian-Flow-v1.1.27-BetaC.apk',
                 isPrerelease: true,
-                desc: 'Level-up exclusive commentary progression, multi-tier exponential rank scaling, 10 Level-Locked Developer Exclusive Themes, and SHA-256 encrypted developer master key bypass.'
+                desc: 'Restored Cosmic Gemini & Ena Shine Developer Exclusive Themes with premium golden shimmer lighting, radiant aura animations, level-up exclusive quotes, and multi-tier exponential rank scaling.'
               },
               {
                 id: 'mobile',
