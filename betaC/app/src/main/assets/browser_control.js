@@ -1237,6 +1237,10 @@
     } catch (e) { }
 
     renderOpenTabs();
+    initDevLevelThemes();
+    if (typeof window.updateDevHudCounters === 'function') {
+      window.updateDevHudCounters();
+    }
   }
 
   // Bind live audio preview when selecting dropdown choices
@@ -1316,6 +1320,78 @@
     });
   }
 
+  const CASPIAN_LEVELS = [
+    { level: 1, req: 0, name: 'LVL 1 RIPPLE DRIFTER 💧' },
+    { level: 2, req: 30, name: 'LVL 2 SHALLOW DIVER 🌊' },
+    { level: 3, req: 80, name: 'LVL 3 STREAM NAVIGATOR 🚣' },
+    { level: 4, req: 160, name: 'LVL 4 CASPIAN WAVE RIDER 🏄' },
+    { level: 5, req: 270, name: 'LVL 5 TIDE WEAVER 🌊' },
+    { level: 6, req: 420, name: 'LVL 6 CORAL EXPLORER 🪸' },
+    { level: 7, req: 620, name: 'LVL 7 ABYSSAL VOYAGER 🌌' },
+    { level: 8, req: 880, name: 'LVL 8 CASPIAN LEVIATHAN 🐋' },
+    { level: 9, req: 1200, name: 'LVL 9 POSEIDON\'S CHOSEN 🔱' },
+    { level: 10, req: 1600, name: 'LVL 10 SOVEREIGN OF CASPIAN 👑' },
+    { level: 11, req: 2200, name: 'LVL 11 MYTHIC OCEAN LORD 🌟' },
+    { level: 12, req: 3000, name: 'LVL 12 ETERNAL DEPTH MASTER 💎' }
+  ];
+
+  function getCaspianLevelInfo(clicks) {
+    let currentIdx = 0;
+    for (let i = 0; i < CASPIAN_LEVELS.length; i++) {
+      if (clicks >= CASPIAN_LEVELS[i].req) {
+        currentIdx = i;
+      } else {
+        break;
+      }
+    }
+    const current = CASPIAN_LEVELS[currentIdx];
+    const next = CASPIAN_LEVELS[currentIdx + 1] || { req: current.req + 1000, name: `LVL ${current.level + 1} TRANSCENDENT TITAN ⚡` };
+    const range = Math.max(1, next.req - current.req);
+    const progress = Math.max(0, clicks - current.req);
+    const pct = Math.min(100, Math.max(0, Math.floor((progress / range) * 100)));
+    return {
+      level: current.level,
+      name: current.name,
+      currentReq: current.req,
+      nextReq: next.req,
+      pct: pct
+    };
+  }
+
+  const LEVEL_UP_QUOTES = [
+    `Oh boy, you have reached LVL 1 RIPPLE DRIFTER! You are a real Caspianer! 🌊`,
+    `Level 2 Unlocked! Shallow Diver navigating the digital currents! 🌊`,
+    `Level 3 Stream Navigator! Rowing smoothly across the Caspian! 🚣`,
+    `Level 4 Wave Rider! Pure Caspian resonance, mastering the tides! 🏄`,
+    `Level 5 Tide Weaver achieved! Man is truly committed to the flow! ⚡`,
+    `Level 6 Coral Explorer! Discovering secrets of the lake bottom! 🪸`,
+    `Level 7 Abyssal Voyager! The tides of Caspian obey your every click! 🌌`,
+    `Level 8 Leviathan! Caspian Sea waters flow straight through your veins! 🐋`,
+    `Level 9 Poseidon's Chosen! Lord of the Caspian Tides and Waves! 🔱`,
+    `Level 10 Sovereign of Caspian! Supreme Ocean King of the Flow! 👑`,
+    `Level 11 Mythic Ocean Lord! Nigel is weeping tears of joy! 🌟`,
+    `Level 12 Depth Master! The Caspian Sea bows to your greatness! 💎`
+  ];
+
+  async function sha256Hex(str) {
+    try {
+      const msgBuffer = new TextEncoder().encode(str.trim());
+      const hashBuffer = await crypto.subtle.digest('SHA-256', msgBuffer);
+      const hashArray = Array.from(new Uint8Array(hashBuffer));
+      return hashArray.map(b => b.toString(16).padStart(2, '0')).join('');
+    } catch (e) {
+      let hash = 0;
+      for (let i = 0; i < str.length; i++) {
+        hash = ((hash << 5) - hash) + str.charCodeAt(i);
+        hash |= 0;
+      }
+      return String(hash);
+    }
+  }
+
+  // Developer Master Key Hash (SHA-256 of secret developer passkey)
+  const DEV_MASTER_KEY_HASH = '6c7adc1f0cba6da6fde065d70004998b2f922cc0bddfe24b4980f3a3350ef220';
+
   window.updateDevHudCounters = function() {
     let clicks = 0;
     if (window.CaspianBridge && typeof window.CaspianBridge.getActionButtonClicks === 'function') {
@@ -1334,43 +1410,135 @@
     if (totalEl) totalEl.textContent = clicks.toLocaleString();
     if (cyclesEl) cyclesEl.textContent = cycles.toLocaleString();
 
-    let tier = 'LVL 1 RIPPLE DRIFTER 💧';
-    let pct = Math.min(100, Math.max(10, (clicks % 50) * 2));
-    if (clicks >= 2500) tier = 'LVL 7 POSEIDON OF CASPIAN 🔱';
-    else if (clicks >= 1000) tier = 'LVL 6 CASPIAN LEVIATHAN 🐋';
-    else if (clicks >= 500) tier = 'LVL 5 TIDE WEAVER 🌊';
-    else if (clicks >= 200) tier = 'LVL 4 CASPIAN WAVE RIDER 🏄';
-    else if (clicks >= 100) tier = 'LVL 3 STREAM NAVIGATOR 🚣';
-    else if (clicks >= 30) tier = 'LVL 2 SHALLOW DIVER 🌊';
+    const info = getCaspianLevelInfo(clicks);
+    if (tierEl) tierEl.textContent = info.name;
+    if (barEl) barEl.style.width = info.pct + '%';
+    if (pctEl) pctEl.textContent = `${info.pct}% to LVL ${info.level + 1}`;
 
-    if (tierEl) tierEl.textContent = tier;
-    if (barEl) barEl.style.width = pct + '%';
-    if (pctEl) pctEl.textContent = `${pct}% Sync`;
+    const savedLevel = parseInt(localStorage.getItem('caspian_fan_level') || '1', 10);
+    let currentQuote = localStorage.getItem('caspian_fan_quote');
 
-    const CASPIAN_FAN_QUOTES = [
-      `Oh boy, you have reached ${tier}! You are a real Caspianer! 🌊`,
-      `Over ${cycles} cycles! Man is truly committed to the flow! ⚡`,
-      `Diving deeper into the Caspian depths with every tap! 🏊‍♂️`,
-      `Navigating the digital waters like a true Caspian captain! ⛵`,
-      `The tides of Caspian obey your every click! 🌊✨`,
-      `Pure Caspian resonance! You've mastered the current! 🌊`,
-      `Over ${clicks} taps! An absolute legend of the Lake! 👑`,
-      `Spamming the button like there's treasure at the lake bottom! 🏴‍☠️`,
-      `Caspian Sea waters flow straight through your veins! 🌊💎`,
-      `Lord of the Caspian Tides! Unstoppable wave rider! 🏄‍♂️`,
-      `You tap, the Caspian waves listen! 🌊⚡`,
-      `Such dedication! Nigel is weeping tears of joy right now! 🥲`,
-      `Floating smoothly across the digital Caspian Sea! 🌌🌊`,
-      `Rank ${tier} achieved! You rule the depths! 🔱`,
-      `The Caspian Sea has never seen someone click this much! 🌊🚀`,
-      `Caspian synergy at maximum depth! Full flow unlocked! 🌊🔥`
-    ];
+    if (info.level > savedLevel || !currentQuote) {
+      currentQuote = LEVEL_UP_QUOTES[info.level - 1] || `Level ${info.level} achieved! You are a supreme Caspian legend! 👑`;
+      localStorage.setItem('caspian_fan_level', String(info.level));
+      localStorage.setItem('caspian_fan_quote', currentQuote);
+      if (info.level > savedLevel) {
+        playSFX('ta');
+        if (window.CaspianBridge && typeof window.CaspianBridge.showToast === 'function') {
+          window.CaspianBridge.showToast(`🎉 LEVEL UP! You reached ${info.name}!`);
+        }
+      }
+    }
 
     if (subEl) {
-      const qIdx = (clicks + cycles) % CASPIAN_FAN_QUOTES.length;
-      subEl.textContent = CASPIAN_FAN_QUOTES[qIdx];
+      subEl.textContent = currentQuote;
     }
+
+    updateDevLevelThemes(info.level);
   };
+
+  function updateDevLevelThemes(userLevel) {
+    const isDevMaster = localStorage.getItem('dev_master_unlocked') === 'true';
+    document.querySelectorAll('.dev-level-theme').forEach(btn => {
+      const req = parseInt(btn.dataset.req, 10);
+      const isUnlocked = isDevMaster || (userLevel >= req);
+      const badge = btn.querySelector('.theme-lock-badge');
+
+      if (isUnlocked) {
+        btn.style.opacity = '1.0';
+        btn.style.filter = 'none';
+        if (badge) {
+          badge.textContent = isDevMaster ? '✨ DEV' : 'UNLOCKED';
+          badge.style.background = 'rgba(16, 185, 129, 0.4)';
+          badge.style.color = '#34d399';
+        }
+      } else {
+        btn.style.opacity = '0.55';
+        btn.style.filter = 'grayscale(35%)';
+        if (badge) {
+          badge.textContent = `🔒 LVL ${req}`;
+          badge.style.background = 'rgba(0, 0, 0, 0.6)';
+          badge.style.color = '#f87171';
+        }
+      }
+    });
+  }
+
+  function initDevLevelThemes() {
+    document.querySelectorAll('.dev-level-theme').forEach(btn => {
+      if (btn.dataset.boundTheme) return;
+      btn.dataset.boundTheme = 'true';
+      btn.addEventListener('click', (e) => {
+        e.stopPropagation();
+        const req = parseInt(btn.dataset.req, 10);
+        let clicks = 0;
+        if (window.CaspianBridge && typeof window.CaspianBridge.getActionButtonClicks === 'function') {
+          clicks = window.CaspianBridge.getActionButtonClicks() || 0;
+        } else {
+          clicks = parseInt(localStorage.getItem('action_btn_click_count') || '0', 10);
+        }
+        const info = getCaspianLevelInfo(clicks);
+        const isDevMaster = localStorage.getItem('dev_master_unlocked') === 'true';
+
+        if (info.level >= req || isDevMaster) {
+          playSFX('tb_clicks');
+          const start = btn.dataset.start;
+          const end = btn.dataset.end;
+          applyCustomGradient(start, end);
+          if (window.CaspianBridge && typeof window.CaspianBridge.showToast === 'function') {
+            const title = btn.querySelector('span') ? btn.querySelector('span').textContent : 'Theme';
+            window.CaspianBridge.showToast(`🎨 Theme Applied: ${title}`);
+          }
+        } else {
+          playSFX('ta');
+          btn.style.transform = 'scale(0.95)';
+          setTimeout(() => btn.style.transform = 'none', 200);
+          if (window.CaspianBridge && typeof window.CaspianBridge.showToast === 'function') {
+            window.CaspianBridge.showToast(`🔒 Locked! Reach LVL ${req} to unlock this theme.`);
+          }
+        }
+      });
+    });
+
+    const keyBtn = document.getElementById('btn-secret-dev-key');
+    if (keyBtn && !keyBtn.dataset.bound) {
+      keyBtn.dataset.bound = 'true';
+      keyBtn.addEventListener('click', async (e) => {
+        e.stopPropagation();
+        promptDeveloperSecretKey();
+      });
+    }
+
+    const unlockBadge = document.getElementById('dev-unlocked-badge');
+    if (unlockBadge && !unlockBadge.dataset.boundDevKey) {
+      unlockBadge.dataset.boundDevKey = 'true';
+      unlockBadge.addEventListener('click', async (e) => {
+        e.stopPropagation();
+        promptDeveloperSecretKey();
+      });
+    }
+  }
+
+  async function promptDeveloperSecretKey() {
+    const input = prompt("🔑 Enter Secret Developer Passkey:");
+    if (!input) return;
+    const hash = await sha256Hex(input);
+    if (hash === DEV_MASTER_KEY_HASH) {
+      playSFX('ta');
+      localStorage.setItem('dev_master_unlocked', 'true');
+      if (window.CaspianBridge && typeof window.CaspianBridge.showToast === 'function') {
+        window.CaspianBridge.showToast("👑 MASTER DEVELOPER OVERRIDE: All 10 Themes Unlocked!");
+      }
+      if (typeof window.updateDevHudCounters === 'function') {
+        window.updateDevHudCounters();
+      }
+    } else {
+      playSFX('ta');
+      if (window.CaspianBridge && typeof window.CaspianBridge.showToast === 'function') {
+        window.CaspianBridge.showToast("❌ Invalid Developer Passkey.");
+      }
+    }
+  }
 
   // Theme Presets Map
   const presets = {
