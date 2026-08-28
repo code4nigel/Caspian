@@ -1812,6 +1812,250 @@
         </FrameLayout>
     </FrameLayout>
 
+    <!-- 6.6 Dedicated Liquid Glass Gemini Dock Toolbar -->
+    <FrameLayout
+        android:id="@+id/gemini_dock_container"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_gravity="bottom|end"
+        android:layout_marginBottom="145dp"
+        android:layout_marginEnd="8dp"
+        android:elevation="45dp"
+        android:clickable="true"
+        android:focusable="true"
+        android:visibility="gone">
+
+        <!-- Expanded Horizontal Floating Toolbar Dock -->
+        <HorizontalScrollView
+            android:id="@+id/gemini_dock_scroll"
+            android:layout_width="wrap_content"
+            android:layout_height="48dp"
+            android:scrollbars="none"
+            android:overScrollMode="never"
+            android:background="@drawable/bg_liquid_glass">
+
+            <LinearLayout
+                android:id="@+id/gemini_dock_expanded"
+                android:layout_width="wrap_content"
+                android:layout_height="match_parent"
+                android:orientation="horizontal"
+                android:paddingStart="8dp"
+                android:paddingEnd="6dp"
+                android:gravity="center_vertical">
+
+                <ImageButton
+                    android:id="@+id/gemini_dock_close"
+                    android:layout_width="26dp"
+                    android:layout_height="26dp"
+                    android:background="?attr/selectableItemBackgroundBorderless"
+                    android:src="@drawable/ic_pod_close"
+                    android:tint="#88FFFFFF"
+                    android:contentDescription="Close Gemini Toolbar" />
+
+                <View
+                    android:layout_width="1dp"
+                    android:layout_height="16dp"
+                    android:layout_marginStart="3dp"
+                    android:layout_marginEnd="3dp"
+                    android:background="#33FFFFFF" />
+
+                <ImageButton
+                    android:id="@+id/gemini_dock_reload"
+                    android:layout_width="26dp"
+                    android:layout_height="26dp"
+                    android:background="?attr/selectableItemBackgroundBorderless"
+                    android:src="@drawable/ic_pod_reload"
+                    android:tint="#FFFFFF"
+                    android:contentDescription="Reload Gemini Chat" />
+
+                <!-- Pruner Enable Toggle Pill -->
+                <TextView
+                    android:id="@+id/gemini_dock_toggle_btn"
+                    android:layout_width="wrap_content"
+                    android:layout_height="26dp"
+                    android:layout_marginStart="3dp"
+                    android:paddingStart="8dp"
+                    android:paddingEnd="8dp"
+                    android:gravity="center"
+                    android:text="✂️ Limit: OFF"
+                    android:textColor="#88FFFFFF"
+                    android:textSize="11sp"
+                    android:textStyle="bold"
+                    android:background="@drawable/bg_liquid_glass_pill" />
+
+                <!-- Limit Selector Pill (2 msgs) -->
+                <TextView
+                    android:id="@+id/gemini_dock_limit_btn"
+                    android:layout_width="wrap_content"
+                    android:layout_height="26dp"
+                    android:layout_marginStart="3dp"
+                    android:paddingStart="8dp"
+                    android:paddingEnd="8dp"
+                    android:gravity="center"
+                    android:text="2 msgs"
+                    android:textColor="#FFCC00"
+                    android:textSize="11sp"
+                    android:textStyle="bold"
+                    android:background="@drawable/bg_liquid_glass_pill" />
+
+                <View
+                    android:layout_width="1dp"
+                    android:layout_height="16dp"
+                    android:layout_marginStart="3dp"
+                    android:layout_marginEnd="3dp"
+                    android:background="#33FFFFFF" />
+
+                <!-- In-Page Word Finder Input Box -->
+                <LinearLayout
+                    android:id="@+id/gemini_finder_box"
+                    android:layout_width="wrap_content"
+                    android:layout_height="26dp"
+                    android:background="@drawable/bg_liquid_glass_pill"
+                    android:orientation="horizontal"
+                    android:gravity="center_vertical"
+                    android:paddingStart="6dp"
+                    android:paddingEnd="6dp"
+                    android:visibility="gone">
+
+                    <EditText
+                        android:id="@+id/gemini_finder_input"
+                        android:layout_width="90dp"
+                        android:layout_height="match_parent"
+                        android:background="@android:color/transparent"
+                        android:hint="Find in chat..."
+                        android:textColorHint="#88FFFFFF"
+                        android:textColor="#FFFFFF"
+                        android:textSize="11sp"
+                        android:singleLine="true"
+                        android:imeOptions="actionSearch"
+                        android:inputType="text"
+                        android:padding="0dp" />
+
+                    <TextView
+                        android:id="@+id/gemini_finder_count"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:text="0/0"
+                        android:textColor="#FFCC00"
+                        android:textSize="10sp"
+                        android:textStyle="bold"
+                        android:layout_marginStart="4dp" />
+                </LinearLayout>
+
+                <!-- Finder Toggle Button -->
+                <ImageButton
+                    android:id="@+id/gemini_finder_btn"
+                    android:layout_width="26dp"
+                    android:layout_height="26dp"
+                    android:layout_marginStart="3dp"
+                    android:background="?attr/selectableItemBackgroundBorderless"
+                    android:src="@drawable/ic_pod_search"
+                    android:tint="#FFFFFF"
+                    android:contentDescription="Find in Gemini Chat" />
+
+                <!-- Finder Prev Match -->
+                <ImageButton
+                    android:id="@+id/gemini_finder_prev"
+                    android:layout_width="26dp"
+                    android:layout_height="26dp"
+                    android:layout_marginStart="2dp"
+                    android:background="?attr/selectableItemBackgroundBorderless"
+                    android:src="@drawable/ic_pod_arrow_up"
+                    android:tint="#FFFFFF"
+                    android:visibility="gone"
+                    android:contentDescription="Previous Match" />
+
+                <!-- Finder Next Match -->
+                <ImageButton
+                    android:id="@+id/gemini_finder_next"
+                    android:layout_width="26dp"
+                    android:layout_height="26dp"
+                    android:layout_marginStart="2dp"
+                    android:background="?attr/selectableItemBackgroundBorderless"
+                    android:src="@drawable/ic_pod_arrow_down"
+                    android:tint="#FFFFFF"
+                    android:visibility="gone"
+                    android:contentDescription="Next Match" />
+
+                <View
+                    android:layout_width="1dp"
+                    android:layout_height="16dp"
+                    android:layout_marginStart="3dp"
+                    android:layout_marginEnd="3dp"
+                    android:background="#33FFFFFF" />
+
+                <!-- Step Message Above (1-2 Turns Up) -->
+                <ImageButton
+                    android:id="@+id/gemini_msg_up_btn"
+                    android:layout_width="26dp"
+                    android:layout_height="26dp"
+                    android:layout_marginStart="2dp"
+                    android:background="?attr/selectableItemBackgroundBorderless"
+                    android:src="@drawable/ic_pod_arrow_up"
+                    android:tint="#FFFFFF"
+                    android:contentDescription="Navigate Up" />
+
+                <!-- Step Message Below (1-2 Turns Down) -->
+                <ImageButton
+                    android:id="@+id/gemini_msg_down_btn"
+                    android:layout_width="26dp"
+                    android:layout_height="26dp"
+                    android:layout_marginStart="2dp"
+                    android:background="?attr/selectableItemBackgroundBorderless"
+                    android:src="@drawable/ic_pod_arrow_down"
+                    android:tint="#FFFFFF"
+                    android:contentDescription="Navigate Down" />
+
+                <View
+                    android:layout_width="1dp"
+                    android:layout_height="16dp"
+                    android:layout_marginStart="4dp"
+                    android:layout_marginEnd="2dp"
+                    android:background="#33FFFFFF" />
+
+                <TextView
+                    android:id="@+id/gemini_dock_drag_handle"
+                    android:layout_width="32dp"
+                    android:layout_height="32dp"
+                    android:gravity="center"
+                    android:text="⠿"
+                    android:textColor="#B3FFFFFF"
+                    android:textSize="16sp"
+                    android:contentDescription="Drag Gemini Toolbar" />
+
+                <ImageButton
+                    android:id="@+id/gemini_dock_shrink_btn"
+                    android:layout_width="28dp"
+                    android:layout_height="28dp"
+                    android:layout_marginStart="1dp"
+                    android:background="?attr/selectableItemBackgroundBorderless"
+                    android:src="@drawable/ic_shrink_bubble"
+                    android:tint="#CCFFFFFF"
+                    android:contentDescription="Shrink Gemini Toolbar" />
+            </LinearLayout>
+        </HorizontalScrollView>
+
+        <!-- Collapsed Floating Liquid Glass Ball (Draggable) -->
+        <FrameLayout
+            android:id="@+id/gemini_dock_ball"
+            android:layout_width="44dp"
+            android:layout_height="44dp"
+            android:layout_gravity="center_vertical|end"
+            android:background="@drawable/bg_liquid_glass_ball"
+            android:clickable="true"
+            android:focusable="true"
+            android:elevation="42dp"
+            android:visibility="gone">
+
+            <TextView
+                android:layout_width="match_parent"
+                android:layout_height="match_parent"
+                android:gravity="center"
+                android:text="♊"
+                android:textSize="18sp" />
+        </FrameLayout>
+    </FrameLayout>
+
     <!-- 7. Dictation Audio Wave Screen Overlay View -->
     <FrameLayout
         android:id="@+id/speech_waveform_container"

@@ -1085,11 +1085,11 @@ def build_html(version_name):
               <div style="display: flex; align-items: center; gap: 6px;">
                 <span style="font-size: 14px;">⚡</span>
                 <div>
-                  <div style="font-size: 10.5px; font-weight: 800; color: #c084fc; letter-spacing: 0.5px; text-transform: uppercase;">Action Button Resonance</div>
-                  <div style="font-size: 9px; color: var(--text-muted);">Interactive Action Button Pulse Telemetry</div>
+                  <div style="font-size: 10.5px; font-weight: 800; color: #c084fc; letter-spacing: 0.5px; text-transform: uppercase;">Action Button Fan Level</div>
+                  <div id="dev-hud-subtext" style="font-size: 9px; color: var(--text-muted); transition: opacity 0.2s ease;">Interactive Action Button Pulse Telemetry</div>
                 </div>
               </div>
-              <span id="dev-hud-tier" class="m3-badge" style="background: linear-gradient(135deg, #9333ea, #c084fc); color: #fff; font-weight: 800; font-size: 8.5px; padding: 2px 7px; border-radius: 9999px; box-shadow: 0 0 8px rgba(192, 132, 252, 0.5);">LVL 1 INITIATE</span>
+              <span id="dev-hud-tier" class="m3-badge" style="background: linear-gradient(135deg, #9333ea, #c084fc); color: #fff; font-weight: 800; font-size: 8.5px; padding: 2px 7px; border-radius: 9999px; box-shadow: 0 0 8px rgba(192, 132, 252, 0.5);">LVL 1 RIPPLE DRIFTER 💧</span>
             </div>
 
             <!-- Two Metric Counters Grid -->

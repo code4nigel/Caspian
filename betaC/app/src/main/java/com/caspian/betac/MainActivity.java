@@ -330,6 +330,27 @@ public class MainActivity extends AppCompatActivity {
     private TextView chatgptDockDragHandle;
     private ImageButton chatgptDockShrinkBtn;
     private boolean isChatgptDockExplicitlyHidden = false;
+
+    private FrameLayout geminiDockContainer;
+    private HorizontalScrollView geminiDockScroll;
+    private LinearLayout geminiDockExpanded;
+    private FrameLayout geminiDockBall;
+    private ImageButton geminiDockClose;
+    private ImageButton geminiDockReload;
+    private TextView geminiDockToggleBtn;
+    private TextView geminiDockLimitBtn;
+    private LinearLayout geminiFinderBox;
+    private EditText geminiFinderInput;
+    private TextView geminiFinderCount;
+    private ImageButton geminiFinderBtn;
+    private ImageButton geminiFinderPrev;
+    private ImageButton geminiFinderNext;
+    private ImageButton geminiMsgUpBtn;
+    private ImageButton geminiMsgDownBtn;
+    private TextView geminiDockDragHandle;
+    private ImageButton geminiDockShrinkBtn;
+    private boolean isGeminiDockExplicitlyHidden = false;
+
     private int actionButtonClickCount = 0;
 
     private String podShape = "circle";
@@ -400,6 +421,7 @@ public class MainActivity extends AppCompatActivity {
             isYtRemoteExplicitlyHidden = !appPrefs.getBoolean("yt_dock_enabled", true);
             isSearchNavExplicitlyHidden = !appPrefs.getBoolean("google_dock_enabled", false);
             isChatgptDockExplicitlyHidden = !appPrefs.getBoolean("chatgpt_dock_enabled", true);
+            isGeminiDockExplicitlyHidden = !appPrefs.getBoolean("gemini_dock_enabled", true);
             isDarkTheme = !"light".equalsIgnoreCase(appPrefs.getString("theme", "dark"));
         } catch (Throwable ignored) {}
 
@@ -411,6 +433,7 @@ public class MainActivity extends AppCompatActivity {
         try { setupLiquidGlassYouTubeRemote(); } catch (Throwable ignored) {}
         try { setupLiquidGlassGoogleDock(); } catch (Throwable ignored) {}
         try { setupLiquidGlassChatGPTDock(); } catch (Throwable ignored) {}
+        try { setupLiquidGlassGeminiDock(); } catch (Throwable ignored) {}
         try { setupSplitFloatingControls(); } catch (Throwable ignored) {}
         try { setupSplitDividerDrag(); } catch (Throwable ignored) {}
         try { setupModernTabGridOverlay(); } catch (Throwable ignored) {}
@@ -747,14 +770,17 @@ public class MainActivity extends AppCompatActivity {
         try {
             SharedPreferences prefs = getSharedPreferences(PREFS_NAME, MODE_PRIVATE);
             String key = "tb_clicks";
-            String defaultFile = "tap_button.mp3";
+            String defaultFile = "pop_click.mp3";
 
-            if ("ta".equals(soundType) || "action_btn".equals(soundType)) {
+            if ("ta".equals(soundType) || "action_btn".equals(soundType) || "action".equals(soundType)) {
                 key = "ta";
-                defaultFile = "tap_alternate.mp3";
-            } else if ("tm_tabs".equals(soundType) || "tabs".equals(soundType)) {
+                defaultFile = "pop_click.mp3";
+            } else if ("tm_tabs".equals(soundType) || "main_tabs".equals(soundType) || "main_tab".equals(soundType)) {
                 key = "tm_tabs";
                 defaultFile = "pop_button.mp3";
+            } else if ("tb_clicks".equals(soundType) || "tabs".equals(soundType) || "tab".equals(soundType) || "browser_tab".equals(soundType) || "tap".equals(soundType)) {
+                key = "tb_clicks";
+                defaultFile = "pop_click.mp3";
             } else if ("tm_header".equals(soundType) || "header".equals(soundType) || "reload".equals(soundType)) {
                 key = "tm_header";
                 defaultFile = "tap_main.mp3";
@@ -930,6 +956,25 @@ public class MainActivity extends AppCompatActivity {
             chatgptMsgDownBtn = findViewById(R.id.chatgpt_msg_down_btn);
             chatgptDockDragHandle = findViewById(R.id.chatgpt_dock_drag_handle);
             chatgptDockShrinkBtn = findViewById(R.id.chatgpt_dock_shrink_btn);
+
+            geminiDockContainer = findViewById(R.id.gemini_dock_container);
+            geminiDockScroll = findViewById(R.id.gemini_dock_scroll);
+            geminiDockExpanded = findViewById(R.id.gemini_dock_expanded);
+            geminiDockBall = findViewById(R.id.gemini_dock_ball);
+            geminiDockClose = findViewById(R.id.gemini_dock_close);
+            geminiDockReload = findViewById(R.id.gemini_dock_reload);
+            geminiDockToggleBtn = findViewById(R.id.gemini_dock_toggle_btn);
+            geminiDockLimitBtn = findViewById(R.id.gemini_dock_limit_btn);
+            geminiFinderBox = findViewById(R.id.gemini_finder_box);
+            geminiFinderInput = findViewById(R.id.gemini_finder_input);
+            geminiFinderCount = findViewById(R.id.gemini_finder_count);
+            geminiFinderBtn = findViewById(R.id.gemini_finder_btn);
+            geminiFinderPrev = findViewById(R.id.gemini_finder_prev);
+            geminiFinderNext = findViewById(R.id.gemini_finder_next);
+            geminiMsgUpBtn = findViewById(R.id.gemini_msg_up_btn);
+            geminiMsgDownBtn = findViewById(R.id.gemini_msg_down_btn);
+            geminiDockDragHandle = findViewById(R.id.gemini_dock_drag_handle);
+            geminiDockShrinkBtn = findViewById(R.id.gemini_dock_shrink_btn);
 
             speechWaveformContainer = findViewById(R.id.speech_waveform_container);
             fullscreenContainer = findViewById(R.id.fullscreen_container);
@@ -1890,6 +1935,17 @@ public class MainActivity extends AppCompatActivity {
         if (currentTab != null && currentTab.webView != null) {
             currentTab.webView.evaluateJavascript("if (window.__CaspianYouTube) window.__CaspianYouTube.setQuality('" + quality + "');", null);
         }
+        if (ytRemoteQualityBtn != null) {
+            String label = "HD";
+            if ("auto".equalsIgnoreCase(quality)) label = "Auto";
+            else if ("hd1080".equalsIgnoreCase(quality)) label = "1080p";
+            else if ("hd720".equalsIgnoreCase(quality)) label = "720p";
+            else if ("large".equalsIgnoreCase(quality)) label = "480p";
+            else if ("medium".equalsIgnoreCase(quality)) label = "360p";
+            else if ("small".equalsIgnoreCase(quality)) label = "240p";
+            else if ("tiny".equalsIgnoreCase(quality)) label = "144p";
+            ytRemoteQualityBtn.setText(label);
+        }
     }
 
     public void toggleFloatingYouTubeRemote(boolean show) {
@@ -1940,6 +1996,22 @@ public class MainActivity extends AppCompatActivity {
         updateOmniboxState();
     }
 
+    public void toggleGeminiDock(boolean show) {
+        isGeminiDockExplicitlyHidden = !show;
+        try {
+            SharedPreferences prefs = getSharedPreferences(PREFS_NAME, MODE_PRIVATE);
+            prefs.edit().putBoolean("gemini_dock_enabled", show).apply();
+        } catch (Exception ignored) {}
+        if (geminiDockContainer != null) {
+            if (show) {
+                geminiDockScroll.setVisibility(View.GONE);
+                geminiDockBall.setVisibility(View.VISIBLE);
+            }
+            geminiDockContainer.setVisibility(show ? View.VISIBLE : View.GONE);
+        }
+        updateOmniboxState();
+    }
+
     public void setGoogleDockAutoCollapse(boolean enabled) {
         this.isGoogleDockAutoCollapse = enabled;
         SharedPreferences prefs = getSharedPreferences(PREFS_NAME, MODE_PRIVATE);
@@ -1964,7 +2036,7 @@ public class MainActivity extends AppCompatActivity {
             chatgptDockToggleBtn.setOnClickListener(v -> {
                 playUiFeedbackSound("tap");
                 SharedPreferences prefs = getSharedPreferences(PREFS_NAME, MODE_PRIVATE);
-                boolean curEnabled = !"false".equalsIgnoreCase(prefs.getString("chat_limit_enabled", "true"));
+                boolean curEnabled = "true".equalsIgnoreCase(prefs.getString("chat_limit_enabled", "false"));
                 boolean nextEnabled = !curEnabled;
                 int limit = 5;
                 try { limit = Integer.parseInt(prefs.getString("chat_message_limit", "5")); } catch(Exception ignored){}
@@ -1981,7 +2053,7 @@ public class MainActivity extends AppCompatActivity {
                 String nextMode = "sliding_window".equalsIgnoreCase(curMode) ? "tail" : "sliding_window";
                 int limit = 5;
                 try { limit = Integer.parseInt(prefs.getString("chat_message_limit", "5")); } catch(Exception ignored){}
-                boolean enabled = !"false".equalsIgnoreCase(prefs.getString("chat_limit_enabled", "true"));
+                boolean enabled = "true".equalsIgnoreCase(prefs.getString("chat_limit_enabled", "false"));
 
                 new CaspianBridge(this).applyPruningSettings(limit, nextMode, enabled);
                 Toast.makeText(this, "Mode: " + ("sliding_window".equals(nextMode) ? "Sliding Window" : "Tail Window"), Toast.LENGTH_SHORT).show();
@@ -1995,8 +2067,8 @@ public class MainActivity extends AppCompatActivity {
                 String[] labels = {"2 Messages", "4 Messages", "6 Messages", "8 Messages", "10 Messages", "14 Messages", "18 Messages", "20 Messages", "28 Messages", "48 Messages", "∞ Unlimited (Show All)"};
 
                 SharedPreferences prefs = getSharedPreferences(PREFS_NAME, MODE_PRIVATE);
-                int curLimit = 6;
-                try { curLimit = Integer.parseInt(prefs.getString("chat_message_limit", "6")); } catch(Exception ignored){}
+                int curLimit = 5;
+                try { curLimit = Integer.parseInt(prefs.getString("chat_message_limit", "5")); } catch(Exception ignored){}
 
                 for (int i = 0; i < limits.length; i++) {
                     String label = (curLimit == limits[i] ? "✓ " : "   ") + labels[i];
@@ -2007,7 +2079,7 @@ public class MainActivity extends AppCompatActivity {
                     playUiFeedbackSound("tap");
                     int selectedLimit = item.getItemId();
                     String mode = prefs.getString("chat_pruning_mode", "sliding_window");
-                    boolean enabled = !"false".equalsIgnoreCase(prefs.getString("chat_limit_enabled", "true"));
+                    boolean enabled = "true".equalsIgnoreCase(prefs.getString("chat_limit_enabled", "false"));
 
                     new CaspianBridge(this).applyPruningSettings(selectedLimit, mode, enabled);
                     updateChatgptDockButtons();
@@ -2021,7 +2093,10 @@ public class MainActivity extends AppCompatActivity {
                 playUiFeedbackSound("tap");
                 TabItem currentTab = getTabById(activeTabId);
                 if (currentTab != null && currentTab.webView != null) {
-                    currentTab.webView.evaluateJavascript("if (window.__CASPIAN_PRUNER_STEP) window.__CASPIAN_PRUNER_STEP(-1);", null);
+                    SharedPreferences prefs = getSharedPreferences(PREFS_NAME, MODE_PRIVATE);
+                    boolean enabled = "true".equalsIgnoreCase(prefs.getString("chat_limit_enabled", "false"));
+                    int step = enabled ? -1 : -2;
+                    currentTab.webView.evaluateJavascript("if (window.__CASPIAN_PRUNER_STEP) window.__CASPIAN_PRUNER_STEP(" + step + "); else window.scrollBy({top: -400, behavior: 'smooth'});", null);
                 }
             });
 
@@ -2029,7 +2104,10 @@ public class MainActivity extends AppCompatActivity {
                 playUiFeedbackSound("tap");
                 TabItem currentTab = getTabById(activeTabId);
                 if (currentTab != null && currentTab.webView != null) {
-                    currentTab.webView.evaluateJavascript("if (window.__CASPIAN_PRUNER_STEP) window.__CASPIAN_PRUNER_STEP(1);", null);
+                    SharedPreferences prefs = getSharedPreferences(PREFS_NAME, MODE_PRIVATE);
+                    boolean enabled = "true".equalsIgnoreCase(prefs.getString("chat_limit_enabled", "false"));
+                    int step = enabled ? 1 : 2;
+                    currentTab.webView.evaluateJavascript("if (window.__CASPIAN_PRUNER_STEP) window.__CASPIAN_PRUNER_STEP(" + step + "); else window.scrollBy({top: 400, behavior: 'smooth'});", null);
                 }
             });
 
@@ -2165,16 +2243,255 @@ public class MainActivity extends AppCompatActivity {
         if (chatgptDockToggleBtn == null) return;
         try {
             SharedPreferences prefs = getSharedPreferences(PREFS_NAME, MODE_PRIVATE);
-            boolean enabled = !"false".equalsIgnoreCase(prefs.getString("chat_limit_enabled", "true"));
+            boolean enabled = "true".equalsIgnoreCase(prefs.getString("chat_limit_enabled", "false"));
             String mode = prefs.getString("chat_pruning_mode", "sliding_window");
-            int limit = 6;
-            try { limit = Integer.parseInt(prefs.getString("chat_message_limit", "6")); } catch(Exception ignored){}
+            int limit = 5;
+            try { limit = Integer.parseInt(prefs.getString("chat_message_limit", "5")); } catch(Exception ignored){}
 
             chatgptDockToggleBtn.setText(enabled ? "✂️ Limit: ON" : "✂️ Limit: OFF");
             chatgptDockToggleBtn.setTextColor(enabled ? 0xFF00E5FF : 0x88FFFFFF);
 
-            chatgptDockModeBtn.setText("sliding_window".equalsIgnoreCase(mode) ? "🪟 Sliding" : "📜 Tail");
-            chatgptDockLimitBtn.setText(limit >= 9999 ? "∞ msgs" : (limit + " msgs"));
+            if (chatgptDockModeBtn != null) {
+                chatgptDockModeBtn.setVisibility(enabled ? View.VISIBLE : View.GONE);
+                chatgptDockModeBtn.setText("sliding_window".equalsIgnoreCase(mode) ? "🪟 Sliding" : "📜 Tail");
+            }
+
+            if (chatgptDockLimitBtn != null) {
+                if (!enabled) {
+                    chatgptDockLimitBtn.setText("2 msgs");
+                } else {
+                    chatgptDockLimitBtn.setText(limit >= 9999 ? "∞ msgs" : (limit + " msgs"));
+                }
+            }
+        } catch (Exception ignored) {}
+    }
+
+    @SuppressLint("ClickableViewAccessibility")
+    private void setupLiquidGlassGeminiDock() {
+        if (geminiDockContainer == null) return;
+
+        try {
+            geminiDockClose.setOnClickListener(v -> {
+                playUiFeedbackSound("tap");
+                toggleGeminiDock(false);
+            });
+
+            geminiDockReload.setOnClickListener(v -> {
+                playUiFeedbackSound("tap");
+                reloadActiveTab();
+            });
+
+            geminiDockToggleBtn.setOnClickListener(v -> {
+                playUiFeedbackSound("tap");
+                SharedPreferences prefs = getSharedPreferences(PREFS_NAME, MODE_PRIVATE);
+                boolean curEnabled = "true".equalsIgnoreCase(prefs.getString("chat_limit_enabled", "false"));
+                boolean nextEnabled = !curEnabled;
+                int limit = 5;
+                try { limit = Integer.parseInt(prefs.getString("chat_message_limit", "5")); } catch(Exception ignored){}
+                String mode = prefs.getString("chat_pruning_mode", "sliding_window");
+
+                new CaspianBridge(this).applyPruningSettings(limit, mode, nextEnabled);
+                updateGeminiDockButtons();
+                Toast.makeText(this, "✂️ Pruning " + (nextEnabled ? "ENABLED" : "DISABLED"), Toast.LENGTH_SHORT).show();
+            });
+
+            geminiDockLimitBtn.setOnClickListener(v -> {
+                playUiFeedbackSound("tap");
+                PopupMenu popup = new PopupMenu(this, v);
+                int[] limits = {2, 4, 6, 8, 10, 14, 18, 20, 28, 48, 9999};
+                String[] labels = {"2 Messages", "4 Messages", "6 Messages", "8 Messages", "10 Messages", "14 Messages", "18 Messages", "20 Messages", "28 Messages", "48 Messages", "∞ Unlimited (Show All)"};
+
+                SharedPreferences prefs = getSharedPreferences(PREFS_NAME, MODE_PRIVATE);
+                int curLimit = 5;
+                try { curLimit = Integer.parseInt(prefs.getString("chat_message_limit", "5")); } catch(Exception ignored){}
+
+                for (int i = 0; i < limits.length; i++) {
+                    String label = (curLimit == limits[i] ? "✓ " : "   ") + labels[i];
+                    popup.getMenu().add(0, limits[i], i, label);
+                }
+
+                popup.setOnMenuItemClickListener(item -> {
+                    playUiFeedbackSound("tap");
+                    int selectedLimit = item.getItemId();
+                    String mode = prefs.getString("chat_pruning_mode", "sliding_window");
+                    boolean enabled = "true".equalsIgnoreCase(prefs.getString("chat_limit_enabled", "false"));
+
+                    new CaspianBridge(this).applyPruningSettings(selectedLimit, mode, enabled);
+                    updateGeminiDockButtons();
+                    Toast.makeText(this, "Message Limit: " + (selectedLimit >= 9999 ? "Unlimited" : (selectedLimit + " msgs")), Toast.LENGTH_SHORT).show();
+                    return true;
+                });
+                popup.show();
+            });
+
+            geminiMsgUpBtn.setOnClickListener(v -> {
+                playUiFeedbackSound("tap");
+                TabItem currentTab = getTabById(activeTabId);
+                if (currentTab != null && currentTab.webView != null) {
+                    SharedPreferences prefs = getSharedPreferences(PREFS_NAME, MODE_PRIVATE);
+                    boolean enabled = "true".equalsIgnoreCase(prefs.getString("chat_limit_enabled", "false"));
+                    int step = enabled ? -1 : -2;
+                    currentTab.webView.evaluateJavascript("if (window.__CASPIAN_PRUNER_STEP) window.__CASPIAN_PRUNER_STEP(" + step + "); else window.scrollBy({top: -400, behavior: 'smooth'});", null);
+                }
+            });
+
+            geminiMsgDownBtn.setOnClickListener(v -> {
+                playUiFeedbackSound("tap");
+                TabItem currentTab = getTabById(activeTabId);
+                if (currentTab != null && currentTab.webView != null) {
+                    SharedPreferences prefs = getSharedPreferences(PREFS_NAME, MODE_PRIVATE);
+                    boolean enabled = "true".equalsIgnoreCase(prefs.getString("chat_limit_enabled", "false"));
+                    int step = enabled ? 1 : 2;
+                    currentTab.webView.evaluateJavascript("if (window.__CASPIAN_PRUNER_STEP) window.__CASPIAN_PRUNER_STEP(" + step + "); else window.scrollBy({top: 400, behavior: 'smooth'});", null);
+                }
+            });
+
+            geminiFinderBtn.setOnClickListener(v -> {
+                playUiFeedbackSound("tap");
+                boolean isFinderOpen = geminiFinderBox.getVisibility() == View.VISIBLE;
+                if (isFinderOpen) {
+                    geminiFinderBox.setVisibility(View.GONE);
+                    geminiFinderPrev.setVisibility(View.GONE);
+                    geminiFinderNext.setVisibility(View.GONE);
+                    TabItem currentTab = getTabById(activeTabId);
+                    if (currentTab != null && currentTab.webView != null) currentTab.webView.clearMatches();
+                    hideKeyboard();
+                } else {
+                    geminiFinderBox.setVisibility(View.VISIBLE);
+                    geminiFinderPrev.setVisibility(View.VISIBLE);
+                    geminiFinderNext.setVisibility(View.VISIBLE);
+                    geminiFinderInput.requestFocus();
+                    InputMethodManager imm = (InputMethodManager) getSystemService(Context.INPUT_METHOD_SERVICE);
+                    if (imm != null) imm.showSoftInput(geminiFinderInput, InputMethodManager.SHOW_IMPLICIT);
+                }
+            });
+
+            geminiFinderInput.addTextChangedListener(new TextWatcher() {
+                @Override
+                public void beforeTextChanged(CharSequence s, int start, int count, int after) {}
+
+                @Override
+                public void onTextChanged(CharSequence s, int start, int before, int count) {
+                    TabItem currentTab = getTabById(activeTabId);
+                    if (currentTab != null && currentTab.webView != null) {
+                        currentTab.webView.findAllAsync(s.toString());
+                    }
+                }
+
+                @Override
+                public void afterTextChanged(Editable s) {}
+            });
+
+            geminiFinderPrev.setOnClickListener(v -> {
+                TabItem currentTab = getTabById(activeTabId);
+                if (currentTab != null && currentTab.webView != null) currentTab.webView.findNext(false);
+            });
+
+            geminiFinderNext.setOnClickListener(v -> {
+                TabItem currentTab = getTabById(activeTabId);
+                if (currentTab != null && currentTab.webView != null) currentTab.webView.findNext(true);
+            });
+
+            geminiDockShrinkBtn.setOnClickListener(v -> {
+                playUiFeedbackSound("tap");
+                geminiDockScroll.setVisibility(View.GONE);
+                geminiDockBall.setVisibility(View.VISIBLE);
+            });
+
+            geminiDockBall.setOnTouchListener(new View.OnTouchListener() {
+                private float ballDX, ballDY, startX, startY;
+                private boolean isBallDragging = false;
+
+                @Override
+                public boolean onTouch(View v, MotionEvent event) {
+                    switch (event.getActionMasked()) {
+                        case MotionEvent.ACTION_DOWN:
+                            ballDX = geminiDockContainer.getX() - event.getRawX();
+                            ballDY = geminiDockContainer.getY() - event.getRawY();
+                            startX = event.getRawX();
+                            startY = event.getRawY();
+                            isBallDragging = false;
+                            return true;
+
+                        case MotionEvent.ACTION_MOVE:
+                            float deltaX = Math.abs(event.getRawX() - startX);
+                            float deltaY = Math.abs(event.getRawY() - startY);
+                            if (deltaX > 10 || deltaY > 10) {
+                                isBallDragging = true;
+                                geminiDockContainer.animate()
+                                        .x(event.getRawX() + ballDX)
+                                        .y(event.getRawY() + ballDY)
+                                        .setDuration(0)
+                                        .start();
+                            }
+                            return true;
+
+                        case MotionEvent.ACTION_UP:
+                            if (!isBallDragging) {
+                                playUiFeedbackSound("tap");
+                                geminiDockBall.setVisibility(View.GONE);
+                                geminiDockScroll.setVisibility(View.VISIBLE);
+                            }
+                            return true;
+                    }
+                    return false;
+                }
+            });
+
+            View.OnTouchListener geminiMover = new View.OnTouchListener() {
+                private float dockDX, dockDY;
+
+                @Override
+                public boolean onTouch(View view, MotionEvent event) {
+                    if (event.getPointerCount() >= 2 || view == geminiDockDragHandle) {
+                        switch (event.getActionMasked()) {
+                            case MotionEvent.ACTION_DOWN:
+                            case MotionEvent.ACTION_POINTER_DOWN:
+                                dockDX = geminiDockContainer.getX() - event.getRawX();
+                                dockDY = geminiDockContainer.getY() - event.getRawY();
+                                return true;
+
+                            case MotionEvent.ACTION_MOVE:
+                                geminiDockContainer.animate()
+                                        .x(event.getRawX() + dockDX)
+                                        .y(event.getRawY() + dockDY)
+                                        .setDuration(0)
+                                        .start();
+                                return true;
+                        }
+                    }
+                    return false;
+                }
+            };
+            geminiDockDragHandle.setOnTouchListener(geminiMover);
+            geminiDockScroll.setOnTouchListener(geminiMover);
+
+            updateGeminiDockButtons();
+            geminiDockScroll.setVisibility(View.GONE);
+            geminiDockBall.setVisibility(View.VISIBLE);
+        } catch (Exception e) {
+            Log.e(TAG, "setupLiquidGlassGeminiDock error: " + e.getMessage());
+        }
+    }
+
+    private void updateGeminiDockButtons() {
+        if (geminiDockToggleBtn == null) return;
+        try {
+            SharedPreferences prefs = getSharedPreferences(PREFS_NAME, MODE_PRIVATE);
+            boolean enabled = "true".equalsIgnoreCase(prefs.getString("chat_limit_enabled", "false"));
+            int limit = 5;
+            try { limit = Integer.parseInt(prefs.getString("chat_message_limit", "5")); } catch(Exception ignored){}
+
+            geminiDockToggleBtn.setText(enabled ? "✂️ Limit: ON" : "✂️ Limit: OFF");
+            geminiDockToggleBtn.setTextColor(enabled ? 0xFF00E5FF : 0x88FFFFFF);
+
+            if (geminiDockLimitBtn != null) {
+                if (!enabled) {
+                    geminiDockLimitBtn.setText("2 msgs");
+                } else {
+                    geminiDockLimitBtn.setText(limit >= 9999 ? "∞ msgs" : (limit + " msgs"));
+                }
+            }
         } catch (Exception ignored) {}
     }
 
@@ -2236,15 +2553,29 @@ public class MainActivity extends AppCompatActivity {
 
             ytRemoteSpeedBtn.setOnClickListener(v -> {
                 playUiFeedbackSound("tap");
-                if (ytCurrentSpeed == 1.0f) setYouTubeSpeed(1.25);
-                else if (ytCurrentSpeed == 1.25f) setYouTubeSpeed(1.5);
-                else if (ytCurrentSpeed == 1.5f) setYouTubeSpeed(2.0);
-                else setYouTubeSpeed(1.0);
+                List<CaspianMenuItem> speedItems = new ArrayList<>();
+                speedItems.add(new CaspianMenuItem("0.25x", () -> setYouTubeSpeed(0.25)));
+                speedItems.add(new CaspianMenuItem("0.5x", () -> setYouTubeSpeed(0.5)));
+                speedItems.add(new CaspianMenuItem("0.75x", () -> setYouTubeSpeed(0.75)));
+                speedItems.add(new CaspianMenuItem("1.0x (Normal)", () -> setYouTubeSpeed(1.0)));
+                speedItems.add(new CaspianMenuItem("1.25x", () -> setYouTubeSpeed(1.25)));
+                speedItems.add(new CaspianMenuItem("1.5x", () -> setYouTubeSpeed(1.5)));
+                speedItems.add(new CaspianMenuItem("1.75x", () -> setYouTubeSpeed(1.75)));
+                speedItems.add(new CaspianMenuItem("2.0x", () -> setYouTubeSpeed(2.0)));
+                showCaspianCustomPopup(v, speedItems);
             });
 
             ytRemoteQualityBtn.setOnClickListener(v -> {
                 playUiFeedbackSound("tap");
-                setYouTubeQuality("auto");
+                List<CaspianMenuItem> qualityItems = new ArrayList<>();
+                qualityItems.add(new CaspianMenuItem("🎯 Auto Quality", () -> setYouTubeQuality("auto")));
+                qualityItems.add(new CaspianMenuItem("💎 1080p (HD)", () -> setYouTubeQuality("hd1080")));
+                qualityItems.add(new CaspianMenuItem("📺 720p (HD)", () -> setYouTubeQuality("hd720")));
+                qualityItems.add(new CaspianMenuItem("⚡ 480p", () -> setYouTubeQuality("large")));
+                qualityItems.add(new CaspianMenuItem("📱 360p", () -> setYouTubeQuality("medium")));
+                qualityItems.add(new CaspianMenuItem("🔋 240p", () -> setYouTubeQuality("small")));
+                qualityItems.add(new CaspianMenuItem("🍃 144p (Data Saver)", () -> setYouTubeQuality("tiny")));
+                showCaspianCustomPopup(v, qualityItems);
             });
 
             ytRemoteShrinkBtn.setOnClickListener(v -> {
@@ -2536,7 +2867,11 @@ public class MainActivity extends AppCompatActivity {
                     long now = System.currentTimeMillis();
                     if (!omniboxEditText.hasFocus()) {
                         omniboxEditText.requestFocus();
-                        omniboxEditText.post(() -> omniboxEditText.selectAll());
+                        omniboxEditText.post(() -> {
+                            omniboxEditText.selectAll();
+                            InputMethodManager imm = (InputMethodManager) getSystemService(Context.INPUT_METHOD_SERVICE);
+                            if (imm != null) imm.showSoftInput(omniboxEditText, InputMethodManager.SHOW_IMPLICIT);
+                        });
                         lastTapTime = now;
                         return true;
                     } else if (now - lastTapTime > 400 && omniboxEditText.getSelectionStart() == 0 && omniboxEditText.getSelectionEnd() == omniboxEditText.getText().length()) {
@@ -2714,7 +3049,11 @@ public class MainActivity extends AppCompatActivity {
 
         omniboxEditText.setOnFocusChangeListener((v, hasFocus) -> {
             if (hasFocus) {
-                omniboxEditText.post(() -> omniboxEditText.selectAll());
+                omniboxEditText.post(() -> {
+                    omniboxEditText.selectAll();
+                    InputMethodManager imm = (InputMethodManager) getSystemService(Context.INPUT_METHOD_SERVICE);
+                    if (imm != null) imm.showSoftInput(omniboxEditText, InputMethodManager.SHOW_IMPLICIT);
+                });
                 checkClipboardAndShowSuggestions(omniboxEditText.getText().toString());
             } else {
                 omniboxSuggestionsContainer.setVisibility(View.GONE);
@@ -2863,6 +3202,10 @@ public class MainActivity extends AppCompatActivity {
         menuItems.add(new CaspianMenuItem(
                 "🤖 ChatGPT Dock: " + (isChatgptDockExplicitlyHidden ? "OFF" : "ON"),
                 () -> toggleChatGPTDock(isChatgptDockExplicitlyHidden)
+        ));
+        menuItems.add(new CaspianMenuItem(
+                "♊ Gemini Dock: " + (isGeminiDockExplicitlyHidden ? "OFF" : "ON"),
+                () -> toggleGeminiDock(isGeminiDockExplicitlyHidden)
         ));
         menuItems.add(new CaspianMenuItem(
                 "🎬 YouTube Remote: " + (isYtRemoteExplicitlyHidden ? "OFF" : "ON"),
@@ -5595,6 +5938,20 @@ public class MainActivity extends AppCompatActivity {
                 }
             }
 
+            boolean isGeminiTab = url.toLowerCase().contains("gemini.google.com") || "gemini".equalsIgnoreCase(currentTab.service);
+            if (geminiDockContainer != null) {
+                if (isGeminiTab && !isGeminiDockExplicitlyHidden) {
+                    if (geminiDockContainer.getVisibility() != View.VISIBLE) {
+                        geminiDockScroll.setVisibility(View.GONE);
+                        geminiDockBall.setVisibility(View.VISIBLE);
+                    }
+                    geminiDockContainer.setVisibility(View.VISIBLE);
+                    updateGeminiDockButtons();
+                } else {
+                    geminiDockContainer.setVisibility(View.GONE);
+                }
+            }
+
             if (currentTab.isIncognito) {
                 omniboxHeaderWrapper.setBackgroundColor(0xFF1E102E);
             } else {
@@ -5609,7 +5966,8 @@ public class MainActivity extends AppCompatActivity {
 
         boolean anyDockActive = (ytFloatingRemoteContainer != null && ytFloatingRemoteContainer.getVisibility() == View.VISIBLE) ||
                                (searchNavContainer != null && searchNavContainer.getVisibility() == View.VISIBLE) ||
-                               (chatgptDockContainer != null && chatgptDockContainer.getVisibility() == View.VISIBLE);
+                               (chatgptDockContainer != null && chatgptDockContainer.getVisibility() == View.VISIBLE) ||
+                               (geminiDockContainer != null && geminiDockContainer.getVisibility() == View.VISIBLE);
         if (omniboxToolbarsBtn != null) {
             omniboxToolbarsBtn.setColorFilter(anyDockActive ? themeAccent : defaultIconTint);
         }

@@ -76,11 +76,11 @@ jobs:
               {
                 id: 'flow',
                 productName: 'Caspian Flow (Beta C)',
-                tag: 'Caspian-Flow-v1.1.23-BetaC',
-                title: '[Beta C] Caspian Flow v1.1.23-BetaC',
-                assetPattern: 'Caspian-Flow-v1.1.23-BetaC.apk',
+                tag: 'Caspian-Flow-v1.1.25-BetaC',
+                title: '[Beta C] Caspian Flow v1.1.25-BetaC',
+                assetPattern: 'Caspian-Flow-v1.1.25-BetaC.apk',
                 isPrerelease: true,
-                desc: 'Omnibox UX refinements, clipboard-only suggestion preview, custom obsidian frosted glass context menus, Browsing History manager with selective clearing, and Dual AI Ask.'
+                desc: 'Action Button Fan Level with water & Caspian themed ranks, dynamic player commentary quotes, SFX audio routing fix, YouTube quality and speed dropdowns, dedicated Gemini toolbar, and Omnibox keyboard summon.'
               },
               {
                 id: 'mobile',

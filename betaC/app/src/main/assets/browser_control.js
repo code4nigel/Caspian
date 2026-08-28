@@ -77,13 +77,14 @@
   setTimeout(preloadAllSFX, 100);
 
   function getSFXFileForType(type) {
-    if (sfxConfig[type]) return sfxConfig[type];
     const saved = localStorage.getItem(`sfx_file_${type}`);
     if (saved) return saved;
+    if (sfxConfig[type]) return sfxConfig[type];
     if (type === 'tm_tabs') return 'pop_button.mp3';
     if (type === 'tm_header') return 'tap_main.mp3';
     if (type === 'ta') return 'pop_click.mp3';
-    return 'tap_button.mp3';
+    if (type === 'tb_clicks') return 'pop_click.mp3';
+    return 'pop_click.mp3';
   }
 
   function playSFX(type) {
@@ -105,6 +106,39 @@
       }
     } catch (e) { }
   }
+
+  window.syncPrunerSettingsFromNative = function(limit, mode, enabled) {
+    limitVal = limit;
+    globalActive = enabled;
+    localStorage.setItem('limit', limit);
+    localStorage.setItem('chat_limit_enabled', enabled ? 'true' : 'false');
+    localStorage.setItem('chat_pruning_mode', mode);
+
+    const statusDot = document.getElementById('status-dot');
+    const statusTitle = document.getElementById('status-title');
+    const toggleBtn = document.getElementById('toggle-chat-limit-btn');
+    const activeBadge = document.getElementById('active-limit-badge');
+
+    if (statusDot) statusDot.classList.toggle('active', enabled);
+    if (statusTitle) statusTitle.textContent = enabled ? 'Chat Message Limit: ON' : 'Chat Message Limit: OFF';
+    if (toggleBtn) {
+      toggleBtn.textContent = enabled ? 'ON' : 'OFF';
+      toggleBtn.className = enabled ? 'oneui-pill-btn primary' : 'oneui-pill-btn secondary';
+    }
+    if (activeBadge) {
+      activeBadge.textContent = limit >= 9999 ? '∞ All' : `${limit} ${limit === 1 ? 'Message' : 'Messages'}`;
+    }
+
+    document.querySelectorAll('.limit-pill').forEach(p => {
+      const val = parseInt(p.dataset.val);
+      p.classList.toggle('active', val === limit);
+    });
+
+    const btnSliding = document.getElementById('btn-mode-sliding');
+    const btnTail = document.getElementById('btn-mode-tail');
+    if (btnSliding) btnSliding.classList.toggle('active', mode === 'sliding_window');
+    if (btnTail) btnTail.classList.toggle('active', mode === 'tail');
+  };
 
   function previewSFXFile(fileName) {
     try {
@@ -158,7 +192,7 @@
   let activeTheme = 'light';
   let selectedDarkBg = '#050811';
   let limitVal = 5;
-  let globalActive = true;
+  let globalActive = false;
 
   function syncAppVersion() {
     try {
@@ -820,6 +854,20 @@
               activeBadge.textContent = limitVal >= 9999 ? '∞ All' : `${limitVal} ${limitVal === 1 ? 'Message' : 'Messages'}`;
             }
           }
+
+          // Restore Chat Message Limit Enabled State
+          const limitEnabled = prefs.chat_limit_enabled !== undefined ? (prefs.chat_limit_enabled === true || prefs.chat_limit_enabled === 'true') : (localStorage.getItem('chat_limit_enabled') === 'true');
+          globalActive = limitEnabled;
+          const statusDot = document.getElementById('status-dot');
+          const statusTitle = document.getElementById('status-title');
+          const toggleLimitBtn = document.getElementById('toggle-chat-limit-btn');
+          if (statusDot) statusDot.classList.toggle('active', limitEnabled);
+          if (statusTitle) statusTitle.textContent = limitEnabled ? 'Chat Message Limit: ON' : 'Chat Message Limit: OFF';
+          if (toggleLimitBtn) {
+            toggleLimitBtn.textContent = limitEnabled ? 'ON' : 'OFF';
+            toggleLimitBtn.className = limitEnabled ? 'oneui-pill-btn primary' : 'oneui-pill-btn secondary';
+          }
+
           // Restore AdBlocker State
           const adblockVal = prefs.adblock_enabled !== undefined ? (prefs.adblock_enabled === true || prefs.adblock_enabled === 'true') : (localStorage.getItem('adblock_enabled') !== 'false');
           const toggleAdblockBtn = document.getElementById('toggle-adblock-btn');
@@ -1281,20 +1329,47 @@
     const tierEl = document.getElementById('dev-hud-tier');
     const barEl = document.getElementById('dev-hud-progress-bar');
     const pctEl = document.getElementById('dev-hud-synergy-pct');
+    const subEl = document.getElementById('dev-hud-subtext');
 
     if (totalEl) totalEl.textContent = clicks.toLocaleString();
     if (cyclesEl) cyclesEl.textContent = cycles.toLocaleString();
 
-    let tier = 'LVL 1 INITIATE';
+    let tier = 'LVL 1 RIPPLE DRIFTER 💧';
     let pct = Math.min(100, Math.max(10, (clicks % 50) * 2));
-    if (clicks >= 500) tier = 'LVL 5 QUANTUM LORD';
-    else if (clicks >= 200) tier = 'LVL 4 VOID WEAVER';
-    else if (clicks >= 100) tier = 'LVL 3 CHRONO MASTER';
-    else if (clicks >= 30) tier = 'LVL 2 CYBER PILOT';
+    if (clicks >= 2500) tier = 'LVL 7 POSEIDON OF CASPIAN 🔱';
+    else if (clicks >= 1000) tier = 'LVL 6 CASPIAN LEVIATHAN 🐋';
+    else if (clicks >= 500) tier = 'LVL 5 TIDE WEAVER 🌊';
+    else if (clicks >= 200) tier = 'LVL 4 CASPIAN WAVE RIDER 🏄';
+    else if (clicks >= 100) tier = 'LVL 3 STREAM NAVIGATOR 🚣';
+    else if (clicks >= 30) tier = 'LVL 2 SHALLOW DIVER 🌊';
 
     if (tierEl) tierEl.textContent = tier;
     if (barEl) barEl.style.width = pct + '%';
     if (pctEl) pctEl.textContent = `${pct}% Sync`;
+
+    const CASPIAN_FAN_QUOTES = [
+      `Oh boy, you have reached ${tier}! You are a real Caspianer! 🌊`,
+      `Over ${cycles} cycles! Man is truly committed to the flow! ⚡`,
+      `Diving deeper into the Caspian depths with every tap! 🏊‍♂️`,
+      `Navigating the digital waters like a true Caspian captain! ⛵`,
+      `The tides of Caspian obey your every click! 🌊✨`,
+      `Pure Caspian resonance! You've mastered the current! 🌊`,
+      `Over ${clicks} taps! An absolute legend of the Lake! 👑`,
+      `Spamming the button like there's treasure at the lake bottom! 🏴‍☠️`,
+      `Caspian Sea waters flow straight through your veins! 🌊💎`,
+      `Lord of the Caspian Tides! Unstoppable wave rider! 🏄‍♂️`,
+      `You tap, the Caspian waves listen! 🌊⚡`,
+      `Such dedication! Nigel is weeping tears of joy right now! 🥲`,
+      `Floating smoothly across the digital Caspian Sea! 🌌🌊`,
+      `Rank ${tier} achieved! You rule the depths! 🔱`,
+      `The Caspian Sea has never seen someone click this much! 🌊🚀`,
+      `Caspian synergy at maximum depth! Full flow unlocked! 🌊🔥`
+    ];
+
+    if (subEl) {
+      const qIdx = (clicks + cycles) % CASPIAN_FAN_QUOTES.length;
+      subEl.textContent = CASPIAN_FAN_QUOTES[qIdx];
+    }
   };
 
   // Theme Presets Map
