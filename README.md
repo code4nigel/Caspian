@@ -83,8 +83,8 @@ You can use [Obtainium](https://github.com/ImranR98/Obtainium) to receive automa
 5. All three Caspian variants (**Caspian Flow**, **Caspian Mobile**, and **Caspian Beta A**) will be automatically added with their correct release filters!
 
 ### Video Walkthrough Guide
-A step-by-step video demonstration is available in the repository:
-- Video Guide: [`obtanium setup/obtainium_setup_guide.mp4`](obtanium%20setup/obtainium_setup_guide.mp4)
+Watch the quick setup demonstration on YouTube:
+- **YouTube Video Guide**: [Watch How to Setup Caspian in Obtainium](https://youtube.com/shorts/16XPiOxabTo)
 
 ---
 
