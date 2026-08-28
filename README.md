@@ -139,6 +139,6 @@ A step-by-step video demonstration is available in the repository:
 
 ## Developer and License
 
-- **Creator & Lead Developer**: **Nigel (code4nigel)**
+- **Creator & Lead Architect**: Crafted with ❤️ by **NigelWeb** ([github.com/code4nigel](https://github.com/code4nigel)), Lead Architect of **Lsync**, **Caspian**, and **Scrobby**.
 - **Repository**: [https://github.com/code4nigel/Caspian](https://github.com/code4nigel/Caspian)
 - **License**: GNU General Public License v3.0 (GPL-3.0)
