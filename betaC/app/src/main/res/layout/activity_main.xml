@@ -292,6 +292,73 @@
             </LinearLayout>
         </FrameLayout>
 
+        <!-- Floating Glass Omnibox Suggestions & Clipboard Dropdown -->
+        <FrameLayout
+            android:id="@+id/omnibox_suggestions_container"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:paddingStart="10dp"
+            android:paddingEnd="10dp"
+            android:paddingTop="2dp"
+            android:paddingBottom="6dp"
+            android:background="#151E2E"
+            android:visibility="gone"
+            android:elevation="8dp">
+
+            <LinearLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:orientation="vertical">
+
+                <!-- Clipboard Link Chip (if URL detected) -->
+                <LinearLayout
+                    android:id="@+id/omnibox_clipboard_chip"
+                    android:layout_width="match_parent"
+                    android:layout_height="36dp"
+                    android:orientation="horizontal"
+                    android:gravity="center_vertical"
+                    android:background="@drawable/bg_liquid_glass_pill"
+                    android:paddingStart="10dp"
+                    android:paddingEnd="10dp"
+                    android:layout_marginBottom="4dp"
+                    android:visibility="gone">
+
+                    <ImageView
+                        android:layout_width="16dp"
+                        android:layout_height="16dp"
+                        android:src="@drawable/ic_browser_lock"
+                        android:tint="#00E5FF" />
+
+                    <TextView
+                        android:id="@+id/omnibox_clipboard_text"
+                        android:layout_width="0dp"
+                        android:layout_height="wrap_content"
+                        android:layout_weight="1"
+                        android:layout_marginStart="8dp"
+                        android:text="Link you copied"
+                        android:textColor="#E0E6ED"
+                        android:textSize="11sp"
+                        android:singleLine="true"
+                        android:ellipsize="end" />
+
+                    <TextView
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:text="Paste"
+                        android:textColor="#00E5FF"
+                        android:textSize="11sp"
+                        android:textStyle="bold" />
+                </LinearLayout>
+
+                <!-- Search Suggestions List Container -->
+                <LinearLayout
+                    android:id="@+id/omnibox_suggestions_list"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:orientation="vertical" />
+            </LinearLayout>
+        </FrameLayout>
+
         <!-- Slim Hardware-Accelerated Loading Progress Bar -->
         <ProgressBar
             android:id="@+id/browser_progress_bar"
@@ -308,11 +375,17 @@
             android:layout_height="0dp"
             android:layout_weight="1">
 
-            <!-- Single Tab Fullscreen Container -->
-            <FrameLayout
-                android:id="@+id/webview_container"
+            <!-- Single Tab Fullscreen Container with Pull-to-Refresh -->
+            <androidx.swiperefreshlayout.widget.SwipeRefreshLayout
+                android:id="@+id/swipe_refresh_layout"
                 android:layout_width="match_parent"
-                android:layout_height="match_parent" />
+                android:layout_height="match_parent">
+
+                <FrameLayout
+                    android:id="@+id/webview_container"
+                    android:layout_width="match_parent"
+                    android:layout_height="match_parent" />
+            </androidx.swiperefreshlayout.widget.SwipeRefreshLayout>
 
             <!-- Dual Split-Screen AI Workspace (Dynamic Horizontal/Vertical) -->
             <LinearLayout

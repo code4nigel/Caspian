@@ -200,6 +200,12 @@ public class MainActivity extends AppCompatActivity {
     private ImageButton omniboxMenuBtn;
     private ProgressBar browserProgressBar;
 
+    private androidx.swiperefreshlayout.widget.SwipeRefreshLayout swipeRefreshLayout;
+    private FrameLayout omniboxSuggestionsContainer;
+    private LinearLayout omniboxClipboardChip;
+    private TextView omniboxClipboardText;
+    private LinearLayout omniboxSuggestionsList;
+
     private FrameLayout webviewsParentContainer;
     private FrameLayout webViewContainer;
     private LinearLayout splitViewContainer;
@@ -408,6 +414,9 @@ public class MainActivity extends AppCompatActivity {
         try { setupSplitDividerDrag(); } catch (Throwable ignored) {}
         try { setupModernTabGridOverlay(); } catch (Throwable ignored) {}
         try { setupPlatformModal(); } catch (Throwable ignored) {}
+        try { setupPullToRefresh(); } catch (Throwable ignored) {}
+        try { setupOmniboxSwipeTabSwitcher(); } catch (Throwable ignored) {}
+        try { setupOmniboxSuggestions(); } catch (Throwable ignored) {}
         try { initCaspianBetaASplash(); } catch (Throwable ignored) {}
 
         try {
@@ -802,6 +811,12 @@ public class MainActivity extends AppCompatActivity {
             omniboxTabsCount = findViewById(R.id.omnibox_tabs_count);
             omniboxMenuBtn = findViewById(R.id.omnibox_menu_btn);
             browserProgressBar = findViewById(R.id.browser_progress_bar);
+
+            swipeRefreshLayout = findViewById(R.id.swipe_refresh_layout);
+            omniboxSuggestionsContainer = findViewById(R.id.omnibox_suggestions_container);
+            omniboxClipboardChip = findViewById(R.id.omnibox_clipboard_chip);
+            omniboxClipboardText = findViewById(R.id.omnibox_clipboard_text);
+            omniboxSuggestionsList = findViewById(R.id.omnibox_suggestions_list);
 
             webviewsParentContainer = findViewById(R.id.webviews_parent_container);
             webViewContainer = findViewById(R.id.webview_container);
@@ -2568,6 +2583,225 @@ public class MainActivity extends AppCompatActivity {
         });
 
         omniboxMenuBtn.setOnClickListener(v -> showBrowserMenu(v));
+    }
+
+    private int dpToPx(int dp) {
+        return (int) (dp * getResources().getDisplayMetrics().density + 0.5f);
+    }
+
+    private void setupPullToRefresh() {
+        if (swipeRefreshLayout == null) return;
+        swipeRefreshLayout.setColorSchemeColors(0xFF00E5FF, 0xFF10B981, 0xFFFFCC00);
+        swipeRefreshLayout.setProgressBackgroundColorSchemeColor(0xFF0D1524);
+        swipeRefreshLayout.setOnRefreshListener(() -> {
+            TabItem currentTab = getTabById(activeTabId);
+            if (currentTab != null && currentTab.webView != null) {
+                playUiFeedbackSound("tap");
+                currentTab.webView.reload();
+            }
+            swipeRefreshLayout.postDelayed(() -> {
+                if (swipeRefreshLayout != null) swipeRefreshLayout.setRefreshing(false);
+            }, 800);
+        });
+    }
+
+    private void setupOmniboxSwipeTabSwitcher() {
+        if (omniboxHeaderWrapper == null) return;
+
+        omniboxHeaderWrapper.setOnTouchListener(new View.OnTouchListener() {
+            private float startX = 0f;
+            private float startY = 0f;
+            private boolean isSwiping = false;
+
+            @Override
+            public boolean onTouch(View v, MotionEvent event) {
+                switch (event.getActionMasked()) {
+                    case MotionEvent.ACTION_DOWN:
+                        startX = event.getRawX();
+                        startY = event.getRawY();
+                        isSwiping = false;
+                        return false;
+
+                    case MotionEvent.ACTION_MOVE:
+                        float dx = event.getRawX() - startX;
+                        float dy = Math.abs(event.getRawY() - startY);
+                        if (Math.abs(dx) > 30 && dy < 40 && omniboxEditText != null && !omniboxEditText.hasFocus()) {
+                            isSwiping = true;
+                            return true;
+                        }
+                        break;
+
+                    case MotionEvent.ACTION_UP:
+                        if (isSwiping) {
+                            float deltaX = event.getRawX() - startX;
+                            if (Math.abs(deltaX) > 60) {
+                                if (deltaX > 0) {
+                                    switchToAdjacentTab(-1);
+                                } else {
+                                    switchToAdjacentTab(1);
+                                }
+                                return true;
+                            }
+                        }
+                        break;
+                }
+                return false;
+            }
+        });
+    }
+
+    public void switchToAdjacentTab(int direction) {
+        if (tabsList == null || tabsList.size() <= 1) return;
+        int currentIndex = -1;
+        for (int i = 0; i < tabsList.size(); i++) {
+            if (tabsList.get(i).id == activeTabId) {
+                currentIndex = i;
+                break;
+            }
+        }
+        if (currentIndex < 0) return;
+
+        int targetIndex = (currentIndex + direction + tabsList.size()) % tabsList.size();
+        TabItem targetTab = tabsList.get(targetIndex);
+
+        if (webViewContainer != null) {
+            float offset = direction > 0 ? 100f : -100f;
+            webViewContainer.animate()
+                    .translationX(-offset)
+                    .alpha(0.5f)
+                    .setDuration(90)
+                    .withEndAction(() -> {
+                        switchToTab(targetTab.id);
+                        webViewContainer.setTranslationX(offset);
+                        webViewContainer.animate()
+                                .translationX(0f)
+                                .alpha(1.0f)
+                                .setDuration(120)
+                                .start();
+                    })
+                    .start();
+        } else {
+            switchToTab(targetTab.id);
+        }
+    }
+
+    private void setupOmniboxSuggestions() {
+        if (omniboxEditText == null || omniboxSuggestionsContainer == null) return;
+
+        omniboxEditText.setOnFocusChangeListener((v, hasFocus) -> {
+            if (hasFocus) {
+                checkClipboardAndShowSuggestions(omniboxEditText.getText().toString());
+            } else {
+                omniboxSuggestionsContainer.setVisibility(View.GONE);
+            }
+        });
+
+        omniboxEditText.addTextChangedListener(new TextWatcher() {
+            @Override
+            public void beforeTextChanged(CharSequence s, int start, int count, int after) {}
+
+            @Override
+            public void onTextChanged(CharSequence s, int start, int before, int count) {
+                if (omniboxEditText.hasFocus()) {
+                    checkClipboardAndShowSuggestions(s != null ? s.toString() : "");
+                }
+            }
+
+            @Override
+            public void afterTextChanged(Editable s) {}
+        });
+    }
+
+    private void checkClipboardAndShowSuggestions(String currentText) {
+        if (omniboxSuggestionsContainer == null || omniboxSuggestionsList == null) return;
+
+        ClipboardManager clipboard = (ClipboardManager) getSystemService(CLIPBOARD_SERVICE);
+        if (clipboard != null && clipboard.hasPrimaryClip() && clipboard.getPrimaryClip() != null && clipboard.getPrimaryClip().getItemCount() > 0) {
+            CharSequence clipText = clipboard.getPrimaryClip().getItemAt(0).getText();
+            if (clipText != null && !clipText.toString().trim().isEmpty() && (clipText.toString().startsWith("http://") || clipText.toString().startsWith("https://") || clipText.toString().contains("."))) {
+                String link = clipText.toString().trim();
+                omniboxClipboardText.setText(link);
+                omniboxClipboardChip.setVisibility(View.VISIBLE);
+                omniboxClipboardChip.setOnClickListener(v -> {
+                    omniboxEditText.setText(link);
+                    handleOmniboxSubmission(link);
+                    omniboxSuggestionsContainer.setVisibility(View.GONE);
+                    hideKeyboard();
+                    omniboxEditText.clearFocus();
+                });
+            } else {
+                omniboxClipboardChip.setVisibility(View.GONE);
+            }
+        } else {
+            omniboxClipboardChip.setVisibility(View.GONE);
+        }
+
+        SearchSuggestionService.fetchSuggestions(currentText, (query, suggestions) -> {
+            if (suggestions == null || suggestions.isEmpty()) {
+                if (omniboxClipboardChip.getVisibility() == View.GONE) {
+                    omniboxSuggestionsContainer.setVisibility(View.GONE);
+                } else {
+                    omniboxSuggestionsContainer.setVisibility(View.VISIBLE);
+                    omniboxSuggestionsList.removeAllViews();
+                }
+                return;
+            }
+
+            omniboxSuggestionsList.removeAllViews();
+            omniboxSuggestionsContainer.setVisibility(View.VISIBLE);
+
+            for (String suggestion : suggestions) {
+                LinearLayout row = new LinearLayout(this);
+                row.setLayoutParams(new LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, dpToPx(38)));
+                row.setOrientation(LinearLayout.HORIZONTAL);
+                row.setGravity(Gravity.CENTER_VERTICAL);
+                row.setPadding(dpToPx(10), 0, dpToPx(10), 0);
+                row.setBackgroundResource(R.drawable.bg_liquid_glass_pill);
+
+                ImageView icon = new ImageView(this);
+                icon.setLayoutParams(new LinearLayout.LayoutParams(dpToPx(16), dpToPx(16)));
+                icon.setImageResource(R.drawable.ic_pod_search);
+                icon.setColorFilter(0xFFA2A9A9);
+
+                TextView tv = new TextView(this);
+                LinearLayout.LayoutParams tvParams = new LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.WRAP_CONTENT, 1.0f);
+                tvParams.setMarginStart(dpToPx(8));
+                tv.setLayoutParams(tvParams);
+                tv.setText(suggestion);
+                tv.setTextColor(0xFFFFFFFF);
+                tv.setTextSize(TypedValue.COMPLEX_UNIT_SP, 12);
+                tv.setSingleLine(true);
+
+                ImageView arrow = new ImageView(this);
+                arrow.setLayoutParams(new LinearLayout.LayoutParams(dpToPx(16), dpToPx(16)));
+                arrow.setImageResource(R.drawable.ic_pod_arrow_up);
+                arrow.setRotation(-45);
+                arrow.setColorFilter(0x88A2A9A9);
+
+                row.addView(icon);
+                row.addView(tv);
+                row.addView(arrow);
+
+                row.setOnClickListener(v -> {
+                    omniboxEditText.setText(suggestion);
+                    handleOmniboxSubmission(suggestion);
+                    omniboxSuggestionsContainer.setVisibility(View.GONE);
+                    hideKeyboard();
+                    omniboxEditText.clearFocus();
+                });
+
+                arrow.setOnClickListener(v -> {
+                    omniboxEditText.setText(suggestion);
+                    omniboxEditText.setSelection(suggestion.length());
+                });
+
+                LinearLayout.LayoutParams rowParams = (LinearLayout.LayoutParams) row.getLayoutParams();
+                rowParams.bottomMargin = dpToPx(4);
+                row.setLayoutParams(rowParams);
+
+                omniboxSuggestionsList.addView(row);
+            }
+        });
     }
 
     private void showOmniboxFinder() {
@@ -4714,6 +4948,9 @@ public class MainActivity extends AppCompatActivity {
         tabItem.pendingPrompt = promptPayload;
 
         webView.setOnScrollChangeListener((v, scrollX, scrollY, oldScrollX, oldScrollY) -> {
+            if (swipeRefreshLayout != null) {
+                swipeRefreshLayout.setEnabled(scrollY <= 0);
+            }
             if (isGoogleDockAutoCollapse && searchNavContainer != null && searchNavContainer.getVisibility() == View.VISIBLE) {
                 int delta = scrollY - oldScrollY;
                 if (delta > 20 && searchDockScroll.getVisibility() == View.VISIBLE) {
