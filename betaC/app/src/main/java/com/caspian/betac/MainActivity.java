@@ -4705,6 +4705,11 @@ public class MainActivity extends AppCompatActivity {
         webView.addJavascriptInterface(new CaspianBridge(this), "CaspianBridge");
         applyWebViewTheme(webView, isDarkTheme);
 
+        webView.setLayerType(View.LAYER_TYPE_HARDWARE, null);
+        settings.setRenderPriority(WebSettings.RenderPriority.HIGH);
+        settings.setOffscreenPreRaster(true);
+        settings.setEnableSmoothTransition(true);
+
         TabItem tabItem = new TabItem(id, "New Tab", url, service, webView, isIncognito);
         tabItem.pendingPrompt = promptPayload;
 
@@ -4780,6 +4785,10 @@ public class MainActivity extends AppCompatActivity {
                     browserProgressBar.setProgress(15);
                     updateOmniboxState();
                 }
+                if (pageUrl != null && pageUrl.contains("chatgpt.com")) {
+                    String interceptorJs = readAssetScript("chatgpt_network_interceptor.js");
+                    if (!interceptorJs.isEmpty()) view.evaluateJavascript(interceptorJs, null);
+                }
             }
 
             @Override
@@ -4792,6 +4801,13 @@ public class MainActivity extends AppCompatActivity {
                 }
 
                 captureTabSnapshot(tabItem);
+
+                if (pageUrl != null && pageUrl.contains("chatgpt.com")) {
+                    String interceptorJs = readAssetScript("chatgpt_network_interceptor.js");
+                    if (!interceptorJs.isEmpty()) {
+                        view.evaluateJavascript(interceptorJs, null);
+                    }
+                }
 
                 String prunerJs = readAssetScript("mobile_pruner.js");
                 if (!prunerJs.isEmpty()) {

@@ -72,11 +72,11 @@ jobs:
               {
                 id: 'flow',
                 productName: 'Caspian Flow (Beta C)',
-                tag: 'Caspian-Flow-v1.1.15-BetaC',
-                title: '[Beta C] Caspian Flow v1.1.15-BetaC',
-                assetPattern: 'Caspian-Flow-v1.1.15-BetaC.apk',
+                tag: 'Caspian-Flow-v1.1.16-BetaC',
+                title: '[Beta C] Caspian Flow v1.1.16-BetaC',
+                assetPattern: 'Caspian-Flow-v1.1.16-BetaC.apk',
                 isPrerelease: true,
-                desc: 'Ultra high-performance multi-threaded AI workspace browser with virtual sliding window DOM pruning and voice visualizer.'
+                desc: 'Zero-lag ChatGPT conversation stream interceptor, hardware-accelerated Chromium rendering flags, and high-priority render looper.'
               },
               {
                 id: 'mobile',
