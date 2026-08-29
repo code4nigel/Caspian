@@ -76,11 +76,11 @@ jobs:
               {
                 id: 'flow',
                 productName: 'Caspian Flow (Beta C)',
-                tag: 'Caspian-Flow-v1.1.30-BetaC',
-                title: '[Beta C] Caspian Flow v1.1.30-BetaC',
-                assetPattern: 'Caspian-Flow-v1.1.30-BetaC.apk',
+                tag: 'Caspian-Flow-v1.1.31-BetaC',
+                title: '[Beta C] Caspian Flow v1.1.31-BetaC',
+                assetPattern: 'Caspian-Flow-v1.1.31-BetaC.apk',
                 isPrerelease: true,
-                desc: 'Features smooth browser tab reordering and natural position-swapping with live space-giving displacement in both Caspian Menu and Omnibox Tab grids, multi-tier ranking, and developer exclusive themes.'
+                desc: 'Features multi-tab bulk drag & drop reordering and group movement in Caspian Menu tabs, smooth browser tab slot displacement animations, multi-tier ranking, and developer exclusive themes.'
               },
               {
                 id: 'mobile',

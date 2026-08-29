@@ -571,6 +571,17 @@
             card.style.willChange = 'transform';
             card.style.transition = 'none';
 
+            const tabId = parseInt(card.dataset.tabid);
+            if (isMultiSelectMode && selectedTabIds.has(tabId)) {
+              container.querySelectorAll('.chrome-tab-card').forEach(c => {
+                const cId = parseInt(c.dataset.tabid);
+                if (selectedTabIds.has(cId) && c !== card) {
+                  c.classList.add('dragging');
+                  c.style.opacity = '0.7';
+                }
+              });
+            }
+
             cachedTargets = Array.from(container.querySelectorAll('.chrome-tab-card')).map(c => ({
               el: c,
               rect: c.getBoundingClientRect()
@@ -670,8 +681,10 @@
 
         container.querySelectorAll('.chrome-tab-card').forEach(c => {
           c.classList.remove('drop-target');
+          c.classList.remove('dragging');
           c.style.transform = '';
           c.style.transition = '';
+          c.style.opacity = '';
         });
 
         if (wasDrag) {
@@ -736,44 +749,92 @@
               return;
             }
 
-            // Case B: Dropped onto another Tab card in main view -> Reorder tabs giving natural browser movement!
+            // Case B: Dropped onto another Tab card in main view -> Reorder tabs (Single or Bulk Multi-Selected Tabs!)
             if (!activeGroupId && !activeDropTarget.classList.contains('group-card')) {
               const targetTabId = parseInt(activeDropTarget.dataset.tabid);
               if (sourceTabId !== targetTabId) {
                 const allTabsJson = window.CaspianBridge && typeof window.CaspianBridge.getOpenTabs === 'function' ? window.CaspianBridge.getOpenTabs() : null;
                 const allTabs = allTabsJson ? JSON.parse(allTabsJson) : [];
-                const sourceIdx = allTabs.findIndex(t => t.id === sourceTabId);
-                const targetIdx = allTabs.findIndex(t => t.id === targetTabId);
 
-                if (sourceIdx !== -1 && targetIdx !== -1 && sourceIdx !== targetIdx) {
-                  const [moved] = allTabs.splice(sourceIdx, 1);
-                  allTabs.splice(targetIdx, 0, moved);
-                  const newIds = allTabs.map(t => t.id);
+                if (isMultiSelectMode && selectedTabIds.size > 0) {
+                  const selectedSet = new Set(selectedTabIds);
+                  selectedSet.add(sourceTabId);
+
+                  const selectedTabs = allTabs.filter(t => selectedSet.has(t.id));
+                  const unselectedTabs = allTabs.filter(t => !selectedSet.has(t.id));
+
+                  let insertIndex = unselectedTabs.findIndex(t => t.id === targetTabId);
+                  if (insertIndex === -1) insertIndex = unselectedTabs.length;
+
+                  unselectedTabs.splice(insertIndex, 0, ...selectedTabs);
+                  const newIds = unselectedTabs.map(t => t.id);
                   if (window.CaspianBridge && typeof window.CaspianBridge.reorderTabs === 'function') {
                     window.CaspianBridge.reorderTabs(JSON.stringify(newIds));
                   }
-                  if (navigator.vibrate) navigator.vibrate(30);
+                  isMultiSelectMode = false;
+                  selectedTabIds.clear();
+                  if (navigator.vibrate) navigator.vibrate(40);
                   playSFX('tb_clicks');
+                  if (window.CaspianBridge && typeof window.CaspianBridge.showToast === 'function') {
+                    window.CaspianBridge.showToast(`Moved ${selectedTabs.length} tabs together!`);
+                  }
                   setTimeout(renderOpenTabs, 50);
                   return;
+                } else {
+                  const sourceIdx = allTabs.findIndex(t => t.id === sourceTabId);
+                  const targetIdx = allTabs.findIndex(t => t.id === targetTabId);
+
+                  if (sourceIdx !== -1 && targetIdx !== -1 && sourceIdx !== targetIdx) {
+                    const [moved] = allTabs.splice(sourceIdx, 1);
+                    allTabs.splice(targetIdx, 0, moved);
+                    const newIds = allTabs.map(t => t.id);
+                    if (window.CaspianBridge && typeof window.CaspianBridge.reorderTabs === 'function') {
+                      window.CaspianBridge.reorderTabs(JSON.stringify(newIds));
+                    }
+                    if (navigator.vibrate) navigator.vibrate(30);
+                    playSFX('tb_clicks');
+                    setTimeout(renderOpenTabs, 50);
+                    return;
+                  }
                 }
               }
             }
 
-            // Case C: Inside an active group -> Reorder tabs inside group
+            // Case C: Inside an active group -> Reorder tabs inside group (Single or Bulk Multi-Selected!)
             if (activeGroupId) {
               const currentGroup = tabGroups.find(g => g.id === activeGroupId);
               if (currentGroup) {
                 const targetTabId = parseInt(activeDropTarget.dataset.tabid);
-                const sIdx = currentGroup.tabIds.indexOf(sourceTabId);
-                const tIdx = currentGroup.tabIds.indexOf(targetTabId);
-                if (sIdx !== -1 && tIdx !== -1 && sIdx !== tIdx) {
-                  const [moved] = currentGroup.tabIds.splice(sIdx, 1);
-                  currentGroup.tabIds.splice(tIdx, 0, moved);
+                if (isMultiSelectMode && selectedTabIds.size > 0) {
+                  const selectedSet = new Set(selectedTabIds);
+                  selectedSet.add(sourceTabId);
+                  const selectedInGroup = currentGroup.tabIds.filter(id => selectedSet.has(id));
+                  const unselectedInGroup = currentGroup.tabIds.filter(id => !selectedSet.has(id));
+                  let insertIndex = unselectedInGroup.indexOf(targetTabId);
+                  if (insertIndex === -1) insertIndex = unselectedInGroup.length;
+                  unselectedInGroup.splice(insertIndex, 0, ...selectedInGroup);
+                  currentGroup.tabIds = unselectedInGroup;
                   saveTabGroups();
+                  isMultiSelectMode = false;
+                  selectedTabIds.clear();
+                  if (navigator.vibrate) navigator.vibrate(40);
                   playSFX('tb_clicks');
+                  if (window.CaspianBridge && typeof window.CaspianBridge.showToast === 'function') {
+                    window.CaspianBridge.showToast(`Moved ${selectedInGroup.length} tabs together!`);
+                  }
                   setTimeout(renderOpenTabs, 50);
                   return;
+                } else {
+                  const sIdx = currentGroup.tabIds.indexOf(sourceTabId);
+                  const tIdx = currentGroup.tabIds.indexOf(targetTabId);
+                  if (sIdx !== -1 && tIdx !== -1 && sIdx !== tIdx) {
+                    const [moved] = currentGroup.tabIds.splice(sIdx, 1);
+                    currentGroup.tabIds.splice(tIdx, 0, moved);
+                    saveTabGroups();
+                    playSFX('tb_clicks');
+                    setTimeout(renderOpenTabs, 50);
+                    return;
+                  }
                 }
               }
             }
