@@ -1145,18 +1145,24 @@ select option {
 .chrome-tab-card {
   transition: transform 0.15s ease-out, opacity 0.15s ease-out, box-shadow 0.15s ease-out;
   position: relative;
+  user-select: none !important;
+  -webkit-user-select: none !important;
+  -webkit-touch-callout: none !important;
 }
 
 .chrome-tab-card.dragging {
   transition: none !important;
-  opacity: 0.8;
-  box-shadow: 0 8px 24px rgba(0,0,0,0.3);
+  opacity: 0.95 !important;
+  transform: scale(1.06) !important;
+  box-shadow: 0 16px 36px rgba(0, 0, 0, 0.6), 0 0 20px var(--accent-glow) !important;
+  z-index: 99999 !important;
+  cursor: grabbing !important;
 }
 
 .chrome-tab-card.drop-target {
-  border-color: #10b981 !important;
-  box-shadow: 0 0 14px rgba(16, 185, 129, 0.4) !important;
-  transform: scale(1.02);
+  border: 2px dashed #10b981 !important;
+  box-shadow: 0 0 20px rgba(16, 185, 129, 0.6) !important;
+  transform: scale(1.04) !important;
 }
 
 /* GPU-accelerated tab switching animation with layout containment */

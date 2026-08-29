@@ -76,11 +76,11 @@ jobs:
               {
                 id: 'flow',
                 productName: 'Caspian Flow (Beta C)',
-                tag: 'Caspian-Flow-v1.1.27-BetaC',
-                title: '[Beta C] Caspian Flow v1.1.27-BetaC',
-                assetPattern: 'Caspian-Flow-v1.1.27-BetaC.apk',
+                tag: 'Caspian-Flow-v1.1.28-BetaC',
+                title: '[Beta C] Caspian Flow v1.1.28-BetaC',
+                assetPattern: 'Caspian-Flow-v1.1.28-BetaC.apk',
                 isPrerelease: true,
-                desc: 'Restored Cosmic Gemini & Ena Shine Developer Exclusive Themes with premium golden shimmer lighting, radiant aura animations, level-up exclusive quotes, and multi-tier exponential rank scaling.'
+                desc: 'Natural press-and-hold fluid tab drag & drop, hover tab grouping (drop tab onto tab to create group), and prevention of unwanted multi-select triggers.'
               },
               {
                 id: 'mobile',

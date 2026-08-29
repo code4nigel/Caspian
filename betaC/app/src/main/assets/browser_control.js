@@ -477,6 +477,7 @@
           openGroupOptionsMenu(group);
         }
       });
+      card.addEventListener('contextmenu', (e) => e.preventDefault());
 
       card.addEventListener('click', (e) => {
         if (e.target.classList.contains('chrome-group-menu-btn')) return;
@@ -519,7 +520,7 @@
 
     window.renderOpenTabs = renderOpenTabs;
 
-    // Bind Normal Tab Cards touch gestures (1-finger drag vs 2-finger multi-select)
+    // Bind Normal Tab Cards touch gestures (1-finger drag & drop grouping vs 2-finger multi-select)
     container.querySelectorAll('.chrome-tab-card:not(.group-card)').forEach(card => {
       let touchStartX = 0;
       let touchStartY = 0;
@@ -533,7 +534,7 @@
       let cachedTargets = [];
 
       const onTouchStart = (e) => {
-        // Fix Issue 2: 2-finger touch strictly activates Multi-Select mode & cancels drag timers!
+        // 2-finger touch strictly activates Multi-Select mode
         if (e.touches.length >= 2) {
           clearTimeout(pressTimer);
           isDrag = false;
@@ -560,23 +561,22 @@
         isDrag = false;
 
         clearTimeout(pressTimer);
-        // 200ms long press to activate tab moving mode
+        // Responsive 150ms press-and-hold to activate fluid tab dragging
         pressTimer = setTimeout(() => {
-          if (!isSwipe && e.touches.length === 1) {
+          if (!isSwipe && e.touches && e.touches.length === 1) {
             isDrag = true;
             card.classList.add('dragging');
             card.style.zIndex = '10000';
-            card.style.pointerEvents = 'none'; // Pass-through touch events once
-            card.style.willChange = 'transform'; // Enable GPU acceleration
+            card.style.pointerEvents = 'none'; // Pass-through touch events for 2D collision
+            card.style.willChange = 'transform';
             card.style.transition = 'none';
 
-            // Cache bounding rects once on drag start to prevent layout flushes during move!
             cachedTargets = Array.from(container.querySelectorAll('.chrome-tab-card')).map(c => ({
               el: c,
               rect: c.getBoundingClientRect()
             }));
 
-            const headerZone = document.getElementById('group-view-header');
+            const headerZone = document.getElementById('group-view-header') || document.getElementById('inside-group-header');
             if (activeGroupId && headerZone && headerZone.offsetParent !== null) {
               cachedTargets.push({
                 el: headerZone,
@@ -588,7 +588,7 @@
             if (navigator.vibrate) navigator.vibrate(40);
             playSFX('tb_clicks');
           }
-        }, 200);
+        }, 150);
       };
 
       const onTouchMove = (e) => {
@@ -606,10 +606,10 @@
         const moveDist = Math.hypot(diffX, diffY);
 
         if (isDrag) {
-          e.preventDefault(); // Prevent native WebView scroll while dragging
-          card.style.transform = `translate3d(${diffX}px, ${diffY}px, 0) scale(1.04)`; // 3D GPU acceleration
+          e.preventDefault(); // Lock scrolling during card drag
+          card.style.transform = `translate3d(${diffX}px, ${diffY}px, 0) scale(1.06)`;
 
-          // Fast 2D spatial collision detection (handles 2-column grid & diagonal tabs)
+          // Fast 2D spatial collision detection for hover target
           const touchX = touch.clientX;
           const touchY = touch.clientY;
           for (let i = 0; i < cachedTargets.length; i++) {
@@ -618,7 +618,7 @@
             const r = item.rect;
             if (touchX >= r.left && touchX <= r.right && touchY >= r.top && touchY <= r.bottom) {
               if (!item.el.classList.contains('drop-target')) {
-                container.querySelectorAll('.chrome-tab-card.drop-target, #group-view-header.drop-target').forEach(c => c.classList.remove('drop-target'));
+                container.querySelectorAll('.chrome-tab-card.drop-target, #group-view-header.drop-target, #inside-group-header.drop-target').forEach(c => c.classList.remove('drop-target'));
                 item.el.classList.add('drop-target');
               }
               break;
@@ -627,9 +627,9 @@
           return;
         }
 
-        // Finger moved > 10px before 200ms timer fired: cancel drag
-        if (!isDrag && moveDist > 10) {
-          if (Math.abs(diffX) > Math.abs(diffY) * 1.5) {
+        // Cancel timer only on clear scroll/swipe displacement
+        if (!isDrag && moveDist > 12) {
+          if (Math.abs(diffX) > Math.abs(diffY) * 2.0) {
             isSwipe = true;
           }
           clearTimeout(pressTimer);
@@ -646,7 +646,7 @@
         const wasDrag = isDrag;
         const wasSwipe = isSwipe;
 
-        // Unconditionally unlock card pointer & visual state on touch release!
+        // Unconditionally unlock card state
         card.classList.remove('dragging');
         card.style.zIndex = '';
         card.style.transform = '';
@@ -655,8 +655,7 @@
         isDrag = false;
 
         if (wasDrag) {
-          // Find drop target card from drop-target class or cached targets 2D spatial check
-          const activeDropTarget = container.querySelector('.chrome-tab-card.drop-target, #group-view-header.drop-target') ||
+          const activeDropTarget = container.querySelector('.chrome-tab-card.drop-target, #group-view-header.drop-target, #inside-group-header.drop-target') ||
             (() => {
               const item = cachedTargets.find(t =>
                 t.el !== card &&
@@ -666,14 +665,14 @@
               return item ? item.el : null;
             })();
 
-          container.querySelectorAll('.chrome-tab-card, #group-view-header').forEach(c => c.classList.remove('drop-target'));
+          container.querySelectorAll('.chrome-tab-card, #group-view-header, #inside-group-header').forEach(c => c.classList.remove('drop-target'));
           cachedTargets = [];
 
           if (activeDropTarget) {
             const sourceTabId = parseInt(card.dataset.tabid);
 
-            // Case 0: Dropped onto Group View Header (#group-view-header) to remove tab from group!
-            if (activeDropTarget.id === 'group-view-header' || activeDropTarget.closest('#group-view-header')) {
+            // Case 0: Dropped onto Group View Header to remove tab from group
+            if (activeDropTarget.id === 'group-view-header' || activeDropTarget.id === 'inside-group-header' || activeDropTarget.closest('#inside-group-header') || activeDropTarget.closest('#group-view-header')) {
               const currentGroup = tabGroups.find(g => g.id === activeGroupId);
               if (currentGroup) {
                 const moveIds = (isMultiSelectMode && selectedTabIds.size > 0) ? Array.from(selectedTabIds) : [sourceTabId];
@@ -692,7 +691,7 @@
               return;
             }
 
-            // Case A: Dropped onto a Group Card (.group-card)
+            // Case A: Dropped onto an existing Group Card (.group-card)
             if (activeDropTarget.classList.contains('group-card')) {
               const targetGroupId = activeDropTarget.dataset.groupid;
               const targetGroup = tabGroups.find(g => g.id === targetGroupId);
@@ -707,6 +706,8 @@
                 saveTabGroups();
                 isMultiSelectMode = false;
                 selectedTabIds.clear();
+                if (navigator.vibrate) navigator.vibrate(60);
+                playSFX('ta');
                 if (window.CaspianBridge && typeof window.CaspianBridge.showToast === 'function') {
                   window.CaspianBridge.showToast(`Added ${moveIds.length} tab(s) to "${targetGroup.title}"!`);
                 }
@@ -715,42 +716,72 @@
               return;
             }
 
-            // Case B: Reordering single tabs or multi-selected tabs on FULL grid
-            const allTabsJson = window.CaspianBridge.getOpenTabs();
-            const allTabs = allTabsJson ? JSON.parse(allTabsJson) : [];
-            const targetTabId = parseInt(activeDropTarget.dataset.tabid);
-            const sourceIdx = allTabs.findIndex(t => t.id === sourceTabId);
-            const targetIdx = allTabs.findIndex(t => t.id === targetTabId);
-
-            if (sourceIdx !== -1 && targetIdx !== -1 && sourceIdx !== targetIdx) {
-              if (isMultiSelectMode && selectedTabIds.size > 0) {
-                const selectedItems = allTabs.filter(t => selectedTabIds.has(t.id));
-                const remainingItems = allTabs.filter(t => !selectedTabIds.has(t.id));
-                let insertAt = remainingItems.findIndex(t => t.id === targetTabId);
-                if (insertAt === -1) insertAt = remainingItems.length;
-                remainingItems.splice(insertAt, 0, ...selectedItems);
-                const newIds = remainingItems.map(t => t.id);
-                if (window.CaspianBridge && typeof window.CaspianBridge.reorderTabs === 'function') {
-                  window.CaspianBridge.reorderTabs(JSON.stringify(newIds));
+            // Case B: Dropped onto another single Tab card in main view -> Group them into a new Tab Group!
+            if (!activeGroupId && !activeDropTarget.classList.contains('group-card')) {
+              const targetTabId = parseInt(activeDropTarget.dataset.tabid);
+              if (sourceTabId !== targetTabId) {
+                const moveIds = (isMultiSelectMode && selectedTabIds.size > 0) ? Array.from(selectedTabIds) : [sourceTabId];
+                if (!moveIds.includes(targetTabId)) {
+                  moveIds.push(targetTabId);
                 }
+
+                // Check if target was already in a group
+                const existingGroup = tabGroups.find(g => g.tabIds.includes(targetTabId));
+                if (existingGroup) {
+                  moveIds.forEach(id => {
+                    if (!existingGroup.tabIds.includes(id)) existingGroup.tabIds.push(id);
+                  });
+                  tabGroups.forEach(g => {
+                    if (g !== existingGroup) g.tabIds = g.tabIds.filter(id => !moveIds.includes(id));
+                  });
+                  saveTabGroups();
+                  if (window.CaspianBridge && typeof window.CaspianBridge.showToast === 'function') {
+                    window.CaspianBridge.showToast(`Added to "${existingGroup.title}"!`);
+                  }
+                } else {
+                  // Create new group
+                  const newGroup = {
+                    id: 'group_' + Date.now(),
+                    title: 'Tab Group',
+                    color: '#3b82f6',
+                    icon: '📁',
+                    isFavorite: false,
+                    tabIds: moveIds
+                  };
+                  tabGroups.push(newGroup);
+                  saveTabGroups();
+                  if (window.CaspianBridge && typeof window.CaspianBridge.showToast === 'function') {
+                    window.CaspianBridge.showToast(`📁 Created Tab Group with ${moveIds.length} tabs!`);
+                  }
+                }
+
                 isMultiSelectMode = false;
                 selectedTabIds.clear();
-                if (window.CaspianBridge && typeof window.CaspianBridge.showToast === 'function') {
-                  window.CaspianBridge.showToast(`Moved ${selectedItems.length} selected tabs!`);
-                }
-              } else {
-                const [moved] = allTabs.splice(sourceIdx, 1);
-                allTabs.splice(targetIdx, 0, moved);
-                const newIds = allTabs.map(t => t.id);
-                if (window.CaspianBridge && typeof window.CaspianBridge.reorderTabs === 'function') {
-                  window.CaspianBridge.reorderTabs(JSON.stringify(newIds));
+                if (navigator.vibrate) navigator.vibrate(60);
+                playSFX('ta');
+                setTimeout(renderOpenTabs, 50);
+                return;
+              }
+            }
+
+            // Case C: Inside an active group -> Reorder tabs inside group
+            if (activeGroupId) {
+              const currentGroup = tabGroups.find(g => g.id === activeGroupId);
+              if (currentGroup) {
+                const targetTabId = parseInt(activeDropTarget.dataset.tabid);
+                const sIdx = currentGroup.tabIds.indexOf(sourceTabId);
+                const tIdx = currentGroup.tabIds.indexOf(targetTabId);
+                if (sIdx !== -1 && tIdx !== -1 && sIdx !== tIdx) {
+                  const [moved] = currentGroup.tabIds.splice(sIdx, 1);
+                  currentGroup.tabIds.splice(tIdx, 0, moved);
+                  saveTabGroups();
+                  playSFX('tb_clicks');
+                  setTimeout(renderOpenTabs, 50);
+                  return;
                 }
               }
-              setTimeout(renderOpenTabs, 50);
-              return;
             }
           }
-
           return;
         }
 
@@ -767,10 +798,11 @@
         }
       };
 
-      card.addEventListener('touchstart', onTouchStart, { passive: true });
+      card.addEventListener('touchstart', onTouchStart, { passive: false });
       card.addEventListener('touchmove', onTouchMove, { passive: false });
       card.addEventListener('touchend', onTouchEnd);
       card.addEventListener('touchcancel', onTouchEnd);
+      card.addEventListener('contextmenu', (e) => e.preventDefault());
 
       // Click Event for switching tab or toggling selection in multi-select mode
       card.addEventListener('click', (e) => {
