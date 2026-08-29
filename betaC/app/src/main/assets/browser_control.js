@@ -609,21 +609,35 @@
           e.preventDefault(); // Lock scrolling during card drag
           card.style.transform = `translate3d(${diffX}px, ${diffY}px, 0) scale(1.06)`;
 
-          // Fast 2D spatial collision detection for hover target
+          // Fast 2D spatial collision detection for hover target & live space-giving displacement
           const touchX = touch.clientX;
           const touchY = touch.clientY;
+          let currentTarget = null;
+
           for (let i = 0; i < cachedTargets.length; i++) {
             const item = cachedTargets[i];
             if (item.el === card) continue;
             const r = item.rect;
             if (touchX >= r.left && touchX <= r.right && touchY >= r.top && touchY <= r.bottom) {
-              if (!item.el.classList.contains('drop-target')) {
-                container.querySelectorAll('.chrome-tab-card.drop-target, #group-view-header.drop-target, #inside-group-header.drop-target').forEach(c => c.classList.remove('drop-target'));
-                item.el.classList.add('drop-target');
-              }
+              currentTarget = item.el;
               break;
             }
           }
+
+          cachedTargets.forEach(item => {
+            if (item.el === card) return;
+            if (item.el === currentTarget) {
+              if (!item.el.classList.contains('drop-target')) {
+                item.el.classList.add('drop-target');
+              }
+              item.el.style.transform = 'scale(0.96) translateY(6px)';
+              item.el.style.transition = 'transform 0.15s ease-out';
+            } else {
+              item.el.classList.remove('drop-target');
+              item.el.style.transform = '';
+              item.el.style.transition = 'transform 0.15s ease-out';
+            }
+          });
           return;
         }
 
@@ -646,13 +660,19 @@
         const wasDrag = isDrag;
         const wasSwipe = isSwipe;
 
-        // Unconditionally unlock card state
+        // Unconditionally unlock card state & clean all transforms
         card.classList.remove('dragging');
         card.style.zIndex = '';
         card.style.transform = '';
         card.style.pointerEvents = '';
         card.style.willChange = '';
         isDrag = false;
+
+        container.querySelectorAll('.chrome-tab-card').forEach(c => {
+          c.classList.remove('drop-target');
+          c.style.transform = '';
+          c.style.transition = '';
+        });
 
         if (wasDrag) {
           const activeDropTarget = container.querySelector('.chrome-tab-card.drop-target, #group-view-header.drop-target, #inside-group-header.drop-target') ||
@@ -716,51 +736,27 @@
               return;
             }
 
-            // Case B: Dropped onto another single Tab card in main view -> Group them into a new Tab Group!
+            // Case B: Dropped onto another Tab card in main view -> Reorder tabs giving natural browser movement!
             if (!activeGroupId && !activeDropTarget.classList.contains('group-card')) {
               const targetTabId = parseInt(activeDropTarget.dataset.tabid);
               if (sourceTabId !== targetTabId) {
-                const moveIds = (isMultiSelectMode && selectedTabIds.size > 0) ? Array.from(selectedTabIds) : [sourceTabId];
-                if (!moveIds.includes(targetTabId)) {
-                  moveIds.push(targetTabId);
-                }
+                const allTabsJson = window.CaspianBridge && typeof window.CaspianBridge.getOpenTabs === 'function' ? window.CaspianBridge.getOpenTabs() : null;
+                const allTabs = allTabsJson ? JSON.parse(allTabsJson) : [];
+                const sourceIdx = allTabs.findIndex(t => t.id === sourceTabId);
+                const targetIdx = allTabs.findIndex(t => t.id === targetTabId);
 
-                // Check if target was already in a group
-                const existingGroup = tabGroups.find(g => g.tabIds.includes(targetTabId));
-                if (existingGroup) {
-                  moveIds.forEach(id => {
-                    if (!existingGroup.tabIds.includes(id)) existingGroup.tabIds.push(id);
-                  });
-                  tabGroups.forEach(g => {
-                    if (g !== existingGroup) g.tabIds = g.tabIds.filter(id => !moveIds.includes(id));
-                  });
-                  saveTabGroups();
-                  if (window.CaspianBridge && typeof window.CaspianBridge.showToast === 'function') {
-                    window.CaspianBridge.showToast(`Added to "${existingGroup.title}"!`);
+                if (sourceIdx !== -1 && targetIdx !== -1 && sourceIdx !== targetIdx) {
+                  const [moved] = allTabs.splice(sourceIdx, 1);
+                  allTabs.splice(targetIdx, 0, moved);
+                  const newIds = allTabs.map(t => t.id);
+                  if (window.CaspianBridge && typeof window.CaspianBridge.reorderTabs === 'function') {
+                    window.CaspianBridge.reorderTabs(JSON.stringify(newIds));
                   }
-                } else {
-                  // Create new group
-                  const newGroup = {
-                    id: 'group_' + Date.now(),
-                    title: 'Tab Group',
-                    color: '#3b82f6',
-                    icon: '📁',
-                    isFavorite: false,
-                    tabIds: moveIds
-                  };
-                  tabGroups.push(newGroup);
-                  saveTabGroups();
-                  if (window.CaspianBridge && typeof window.CaspianBridge.showToast === 'function') {
-                    window.CaspianBridge.showToast(`📁 Created Tab Group with ${moveIds.length} tabs!`);
-                  }
+                  if (navigator.vibrate) navigator.vibrate(30);
+                  playSFX('tb_clicks');
+                  setTimeout(renderOpenTabs, 50);
+                  return;
                 }
-
-                isMultiSelectMode = false;
-                selectedTabIds.clear();
-                if (navigator.vibrate) navigator.vibrate(60);
-                playSFX('ta');
-                setTimeout(renderOpenTabs, 50);
-                return;
               }
             }
 

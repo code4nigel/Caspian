@@ -1640,8 +1640,16 @@ public class MainActivity extends AppCompatActivity {
                         TabItem sourceTab = (TabItem) event.getLocalState();
                         if (sourceTab.id != tab.id) {
                             v.animate().scaleX(1.0f).scaleY(1.0f).setDuration(100).start();
-                            mergeTabsIntoGroup(sourceTab.id, tab.id);
-                            return true;
+                            int fromIdx = tabsList.indexOf(sourceTab);
+                            int toIdx = tabsList.indexOf(tab);
+                            if (fromIdx != -1 && toIdx != -1) {
+                                tabsList.remove(fromIdx);
+                                tabsList.add(toIdx, sourceTab);
+                                saveOpenTabsState();
+                                renderTabGridCards(tabGridSearchInput != null ? tabGridSearchInput.getText().toString() : "");
+                                playAssetSound("sfx/pop_click.mp3");
+                                return true;
+                            }
                         }
                     }
                     return false;
