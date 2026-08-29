@@ -76,11 +76,11 @@ jobs:
               {
                 id: 'flow',
                 productName: 'Caspian Flow (Beta C)',
-                tag: 'Caspian-Flow-v1.1.28-BetaC',
-                title: '[Beta C] Caspian Flow v1.1.28-BetaC',
-                assetPattern: 'Caspian-Flow-v1.1.28-BetaC.apk',
+                tag: 'Caspian-Flow-v1.1.29-BetaC',
+                title: '[Beta C] Caspian Flow v1.1.29-BetaC',
+                assetPattern: 'Caspian-Flow-v1.1.29-BetaC.apk',
                 isPrerelease: true,
-                desc: 'Natural press-and-hold fluid tab drag & drop, hover tab grouping (drop tab onto tab to create group), and prevention of unwanted multi-select triggers.'
+                desc: 'Features natural press-and-hold drag & drop tab reordering and drag-to-group tab organization in the Omnibox Tab Grid, multi-tier ranking, and developer exclusive themes.'
               },
               {
                 id: 'mobile',

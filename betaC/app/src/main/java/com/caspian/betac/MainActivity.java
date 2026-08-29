@@ -24,6 +24,7 @@ import android.media.MediaPlayer;
 import android.media.MediaRecorder;
 import android.media.SoundPool;
 import android.net.Uri;
+import android.os.Build;
 import android.os.Bundle;
 import android.os.Environment;
 import android.os.Handler;
@@ -38,6 +39,7 @@ import android.text.Editable;
 import android.text.TextWatcher;
 import android.util.Log;
 import android.util.TypedValue;
+import android.view.DragEvent;
 import android.view.Gravity;
 import android.view.HapticFeedbackConstants;
 import android.view.KeyEvent;
@@ -1251,6 +1253,37 @@ public class MainActivity extends AppCompatActivity {
             grid.addView(createEdgeTabGroupCard(group, cardWidth, filterQuery));
         }
 
+        grid.setOnDragListener((v, event) -> {
+            if (event.getAction() == DragEvent.ACTION_DROP) {
+                if (event.getLocalState() instanceof TabItem) {
+                    TabItem sourceTab = (TabItem) event.getLocalState();
+                    float dropX = event.getX();
+                    float dropY = event.getY();
+                    int targetIdx = -1;
+                    for (int i = 0; i < grid.getChildCount(); i++) {
+                        View child = grid.getChildAt(i);
+                        if (dropY >= child.getTop() && dropY <= child.getBottom() &&
+                            dropX >= child.getLeft() && dropX <= child.getRight()) {
+                            targetIdx = i;
+                            break;
+                        }
+                    }
+                    if (targetIdx != -1 && targetIdx < tabsList.size()) {
+                        int fromIdx = tabsList.indexOf(sourceTab);
+                        if (fromIdx != -1 && fromIdx != targetIdx) {
+                            tabsList.remove(fromIdx);
+                            tabsList.add(targetIdx, sourceTab);
+                            saveOpenTabsState();
+                            renderTabGridCards(tabGridSearchInput != null ? tabGridSearchInput.getText().toString() : "");
+                            playAssetSound("sfx/pop_click.mp3");
+                            return true;
+                        }
+                    }
+                }
+            }
+            return true;
+        });
+
         tabGridContentLayout.addView(grid);
     }
 
@@ -1366,6 +1399,44 @@ public class MainActivity extends AppCompatActivity {
             playUiFeedbackSound("tap");
             currentGridGroupId = group.id;
             renderTabGridCards(tabGridSearchInput.getText().toString());
+        });
+
+        card.setOnDragListener((v, event) -> {
+            switch (event.getAction()) {
+                case DragEvent.ACTION_DRAG_STARTED:
+                    return event.getLocalState() instanceof TabItem;
+
+                case DragEvent.ACTION_DRAG_ENTERED:
+                    if (event.getLocalState() instanceof TabItem) {
+                        TabItem sourceTab = (TabItem) event.getLocalState();
+                        if (!group.tabIds.contains(sourceTab.id)) {
+                            gd.setStroke(dpToPx(3), 0xFF00E5FF);
+                            v.animate().scaleX(1.05f).scaleY(1.05f).setDuration(120).start();
+                        }
+                    }
+                    return true;
+
+                case DragEvent.ACTION_DRAG_EXITED:
+                    gd.setStroke(dpToPx(2), Color.parseColor(group.color != null ? group.color : "#00E5FF"));
+                    v.animate().scaleX(1.0f).scaleY(1.0f).setDuration(120).start();
+                    return true;
+
+                case DragEvent.ACTION_DROP:
+                    if (event.getLocalState() instanceof TabItem) {
+                        TabItem sourceTab = (TabItem) event.getLocalState();
+                        v.animate().scaleX(1.0f).scaleY(1.0f).setDuration(100).start();
+                        addTabToGroup(sourceTab.id, group.id);
+                        return true;
+                    }
+                    return false;
+
+                case DragEvent.ACTION_DRAG_ENDED:
+                    v.setAlpha(1.0f);
+                    v.animate().scaleX(1.0f).scaleY(1.0f).setDuration(100).start();
+                    gd.setStroke(dpToPx(2), Color.parseColor(group.color != null ? group.color : "#00E5FF"));
+                    return true;
+            }
+            return false;
         });
 
         return card;
@@ -1516,11 +1587,150 @@ public class MainActivity extends AppCompatActivity {
         });
 
         card.setOnLongClickListener(v -> {
-            toggleTabSelectionForSplit(tab.id);
+            if (!selectedGridTabIds.isEmpty()) {
+                toggleTabSelectionForSplit(tab.id);
+                return true;
+            }
+            v.performHapticFeedback(HapticFeedbackConstants.LONG_PRESS);
+            playAssetSound("sfx/pop_button_v2.mp3");
+            ClipData clipData = ClipData.newPlainText("tab_id", String.valueOf(tab.id));
+            View.DragShadowBuilder shadow = new View.DragShadowBuilder(v);
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.N) {
+                v.startDragAndDrop(clipData, shadow, tab, 0);
+            } else {
+                v.startDrag(clipData, shadow, tab, 0);
+            }
+            v.setAlpha(0.35f);
             return true;
         });
 
+        card.setOnDragListener((v, event) -> {
+            switch (event.getAction()) {
+                case DragEvent.ACTION_DRAG_STARTED:
+                    return event.getLocalState() instanceof TabItem;
+
+                case DragEvent.ACTION_DRAG_ENTERED:
+                    if (event.getLocalState() instanceof TabItem) {
+                        TabItem sourceTab = (TabItem) event.getLocalState();
+                        if (sourceTab.id != tab.id) {
+                            gd.setStroke(dpToPx(3), 0xFF00E5FF);
+                            v.animate().scaleX(1.06f).scaleY(1.06f).setDuration(120).start();
+                        }
+                    }
+                    return true;
+
+                case DragEvent.ACTION_DRAG_EXITED:
+                    if (event.getLocalState() instanceof TabItem) {
+                        TabItem sourceTab = (TabItem) event.getLocalState();
+                        if (sourceTab.id != tab.id) {
+                            if (selectedGridTabIds.contains(tab.id)) {
+                                gd.setStroke(dpToPx(3), 0xFFFFCC00);
+                            } else if (tab.id == activeTabId) {
+                                gd.setStroke(dpToPx(2), 0xFF00E5FF);
+                            } else {
+                                gd.setStroke(dpToPx(1), 0x22FFFFFF);
+                            }
+                            v.animate().scaleX(1.0f).scaleY(1.0f).setDuration(120).start();
+                        }
+                    }
+                    return true;
+
+                case DragEvent.ACTION_DROP:
+                    if (event.getLocalState() instanceof TabItem) {
+                        TabItem sourceTab = (TabItem) event.getLocalState();
+                        if (sourceTab.id != tab.id) {
+                            v.animate().scaleX(1.0f).scaleY(1.0f).setDuration(100).start();
+                            mergeTabsIntoGroup(sourceTab.id, tab.id);
+                            return true;
+                        }
+                    }
+                    return false;
+
+                case DragEvent.ACTION_DRAG_ENDED:
+                    v.setAlpha(1.0f);
+                    v.animate().scaleX(1.0f).scaleY(1.0f).setDuration(100).start();
+                    if (selectedGridTabIds.contains(tab.id)) {
+                        gd.setStroke(dpToPx(3), 0xFFFFCC00);
+                    } else if (tab.id == activeTabId) {
+                        gd.setStroke(dpToPx(2), 0xFF00E5FF);
+                    } else {
+                        gd.setStroke(dpToPx(1), 0x22FFFFFF);
+                    }
+                    return true;
+            }
+            return false;
+        });
+
         return card;
+    }
+
+    private void mergeTabsIntoGroup(int sourceTabId, int targetTabId) {
+        TabItem sourceTab = getTabById(sourceTabId);
+        TabItem targetTab = getTabById(targetTabId);
+        if (sourceTab == null || targetTab == null) return;
+
+        TabGroup existingGroup = null;
+        for (TabGroup g : tabGroupsList) {
+            if (g.tabIds.contains(targetTabId)) {
+                existingGroup = g;
+                break;
+            }
+        }
+
+        if (existingGroup != null) {
+            for (TabGroup g : tabGroupsList) {
+                g.tabIds.remove((Integer) sourceTabId);
+            }
+            if (!existingGroup.tabIds.contains(sourceTabId)) {
+                existingGroup.tabIds.add(sourceTabId);
+            }
+        } else {
+            for (TabGroup g : tabGroupsList) {
+                g.tabIds.remove((Integer) sourceTabId);
+                g.tabIds.remove((Integer) targetTabId);
+            }
+            String groupTitle = "Group (" + (targetTab.title != null ? targetTab.title : "Tabs") + ")";
+            if (groupTitle.length() > 22) groupTitle = groupTitle.substring(0, 20) + "…";
+            TabGroup newGroup = new TabGroup("group_" + System.currentTimeMillis(), groupTitle, "#00E5FF", "📁");
+            newGroup.tabIds.add(targetTabId);
+            newGroup.tabIds.add(sourceTabId);
+            tabGroupsList.add(newGroup);
+        }
+
+        tabGroupsList.removeIf(g -> g.tabIds.isEmpty());
+        saveTabGroups();
+        saveOpenTabsState();
+        renderTabGridCards(tabGridSearchInput != null ? tabGridSearchInput.getText().toString() : "");
+        playAssetSound("sfx/pop_click.mp3");
+        Toast.makeText(this, "📁 Grouped tabs together", Toast.LENGTH_SHORT).show();
+    }
+
+    private void addTabToGroup(int sourceTabId, String groupId) {
+        TabItem sourceTab = getTabById(sourceTabId);
+        if (sourceTab == null) return;
+
+        TabGroup targetGroup = null;
+        for (TabGroup g : tabGroupsList) {
+            if (g.id.equals(groupId)) {
+                targetGroup = g;
+                break;
+            }
+        }
+        if (targetGroup == null) return;
+
+        for (TabGroup g : tabGroupsList) {
+            g.tabIds.remove((Integer) sourceTabId);
+        }
+        if (!targetGroup.tabIds.contains(sourceTabId)) {
+            targetGroup.tabIds.add(sourceTabId);
+        }
+
+        tabGroupsList.removeIf(g -> g.tabIds.isEmpty());
+        saveTabGroups();
+        saveOpenTabsState();
+        renderTabGridCards(tabGridSearchInput != null ? tabGridSearchInput.getText().toString() : "");
+        playAssetSound("sfx/pop_click.mp3");
+        Toast.makeText(this, "📁 Added '" + sourceTab.title + "' to " + targetGroup.title, Toast.LENGTH_SHORT).show();
     }
 
     private void toggleTabSelectionForSplit(int tabId) {
