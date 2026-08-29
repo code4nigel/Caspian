@@ -71,23 +71,6 @@ Granular control over conversation extraction engines:
 
 ---
 
-## Automatic Updates via Obtainium
-
-You can use [Obtainium](https://github.com/ImranR98/Obtainium) to receive automatic update notifications and install releases directly from GitHub without needing to manually download APKs for every update.
-
-### Quick Setup with Import File
-1. Install **Obtainium** on your Android device from the [official Obtainium repository](https://github.com/ImranR98/Obtainium).
-2. Download the pre-configured import file from this repository: [`obtanium setup/Caspian_Obtainium_Setup.json`](obtanium%20setup/Caspian_Obtainium_Setup.json).
-3. Open Obtainium ➔ Navigate to **Settings** ➔ Tap **Import/Export** ➔ Tap **Import configuration**.
-4. Select `Caspian_Obtainium_Setup.json`.
-5. All three Caspian variants (**Caspian Flow**, **Caspian Mobile**, and **Caspian Beta A**) will be automatically added with their correct release filters!
-
-### Video Walkthrough Guide
-Watch the quick setup demonstration on YouTube:
-- **YouTube Video Guide**: [Watch How to Setup Caspian in Obtainium](https://youtube.com/shorts/16XPiOxabTo)
-
----
-
 ## Caspian Desktop Extension (Chromium)
 
 ### Supported Browsers
@@ -120,12 +103,41 @@ Watch the quick setup demonstration on YouTube:
 
 ### Direct APK Installation
 1. Download the latest release (`.apk`) from [GitHub Releases](https://github.com/code4nigel/Caspian/releases):
-   - **Caspian Flow (Beta C)**: `Caspian-Flow-v1.1.27-BetaC.apk`
+   - **Caspian Flow (Beta C)**: `Caspian-Flow-v1.1.31-BetaC.apk`
    - **Caspian Mobile (Stable)**: `Caspian-Mobile-v1.2.40.apk`
    - **Caspian Beta A (Experimental)**: `Caspian-Beta-A-v1.2.48.apk`
 2. Open the `.apk` file on your Android device (Android 7.0+ supported).
 3. Allow "Install from Unknown Sources" if prompted.
 4. Launch the application.
+
+---
+
+## Automatic Updates via Obtainium Setup
+
+You can use [Obtainium](https://github.com/ImranR98/Obtainium) to receive automatic background update notifications and install releases directly from GitHub without needing to manually download APKs for every update.
+
+### Option 1: 1-Click Setup with Import File (Recommended)
+1. Install **Obtainium** on your Android device from the [official Obtainium repository](https://github.com/ImranR98/Obtainium).
+2. Download the pre-configured import file from this repository: [`obtanium setup/Caspian_Obtainium_Setup.json`](obtanium%20setup/Caspian_Obtainium_Setup.json).
+3. Open Obtainium ➔ Navigate to **Settings** ➔ Tap **Import/Export** ➔ Tap **Import configuration**.
+4. Select `Caspian_Obtainium_Setup.json`.
+5. All three Caspian variants (**Caspian Flow**, **Caspian Mobile**, and **Caspian Beta A**) will be automatically configured with their correct release filters, regex trimmers, and categories!
+
+### Option 2: Manual Regex Configuration
+
+If adding repository apps manually in Obtainium (`https://github.com/code4nigel/Caspian`), configure the following settings:
+
+| App | Filter Release Titles Regex | Trim Version String RegEx | Match Group | Filter APKs Regex |
+| :--- | :--- | :--- | :--- | :--- |
+| **Caspian Flow (Beta C)** | `.*Flow.*` | `([0-9]+\.[0-9]+\.[0-9]+-BetaC)` | `1` | `.*Flow.*\.apk$` |
+| **Caspian Mobile (Stable)** | `.*Mobile.*` | `([0-9]+\.[0-9]+\.[0-9]+)` | `1` | `.*Mobile.*\.apk$` |
+| **Caspian Beta A** | `.*Beta.*A.*` | `([0-9]+\.[0-9]+\.[0-9]+.*)` | `1` | `.*Beta.*A.*\.apk$` |
+
+> **Tip**: Toggle **ON** *"Include prereleases"* and *"Fallback to older releases"*, and set *"Sort method"* to **Release date**.
+
+### Video Walkthrough Guide
+Watch the quick setup demonstration on YouTube:
+- **YouTube Video Guide**: [Watch How to Setup Caspian in Obtainium](https://youtube.com/shorts/16XPiOxabTo)
 
 ---
 
