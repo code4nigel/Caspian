@@ -118,9 +118,9 @@ You can use [Obtainium](https://github.com/ImranR98/Obtainium) to receive automa
 
 ### Option 1: 1-Click Setup with Import File (Recommended)
 1. Install **Obtainium** on your Android device from the [official Obtainium repository](https://github.com/ImranR98/Obtainium).
-2. Download the pre-configured import file from this repository: [`obtanium setup/Caspian_Obtainium_Setup.json`](obtanium%20setup/Caspian_Obtainium_Setup.json).
+2. Download the pre-configured import file from this repository: [`obtanium setup/Caspian_Obtainium_Setup_V2.json`](obtanium%20setup/Caspian_Obtainium_Setup_V2.json).
 3. Open Obtainium ➔ Navigate to **Settings** ➔ Tap **Import/Export** ➔ Tap **Import configuration**.
-4. Select `Caspian_Obtainium_Setup.json`.
+4. Select `Caspian_Obtainium_Setup_V2.json`.
 5. All three Caspian variants (**Caspian Flow**, **Caspian Mobile**, and **Caspian Beta A**) will be automatically configured with their correct release filters, regex trimmers, and categories!
 
 ### Option 2: Manual Regex Configuration
