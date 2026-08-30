@@ -57,9 +57,8 @@
           <span class="sheet-brand-name">CASPIAN FLOW</span>
           <span class="sheet-brand-tag">V1.1.40-BetaC</span>
         </div>
-        <div id="header-cask-pill" style="display: flex; align-items: center; gap: 4px; padding: 4px 8px; border-radius: 10px; background: rgba(0,229,255,0.08); border: 1px solid rgba(0,229,255,0.25); cursor: pointer; margin-left: 6px;" title="Active Caspian Cask">
-          <span id="header-cask-icon" style="font-size: 13px;">🌊</span>
-          <span id="header-cask-name" style="font-size: 11px; font-weight: 700; color: #00E5FF; max-width: 80px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">Caspian</span>
+        <div id="header-cask-pill" style="display: flex; align-items: center; justify-content: center; width: 30px; height: 30px; min-width: 30px; border-radius: 10px; background: var(--bg-card); border: 1.5px solid var(--accent, #00E5FF); box-shadow: 0 2px 8px var(--accent-glow, rgba(0,0,0,0.3)); cursor: pointer; margin-left: 6px; transition: all 0.2s ease;" title="Active Caspian Cask - Tap to switch">
+          <span id="header-cask-icon" style="font-size: 15px; line-height: 1;">🌊</span>
         </div>
       </div>
       <div class="header-icon-actions">
@@ -1328,9 +1327,11 @@
         </button>
       </div>
     </div>
+  </div>
+
   <!-- Caspian Casks Switcher & Creator Modal in Control Sheet -->
-  <div id="control-casks-modal" style="display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.7); backdrop-filter: blur(12px); -webkit-backdrop-filter: blur(12px); z-index: 100000; justify-content: center; align-items: center; padding: 20px;">
-    <div style="width: 100%; max-width: 360px; background: var(--bg-card); border: 1px solid var(--border-glass); border-radius: 24px; padding: 22px; box-shadow: 0 20px 50px rgba(0,0,0,0.5); text-align: left;">
+  <div id="control-casks-modal" style="display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.7); backdrop-filter: blur(14px); -webkit-backdrop-filter: blur(14px); z-index: 100000; justify-content: center; align-items: center; padding: 20px;">
+    <div style="width: 100%; max-width: 360px; background: var(--bg-card); border: 1px solid var(--border-glass); border-radius: 24px; padding: 22px; box-shadow: 0 20px 50px rgba(0,0,0,0.6); text-align: left; animation: caskModalIn 0.25s cubic-bezier(0.16, 1, 0.3, 1);">
       <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px;">
         <div style="font-size: 15px; font-weight: 800; color: var(--text-main); display: flex; align-items: center; gap: 8px;">
           <span>🌊 Caspian Casks</span>
@@ -1348,14 +1349,14 @@
 
       <!-- Create New Cask Button & Form -->
       <div id="control-create-cask-sec" style="border-top: 1px dashed var(--border-glass); padding-top: 12px;">
-        <button id="btn-control-new-cask" style="width: 100%; padding: 10px; border-radius: 14px; background: rgba(0,229,255,0.08); border: 1px solid rgba(0,229,255,0.3); color: #00E5FF; font-size: 12px; font-weight: 700; cursor: pointer; display: flex; align-items: center; justify-content: center; gap: 6px;">
+        <button id="btn-control-new-cask" style="width: 100%; padding: 10px; border-radius: 14px; background: var(--accent-glow, rgba(0,229,255,0.08)); border: 1px solid var(--accent, #00E5FF); color: var(--accent, #00E5FF); font-size: 12px; font-weight: 700; cursor: pointer; display: flex; align-items: center; justify-content: center; gap: 6px;">
           <span>➕ New Caspian Cask</span>
         </button>
 
         <div id="control-new-cask-form" style="display: none; margin-top: 10px; flex-direction: column; gap: 8px;">
           <input id="control-new-cask-name" type="text" placeholder="Cask Name (e.g. Work Cask)" style="padding: 10px 12px; border-radius: 10px; border: 1px solid var(--border-glass); background: var(--bg-deep); color: var(--text-main); font-size: 12px; outline: none;" />
-          <div style="display: flex; gap: 6px;">
-            <select id="control-new-cask-icon" style="flex: 1; padding: 8px; border-radius: 10px; border: 1px solid var(--border-glass); background: var(--bg-deep); color: var(--text-main); font-size: 12px; outline: none;">
+          <div style="display: flex; gap: 6px; align-items: center;">
+            <select id="control-new-cask-icon" style="flex: 1.2; padding: 8px; border-radius: 10px; border: 1px solid var(--border-glass); background: var(--bg-deep); color: var(--text-main); font-size: 12px; outline: none;">
               <option value="🌊">🌊 Wave</option>
               <option value="⚓">⚓ Anchor</option>
               <option value="🐬">🐬 Dolphin</option>
@@ -1364,9 +1365,17 @@
               <option value="🔱">🔱 Trident</option>
               <option value="⛵">⛵ Sailboat</option>
               <option value="🏝️">🏝️ Island</option>
+              <option value="🐳">🐳 Whale</option>
+              <option value="🦈">🦈 Shark</option>
+              <option value="🐙">🐙 Octopus</option>
+              <option value="🚢">🚢 Ship</option>
+              <option value="custom">✏️ Custom Emoji...</option>
             </select>
-            <button id="btn-control-create-confirm" style="flex: 1; padding: 8px 12px; border-radius: 10px; background: #00E5FF; border: none; color: #000; font-size: 12px; font-weight: 700; cursor: pointer;">Create</button>
-            <button id="btn-control-create-cancel" style="padding: 8px 12px; border-radius: 10px; background: rgba(128,128,128,0.15); border: none; color: var(--text-muted); font-size: 12px; cursor: pointer;">Cancel</button>
+            <input id="control-new-cask-custom-emoji" type="text" placeholder="Emoji" maxlength="4" style="flex: 1; padding: 8px 10px; border-radius: 10px; border: 1px solid var(--border-glass); background: var(--bg-deep); color: var(--text-main); font-size: 12px; outline: none; text-align: center;" />
+          </div>
+          <div style="display: flex; gap: 6px;">
+            <button id="btn-control-create-confirm" style="flex: 1; padding: 9px 12px; border-radius: 10px; background: var(--accent-gradient, #00E5FF); border: none; color: #fff; font-size: 12px; font-weight: 700; cursor: pointer; box-shadow: 0 4px 12px var(--accent-glow);">Create</button>
+            <button id="btn-control-create-cancel" style="padding: 9px 12px; border-radius: 10px; background: rgba(128,128,128,0.15); border: none; color: var(--text-muted); font-size: 12px; cursor: pointer;">Cancel</button>
           </div>
         </div>
       </div>

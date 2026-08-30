@@ -3833,14 +3833,14 @@
 
     function renderControlCaskUI() {
       const headerIconEl = document.getElementById('header-cask-icon');
-      const headerNameEl = document.getElementById('header-cask-name');
+      const headerPillEl = document.getElementById('header-cask-pill');
       const caskSubEl = document.getElementById('cask-active-sub');
 
       const icon = controlCasksData.activeCaskIcon || '🌊';
       const name = controlCasksData.activeCaskName || 'Caspian Cask';
 
       if (headerIconEl) headerIconEl.textContent = icon;
-      if (headerNameEl) headerNameEl.textContent = name;
+      if (headerPillEl) headerPillEl.title = `Active: ${icon} ${name} - Tap to switch`;
       if (caskSubEl) caskSubEl.textContent = `Active: ${icon} ${name} • Isolated login sessions.`;
     }
 
@@ -3868,12 +3868,12 @@
       casks.forEach(cask => {
         const isActive = cask.id === controlCasksData.activeCaskId;
         const row = document.createElement('div');
-        row.style.cssText = `display:flex; align-items:center; justify-content:space-between; padding:10px 12px; border-radius:14px; background:var(--bg-deep); border:1px solid ${isActive ? '#00E5FF' : 'var(--border-glass)'}; cursor:pointer;`;
-        if (isActive) row.style.background = 'rgba(0, 229, 255, 0.08)';
+        row.style.cssText = `display:flex; align-items:center; justify-content:space-between; padding:10px 12px; border-radius:14px; background:var(--bg-deep); border:1.5px solid ${isActive ? 'var(--accent, #00E5FF)' : 'var(--border-glass)'}; cursor:pointer; transition: all 0.2s ease;`;
+        if (isActive) row.style.background = 'var(--accent-glow, rgba(0, 229, 255, 0.1))';
 
         row.innerHTML = `
           <div style="display:flex; align-items:center; gap:10px;">
-            <div style="width:32px; height:32px; border-radius:10px; background:rgba(255,255,255,0.06); border:1.5px solid ${cask.color || '#00E5FF'}; display:flex; align-items:center; justify-content:center; font-size:16px;">
+            <div style="width:34px; height:34px; border-radius:10px; background:rgba(255,255,255,0.06); border:1.5px solid ${cask.color || 'var(--accent, #00E5FF)'}; display:flex; align-items:center; justify-content:center; font-size:16px;">
               ${cask.icon || '🌊'}
             </div>
             <div>
@@ -3882,8 +3882,8 @@
             </div>
           </div>
           <div style="display:flex; align-items:center; gap:6px;">
-            ${isActive ? '<span style="font-size:10px; font-weight:700; color:#00E5FF; background:rgba(0,229,255,0.15); padding:3px 8px; border-radius:8px;">Active</span>' : '<button class="btn-ctrl-switch" style="padding:4px 10px; border-radius:8px; background:rgba(128,128,128,0.15); border:none; color:var(--text-main); font-size:11px; font-weight:600; cursor:pointer;">Switch</button>'}
-            ${(!cask.isDefault && !isActive) ? `<button class="btn-ctrl-del" style="background:none; border:none; color:#F43F5E; font-size:14px; cursor:pointer; padding:4px;">🗑️</button>` : ''}
+            ${isActive ? '<span style="font-size:10px; font-weight:700; color:#fff; background:var(--accent-gradient, #00E5FF); padding:4px 10px; border-radius:8px; box-shadow:0 2px 8px var(--accent-glow);">Active</span>' : '<button class="btn-ctrl-switch" style="padding:5px 12px; border-radius:8px; background:var(--accent-gradient, #00E5FF); border:none; color:#fff; font-size:11px; font-weight:700; cursor:pointer; box-shadow:0 2px 8px var(--accent-glow);">Switch</button>'}
+            ${(!cask.isDefault && !isActive) ? `<button class="btn-ctrl-del" style="background:none; border:none; color:#F43F5E; font-size:15px; cursor:pointer; padding:4px;" title="Delete Cask">🗑️</button>` : ''}
           </div>
         `;
 
@@ -3945,14 +3945,18 @@
       if (btn) btn.style.display = 'flex';
       const nameInput = document.getElementById('control-new-cask-name');
       if (nameInput) nameInput.value = '';
+      const customEmoji = document.getElementById('control-new-cask-custom-emoji');
+      if (customEmoji) customEmoji.value = '';
     }
 
     function confirmControlCreateCask() {
       try { playSFX('tb_clicks'); } catch (e) {}
       const nameInput = document.getElementById('control-new-cask-name');
       const iconSelect = document.getElementById('control-new-cask-icon');
+      const customEmojiInput = document.getElementById('control-new-cask-custom-emoji');
       const name = nameInput ? nameInput.value.trim() : '';
-      const icon = iconSelect ? iconSelect.value : '🌊';
+      const customEmoji = customEmojiInput ? customEmojiInput.value.trim() : '';
+      const icon = customEmoji || (iconSelect && iconSelect.value !== 'custom' ? iconSelect.value : '🌊');
 
       if (!name) {
         if (window.CaspianBridge && typeof window.CaspianBridge.showToast === 'function') {
@@ -3962,7 +3966,7 @@
       }
 
       if (window.CaspianBridge && typeof window.CaspianBridge.createCaspianCask === 'function') {
-        window.CaspianBridge.createCaspianCask(name, icon, '#00E5FF');
+        window.CaspianBridge.createCaspianCask(name, icon, 'var(--accent, #00E5FF)');
       }
 
       hideControlNewCaskForm();
@@ -3982,24 +3986,34 @@
       } catch (e) {}
     };
 
-    // Modal & Card Listeners
-    const headerPill = document.getElementById('header-cask-pill');
-    if (headerPill) headerPill.addEventListener('click', openControlCasksModal);
+    // Modal & Card Event Listeners with Dynamic Delegation
+    document.addEventListener('click', (e) => {
+      if (e.target.closest('#header-cask-pill') || e.target.closest('#menu-switch-cask-btn') || e.target.closest('#card-casks-manager')) {
+        openControlCasksModal();
+      } else if (e.target.closest('#close-control-casks-modal-btn')) {
+        closeControlCasksModal();
+      } else if (e.target.closest('#btn-control-new-cask')) {
+        showControlNewCaskForm();
+      } else if (e.target.closest('#btn-control-create-cancel')) {
+        hideControlNewCaskForm();
+      } else if (e.target.closest('#btn-control-create-confirm')) {
+        confirmControlCreateCask();
+      } else if (e.target.closest('.sheet-brand-tag') || e.target.closest('#card-app-updater')) {
+        if (latestUpdateInfo && latestUpdateInfo.hasUpdate) {
+          showUpdateModal(latestUpdateInfo);
+        }
+      }
+    });
 
-    const switchBtnCard = document.getElementById('menu-switch-cask-btn');
-    if (switchBtnCard) switchBtnCard.addEventListener('click', openControlCasksModal);
-
-    const closeBtnModal = document.getElementById('close-control-casks-modal-btn');
-    if (closeBtnModal) closeBtnModal.addEventListener('click', closeControlCasksModal);
-
-    const btnNewCask = document.getElementById('btn-control-new-cask');
-    if (btnNewCask) btnNewCask.addEventListener('click', showControlNewCaskForm);
-
-    const btnCancelCask = document.getElementById('btn-control-create-cancel');
-    if (btnCancelCask) btnCancelCask.addEventListener('click', hideControlNewCaskForm);
-
-    const btnConfirmCask = document.getElementById('btn-control-create-confirm');
-    if (btnConfirmCask) btnConfirmCask.addEventListener('click', confirmControlCreateCask);
+    const iconSelectEl = document.getElementById('control-new-cask-icon');
+    if (iconSelectEl) {
+      iconSelectEl.addEventListener('change', () => {
+        const customEmojiInput = document.getElementById('control-new-cask-custom-emoji');
+        if (iconSelectEl.value !== 'custom' && customEmojiInput) {
+          customEmojiInput.value = iconSelectEl.value;
+        }
+      });
+    }
 
     // Initial Load
     setTimeout(loadControlCasks, 100);
@@ -4013,4 +4027,5 @@
     setTimeout(renderOpenTabs, 1000);
   });
 })();
+
 

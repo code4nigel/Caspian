@@ -647,7 +647,15 @@ public class CaspianBridge {
                                 b.setPositiveButton("OK", null);
                                 b.show();
                             } else {
-                                Toast.makeText(activity, "🌟 Update available: v" + info.cleanVersion, Toast.LENGTH_SHORT).show();
+                                AlertDialog.Builder b = new AlertDialog.Builder(activity);
+                                b.setTitle("🚀 Update Available: v" + info.cleanVersion);
+                                String notes = (info.changelogBody != null && !info.changelogBody.trim().isEmpty()) ? ("\n\nWhat's New:\n" + info.changelogBody) : "";
+                                b.setMessage("A new version of Caspian Flow is ready to install!" + notes);
+                                b.setPositiveButton("Download & Install", (dialog, which) -> {
+                                    downloadAndInstallUpdate(info.apkDownloadUrl, info.apkFileName);
+                                });
+                                b.setNegativeButton("Later", null);
+                                b.show();
                             }
                         }
                     });

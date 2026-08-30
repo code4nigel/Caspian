@@ -209,14 +209,14 @@
 
       <!-- Create New Cask Button & Form -->
       <div id="create-cask-section" style="border-top: 1px dashed var(--border-glass); padding-top: 12px;">
-        <button id="btn-show-new-cask" style="width: 100%; padding: 10px; border-radius: 14px; background: rgba(0,229,255,0.08); border: 1px solid rgba(0,229,255,0.3); color: #00E5FF; font-size: 12px; font-weight: 700; cursor: pointer; display: flex; align-items: center; justify-content: center; gap: 6px;">
+        <button id="btn-show-new-cask" style="width: 100%; padding: 10px; border-radius: 14px; background: var(--accent-glow, rgba(0,229,255,0.08)); border: 1px solid var(--accent, #00E5FF); color: var(--accent, #00E5FF); font-size: 12px; font-weight: 700; cursor: pointer; display: flex; align-items: center; justify-content: center; gap: 6px;">
           <span>➕ New Caspian Cask</span>
         </button>
 
         <div id="new-cask-form" style="display: none; margin-top: 10px; flex-direction: column; gap: 8px;">
           <input id="new-cask-name" type="text" placeholder="Cask Name (e.g. Pacific Work)" style="padding: 10px 12px; border-radius: 10px; border: 1px solid var(--border-glass); background: var(--bg-deep); color: var(--text-main); font-size: 12px; outline: none;" />
-          <div style="display: flex; gap: 6px;">
-            <select id="new-cask-icon" style="flex: 1; padding: 8px; border-radius: 10px; border: 1px solid var(--border-glass); background: var(--bg-deep); color: var(--text-main); font-size: 12px; outline: none;">
+          <div style="display: flex; gap: 6px; align-items: center;">
+            <select id="new-cask-icon" style="flex: 1.2; padding: 8px; border-radius: 10px; border: 1px solid var(--border-glass); background: var(--bg-deep); color: var(--text-main); font-size: 12px; outline: none;">
               <option value="🌊">🌊 Wave</option>
               <option value="⚓">⚓ Anchor</option>
               <option value="🐬">🐬 Dolphin</option>
@@ -225,9 +225,17 @@
               <option value="🔱">🔱 Trident</option>
               <option value="⛵">⛵ Sailboat</option>
               <option value="🏝️">🏝️ Island</option>
+              <option value="🐳">🐳 Whale</option>
+              <option value="🦈">🦈 Shark</option>
+              <option value="🐙">🐙 Octopus</option>
+              <option value="🚢">🚢 Ship</option>
+              <option value="custom">✏️ Custom Emoji...</option>
             </select>
-            <button id="btn-confirm-create-cask" style="flex: 1; padding: 8px 12px; border-radius: 10px; background: #00E5FF; border: none; color: #000; font-size: 12px; font-weight: 700; cursor: pointer;">Create</button>
-            <button id="btn-cancel-create-cask" style="padding: 8px 12px; border-radius: 10px; background: rgba(128,128,128,0.15); border: none; color: var(--text-muted); font-size: 12px; cursor: pointer;">Cancel</button>
+            <input id="new-cask-custom-emoji" type="text" placeholder="Emoji" maxlength="4" style="flex: 1; padding: 8px 10px; border-radius: 10px; border: 1px solid var(--border-glass); background: var(--bg-deep); color: var(--text-main); font-size: 12px; outline: none; text-align: center;" />
+          </div>
+          <div style="display: flex; gap: 6px;">
+            <button id="btn-confirm-create-cask" style="flex: 1; padding: 9px 12px; border-radius: 10px; background: var(--accent-gradient, #00E5FF); border: none; color: #fff; font-size: 12px; font-weight: 700; cursor: pointer; box-shadow: 0 4px 12px var(--accent-glow);">Create</button>
+            <button id="btn-cancel-create-cask" style="padding: 9px 12px; border-radius: 10px; background: rgba(128,128,128,0.15); border: none; color: var(--text-muted); font-size: 12px; cursor: pointer;">Cancel</button>
           </div>
         </div>
       </div>
@@ -246,7 +254,7 @@
       padding: 10px 12px;
       border-radius: 14px;
       background: var(--bg-deep);
-      border: 1px solid var(--border-glass);
+      border: 1.5px solid var(--border-glass);
       cursor: pointer;
       transition: all 0.2s ease;
     }
@@ -254,8 +262,8 @@
       transform: scale(0.98);
     }
     .cask-item-row.active {
-      border-color: #00E5FF;
-      background: rgba(0, 229, 255, 0.08);
+      border-color: var(--accent, #00E5FF);
+      background: var(--accent-glow, rgba(0, 229, 255, 0.08));
     }
   </style>
 
@@ -272,8 +280,15 @@
       try {
         if (window.CaspianBridge && typeof window.CaspianBridge.getSettings === 'function') {
           const prefs = JSON.parse(window.CaspianBridge.getSettings());
-          const isDark = prefs.themeMode === 'dark';
+          const isDark = prefs.themeMode === 'dark' || prefs.theme_mode === 'dark';
           document.documentElement.setAttribute('data-theme', isDark ? 'dark' : 'light');
+
+          const start = prefs.accent_start || prefs.accentColor || '#A2A9A9';
+          const end = prefs.accent_end || '#1B4264';
+          document.documentElement.style.setProperty('--accent', start);
+          document.documentElement.style.setProperty('--secondary', end);
+          document.documentElement.style.setProperty('--accent-glow', start + '55');
+          document.documentElement.style.setProperty('--accent-gradient', 'linear-gradient(135deg, ' + start + ', ' + end + ')');
         }
       } catch(e) {}
     }
@@ -341,7 +356,7 @@
         
         row.innerHTML = `
           <div style="display: flex; align-items: center; gap: 10px;">
-            <div style="width: 32px; height: 32px; border-radius: 10px; background: rgba(255,255,255,0.06); border: 1.5px solid ${cask.color || '#00E5FF'}; display: flex; align-items: center; justify-content: center; font-size: 16px;">
+            <div style="width: 34px; height: 34px; border-radius: 10px; background: rgba(255,255,255,0.06); border: 1.5px solid ${cask.color || 'var(--accent, #00E5FF)'}; display: flex; align-items: center; justify-content: center; font-size: 16px;">
               ${cask.icon || '🌊'}
             </div>
             <div>
@@ -350,8 +365,8 @@
             </div>
           </div>
           <div style="display: flex; align-items: center; gap: 6px;">
-            ${isActive ? '<span style="font-size: 10px; font-weight: 700; color: #00E5FF; background: rgba(0,229,255,0.15); padding: 3px 8px; border-radius: 8px;">Active</span>' : '<button class="btn-switch-cask" style="padding: 4px 10px; border-radius: 8px; background: rgba(128,128,128,0.15); border: none; color: var(--text-main); font-size: 11px; font-weight: 600; cursor: pointer;">Switch</button>'}
-            ${(!cask.isDefault && !isActive) ? `<button class="btn-delete-cask" style="background: none; border: none; color: #F43F5E; font-size: 14px; cursor: pointer; padding: 4px;">🗑️</button>` : ''}
+            ${isActive ? '<span style="font-size: 10px; font-weight: 700; color: #fff; background: var(--accent-gradient, #00E5FF); padding: 4px 10px; border-radius: 8px; box-shadow: 0 2px 8px var(--accent-glow);">Active</span>' : '<button class="btn-switch-cask" style="padding: 5px 12px; border-radius: 8px; background: var(--accent-gradient, #00E5FF); border: none; color: #fff; font-size: 11px; font-weight: 700; cursor: pointer; box-shadow: 0 2px 8px var(--accent-glow);">Switch</button>'}
+            ${(!cask.isDefault && !isActive) ? `<button class="btn-delete-cask" style="background: none; border: none; color: #F43F5E; font-size: 15px; cursor: pointer; padding: 4px;" title="Delete Cask">🗑️</button>` : ''}
           </div>
         `;
 
@@ -413,14 +428,18 @@
       if (btn) btn.style.display = 'flex';
       const nameInput = document.getElementById('new-cask-name');
       if (nameInput) nameInput.value = '';
+      const customEmoji = document.getElementById('new-cask-custom-emoji');
+      if (customEmoji) customEmoji.value = '';
     }
 
     function confirmCreateCask() {
       playTapSFX();
       const nameInput = document.getElementById('new-cask-name');
       const iconSelect = document.getElementById('new-cask-icon');
+      const customEmojiInput = document.getElementById('new-cask-custom-emoji');
       const name = nameInput ? nameInput.value.trim() : '';
-      const icon = iconSelect ? iconSelect.value : '🌊';
+      const customEmoji = customEmojiInput ? customEmojiInput.value.trim() : '';
+      const icon = customEmoji || (iconSelect && iconSelect.value !== 'custom' ? iconSelect.value : '🌊');
 
       if (!name) {
         if (window.CaspianBridge && typeof window.CaspianBridge.showToast === 'function') {
@@ -430,7 +449,7 @@
       }
 
       if (window.CaspianBridge && typeof window.CaspianBridge.createCaspianCask === 'function') {
-        window.CaspianBridge.createCaspianCask(name, icon, '#00E5FF');
+        window.CaspianBridge.createCaspianCask(name, icon, 'var(--accent, #00E5FF)');
       }
 
       hideNewCaskForm();
@@ -438,6 +457,16 @@
         loadCaspianCasks();
         renderCasksList();
       }, 200);
+    }
+
+    const hubIconSelect = document.getElementById('new-cask-icon');
+    if (hubIconSelect) {
+      hubIconSelect.addEventListener('change', () => {
+        const customEmojiInput = document.getElementById('new-cask-custom-emoji');
+        if (hubIconSelect.value !== 'custom' && customEmojiInput) {
+          customEmojiInput.value = hubIconSelect.value;
+        }
+      });
     }
 
     // Modal Listeners
