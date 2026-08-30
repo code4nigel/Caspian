@@ -29,11 +29,14 @@ jobs:
         run: |
           mkdir -p versions
           
-          # Create latest Caspian Extension zip if Caspian folder exists
+          # Dynamically detect Caspian Extension version from manifest.json
           if [ -d "Caspian" ]; then
+            EXT_VER=$(node -p "try { require('./Caspian/manifest.json').version } catch(e) { '6.1.5' }")
+            echo "Packaging Caspian Extension v${EXT_VER}..."
             cd Caspian
-            zip -r ../versions/Caspian-Extension-v6.0.0.zip ./* -x "*.git*"
+            zip -r "../versions/Caspian-Extension-v${EXT_VER}.zip" ./* -x "*.git*"
             cd ..
+            cp "versions/Caspian-Extension-v${EXT_VER}.zip" "./Caspian-Extension-v${EXT_VER}.zip"
           fi
 
           # Standardize mobile naming for collision-free clarity
@@ -50,6 +53,17 @@ jobs:
             const path = require('path');
 
             const { owner, repo } = context.repo;
+
+            // Dynamically read extension version from Caspian/manifest.json
+            let extVersion = '6.1.5';
+            try {
+              if (fs.existsSync('Caspian/manifest.json')) {
+                const manifest = JSON.parse(fs.readFileSync('Caspian/manifest.json', 'utf8'));
+                if (manifest.version) extVersion = manifest.version;
+              }
+            } catch (err) {
+              console.log('Error reading manifest.json:', err);
+            }
 
             // Helper to recursively find release assets
             function getAssets(dir) {
@@ -112,11 +126,11 @@ jobs:
               {
                 id: 'extension',
                 productName: 'Caspian Extension',
-                tag: 'Caspian-Extension-v6.0.0',
-                title: '[Extension] Caspian Extension v6.0.0',
-                assetPattern: 'Caspian-Extension-v6.0.0.zip',
+                tag: `Caspian-Extension-v${extVersion}`,
+                title: `[Extension] Caspian Extension v${extVersion}`,
+                assetPattern: `Caspian-Extension-v${extVersion}.zip`,
                 isPrerelease: false,
-                desc: 'Official Chromium Desktop Browser Extension for ChatGPT DOM optimization and pruning.'
+                desc: 'Official Chromium Desktop Browser Extension for ChatGPT/Gemini DOM optimization, universal Flow Speed playback controller, YouTube feed limits & multi-format document exporter.'
               }
             ];
 
