@@ -16,6 +16,35 @@ It addresses everyday web performance and workflow friction: eliminating typing 
 
 ---
 
+## Caspian Flow Mobile Interface Showcase
+
+<p align="center">
+  <img src="Images/Capsian%20Flow/Flow_engine_example.jpg" width="31%" alt="Caspian Flow Engine Dashboard" />
+  <img src="Images/Capsian%20Flow/Flow_tab_example.jpg" width="31%" alt="Caspian Flow Tabs Manager" />
+  <img src="Images/Capsian%20Flow/Flow_settings_example.jpg" width="31%" alt="Caspian Flow Settings and Customization" />
+</p>
+<p align="center">
+  <img src="Images/Capsian%20Flow/Flow_chat_AI_example.jpg" width="31%" alt="Caspian Flow AI Chat Interface" />
+  <img src="Images/Capsian%20Flow/Flow_google_example.jpg" width="31%" alt="Caspian Flow Google Search Dock" />
+  <img src="Images/Capsian%20Flow/Flow_Youtube_example.jpg" width="31%" alt="Caspian Flow YouTube Floating Remote" />
+</p>
+
+---
+
+## Caspian Desktop Extension Showcase
+
+<p align="center">
+  <img src="Caspian/images/caspian_mainUI.png" width="45%" alt="Caspian Extension Engine UI" />
+  <img src="Caspian/images/Caspian_darkUI.png" width="45%" alt="Caspian Dark Mode UI" />
+</p>
+<p align="center">
+  <img src="Caspian/images/caspian_exportOptions.png" width="30%" alt="Caspian Export Options" />
+  <img src="Caspian/images/caspian_siteUI.png" width="30%" alt="Caspian Active Site Options" />
+  <img src="Caspian/images/caspian_settingsUI.png" width="30%" alt="Caspian Settings & Themes" />
+</p>
+
+---
+
 ## Desktop Extension Highlights (V6.1.5)
 
 ### 1. Real-Time AI Chat DOM Pruning
