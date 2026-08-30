@@ -3810,6 +3810,200 @@
       });
     }
 
+    // ==========================================
+    // CASPIAN CASKS (MULTI-ACCOUNT CONTAINERS) LOGIC
+    // ==========================================
+    let controlCasksData = {
+      activeCaskId: 'cask_caspian',
+      activeCaskName: 'Caspian Cask',
+      activeCaskIcon: '🌊',
+      activeCaskColor: '#1B4264',
+      casks: []
+    };
+
+    function loadControlCasks() {
+      try {
+        if (window.CaspianBridge && typeof window.CaspianBridge.getCaspianCasks === 'function') {
+          const jsonStr = window.CaspianBridge.getCaspianCasks();
+          controlCasksData = JSON.parse(jsonStr);
+          renderControlCaskUI();
+        }
+      } catch (e) {}
+    }
+
+    function renderControlCaskUI() {
+      const headerIconEl = document.getElementById('header-cask-icon');
+      const headerNameEl = document.getElementById('header-cask-name');
+      const caskSubEl = document.getElementById('cask-active-sub');
+
+      const icon = controlCasksData.activeCaskIcon || '🌊';
+      const name = controlCasksData.activeCaskName || 'Caspian Cask';
+
+      if (headerIconEl) headerIconEl.textContent = icon;
+      if (headerNameEl) headerNameEl.textContent = name;
+      if (caskSubEl) caskSubEl.textContent = `Active: ${icon} ${name} • Isolated login sessions.`;
+    }
+
+    function openControlCasksModal() {
+      try { playSFX('tb_clicks'); } catch (e) {}
+      loadControlCasks();
+      renderControlCasksList();
+      const modal = document.getElementById('control-casks-modal');
+      if (modal) modal.style.display = 'flex';
+    }
+
+    function closeControlCasksModal() {
+      try { playSFX('tb_clicks'); } catch (e) {}
+      const modal = document.getElementById('control-casks-modal');
+      if (modal) modal.style.display = 'none';
+      hideControlNewCaskForm();
+    }
+
+    function renderControlCasksList() {
+      const container = document.getElementById('control-casks-list');
+      if (!container) return;
+      container.innerHTML = '';
+
+      const casks = controlCasksData.casks || [];
+      casks.forEach(cask => {
+        const isActive = cask.id === controlCasksData.activeCaskId;
+        const row = document.createElement('div');
+        row.style.cssText = `display:flex; align-items:center; justify-content:space-between; padding:10px 12px; border-radius:14px; background:var(--bg-deep); border:1px solid ${isActive ? '#00E5FF' : 'var(--border-glass)'}; cursor:pointer;`;
+        if (isActive) row.style.background = 'rgba(0, 229, 255, 0.08)';
+
+        row.innerHTML = `
+          <div style="display:flex; align-items:center; gap:10px;">
+            <div style="width:32px; height:32px; border-radius:10px; background:rgba(255,255,255,0.06); border:1.5px solid ${cask.color || '#00E5FF'}; display:flex; align-items:center; justify-content:center; font-size:16px;">
+              ${cask.icon || '🌊'}
+            </div>
+            <div>
+              <div style="font-size:12px; font-weight:700; color:var(--text-main);">${cask.name}</div>
+              <div style="font-size:9px; color:var(--text-muted);">${cask.isDefault ? 'Default Cask' : 'Custom Vault'}</div>
+            </div>
+          </div>
+          <div style="display:flex; align-items:center; gap:6px;">
+            ${isActive ? '<span style="font-size:10px; font-weight:700; color:#00E5FF; background:rgba(0,229,255,0.15); padding:3px 8px; border-radius:8px;">Active</span>' : '<button class="btn-ctrl-switch" style="padding:4px 10px; border-radius:8px; background:rgba(128,128,128,0.15); border:none; color:var(--text-main); font-size:11px; font-weight:600; cursor:pointer;">Switch</button>'}
+            ${(!cask.isDefault && !isActive) ? `<button class="btn-ctrl-del" style="background:none; border:none; color:#F43F5E; font-size:14px; cursor:pointer; padding:4px;">🗑️</button>` : ''}
+          </div>
+        `;
+
+        if (!isActive) {
+          const switchBtn = row.querySelector('.btn-ctrl-switch');
+          if (switchBtn) {
+            switchBtn.addEventListener('click', (e) => {
+              e.stopPropagation();
+              switchControlCask(cask.id);
+            });
+          }
+          row.addEventListener('click', () => switchControlCask(cask.id));
+        }
+
+        const delBtn = row.querySelector('.btn-ctrl-del');
+        if (delBtn) {
+          delBtn.addEventListener('click', (e) => {
+            e.stopPropagation();
+            deleteControlCask(cask.id);
+          });
+        }
+
+        container.appendChild(row);
+      });
+    }
+
+    function switchControlCask(caskId) {
+      try { playSFX('tb_clicks'); } catch (e) {}
+      if (window.CaspianBridge && typeof window.CaspianBridge.switchCaspianCask === 'function') {
+        window.CaspianBridge.switchCaspianCask(caskId);
+      }
+      closeControlCasksModal();
+      setTimeout(loadControlCasks, 300);
+    }
+
+    function deleteControlCask(caskId) {
+      try { playSFX('tb_clicks'); } catch (e) {}
+      if (window.CaspianBridge && typeof window.CaspianBridge.deleteCaspianCask === 'function') {
+        window.CaspianBridge.deleteCaspianCask(caskId);
+      }
+      setTimeout(() => {
+        loadControlCasks();
+        renderControlCasksList();
+      }, 200);
+    }
+
+    function showControlNewCaskForm() {
+      try { playSFX('tb_clicks'); } catch (e) {}
+      const form = document.getElementById('control-new-cask-form');
+      const btn = document.getElementById('btn-control-new-cask');
+      if (form) form.style.display = 'flex';
+      if (btn) btn.style.display = 'none';
+    }
+
+    function hideControlNewCaskForm() {
+      const form = document.getElementById('control-new-cask-form');
+      const btn = document.getElementById('btn-control-new-cask');
+      if (form) form.style.display = 'none';
+      if (btn) btn.style.display = 'flex';
+      const nameInput = document.getElementById('control-new-cask-name');
+      if (nameInput) nameInput.value = '';
+    }
+
+    function confirmControlCreateCask() {
+      try { playSFX('tb_clicks'); } catch (e) {}
+      const nameInput = document.getElementById('control-new-cask-name');
+      const iconSelect = document.getElementById('control-new-cask-icon');
+      const name = nameInput ? nameInput.value.trim() : '';
+      const icon = iconSelect ? iconSelect.value : '🌊';
+
+      if (!name) {
+        if (window.CaspianBridge && typeof window.CaspianBridge.showToast === 'function') {
+          window.CaspianBridge.showToast('Please enter a Cask name');
+        }
+        return;
+      }
+
+      if (window.CaspianBridge && typeof window.CaspianBridge.createCaspianCask === 'function') {
+        window.CaspianBridge.createCaspianCask(name, icon, '#00E5FF');
+      }
+
+      hideControlNewCaskForm();
+      setTimeout(() => {
+        loadControlCasks();
+        renderControlCasksList();
+      }, 200);
+    }
+
+    window.onCaspianCasksUpdated = function (jsonStr) {
+      try {
+        if (jsonStr) {
+          controlCasksData = JSON.parse(jsonStr);
+          renderControlCaskUI();
+          renderControlCasksList();
+        }
+      } catch (e) {}
+    };
+
+    // Modal & Card Listeners
+    const headerPill = document.getElementById('header-cask-pill');
+    if (headerPill) headerPill.addEventListener('click', openControlCasksModal);
+
+    const switchBtnCard = document.getElementById('menu-switch-cask-btn');
+    if (switchBtnCard) switchBtnCard.addEventListener('click', openControlCasksModal);
+
+    const closeBtnModal = document.getElementById('close-control-casks-modal-btn');
+    if (closeBtnModal) closeBtnModal.addEventListener('click', closeControlCasksModal);
+
+    const btnNewCask = document.getElementById('btn-control-new-cask');
+    if (btnNewCask) btnNewCask.addEventListener('click', showControlNewCaskForm);
+
+    const btnCancelCask = document.getElementById('btn-control-create-cancel');
+    if (btnCancelCask) btnCancelCask.addEventListener('click', hideControlNewCaskForm);
+
+    const btnConfirmCask = document.getElementById('btn-control-create-confirm');
+    if (btnConfirmCask) btnConfirmCask.addEventListener('click', confirmControlCreateCask);
+
+    // Initial Load
+    setTimeout(loadControlCasks, 100);
+
     // Force clean state & render retries on startup so tabs are never locked after app restart
     isMultiSelectMode = false;
     selectedTabIds.clear();
@@ -3819,3 +4013,4 @@
     setTimeout(renderOpenTabs, 1000);
   });
 })();
+

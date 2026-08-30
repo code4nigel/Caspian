@@ -55,7 +55,11 @@
         </div>
         <div style="display: flex; flex-direction: column;">
           <span class="sheet-brand-name">CASPIAN FLOW</span>
-          <span class="sheet-brand-tag">V1.1.39-BetaC</span>
+          <span class="sheet-brand-tag">V1.1.40-BetaC</span>
+        </div>
+        <div id="header-cask-pill" style="display: flex; align-items: center; gap: 4px; padding: 4px 8px; border-radius: 10px; background: rgba(0,229,255,0.08); border: 1px solid rgba(0,229,255,0.25); cursor: pointer; margin-left: 6px;" title="Active Caspian Cask">
+          <span id="header-cask-icon" style="font-size: 13px;">🌊</span>
+          <span id="header-cask-name" style="font-size: 11px; font-weight: 700; color: #00E5FF; max-width: 80px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">Caspian</span>
         </div>
       </div>
       <div class="header-icon-actions">
@@ -1031,6 +1035,22 @@
         </div>
       </details>
 
+      <!-- Caspian Casks (Multi-Account Containers) Card -->
+      <div class="m3-card" id="card-casks-manager" style="margin-top: 14px;">
+        <div class="m3-card-row">
+          <div class="m3-card-left">
+            <div id="cask-status-dot" class="status-dot active" style="background: #00E5FF;"></div>
+            <div>
+              <div class="m3-card-title">Caspian Casks (Vaults)</div>
+              <div id="cask-active-sub" class="m3-card-sub">Active: 🌊 Caspian Cask • Isolated login sessions.</div>
+            </div>
+          </div>
+          <button id="menu-switch-cask-btn" class="oneui-pill-btn primary" style="font-size: 11px; padding: 6px 12px; display: flex; align-items: center; gap: 4px;">
+            <span>Switch Cask</span>
+          </button>
+        </div>
+      </div>
+
       <!-- Updates & Changelog Card -->
       <div class="m3-card" id="card-app-updater" style="margin-top: 14px;">
         <div class="m3-card-row">
@@ -1038,7 +1058,7 @@
             <div id="updater-status-dot" class="status-dot active"></div>
             <div>
               <div class="m3-card-title">Caspian Flow Updates</div>
-              <div id="updater-status-sub" class="m3-card-sub">Current: V1.1.39-BetaC • Direct in-app GitHub updater.</div>
+              <div id="updater-status-sub" class="m3-card-sub">Current: V1.1.40-BetaC • Direct in-app GitHub updater.</div>
             </div>
           </div>
           <button id="check-updates-btn" class="oneui-pill-btn primary" style="font-size: 11px; padding: 6px 12px; display: flex; align-items: center; gap: 4px;">
@@ -1306,6 +1326,49 @@
         <button id="update-modal-action-btn" class="oneui-pill-btn primary" style="padding: 8px 16px; border-radius: 10px; font-size: 11px; display: flex; align-items: center; gap: 6px;">
           <span>🚀 Update & Install</span>
         </button>
+      </div>
+    </div>
+  <!-- Caspian Casks Switcher & Creator Modal in Control Sheet -->
+  <div id="control-casks-modal" style="display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.7); backdrop-filter: blur(12px); -webkit-backdrop-filter: blur(12px); z-index: 100000; justify-content: center; align-items: center; padding: 20px;">
+    <div style="width: 100%; max-width: 360px; background: var(--bg-card); border: 1px solid var(--border-glass); border-radius: 24px; padding: 22px; box-shadow: 0 20px 50px rgba(0,0,0,0.5); text-align: left;">
+      <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px;">
+        <div style="font-size: 15px; font-weight: 800; color: var(--text-main); display: flex; align-items: center; gap: 8px;">
+          <span>🌊 Caspian Casks</span>
+        </div>
+        <button id="close-control-casks-modal-btn" style="background: rgba(128,128,128,0.15); border: none; color: var(--text-muted); width: 28px; height: 28px; border-radius: 50%; cursor: pointer; font-size: 13px; font-weight: 700;">✕</button>
+      </div>
+      <div style="font-size: 11px; color: var(--text-muted); margin-bottom: 14px; line-height: 1.4;">
+        Switch between isolated multi-account cookie vaults (ChatGPT, Gemini, Google, YouTube).
+      </div>
+
+      <!-- Casks List -->
+      <div id="control-casks-list" style="display: flex; flex-direction: column; gap: 8px; max-height: 220px; overflow-y: auto; margin-bottom: 14px; padding-right: 2px;">
+        <!-- Rendered via JS -->
+      </div>
+
+      <!-- Create New Cask Button & Form -->
+      <div id="control-create-cask-sec" style="border-top: 1px dashed var(--border-glass); padding-top: 12px;">
+        <button id="btn-control-new-cask" style="width: 100%; padding: 10px; border-radius: 14px; background: rgba(0,229,255,0.08); border: 1px solid rgba(0,229,255,0.3); color: #00E5FF; font-size: 12px; font-weight: 700; cursor: pointer; display: flex; align-items: center; justify-content: center; gap: 6px;">
+          <span>➕ New Caspian Cask</span>
+        </button>
+
+        <div id="control-new-cask-form" style="display: none; margin-top: 10px; flex-direction: column; gap: 8px;">
+          <input id="control-new-cask-name" type="text" placeholder="Cask Name (e.g. Work Cask)" style="padding: 10px 12px; border-radius: 10px; border: 1px solid var(--border-glass); background: var(--bg-deep); color: var(--text-main); font-size: 12px; outline: none;" />
+          <div style="display: flex; gap: 6px;">
+            <select id="control-new-cask-icon" style="flex: 1; padding: 8px; border-radius: 10px; border: 1px solid var(--border-glass); background: var(--bg-deep); color: var(--text-main); font-size: 12px; outline: none;">
+              <option value="🌊">🌊 Wave</option>
+              <option value="⚓">⚓ Anchor</option>
+              <option value="🐬">🐬 Dolphin</option>
+              <option value="🧊">🧊 Iceberg</option>
+              <option value="🪸">🪸 Coral</option>
+              <option value="🔱">🔱 Trident</option>
+              <option value="⛵">⛵ Sailboat</option>
+              <option value="🏝️">🏝️ Island</option>
+            </select>
+            <button id="btn-control-create-confirm" style="flex: 1; padding: 8px 12px; border-radius: 10px; background: #00E5FF; border: none; color: #000; font-size: 12px; font-weight: 700; cursor: pointer;">Create</button>
+            <button id="btn-control-create-cancel" style="padding: 8px 12px; border-radius: 10px; background: rgba(128,128,128,0.15); border: none; color: var(--text-muted); font-size: 12px; cursor: pointer;">Cancel</button>
+          </div>
+        </div>
       </div>
     </div>
   </div>

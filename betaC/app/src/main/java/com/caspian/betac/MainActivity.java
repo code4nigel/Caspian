@@ -443,6 +443,10 @@ public class MainActivity extends AppCompatActivity {
         try { setupOmniboxSwipeTabSwitcher(); } catch (Throwable ignored) {}
         try { setupOmniboxSuggestions(); } catch (Throwable ignored) {}
         try { initCaspianBetaASplash(); } catch (Throwable ignored) {}
+        try {
+            CaskManager caskManager = new CaskManager(this);
+            caskManager.restoreCaskCookiesFromVault(caskManager.getActiveCaskId());
+        } catch (Throwable ignored) {}
 
         try {
             restoreOpenTabsState();
@@ -6457,6 +6461,19 @@ public class MainActivity extends AppCompatActivity {
         runOnUiThread(() -> {
             if (controlWebView != null) {
                 controlWebView.evaluateJavascript(js, null);
+            }
+        });
+    }
+
+    public void reloadActiveTabOrHub() {
+        runOnUiThread(() -> {
+            try {
+                TabItem activeTab = getTabById(activeTabId);
+                if (activeTab != null && activeTab.webView != null) {
+                    activeTab.webView.reload();
+                }
+            } catch (Exception e) {
+                Log.e(TAG, "Error reloading active tab on cask switch", e);
             }
         });
     }

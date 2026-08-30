@@ -135,7 +135,7 @@
       </svg>
     </div>
 
-    <div class="brand-title">CASPIAN MOBILE</div>
+    <div class="brand-title">CASPIAN FLOW</div>
     <div class="brand-sub">SELECT AI PLATFORM</div>
 
     <div class="horizontal-grid">
@@ -163,9 +163,111 @@
         <div class="app-icon-domain">youtube.com</div>
       </div>
     </div>
+
+    <!-- CASPIAN CASKS (MULTI-ACCOUNT CONTAINERS) SECTION -->
+    <div class="casks-section" style="margin-top: 20px; border-top: 1px solid var(--border-glass); padding-top: 16px;">
+      <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px;">
+        <span style="font-size: 11px; font-weight: 700; letter-spacing: 1px; color: var(--text-muted);">CASPIAN CASKS</span>
+        <span id="cask-badge-active" style="font-size: 10px; font-weight: 700; color: #00E5FF; background: rgba(0,229,255,0.12); border: 1px solid rgba(0,229,255,0.3); padding: 2px 8px; border-radius: 12px;">Active Vault</span>
+      </div>
+
+      <div id="active-cask-selector" class="active-cask-card" style="display: flex; align-items: center; justify-content: space-between; padding: 12px 14px; background: var(--bg-card); border: 1.5px solid var(--border-glass); border-radius: 18px; cursor: pointer; box-shadow: 0 4px 14px rgba(0,0,0,0.05); transition: all 0.2s ease;">
+        <div style="display: flex; align-items: center; gap: 10px;">
+          <div id="active-cask-icon-wrap" style="width: 36px; height: 36px; border-radius: 12px; background: rgba(0,229,255,0.12); border: 1px solid rgba(0,229,255,0.3); display: flex; align-items: center; justify-content: center; font-size: 18px;">
+            <span id="active-cask-icon">🌊</span>
+          </div>
+          <div style="text-align: left;">
+            <div id="active-cask-name" style="font-size: 13px; font-weight: 700; color: var(--text-main);">Caspian Cask</div>
+            <div style="font-size: 10px; color: var(--text-muted);">Isolated Session & Cookies</div>
+          </div>
+        </div>
+        <div style="display: flex; align-items: center; gap: 4px; font-size: 11px; font-weight: 700; color: #00E5FF; background: rgba(0,229,255,0.08); padding: 4px 10px; border-radius: 10px; border: 1px solid rgba(0,229,255,0.2);">
+          <span>Switch</span>
+          <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M6 9l6 6 6-6"/></svg>
+        </div>
+      </div>
+    </div>
   </div>
 
+  <!-- CASKS SWITCHER & CREATOR MODAL -->
+  <div id="casks-modal" style="display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.65); backdrop-filter: blur(12px); -webkit-backdrop-filter: blur(12px); z-index: 9999; justify-content: center; align-items: center; padding: 20px;">
+    <div style="width: 100%; max-width: 360px; background: var(--bg-card); border: 1px solid var(--border-glass); border-radius: 26px; padding: 22px; box-shadow: 0 20px 50px rgba(0,0,0,0.5); text-align: left; animation: caskModalIn 0.25s cubic-bezier(0.16, 1, 0.3, 1);">
+      <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px;">
+        <div style="font-size: 16px; font-weight: 800; color: var(--text-main); display: flex; align-items: center; gap: 8px;">
+          <span>🌊 Caspian Casks</span>
+        </div>
+        <button id="close-casks-modal" style="background: rgba(128,128,128,0.15); border: none; color: var(--text-muted); width: 28px; height: 28px; border-radius: 50%; cursor: pointer; font-size: 13px; font-weight: 700;">✕</button>
+      </div>
+      <div style="font-size: 11px; color: var(--text-muted); margin-bottom: 14px; line-height: 1.4;">
+        Containers isolate login accounts and cookies for ChatGPT, Gemini, Google & YouTube, while sharing all your settings.
+      </div>
+
+      <!-- Casks List -->
+      <div id="casks-list-container" style="display: flex; flex-direction: column; gap: 8px; max-height: 220px; overflow-y: auto; margin-bottom: 14px; padding-right: 2px;">
+        <!-- Dynamically rendered -->
+      </div>
+
+      <!-- Create New Cask Button & Form -->
+      <div id="create-cask-section" style="border-top: 1px dashed var(--border-glass); padding-top: 12px;">
+        <button id="btn-show-new-cask" style="width: 100%; padding: 10px; border-radius: 14px; background: rgba(0,229,255,0.08); border: 1px solid rgba(0,229,255,0.3); color: #00E5FF; font-size: 12px; font-weight: 700; cursor: pointer; display: flex; align-items: center; justify-content: center; gap: 6px;">
+          <span>➕ New Caspian Cask</span>
+        </button>
+
+        <div id="new-cask-form" style="display: none; margin-top: 10px; flex-direction: column; gap: 8px;">
+          <input id="new-cask-name" type="text" placeholder="Cask Name (e.g. Pacific Work)" style="padding: 10px 12px; border-radius: 10px; border: 1px solid var(--border-glass); background: var(--bg-deep); color: var(--text-main); font-size: 12px; outline: none;" />
+          <div style="display: flex; gap: 6px;">
+            <select id="new-cask-icon" style="flex: 1; padding: 8px; border-radius: 10px; border: 1px solid var(--border-glass); background: var(--bg-deep); color: var(--text-main); font-size: 12px; outline: none;">
+              <option value="🌊">🌊 Wave</option>
+              <option value="⚓">⚓ Anchor</option>
+              <option value="🐬">🐬 Dolphin</option>
+              <option value="🧊">🧊 Iceberg</option>
+              <option value="🪸">🪸 Coral</option>
+              <option value="🔱">🔱 Trident</option>
+              <option value="⛵">⛵ Sailboat</option>
+              <option value="🏝️">🏝️ Island</option>
+            </select>
+            <button id="btn-confirm-create-cask" style="flex: 1; padding: 8px 12px; border-radius: 10px; background: #00E5FF; border: none; color: #000; font-size: 12px; font-weight: 700; cursor: pointer;">Create</button>
+            <button id="btn-cancel-create-cask" style="padding: 8px 12px; border-radius: 10px; background: rgba(128,128,128,0.15); border: none; color: var(--text-muted); font-size: 12px; cursor: pointer;">Cancel</button>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <style>
+    @keyframes caskModalIn {
+      from { opacity: 0; transform: scale(0.92); }
+      to { opacity: 1; transform: scale(1); }
+    }
+    .cask-item-row {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 10px 12px;
+      border-radius: 14px;
+      background: var(--bg-deep);
+      border: 1px solid var(--border-glass);
+      cursor: pointer;
+      transition: all 0.2s ease;
+    }
+    .cask-item-row:active {
+      transform: scale(0.98);
+    }
+    .cask-item-row.active {
+      border-color: #00E5FF;
+      background: rgba(0, 229, 255, 0.08);
+    }
+  </style>
+
   <script>
+    function playTapSFX() {
+      try {
+        if (window.CaspianBridge && typeof window.CaspianBridge.playAssetSound === 'function') {
+          window.CaspianBridge.playAssetSound('tap_button.mp3');
+        }
+      } catch (e) {}
+    }
+
     function syncTheme() {
       try {
         if (window.CaspianBridge && typeof window.CaspianBridge.getSettings === 'function') {
@@ -178,7 +280,179 @@
     syncTheme();
     setInterval(syncTheme, 1000);
 
+    // ==========================================
+    // CASPIAN CASKS LOGIC
+    // ==========================================
+    let currentCasksData = {
+      activeCaskId: 'cask_caspian',
+      activeCaskName: 'Caspian Cask',
+      activeCaskIcon: '🌊',
+      activeCaskColor: '#1B4264',
+      casks: []
+    };
+
+    function loadCaspianCasks() {
+      try {
+        if (window.CaspianBridge && typeof window.CaspianBridge.getCaspianCasks === 'function') {
+          const jsonStr = window.CaspianBridge.getCaspianCasks();
+          currentCasksData = JSON.parse(jsonStr);
+          renderActiveCaskUI();
+        }
+      } catch (e) {}
+    }
+
+    function renderActiveCaskUI() {
+      const activeIconEl = document.getElementById('active-cask-icon');
+      const activeNameEl = document.getElementById('active-cask-name');
+      const activeWrapEl = document.getElementById('active-cask-icon-wrap');
+
+      if (activeIconEl) activeIconEl.textContent = currentCasksData.activeCaskIcon || '🌊';
+      if (activeNameEl) activeNameEl.textContent = currentCasksData.activeCaskName || 'Caspian Cask';
+      if (activeWrapEl && currentCasksData.activeCaskColor) {
+        activeWrapEl.style.borderColor = currentCasksData.activeCaskColor;
+      }
+    }
+
+    function openCasksModal() {
+      playTapSFX();
+      loadCaspianCasks();
+      renderCasksList();
+      const modal = document.getElementById('casks-modal');
+      if (modal) modal.style.display = 'flex';
+    }
+
+    function closeCasksModal() {
+      playTapSFX();
+      const modal = document.getElementById('casks-modal');
+      if (modal) modal.style.display = 'none';
+      hideNewCaskForm();
+    }
+
+    function renderCasksList() {
+      const container = document.getElementById('casks-list-container');
+      if (!container) return;
+      container.innerHTML = '';
+
+      const casks = currentCasksData.casks || [];
+      casks.forEach(cask => {
+        const isActive = cask.id === currentCasksData.activeCaskId;
+        const row = document.createElement('div');
+        row.className = 'cask-item-row' + (isActive ? ' active' : '');
+        
+        row.innerHTML = `
+          <div style="display: flex; align-items: center; gap: 10px;">
+            <div style="width: 32px; height: 32px; border-radius: 10px; background: rgba(255,255,255,0.06); border: 1.5px solid ${cask.color || '#00E5FF'}; display: flex; align-items: center; justify-content: center; font-size: 16px;">
+              ${cask.icon || '🌊'}
+            </div>
+            <div>
+              <div style="font-size: 12px; font-weight: 700; color: var(--text-main);">${cask.name}</div>
+              <div style="font-size: 9px; color: var(--text-muted);">${cask.isDefault ? 'Default Cask' : 'Custom Vault'}</div>
+            </div>
+          </div>
+          <div style="display: flex; align-items: center; gap: 6px;">
+            ${isActive ? '<span style="font-size: 10px; font-weight: 700; color: #00E5FF; background: rgba(0,229,255,0.15); padding: 3px 8px; border-radius: 8px;">Active</span>' : '<button class="btn-switch-cask" style="padding: 4px 10px; border-radius: 8px; background: rgba(128,128,128,0.15); border: none; color: var(--text-main); font-size: 11px; font-weight: 600; cursor: pointer;">Switch</button>'}
+            ${(!cask.isDefault && !isActive) ? `<button class="btn-delete-cask" style="background: none; border: none; color: #F43F5E; font-size: 14px; cursor: pointer; padding: 4px;">🗑️</button>` : ''}
+          </div>
+        `;
+
+        if (!isActive) {
+          const switchBtn = row.querySelector('.btn-switch-cask');
+          if (switchBtn) {
+            switchBtn.addEventListener('click', (e) => {
+              e.stopPropagation();
+              switchCask(cask.id);
+            });
+          }
+          row.addEventListener('click', () => switchCask(cask.id));
+        }
+
+        const deleteBtn = row.querySelector('.btn-delete-cask');
+        if (deleteBtn) {
+          deleteBtn.addEventListener('click', (e) => {
+            e.stopPropagation();
+            deleteCask(cask.id);
+          });
+        }
+
+        container.appendChild(row);
+      });
+    }
+
+    function switchCask(caskId) {
+      playTapSFX();
+      if (window.CaspianBridge && typeof window.CaspianBridge.switchCaspianCask === 'function') {
+        window.CaspianBridge.switchCaspianCask(caskId);
+      }
+      closeCasksModal();
+      setTimeout(loadCaspianCasks, 300);
+    }
+
+    function deleteCask(caskId) {
+      playTapSFX();
+      if (window.CaspianBridge && typeof window.CaspianBridge.deleteCaspianCask === 'function') {
+        window.CaspianBridge.deleteCaspianCask(caskId);
+      }
+      setTimeout(() => {
+        loadCaspianCasks();
+        renderCasksList();
+      }, 200);
+    }
+
+    function showNewCaskForm() {
+      playTapSFX();
+      const form = document.getElementById('new-cask-form');
+      const btn = document.getElementById('btn-show-new-cask');
+      if (form) form.style.display = 'flex';
+      if (btn) btn.style.display = 'none';
+    }
+
+    function hideNewCaskForm() {
+      const form = document.getElementById('new-cask-form');
+      const btn = document.getElementById('btn-show-new-cask');
+      if (form) form.style.display = 'none';
+      if (btn) btn.style.display = 'flex';
+      const nameInput = document.getElementById('new-cask-name');
+      if (nameInput) nameInput.value = '';
+    }
+
+    function confirmCreateCask() {
+      playTapSFX();
+      const nameInput = document.getElementById('new-cask-name');
+      const iconSelect = document.getElementById('new-cask-icon');
+      const name = nameInput ? nameInput.value.trim() : '';
+      const icon = iconSelect ? iconSelect.value : '🌊';
+
+      if (!name) {
+        if (window.CaspianBridge && typeof window.CaspianBridge.showToast === 'function') {
+          window.CaspianBridge.showToast('Please enter a Cask name');
+        }
+        return;
+      }
+
+      if (window.CaspianBridge && typeof window.CaspianBridge.createCaspianCask === 'function') {
+        window.CaspianBridge.createCaspianCask(name, icon, '#00E5FF');
+      }
+
+      hideNewCaskForm();
+      setTimeout(() => {
+        loadCaspianCasks();
+        renderCasksList();
+      }, 200);
+    }
+
+    // Modal Listeners
+    document.getElementById('active-cask-selector').addEventListener('click', openCasksModal);
+    document.getElementById('close-casks-modal').addEventListener('click', closeCasksModal);
+    document.getElementById('btn-show-new-cask').addEventListener('click', showNewCaskForm);
+    document.getElementById('btn-cancel-create-cask').addEventListener('click', hideNewCaskForm);
+    document.getElementById('btn-confirm-create-cask').addEventListener('click', confirmCreateCask);
+
+    // Initial Load
+    setTimeout(loadCaspianCasks, 100);
+
+    // Platform Launch Listeners
     document.getElementById('launch-chatgpt').addEventListener('click', () => {
+      playTapSFX();
       if (window.CaspianBridge && typeof window.CaspianBridge.switchService === 'function') {
         window.CaspianBridge.switchService('chatgpt');
       } else {
@@ -187,6 +461,7 @@
     });
 
     document.getElementById('launch-gemini').addEventListener('click', () => {
+      playTapSFX();
       if (window.CaspianBridge && typeof window.CaspianBridge.switchService === 'function') {
         window.CaspianBridge.switchService('gemini');
       } else {
@@ -195,6 +470,7 @@
     });
 
     document.getElementById('launch-google').addEventListener('click', () => {
+      playTapSFX();
       if (window.CaspianBridge && typeof window.CaspianBridge.switchService === 'function') {
         window.CaspianBridge.switchService('google');
       } else {
@@ -203,6 +479,7 @@
     });
 
     document.getElementById('launch-youtube').addEventListener('click', () => {
+      playTapSFX();
       if (window.CaspianBridge && typeof window.CaspianBridge.switchService === 'function') {
         window.CaspianBridge.switchService('youtube');
       } else {

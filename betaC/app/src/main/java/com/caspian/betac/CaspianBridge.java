@@ -703,4 +703,95 @@ public class CaspianBridge {
             }
         });
     }
+
+    // ==========================================
+    // CASPIAN CASKS (MULTI-ACCOUNT CONTAINERS)
+    // ==========================================
+
+    @JavascriptInterface
+    public String getCaspianCasks() {
+        if (activity == null) return "{\"activeCaskId\":\"cask_caspian\",\"casks\":[]}";
+        try {
+            CaskManager manager = new CaskManager(activity);
+            return manager.getCasksPayloadJson();
+        } catch (Exception e) {
+            return "{\"activeCaskId\":\"cask_caspian\",\"casks\":[]}";
+        }
+    }
+
+    @JavascriptInterface
+    public boolean switchCaspianCask(String caskId) {
+        if (activity == null || caskId == null) return false;
+        try {
+            CaskManager manager = new CaskManager(activity);
+            manager.switchCask(caskId, () -> {
+                activity.runOnUiThread(() -> {
+                    CaskManager.CaskItem active = manager.getActiveCask();
+                    showToast(active.icon + " Switched to " + active.name + "! ✨");
+                    activity.reloadActiveTabOrHub();
+                    String payload = manager.getCasksPayloadJson();
+                    activity.evaluateJavascriptInControlSheet("if(window.onCaspianCasksUpdated) window.onCaspianCasksUpdated(" + JSONObject.quote(payload) + ");");
+                });
+            });
+            return true;
+        } catch (Exception e) {
+            return false;
+        }
+    }
+
+    @JavascriptInterface
+    public boolean createCaspianCask(String name, String icon, String colorHex) {
+        if (activity == null) return false;
+        try {
+            CaskManager manager = new CaskManager(activity);
+            boolean created = manager.createCask(name, icon, colorHex);
+            if (created) {
+                activity.runOnUiThread(() -> {
+                    showToast("🌊 Cask '" + name + "' created!");
+                    String payload = manager.getCasksPayloadJson();
+                    activity.evaluateJavascriptInControlSheet("if(window.onCaspianCasksUpdated) window.onCaspianCasksUpdated(" + JSONObject.quote(payload) + ");");
+                });
+            }
+            return created;
+        } catch (Exception e) {
+            return false;
+        }
+    }
+
+    @JavascriptInterface
+    public boolean deleteCaspianCask(String caskId) {
+        if (activity == null || caskId == null) return false;
+        try {
+            CaskManager manager = new CaskManager(activity);
+            boolean deleted = manager.deleteCask(caskId);
+            if (deleted) {
+                activity.runOnUiThread(() -> {
+                    showToast("Cask deleted.");
+                    String payload = manager.getCasksPayloadJson();
+                    activity.evaluateJavascriptInControlSheet("if(window.onCaspianCasksUpdated) window.onCaspianCasksUpdated(" + JSONObject.quote(payload) + ");");
+                });
+            }
+            return deleted;
+        } catch (Exception e) {
+            return false;
+        }
+    }
+
+    @JavascriptInterface
+    public boolean renameCaspianCask(String caskId, String newName, String newIcon, String newColor) {
+        if (activity == null || caskId == null) return false;
+        try {
+            CaskManager manager = new CaskManager(activity);
+            boolean renamed = manager.renameCask(caskId, newName, newIcon, newColor);
+            if (renamed) {
+                activity.runOnUiThread(() -> {
+                    String payload = manager.getCasksPayloadJson();
+                    activity.evaluateJavascriptInControlSheet("if(window.onCaspianCasksUpdated) window.onCaspianCasksUpdated(" + JSONObject.quote(payload) + ");");
+                });
+            }
+            return renamed;
+        } catch (Exception e) {
+            return false;
+        }
+    }
 }
