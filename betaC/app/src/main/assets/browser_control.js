@@ -317,7 +317,9 @@
     const checkUpdatesBtn = document.getElementById('check-updates-btn');
     if (checkUpdatesBtn) {
       checkUpdatesBtn.addEventListener('click', () => {
-        playAssetSound(sfxConfig.tb_clicks || 'tap_button.mp3');
+        try {
+          playSFX('tb_clicks');
+        } catch (e) { }
         const checkBtnText = document.getElementById('check-updates-btn-text');
         if (checkBtnText) checkBtnText.textContent = 'Checking...';
         if (window.CaspianBridge && typeof window.CaspianBridge.checkForAppUpdates === 'function') {
@@ -335,7 +337,9 @@
           }
           return;
         }
-        playAssetSound(sfxConfig.tb_clicks || 'tap_button.mp3');
+        try {
+          playSFX('tb_clicks');
+        } catch (e) { }
         updateActionBtn.disabled = true;
         updateActionBtn.innerHTML = '<span>⏳ Downloading...</span>';
         if (window.CaspianBridge && typeof window.CaspianBridge.downloadAndInstallUpdate === 'function') {
@@ -349,8 +353,6 @@
 
     const updateModalLaterBtn = document.getElementById('update-modal-later-btn');
     if (updateModalLaterBtn) updateModalLaterBtn.addEventListener('click', hideUpdateModal);
-
-    renderLauncherIcons();
   }, 200);
 
   function updateDebugRecUI() {
@@ -1758,20 +1760,6 @@
     updateIconPreview(start, end, selectedShapeVal);
   }
 
-  // Wire Caspian Flow Theme Banner
-  const flowBanner = document.getElementById('theme-banner-flow');
-  if (flowBanner) {
-    flowBanner.addEventListener('click', () => {
-      playSFX('tb_clicks');
-      applyCustomGradient('#627D94', '#183652');
-      document.querySelectorAll('.preset-btn').forEach(btn => {
-        btn.classList.toggle('active', btn.dataset.preset === 'flow');
-      });
-      if (window.CaspianBridge && typeof window.CaspianBridge.showToast === 'function') {
-        window.CaspianBridge.showToast("🌊 Caspian Flow Edition Activated! ✨");
-      }
-    });
-  }
 
   var selectedShapeVal = 'circle';
 

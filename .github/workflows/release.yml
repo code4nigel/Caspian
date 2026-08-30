@@ -90,11 +90,11 @@ jobs:
               {
                 id: 'flow',
                 productName: 'Caspian Flow (Beta C)',
-                tag: 'Caspian-Flow-v1.1.38-BetaC',
-                title: '[Beta C] Caspian Flow v1.1.38-BetaC',
-                assetPattern: 'Caspian-Flow-v1.1.38-BetaC.apk',
+                tag: 'Caspian-Flow-v1.1.39-BetaC',
+                title: '[Beta C] Caspian Flow v1.1.39-BetaC',
+                assetPattern: 'Caspian-Flow-v1.1.39-BetaC.apk',
                 isPrerelease: true,
-                desc: 'Features Caspian Flow signature theme banner asset & accent presets, horizontal sine S-curve launcher wave icon, and zero-rate-limit dual-engine in-app auto-updater.'
+                desc: 'Cleaned aesthetics menu, removed wave emoji from Flow preset, and fixed Check Updates button JavaScript exception for flawless in-app auto-updating.'
               },
               {
                 id: 'mobile',
