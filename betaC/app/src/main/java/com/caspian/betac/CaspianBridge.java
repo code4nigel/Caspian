@@ -205,6 +205,28 @@ public class CaspianBridge {
     }
 
     @JavascriptInterface
+    public void openNewTab(String url) {
+        if (activity != null) {
+            activity.runOnUiThread(() -> {
+                String finalUrl = (url != null && !url.trim().isEmpty()) ? url : "file:///android_asset/launch_hub.html";
+                String service = "file:///android_asset/launch_hub.html".equals(finalUrl) ? "hub" : "web";
+                activity.addNewTab(service, null, finalUrl, false);
+                activity.hideControlSheet();
+            });
+        }
+    }
+
+    @JavascriptInterface
+    public void openLaunchHubInNewTab() {
+        if (activity != null) {
+            activity.runOnUiThread(() -> {
+                activity.addNewTab("hub", null, "file:///android_asset/launch_hub.html", false);
+                activity.hideControlSheet();
+            });
+        }
+    }
+
+    @JavascriptInterface
     public void openUrl(String url) {
         if (activity != null) {
             activity.runOnUiThread(() -> activity.navigateUrl(url));

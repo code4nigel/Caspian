@@ -55,9 +55,9 @@
         </div>
         <div style="display: flex; flex-direction: column;">
           <span class="sheet-brand-name">CASPIAN FLOW</span>
-          <span class="sheet-brand-tag">V1.1.40-BetaC</span>
+          <span class="sheet-brand-tag">V1.1.42-BetaC</span>
         </div>
-        <div id="header-cask-pill" style="display: flex; align-items: center; justify-content: center; width: 30px; height: 30px; min-width: 30px; border-radius: 10px; background: var(--bg-card); border: 1.5px solid var(--accent, #00E5FF); box-shadow: 0 2px 8px var(--accent-glow, rgba(0,0,0,0.3)); cursor: pointer; margin-left: 6px; transition: all 0.2s ease;" title="Active Caspian Cask - Tap to switch">
+        <div id="header-cask-pill" onclick="if(window.CaspianBridge && typeof window.CaspianBridge.openLaunchHubInNewTab === 'function'){window.CaspianBridge.openLaunchHubInNewTab();}else if(window.CaspianBridge && typeof window.CaspianBridge.openNewTab === 'function'){window.CaspianBridge.openNewTab('file:///android_asset/launch_hub.html');}" style="display: flex; align-items: center; justify-content: center; width: 30px; height: 30px; min-width: 30px; border-radius: 10px; background: var(--bg-card); border: 1.5px solid var(--accent, #00E5FF); box-shadow: 0 2px 8px var(--accent-glow, rgba(0,0,0,0.3)); cursor: pointer; margin-left: 6px; transition: all 0.2s ease;" title="Active Caspian Cask - Tap to open Hub in new tab">
           <span id="header-cask-icon" style="font-size: 15px; line-height: 1;">🌊</span>
         </div>
       </div>
@@ -1035,7 +1035,7 @@
       </details>
 
       <!-- Caspian Casks (Multi-Account Containers) Card -->
-      <div class="m3-card" id="card-casks-manager" style="margin-top: 14px;">
+      <div class="m3-card" id="card-casks-manager" style="margin-top: 14px; cursor: pointer;" onclick="if(typeof openControlCasksModal==='function') openControlCasksModal();">
         <div class="m3-card-row">
           <div class="m3-card-left">
             <div id="cask-status-dot" class="status-dot active" style="background: #00E5FF;"></div>
@@ -1044,7 +1044,7 @@
               <div id="cask-active-sub" class="m3-card-sub">Active: 🌊 Caspian Cask • Isolated login sessions.</div>
             </div>
           </div>
-          <button id="menu-switch-cask-btn" class="oneui-pill-btn primary" style="font-size: 11px; padding: 6px 12px; display: flex; align-items: center; gap: 4px;">
+          <button id="menu-switch-cask-btn" class="oneui-pill-btn primary" style="font-size: 11px; padding: 6px 12px; display: flex; align-items: center; gap: 4px;" onclick="if(typeof openControlCasksModal==='function') openControlCasksModal(); event.stopPropagation();">
             <span>Switch Cask</span>
           </button>
         </div>
@@ -1057,7 +1057,7 @@
             <div id="updater-status-dot" class="status-dot active"></div>
             <div>
               <div class="m3-card-title">Caspian Flow Updates</div>
-              <div id="updater-status-sub" class="m3-card-sub">Current: V1.1.40-BetaC • Direct in-app GitHub updater.</div>
+              <div id="updater-status-sub" class="m3-card-sub">Current: V1.1.42-BetaC • Direct in-app GitHub updater.</div>
             </div>
           </div>
           <button id="check-updates-btn" class="oneui-pill-btn primary" style="font-size: 11px; padding: 6px 12px; display: flex; align-items: center; gap: 4px;">
@@ -1078,7 +1078,7 @@
             <div class="dev-name">NigelWeb</div>
             <div class="dev-role">Lead Architect of Lsync & Caspian</div>
             <a href="https://github.com/code4nigel" target="_blank" class="dev-github-link" onclick="if(window.CaspianBridge){window.CaspianBridge.openExternalUrl('https://github.com/code4nigel');return false;}">
-              <svg width="12" height="12" viewBox="0 0 24 24" fill="currentColor"><path d="M12 0C5.37 0 0 5.37 0 12c0 5.31 3.435 9.795 8.205 11.385.6.105.825-.255.825-.57 0-.285-.015-1.23-.015-2.235-3.015.555-3.795-.735-4.035-1.41-.135-.72-1.41-1.23-1.695-.42-.225-1.02-.78-.015-.795.945-.015 1.62.87 1.845 1.23 1.08 1.815 2.805 1.305 3.495.99.105-.78.42-1.305.765-1.605-2.67-.3-5.46-1.335-5.46-5.925 0-1.305.465-2.385 1.23-3.225-.12-.3-.54-1.53.12-3.18 0 0 1.005-.315 3.3 1.23.96-.27 1.98-.405 3-.405s2.04.135 3 .405c2.295-1.56 3.3-1.23 3.3-1.23.66 1.65.24 2.88.12 3.18.765.84 1.23 1.905 1.23 3.225 0 4.605-2.805 5.625-5.475 5.925.435.375.81 1.095.81 2.22 0 1.605-.015 2.895-.015 3.3 0 .315.225.69.825.57A12.02 12.02 0 0024 12c0-6.63-5.37-12-12-12z"/></svg>
+              <svg width="12" height="12" viewBox="0 0 24 24" fill="currentColor"><path d="M12 0C5.37 0 0 5.37 0 12c0 5.31 3.435 9.795 8.205 11.385.6.105.825-.255.825-.57 0-.285-.015-1.23-.015-2.235-3.015.555-3.795-.735-4.035-1.41-.135-.72-1.41-1.23-1.695-.42-.225-1.02-.78-.015-.795.945-.015 1.62.87 1.845 1.23 1.08 1.815 2.805 1.305 3.495.99.105-.78.42-1.305.765-1.605-2.67-.3-5.46-1.335-5.46-5.925 0-1.305.465-2.385 1.23-3.225-.12-.3-.54-1.53.12-3.18 0 0 1.005-.315 3.3 1.23.96-.27 1.98 -0.405 3 -0.405s2.04 0.135 3 0.405c2.295-1.56 3.3-1.23 3.3-1.23.66 1.65.24 2.88.12 3.18.765.84 1.23 1.905 1.23 3.225 0 4.605-2.805 5.625-5.475 5.925.435.375.81 1.095.81 2.22 0 1.605-.015 2.895-.015 3.3 0 .315.225.69.825.57A12.02 12.02 0 0024 12c0-6.63-5.37-12-12-12z"/></svg>
               <span>github.com/code4nigel</span>
             </a>
           </div>
@@ -1330,7 +1330,7 @@
   </div>
 
   <!-- Caspian Casks Switcher & Creator Modal in Control Sheet -->
-  <div id="control-casks-modal" style="display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.7); backdrop-filter: blur(14px); -webkit-backdrop-filter: blur(14px); z-index: 100000; justify-content: center; align-items: center; padding: 20px;">
+  <div id="control-casks-modal" class="modal-overlay" style="display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.7); backdrop-filter: blur(14px); -webkit-backdrop-filter: blur(14px); z-index: 10000000; justify-content: center; align-items: center; padding: 20px;">
     <div style="width: 100%; max-width: 360px; background: var(--bg-card); border: 1px solid var(--border-glass); border-radius: 24px; padding: 22px; box-shadow: 0 20px 50px rgba(0,0,0,0.6); text-align: left; animation: caskModalIn 0.25s cubic-bezier(0.16, 1, 0.3, 1);">
       <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px;">
         <div style="font-size: 15px; font-weight: 800; color: var(--text-main); display: flex; align-items: center; gap: 8px;">

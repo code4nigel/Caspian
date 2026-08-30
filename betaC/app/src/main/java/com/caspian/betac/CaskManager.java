@@ -30,6 +30,28 @@ public class CaskManager {
 
     public static final String DEFAULT_CASK_ID = "cask_caspian";
 
+    public static boolean isMultiProfileSupported() {
+        try {
+            return androidx.webkit.WebViewFeature.isFeatureSupported(androidx.webkit.WebViewFeature.MULTI_PROFILE);
+        } catch (Throwable t) {
+            return false;
+        }
+    }
+
+    public static void applyProfileToWebView(android.webkit.WebView webView, String caskId) {
+        if (webView == null || caskId == null) return;
+        try {
+            if (isMultiProfileSupported()) {
+                androidx.webkit.ProfileStore store = androidx.webkit.ProfileStore.getInstance();
+                store.getOrCreateProfile(caskId);
+                androidx.webkit.WebViewCompat.setProfile(webView, caskId);
+                Log.d(TAG, "Successfully assigned Multi-Profile: " + caskId + " to WebView");
+            }
+        } catch (Throwable t) {
+            Log.e(TAG, "Error applying profile " + caskId + " to webView", t);
+        }
+    }
+
     // Known common domains for session cookie capture
     private static final List<String> MONITORED_DOMAINS = Arrays.asList(
             "https://chatgpt.com",
@@ -242,9 +264,18 @@ public class CaskManager {
         return false;
     }
 
+    public CaskItem getCaskById(String caskId) {
+        if (caskId == null) return getActiveCask();
+        for (CaskItem item : getAllCasks()) {
+            if (item.id.equals(caskId)) return item;
+        }
+        return getActiveCask();
+    }
+
     /**
-     * Snapshots the active CookieManager state into current Cask's vault,
-     * clears CookieManager, and restores target Cask's cookies.
+     * Activates target Cask.
+     * With AndroidX Multi-Profile, each WebView has its own permanent ProfileStore profile
+     * and separate cookie jar, so open tabs in previous containers NEVER lose cookies or email sessions.
      */
     public void switchCask(String targetCaskId, Runnable onComplete) {
         if (targetCaskId == null || targetCaskId.isEmpty()) return;
@@ -252,21 +283,19 @@ public class CaskManager {
         mainHandler.post(() -> {
             String currentId = getActiveCaskId();
 
-            // 1. Save current active cookies to current Cask vault
-            saveActiveCookiesToVault(currentId);
-
-            // 2. Clear current CookieManager
-            CookieManager cookieManager = CookieManager.getInstance();
-            cookieManager.removeAllCookies(null);
-            cookieManager.flush();
-
-            // 3. Set target Cask as active
+            // Set target Cask as active in preferences
             prefs.edit().putString(KEY_ACTIVE_CASK, targetCaskId).apply();
 
-            // 4. Restore target Cask cookies from vault
-            restoreCaskCookiesFromVault(targetCaskId);
+            // Fallback for legacy devices lacking Multi-Profile support
+            if (!isMultiProfileSupported()) {
+                saveActiveCookiesToVault(currentId);
+                CookieManager cookieManager = CookieManager.getInstance();
+                cookieManager.removeAllCookies(null);
+                cookieManager.flush();
+                restoreCaskCookiesFromVault(targetCaskId);
+            }
 
-            // 5. Notify completion
+            // Notify completion
             if (onComplete != null) {
                 onComplete.run();
             }

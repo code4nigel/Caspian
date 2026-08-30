@@ -10,8 +10,8 @@ android {
         applicationId = "com.caspian.betac"
         minSdk = 24
         targetSdk = 34
-        versionCode = 52
-        versionName = "1.1.41-BetaC"
+        versionCode = 53
+        versionName = "1.1.42-BetaC"
     }
 
     buildTypes {
@@ -40,6 +40,6 @@ dependencies {
     implementation("androidx.appcompat:appcompat:1.6.1")
     implementation("com.google.android.material:material:1.11.0")
     implementation("androidx.browser:browser:1.8.0")
-    implementation("androidx.webkit:webkit:1.10.0")
+    implementation("androidx.webkit:webkit:1.13.0")
     implementation("androidx.cardview:cardview:1.0.0")
 }

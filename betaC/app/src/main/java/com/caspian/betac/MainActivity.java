@@ -129,6 +129,10 @@ public class MainActivity extends AppCompatActivity {
         public boolean isIncognito = false;
         public String pendingPrompt = null;
         public Bitmap snapshotBitmap = null;
+        public String caskId = CaskManager.DEFAULT_CASK_ID;
+        public String caskName = "Caspian Cask";
+        public String caskIcon = "🌊";
+        public String caskColor = "#1B4264";
 
         public TabItem(int id, String title, String url, String service, WebView webView, boolean isIncognito) {
             this.id = id;
@@ -470,6 +474,10 @@ public class MainActivity extends AppCompatActivity {
                 obj.put("isIncognito", false);
                 obj.put("isMuted", tab.isMuted);
                 obj.put("isFavorite", tab.isFavorite);
+                obj.put("caskId", tab.caskId != null ? tab.caskId : CaskManager.DEFAULT_CASK_ID);
+                obj.put("caskName", tab.caskName != null ? tab.caskName : "Caspian Cask");
+                obj.put("caskIcon", tab.caskIcon != null ? tab.caskIcon : "🌊");
+                obj.put("caskColor", tab.caskColor != null ? tab.caskColor : "#1B4264");
                 arr.put(obj);
             }
             SharedPreferences prefs = getSharedPreferences(PREFS_NAME, MODE_PRIVATE);
@@ -512,13 +520,18 @@ public class MainActivity extends AppCompatActivity {
                         boolean isMuted = obj.optBoolean("isMuted", false);
                         boolean isFavorite = obj.optBoolean("isFavorite", false);
                         String title = obj.optString("title", null);
+                        String caskId = obj.optString("caskId", CaskManager.DEFAULT_CASK_ID);
 
-                        TabItem item = createNewTabInstance(id, url, service, null, isIncognito);
+                        TabItem item = createNewTabInstance(id, url, service, null, isIncognito, caskId);
                         item.title = title;
                         item.nickname = nickname;
                         item.isDesktop = isDesktop;
                         item.isMuted = isMuted;
                         item.isFavorite = isFavorite;
+                        item.caskId = caskId;
+                        item.caskName = obj.optString("caskName", "Caspian Cask");
+                        item.caskIcon = obj.optString("caskIcon", "🌊");
+                        item.caskColor = obj.optString("caskColor", "#1B4264");
                         tabsList.add(item);
                         if (id > maxId) maxId = id;
                     }
@@ -5668,8 +5681,16 @@ public class MainActivity extends AppCompatActivity {
         }
     }
 
-    @SuppressLint("SetJavaScriptEnabled")
     private TabItem createNewTabInstance(int id, String url, String service, String promptPayload, boolean isIncognito) {
+        return createNewTabInstance(id, url, service, promptPayload, isIncognito, null);
+    }
+
+    @SuppressLint("SetJavaScriptEnabled")
+    private TabItem createNewTabInstance(int id, String url, String service, String promptPayload, boolean isIncognito, String targetCaskId) {
+        CaskManager cm = new CaskManager(this);
+        String finalCaskId = (targetCaskId != null && !targetCaskId.trim().isEmpty()) ? targetCaskId : cm.getActiveCaskId();
+        CaskManager.CaskItem cask = cm.getCaskById(finalCaskId);
+
         WebView webView = new WebView(this);
         webView.setLayoutParams(new ViewGroup.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.MATCH_PARENT));
 
@@ -5688,6 +5709,7 @@ public class MainActivity extends AppCompatActivity {
         settings.setUserAgentString(MOBILE_UA);
 
         if (!isIncognito) {
+            CaskManager.applyProfileToWebView(webView, finalCaskId);
             CookieManager.getInstance().setAcceptCookie(true);
             CookieManager.getInstance().setAcceptThirdPartyCookies(webView, true);
         } else {
@@ -5704,6 +5726,12 @@ public class MainActivity extends AppCompatActivity {
 
         TabItem tabItem = new TabItem(id, "New Tab", url, service, webView, isIncognito);
         tabItem.pendingPrompt = promptPayload;
+        tabItem.caskId = finalCaskId;
+        if (cask != null) {
+            tabItem.caskName = cask.name;
+            tabItem.caskIcon = cask.icon;
+            tabItem.caskColor = cask.color;
+        }
 
         webView.setOnScrollChangeListener((v, scrollX, scrollY, oldScrollX, oldScrollY) -> {
             if (isGoogleDockAutoCollapse && searchNavContainer != null && searchNavContainer.getVisibility() == View.VISIBLE) {
@@ -5904,11 +5932,17 @@ public class MainActivity extends AppCompatActivity {
     }
 
     public void addNewTab(String service, String prompt, String url, boolean isIncognito) {
+        addNewTab(service, prompt, url, isIncognito, null);
+    }
+
+    public void addNewTab(String service, String prompt, String url, boolean isIncognito, String targetCaskId) {
         int id = nextTabId++;
         String finalUrl = (url != null && !url.trim().isEmpty()) ? url : "file:///android_asset/launch_hub.html";
         String finalService = (service != null && !service.trim().isEmpty()) ? service : ("file:///android_asset/launch_hub.html".equals(finalUrl) ? "hub" : "web");
         
-        TabItem tab = createNewTabInstance(id, finalUrl, finalService, prompt, isIncognito);
+        CaskManager cm = new CaskManager(this);
+        String caskId = (targetCaskId != null && !targetCaskId.trim().isEmpty()) ? targetCaskId : cm.getActiveCaskId();
+        TabItem tab = createNewTabInstance(id, finalUrl, finalService, prompt, isIncognito, caskId);
         if ("file:///android_asset/launch_hub.html".equals(finalUrl)) {
             tab.title = "Caspian Hub";
         }
@@ -5928,15 +5962,42 @@ public class MainActivity extends AppCompatActivity {
         else if ("google".equalsIgnoreCase(service)) url = "https://www.google.com";
 
         TabItem tab = getTabById(activeTabId);
+        CaskManager cm = new CaskManager(this);
+        String activeCask = cm.getActiveCaskId();
+
         if (tab != null && tab.webView != null) {
             tab.service = service;
             tab.url = url;
             if ("hub".equalsIgnoreCase(service)) tab.title = "Caspian Hub";
-            tab.webView.loadUrl(url);
+
+            // If the tab was Launch Hub and the user switched active cask on Hub,
+            // ensure the newly launched service uses the selected container profile!
+            if (!tab.caskId.equals(activeCask) && CaskManager.isMultiProfileSupported()) {
+                tab.caskId = activeCask;
+                CaskManager.CaskItem cask = cm.getCaskById(activeCask);
+                if (cask != null) {
+                    tab.caskName = cask.name;
+                    tab.caskIcon = cask.icon;
+                    tab.caskColor = cask.color;
+                }
+                if (tab.webView.getParent() != null) {
+                    ((ViewGroup) tab.webView.getParent()).removeView(tab.webView);
+                }
+                tab.webView.destroy();
+                TabItem refreshed = createNewTabInstance(tab.id, url, service, null, tab.isIncognito, activeCask);
+                tab.webView = refreshed.webView;
+                if (splitModeState == 0) {
+                    webViewContainer.addView(tab.webView);
+                } else {
+                    applySplitViewLayout();
+                }
+            } else {
+                tab.webView.loadUrl(url);
+            }
             updateOmniboxState();
             saveOpenTabsState();
         } else {
-            addNewTab(service, null, url, false);
+            addNewTab(service, null, url, false, activeCask);
         }
     }
 
@@ -5946,6 +6007,14 @@ public class MainActivity extends AppCompatActivity {
 
         TabItem tab = getTabById(tabId);
         if (tab == null) return;
+
+        // On legacy devices lacking Multi-Profile, swap vault cookies when switching between tabs with different casks
+        if (!CaskManager.isMultiProfileSupported() && previousTab != null && previousTab.caskId != null && !previousTab.caskId.equals(tab.caskId)) {
+            CaskManager cm = new CaskManager(this);
+            cm.saveActiveCookiesToVault(previousTab.caskId);
+            CookieManager.getInstance().removeAllCookies(null);
+            cm.restoreCaskCookiesFromVault(tab.caskId);
+        }
 
         activeTabId = tabId;
         if (splitModeState == 0) {
@@ -6314,6 +6383,10 @@ public class MainActivity extends AppCompatActivity {
                 obj.put("isPlayingAudio", false);
                 obj.put("isMuted", tab.isMuted);
                 obj.put("isFavorite", tab.isFavorite);
+                obj.put("caskId", tab.caskId != null ? tab.caskId : CaskManager.DEFAULT_CASK_ID);
+                obj.put("caskName", tab.caskName != null ? tab.caskName : "Caspian Cask");
+                obj.put("caskIcon", tab.caskIcon != null ? tab.caskIcon : "🌊");
+                obj.put("caskColor", tab.caskColor != null ? tab.caskColor : "#1B4264");
                 boolean isSplitTab = (splitModeState > 0 && (tab.id == activeTabId || tab.id == secondarySplitTabId));
                 obj.put("isSplit", isSplitTab);
                 obj.put("splitRole", (tab.id == activeTabId) ? "primary" : ((tab.id == secondarySplitTabId) ? "secondary" : "none"));
@@ -6470,7 +6543,9 @@ public class MainActivity extends AppCompatActivity {
             try {
                 TabItem activeTab = getTabById(activeTabId);
                 if (activeTab != null && activeTab.webView != null) {
-                    activeTab.webView.reload();
+                    if ("file:///android_asset/launch_hub.html".equals(activeTab.url) || "hub".equalsIgnoreCase(activeTab.service)) {
+                        activeTab.webView.reload();
+                    }
                 }
             } catch (Exception e) {
                 Log.e(TAG, "Error reloading active tab on cask switch", e);

@@ -567,6 +567,8 @@
           </button>
         ` : '';
 
+        const caskBadge = tab.caskIcon ? `<span style="font-size: 9px; font-weight: 700; color: var(--text-main); background: rgba(255,255,255,0.08); border: 1px solid ${tab.caskColor || 'var(--accent, #00E5FF)'}; padding: 2px 6px; border-radius: 6px; display: inline-flex; align-items: center; gap: 3px;" title="Container Vault: ${tab.caskName || 'Caspian Cask'}"><span>${tab.caskIcon}</span><span>${tab.caskName ? tab.caskName.split(' ')[0] : 'Cask'}</span></span>` : '';
+
         const favStarBadge = tab.isFavorite ? '<span style="color: #eab308; font-size: 11px; margin-right: 2px;" title="Favorited Tab">⭐</span>' : '';
         const optionMenuBtn = `<button class="chrome-tab-menu-btn icon-btn" data-tabmenuid="${tab.id}" title="Tab Options" style="font-size: 14px; width: 22px; height: 22px; border: none; background: none; color: var(--text-sub); cursor: pointer; display: inline-flex; align-items: center; justify-content: center; margin-right: 2px;">⋮</button>`;
 
@@ -590,7 +592,7 @@
               ${tab.nickname ? `🏷️ <strong style="color: #10b981;">${tab.nickname}</strong>` : tab.url || ''}
             </div>
             <div style="display: flex; justify-content: space-between; align-items: center; margin-top: 6px;">
-              <div>${audioBadge}</div>
+              <div style="display: flex; align-items: center; gap: 4px;">${audioBadge}${caskBadge}</div>
               <div style="display: flex; align-items: center;">${splitBadge}${activeBadge}</div>
             </div>
           </div>
@@ -3988,7 +3990,15 @@
 
     // Modal & Card Event Listeners with Dynamic Delegation
     document.addEventListener('click', (e) => {
-      if (e.target.closest('#header-cask-pill') || e.target.closest('#menu-switch-cask-btn') || e.target.closest('#card-casks-manager')) {
+      if (e.target.closest('#header-cask-pill')) {
+        try { playSFX('tb_clicks'); } catch (e) {}
+        if (window.CaspianBridge && typeof window.CaspianBridge.openLaunchHubInNewTab === 'function') {
+          window.CaspianBridge.openLaunchHubInNewTab();
+        } else if (window.CaspianBridge && typeof window.CaspianBridge.openNewTab === 'function') {
+          window.CaspianBridge.openNewTab('file:///android_asset/launch_hub.html');
+        }
+        return;
+      } else if (e.target.closest('#menu-switch-cask-btn') || e.target.closest('#card-casks-manager')) {
         openControlCasksModal();
       } else if (e.target.closest('#close-control-casks-modal-btn')) {
         closeControlCasksModal();
@@ -4004,6 +4014,9 @@
         }
       }
     });
+
+    window.openControlCasksModal = openControlCasksModal;
+    window.closeControlCasksModal = closeControlCasksModal;
 
     const iconSelectEl = document.getElementById('control-new-cask-icon');
     if (iconSelectEl) {

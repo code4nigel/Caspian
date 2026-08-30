@@ -107,7 +107,7 @@ jobs:
                 title: `[Beta C] Caspian Flow v${flowVersion}`,
                 assetPattern: `Caspian-Flow-v${flowVersion}.apk`,
                 isPrerelease: true,
-                desc: 'Introduces Caspian Casks: multi-account isolated session and cookie vaults for ChatGPT, Gemini, Google, and YouTube, with 1-tap switching, custom emoji creator, and full persistence.'
+                desc: 'Features true Multi-Profile isolated container vaults: tabs running in different casks stay logged in simultaneously without session/cookie conflicts, 1-tap Hub navigation from the header cask pill, and fixed Settings Cask modal.'
               },
               {
                 id: 'mobile',
