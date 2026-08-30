@@ -90,11 +90,11 @@ jobs:
               {
                 id: 'flow',
                 productName: 'Caspian Flow (Beta C)',
-                tag: 'Caspian-Flow-v1.1.37-BetaC',
-                title: '[Beta C] Caspian Flow v1.1.37-BetaC',
-                assetPattern: 'Caspian-Flow-v1.1.37-BetaC.apk',
+                tag: 'Caspian-Flow-v1.1.38-BetaC',
+                title: '[Beta C] Caspian Flow v1.1.38-BetaC',
+                assetPattern: 'Caspian-Flow-v1.1.38-BetaC.apk',
                 isPrerelease: true,
-                desc: 'Features authentic horizontal Caspian curvy S-curve wave launcher icon, dual-engine zero-rate-limit GitHub auto-updater, and live logcat developer log recording with SAF picker.'
+                desc: 'Features Caspian Flow signature theme banner asset & accent presets, horizontal sine S-curve launcher wave icon, and zero-rate-limit dual-engine in-app auto-updater.'
               },
               {
                 id: 'mobile',

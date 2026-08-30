@@ -55,7 +55,7 @@
         </div>
         <div style="display: flex; flex-direction: column;">
           <span class="sheet-brand-name">CASPIAN FLOW</span>
-          <span class="sheet-brand-tag">V1.1.37-BetaC</span>
+          <span class="sheet-brand-tag">V1.1.38-BetaC</span>
         </div>
       </div>
       <div class="header-icon-actions">
@@ -576,10 +576,27 @@
           <button class="bg-preset-btn" data-bg="#0a1128"><span class="color-dot" style="background: #0a1128;"></span> Bluish Dark</button>
         </div>
 
+        <!-- Caspian Flow Signature Theme Banner Asset -->
+        <div id="theme-banner-flow" style="margin-top: 14px; background: linear-gradient(135deg, #183652 0%, #284A65 50%, #3A5774 100%); border: 1px solid rgba(126, 144, 160, 0.4); border-radius: 12px; padding: 12px 14px; display: flex; align-items: center; justify-content: space-between; cursor: pointer; box-shadow: 0 4px 16px rgba(24, 54, 82, 0.35); transition: transform 0.2s, box-shadow 0.2s;">
+          <div style="display: flex; align-items: center; gap: 10px;">
+            <div style="width: 36px; height: 36px; border-radius: 10px; background: linear-gradient(135deg, #7E90A0, #183652); display: flex; align-items: center; justify-content: center; box-shadow: 0 2px 8px rgba(0,0,0,0.3); border: 1px solid rgba(255,255,255,0.2);">
+              <svg width="22" height="22" viewBox="0 0 108 108" fill="none">
+                <path d="M -8,32 C 10,36 20,64 34,64 C 48,64 58,24 76,24 C 92,24 104,44 116,46 L 116,64 C 104,62 92,42 76,42 C 58,42 48,82 34,82 C 20,82 10,54 -8,50 Z" fill="#FFFFFF"/>
+              </svg>
+            </div>
+            <div>
+              <div style="font-size: 12px; font-weight: 800; color: #FFFFFF; letter-spacing: 0.3px;">CASPIAN FLOW EDITION</div>
+              <div style="font-size: 10px; color: #B0C4DE; opacity: 0.9;">Slate & Deep Navy with Wave Accent</div>
+            </div>
+          </div>
+          <button class="oneui-pill-btn primary" id="btn-activate-flow-theme" style="font-size: 10px; padding: 5px 12px; border-radius: 14px; font-weight: 700; background: #00E5FF; color: #081B2B; border: none; box-shadow: 0 0 10px rgba(0,229,255,0.4);">Apply</button>
+        </div>
+
         <!-- Quick Presets for Accents -->
         <div class="setting-section-header" style="margin-top: 14px;">Accent Presets</div>
         <div class="preset-pill-grid" style="margin-top: 6px;">
-          <button class="preset-btn active" data-preset="caspian"><span class="color-dot" style="background: #A2A9A9;"></span> Caspian</button>
+          <button class="preset-btn active" data-preset="caspian"><span class="color-dot" style="background: #A2A9A9;"></span> Classic</button>
+          <button class="preset-btn" data-preset="flow"><span class="color-dot" style="background: linear-gradient(135deg, #627D94, #183652); border: 1px solid rgba(255,255,255,0.4);"></span> Flow 🌊</button>
           <button class="preset-btn" data-preset="cyan"><span class="color-dot" style="background: #06b6d4;"></span> Cyan</button>
           <button class="preset-btn" data-preset="violet"><span class="color-dot" style="background: #a855f7;"></span> Violet</button>
           <button class="preset-btn" data-preset="azure"><span class="color-dot" style="background: #3b82f6;"></span> Azure</button>
@@ -933,6 +950,7 @@
             <!-- Preset Palettes -->
             <div style="font-size: 10px; color: #8e8ea0; margin-top: 10px; margin-bottom: 6px;">PRESET THEMES</div>
             <div style="display: flex; gap: 6px; flex-wrap: wrap; margin-bottom: 12px;">
+              <button class="preset-theme-chip" data-start="#627D94" data-end="#183652" style="background: linear-gradient(135deg, #627D94, #183652); border: 1px solid #00E5FF; color: #fff; padding: 4px 8px; border-radius: 6px; font-size: 10px; font-weight: 700; cursor: pointer; box-shadow: 0 0 8px rgba(0,229,255,0.3);">Caspian Flow 🌊</button>
               <button class="preset-theme-chip" data-start="#A2A9A9" data-end="#1B4264" style="background: linear-gradient(135deg, #A2A9A9, #1B4264); border: 1px solid #ffffff; color: #fff; padding: 4px 8px; border-radius: 6px; font-size: 10px; font-weight: 600; cursor: pointer;">Caspian Classic</button>
               <button class="preset-theme-chip" data-start="#10a37f" data-end="#047857" style="background: linear-gradient(135deg, #10a37f, #047857); border: 1px solid #ffffff; color: #fff; padding: 4px 8px; border-radius: 6px; font-size: 10px; font-weight: 600; cursor: pointer;">ChatGPT Emerald</button>
               <button class="preset-theme-chip" data-start="#2563eb" data-end="#0f172a" style="background: linear-gradient(135deg, #2563eb, #0f172a); border: 1px solid #ffffff; color: #fff; padding: 4px 8px; border-radius: 6px; font-size: 10px; font-weight: 600; cursor: pointer;">Royal Sapphire</button>
@@ -1036,7 +1054,7 @@
             <div id="updater-status-dot" class="status-dot active"></div>
             <div>
               <div class="m3-card-title">Caspian Flow Updates</div>
-              <div id="updater-status-sub" class="m3-card-sub">Current: V1.1.37-BetaC • Direct in-app GitHub updater.</div>
+              <div id="updater-status-sub" class="m3-card-sub">Current: V1.1.38-BetaC • Direct in-app GitHub updater.</div>
             </div>
           </div>
           <button id="check-updates-btn" class="oneui-pill-btn primary" style="font-size: 11px; padding: 6px 12px; display: flex; align-items: center; gap: 4px;">

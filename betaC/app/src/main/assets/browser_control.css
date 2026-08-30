@@ -1424,6 +1424,37 @@ body.theme-ena-shine .oneui-pill-btn.primary {
   box-shadow: 0 0 14px rgba(251, 191, 36, 0.5) !important;
 }
 
+/* Global Caspian Flow Theme Mode Active Styling */
+html[data-theme-preset="flow"], body.theme-flow {
+  --accent: #627D94 !important;
+  --secondary: #183652 !important;
+  --accent-glow: rgba(98, 125, 148, 0.55) !important;
+  --accent-gradient: linear-gradient(135deg, #7E90A0 0%, #3A5774 50%, #183652 100%) !important;
+}
+
+html[data-theme-preset="flow"] .m3-card,
+body.theme-flow .m3-card {
+  border-color: rgba(126, 144, 160, 0.35) !important;
+  box-shadow: 0 4px 22px rgba(24, 54, 82, 0.25) !important;
+}
+
+html[data-theme-preset="flow"] .oneui-pill-btn.primary,
+body.theme-flow .oneui-pill-btn.primary {
+  background: linear-gradient(135deg, #627D94, #183652) !important;
+  color: #FFFFFF !important;
+  font-weight: 800 !important;
+  box-shadow: 0 0 16px rgba(98, 125, 148, 0.5) !important;
+}
+
+/* Theme Banner Flow Hover Animation */
+#theme-banner-flow:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 6px 22px rgba(0, 229, 255, 0.2) !important;
+}
+#theme-banner-flow:active {
+  transform: scale(0.98);
+}
+
 /* Launcher App Icon Chips */
 .launcher-icon-chip {
   position: relative;

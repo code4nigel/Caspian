@@ -1712,6 +1712,7 @@
   // Theme Presets Map
   const presets = {
     caspian: { start: '#A2A9A9', end: '#1B4264' },
+    flow: { start: '#627D94', end: '#183652' },
     cyan: { start: '#06b6d4', end: '#0891b2' },
     violet: { start: '#a855f7', end: '#7c3aed' },
     azure: { start: '#3b82f6', end: '#1d4ed8' },
@@ -1732,10 +1733,17 @@
     if (start.toLowerCase() === '#fbbf24' && end.toLowerCase() === '#78350f') {
       document.documentElement.setAttribute('data-theme-preset', 'ena_shine');
       document.body.classList.add('theme-ena-shine');
+      document.body.classList.remove('theme-flow');
       localStorage.setItem('theme_preset', 'ena_shine');
+    } else if (start.toLowerCase() === '#627d94' && end.toLowerCase() === '#183652') {
+      document.documentElement.setAttribute('data-theme-preset', 'flow');
+      document.body.classList.add('theme-flow');
+      document.body.classList.remove('theme-ena-shine');
+      localStorage.setItem('theme_preset', 'flow');
     } else {
       document.documentElement.removeAttribute('data-theme-preset');
       document.body.classList.remove('theme-ena-shine');
+      document.body.classList.remove('theme-flow');
       localStorage.removeItem('theme_preset');
     }
 
@@ -1748,6 +1756,21 @@
 
     const shapeSelect = document.getElementById('icon-shape-select');
     updateIconPreview(start, end, selectedShapeVal);
+  }
+
+  // Wire Caspian Flow Theme Banner
+  const flowBanner = document.getElementById('theme-banner-flow');
+  if (flowBanner) {
+    flowBanner.addEventListener('click', () => {
+      playSFX('tb_clicks');
+      applyCustomGradient('#627D94', '#183652');
+      document.querySelectorAll('.preset-btn').forEach(btn => {
+        btn.classList.toggle('active', btn.dataset.preset === 'flow');
+      });
+      if (window.CaspianBridge && typeof window.CaspianBridge.showToast === 'function') {
+        window.CaspianBridge.showToast("🌊 Caspian Flow Edition Activated! ✨");
+      }
+    });
   }
 
   var selectedShapeVal = 'circle';
