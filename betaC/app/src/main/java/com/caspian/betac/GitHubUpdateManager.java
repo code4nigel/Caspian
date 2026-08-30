@@ -143,20 +143,49 @@ public class GitHubUpdateManager {
 
                 JSONArray releases = new JSONArray(sb.toString());
                 JSONObject latestFlowRelease = null;
+                String apkUrl = null;
+                String apkName = null;
+                long apkSize = 0;
 
-                // Find the latest Caspian Flow release
+                // Find the latest Caspian Flow (Beta C) release with a valid APK asset
                 for (int i = 0; i < releases.length(); i++) {
                     JSONObject rel = releases.getJSONObject(i);
-                    String tag = rel.optString("tag_name", "");
-                    String title = rel.optString("name", "");
-                    if (tag.toLowerCase().contains("flow") || tag.toLowerCase().contains("betac") || title.toLowerCase().contains("flow")) {
-                        latestFlowRelease = rel;
-                        break;
-                    }
-                }
+                    if (rel.optBoolean("draft", false)) continue;
 
-                if (latestFlowRelease == null && releases.length() > 0) {
-                    latestFlowRelease = releases.getJSONObject(0);
+                    String tag = rel.optString("tag_name", "").trim();
+                    String title = rel.optString("name", "").trim();
+
+                    // Must strictly match Caspian Flow / Beta C track (exclude Mobile, Beta A, Beta B, Extension)
+                    String tagLower = tag.toLowerCase();
+                    String titleLower = title.toLowerCase();
+
+                    boolean isOtherVariant = tagLower.contains("mobile") 
+                                          || tagLower.contains("beta-a") 
+                                          || tagLower.contains("beta-b") 
+                                          || tagLower.contains("extension");
+
+                    boolean isFlowVariant = (tagLower.contains("flow") || tagLower.contains("betac") || titleLower.contains("flow") || titleLower.contains("beta c")) && !isOtherVariant;
+
+                    if (!isFlowVariant) continue;
+
+                    // Look for Caspian Flow APK in release assets
+                    JSONArray assets = rel.optJSONArray("assets");
+                    if (assets != null) {
+                        for (int j = 0; j < assets.length(); j++) {
+                            JSONObject asset = assets.getJSONObject(j);
+                            String name = asset.optString("name", "");
+                            String nameLower = name.toLowerCase();
+                            if (nameLower.endsWith(".apk") && (nameLower.contains("flow") || nameLower.contains("betac"))) {
+                                apkUrl = asset.optString("browser_download_url", "");
+                                apkName = name;
+                                apkSize = asset.optLong("size", 0);
+                                latestFlowRelease = rel;
+                                break;
+                            }
+                        }
+                    }
+
+                    if (latestFlowRelease != null) break;
                 }
 
                 if (latestFlowRelease == null) {
@@ -171,38 +200,8 @@ public class GitHubUpdateManager {
                 String changelogBody = latestFlowRelease.optString("body", "No changelog provided.");
                 String publishedAt = latestFlowRelease.optString("published_at", "");
 
-                // Find APK asset
-                String apkUrl = null;
-                String apkName = null;
-                long apkSize = 0;
-                JSONArray assets = latestFlowRelease.optJSONArray("assets");
-                if (assets != null) {
-                    for (int j = 0; j < assets.length(); j++) {
-                        JSONObject asset = assets.getJSONObject(j);
-                        String name = asset.optString("name", "");
-                        if (name.toLowerCase().endsWith(".apk") && (name.toLowerCase().contains("flow") || name.toLowerCase().contains("betac"))) {
-                            apkUrl = asset.optString("browser_download_url", "");
-                            apkName = name;
-                            apkSize = asset.optLong("size", 0);
-                            break;
-                        }
-                    }
-                    if (apkUrl == null && assets.length() > 0) {
-                        for (int j = 0; j < assets.length(); j++) {
-                            JSONObject asset = assets.getJSONObject(j);
-                            String name = asset.optString("name", "");
-                            if (name.toLowerCase().endsWith(".apk")) {
-                                apkUrl = asset.optString("browser_download_url", "");
-                                apkName = name;
-                                apkSize = asset.optLong("size", 0);
-                                break;
-                            }
-                        }
-                    }
-                }
-
                 String cleanVersion = extractCleanVersion(tagName);
-                String currentVersion = "1.1.31-BetaC";
+                String currentVersion = "1.1.33-BetaC";
                 try {
                     currentVersion = context.getPackageManager().getPackageInfo(context.getPackageName(), 0).versionName;
                 } catch (Exception ignored) {}
@@ -367,23 +366,34 @@ public class GitHubUpdateManager {
     }
 
     public static boolean isNewerVersion(String remoteVersion, String localVersion) {
+        if (remoteVersion == null || localVersion == null) return false;
         try {
-            String cleanRemote = remoteVersion.replaceAll("[^0-9.]", "").trim();
-            String cleanLocal = localVersion.replaceAll("[^0-9.]", "").trim();
+            String cleanRemote = extractNumericSemver(remoteVersion);
+            String cleanLocal = extractNumericSemver(localVersion);
 
             String[] rParts = cleanRemote.split("\\.");
             String[] lParts = cleanLocal.split("\\.");
 
             int maxLen = Math.max(rParts.length, lParts.length);
             for (int i = 0; i < maxLen; i++) {
-                int rNum = i < rParts.length && !rParts[i].isEmpty() ? Integer.parseInt(rParts[i]) : 0;
-                int lNum = i < lParts.length && !lParts[i].isEmpty() ? Integer.parseInt(lParts[i]) : 0;
+                int rNum = (i < rParts.length && !rParts[i].isEmpty()) ? Integer.parseInt(rParts[i]) : 0;
+                int lNum = (i < lParts.length && !lParts[i].isEmpty()) ? Integer.parseInt(lParts[i]) : 0;
                 if (rNum > lNum) return true;
                 if (rNum < lNum) return false;
             }
             return false;
         } catch (Exception e) {
-            return !remoteVersion.equalsIgnoreCase(localVersion);
+            return !remoteVersion.trim().equalsIgnoreCase(localVersion.trim());
         }
+    }
+
+    private static String extractNumericSemver(String version) {
+        if (version == null) return "0.0.0";
+        Pattern p = Pattern.compile("(\\d+(\\.\\d+)+)");
+        Matcher m = p.matcher(version);
+        if (m.find()) {
+            return m.group(1);
+        }
+        return version.replaceAll("[^0-9.]", "").trim();
     }
 }

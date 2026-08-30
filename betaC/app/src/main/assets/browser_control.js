@@ -204,64 +204,6 @@
     } catch (e) { }
   }
 
-  function renderLauncherIcons() {
-    const grid = document.getElementById('launcher-icon-grid');
-    if (!grid) return;
-    try {
-      if (window.CaspianBridge && typeof window.CaspianBridge.getAvailableAppIcons === 'function') {
-        const raw = window.CaspianBridge.getAvailableAppIcons();
-        const icons = JSON.parse(raw);
-        grid.innerHTML = icons.map(icon => `
-          <div class="launcher-icon-chip ${icon.isActive ? 'active' : ''}" data-icon-id="${icon.id}" style="display: flex; align-items: center; gap: 8px; padding: 8px 10px; background: rgba(255,255,255,0.04); border: 1.5px solid ${icon.isActive ? '#10b981' : 'var(--border-glass)'}; border-radius: 10px; cursor: pointer; transition: all 0.2s;">
-            <div style="width: 28px; height: 28px; border-radius: 8px; background: ${icon.primaryColor}; display: flex; align-items: center; justify-content: center; box-shadow: 0 2px 6px rgba(0,0,0,0.3); flex-shrink: 0;">
-              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
-                <path d="M5 8c1 1 2 1.5 4 1.5s3-2 6-2 3 .5 4 1.5"></path>
-                <path d="M5 12c1 1 2 1.5 4 1.5s3-2 6-2 3 .5 4 1.5"></path>
-                <path d="M5 16c1 1 2 1.5 4 1.5s3-2 6-2 3 .5 4 1.5"></path>
-              </svg>
-            </div>
-            <div style="flex: 1; min-width: 0;">
-              <div style="font-size: 11px; font-weight: 700; color: ${icon.isActive ? '#10b981' : '#fff'}; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">${icon.title}</div>
-              <div style="font-size: 9px; color: var(--text-sub); white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">${icon.subtitle}</div>
-            </div>
-            ${icon.isActive ? '<span class="chip-checkmark" style="color: #10b981; font-weight: 800; font-size: 12px;">✓</span>' : ''}
-          </div>
-        `).join('');
-
-        grid.querySelectorAll('.launcher-icon-chip').forEach(chip => {
-          chip.addEventListener('click', (e) => {
-            e.stopPropagation();
-            const iconId = chip.getAttribute('data-icon-id');
-            if (!iconId) return;
-
-            // Instant Optimistic UI Update
-            grid.querySelectorAll('.launcher-icon-chip').forEach(c => {
-              c.classList.remove('active');
-              c.style.borderColor = 'var(--border-glass)';
-              const chk = c.querySelector('.chip-checkmark');
-              if (chk) chk.remove();
-            });
-            chip.classList.add('active');
-            chip.style.borderColor = '#10b981';
-            const chkSpan = document.createElement('span');
-            chkSpan.className = 'chip-checkmark';
-            chkSpan.style.cssText = 'color: #10b981; font-weight: 800; font-size: 12px;';
-            chkSpan.textContent = '✓';
-            chip.appendChild(chkSpan);
-
-            playAssetSound(sfxConfig.tb_clicks || 'tap_button.mp3');
-            if (window.CaspianBridge && typeof window.CaspianBridge.setAppIcon === 'function') {
-              window.CaspianBridge.setAppIcon(iconId);
-            }
-            setTimeout(renderLauncherIcons, 250);
-          });
-        });
-      }
-    } catch (e) {
-      console.error('Error rendering launcher icons', e);
-    }
-  }
-
   let latestUpdateInfo = null;
 
   function showUpdateModal(info) {

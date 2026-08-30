@@ -7,17 +7,17 @@
 
     <!-- Subtle Depth Shadow beneath wave -->
     <path
-        android:fillColor="#30000000"
-        android:pathData="M -5,47 C 22,63 48,19 80,37 C 95,46 102,51 115,51 L 115,68 C 102,68 95,63 80,54 C 48,36 22,80 -5,64 Z" />
+        android:fillColor="#35000000"
+        android:pathData="M -5,48 C 14.5,78.2 39.5,78.2 54,48 C 68.5,17.7 93.5,17.7 113,48 L 113,65.3 C 93.5,35 68.5,35 54,65.3 C 39.5,95.5 14.5,95.5 -5,65.3 Z" />
 
-    <!-- Pure White Classic Caspian S-Curve Flow Wave -->
+    <!-- Pure White Classic Caspian Sine S-Curve Flow Wave -->
     <path
         android:fillColor="#FFFFFF"
-        android:pathData="M -5,44 C 22,60 48,16 80,34 C 95,43 102,48 115,48 L 115,64 C 102,64 95,59 80,50 C 48,32 22,76 -5,60 Z" />
+        android:pathData="M -5,45.36 C 14.5,75.6 39.5,75.6 54,45.36 C 68.5,15.1 93.5,15.1 113,45.36 L 113,62.64 C 93.5,32.4 68.5,32.4 54,62.64 C 39.5,92.9 14.5,92.9 -5,62.64 Z" />
 
-    <!-- Subtle Top Surface Highlight -->
+    <!-- Top Surface Highlight Edge -->
     <path
         android:strokeColor="#FFFFFF"
         android:strokeWidth="1.2"
-        android:pathData="M -5,44 C 22,60 48,16 80,34 C 95,43 102,48 115,48" />
+        android:pathData="M -5,45.36 C 14.5,75.6 39.5,75.6 54,45.36 C 68.5,15.1 93.5,15.1 113,45.36" />
 </vector>

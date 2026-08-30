@@ -626,11 +626,21 @@ public class CaspianBridge {
     @JavascriptInterface
     public void checkForAppUpdates(boolean isManual) {
         if (activity == null) return;
+        if (isManual) {
+            activity.runOnUiThread(() -> Toast.makeText(activity, "🔍 Checking GitHub for updates...", Toast.LENGTH_SHORT).show());
+        }
         GitHubUpdateManager updateManager = new GitHubUpdateManager(activity);
         updateManager.checkForUpdates(isManual, new GitHubUpdateManager.UpdateCheckCallback() {
             @Override
             public void onResult(GitHubUpdateManager.UpdateInfo info) {
                 if (activity != null) {
+                    activity.runOnUiThread(() -> {
+                        if (isManual && !info.hasUpdate) {
+                            Toast.makeText(activity, "✅ App is up to date (v" + (info.cleanVersion != null ? info.cleanVersion : "") + ")", Toast.LENGTH_SHORT).show();
+                        } else if (info.hasUpdate) {
+                            Toast.makeText(activity, "🌟 Update available: v" + info.cleanVersion, Toast.LENGTH_SHORT).show();
+                        }
+                    });
                     activity.evaluateJavascriptInControlSheet("if(window.onUpdateCheckResult) window.onUpdateCheckResult(" + info.toJson().toString() + ");");
                 }
             }
@@ -638,6 +648,11 @@ public class CaspianBridge {
             @Override
             public void onError(String message) {
                 if (activity != null) {
+                    activity.runOnUiThread(() -> {
+                        if (isManual) {
+                            Toast.makeText(activity, "Update check failed: " + message, Toast.LENGTH_SHORT).show();
+                        }
+                    });
                     activity.evaluateJavascriptInControlSheet("if(window.onUpdateCheckError) window.onUpdateCheckError(" + JSONObject.quote(message) + ");");
                 }
             }
@@ -673,23 +688,5 @@ public class CaspianBridge {
                 }
             }
         });
-    }
-
-    @JavascriptInterface
-    public String getAvailableAppIcons() {
-        if (activity == null) return "[]";
-        return AppIconManager.getAvailableIconsJson(activity);
-    }
-
-    @JavascriptInterface
-    public boolean setAppIcon(String iconId) {
-        if (activity == null || iconId == null) return false;
-        boolean success = AppIconManager.setAppIcon(activity, iconId);
-        if (success) {
-            activity.runOnUiThread(() -> {
-                Toast.makeText(activity, "Launcher theme set! App drawer updated.", Toast.LENGTH_SHORT).show();
-            });
-        }
-        return success;
     }
 }
