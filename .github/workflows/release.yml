@@ -65,6 +65,19 @@ jobs:
               console.log('Error reading manifest.json:', err);
             }
 
+            // Dynamically read Flow (Beta C) version from betaC/app/build.gradle.kts
+            let flowVersion = '1.1.41-BetaC';
+            try {
+              if (fs.existsSync('betaC/app/build.gradle.kts')) {
+                const gradleContent = fs.readFileSync('betaC/app/build.gradle.kts', 'utf8');
+                const match = gradleContent.match(/versionName\s*=\s*"([^"]+)"/);
+                if (match && match[1]) flowVersion = match[1];
+              }
+            } catch (err) {
+              console.log('Error reading build.gradle.kts:', err);
+            }
+            console.log(`Detected Flow Version: v${flowVersion}, Extension Version: v${extVersion}`);
+
             // Helper to recursively find release assets
             function getAssets(dir) {
               let results = [];
@@ -90,11 +103,11 @@ jobs:
               {
                 id: 'flow',
                 productName: 'Caspian Flow (Beta C)',
-                tag: 'Caspian-Flow-v1.1.40-BetaC',
-                title: '[Beta C] Caspian Flow v1.1.40-BetaC',
-                assetPattern: 'Caspian-Flow-v1.1.40-BetaC.apk',
+                tag: `Caspian-Flow-v${flowVersion}`,
+                title: `[Beta C] Caspian Flow v${flowVersion}`,
+                assetPattern: `Caspian-Flow-v${flowVersion}.apk`,
                 isPrerelease: true,
-                desc: 'Introduces Caspian Casks: multi-account isolated session and cookie vaults for ChatGPT, Gemini, Google, and YouTube, with 1-tap switching and full persistence.'
+                desc: 'Introduces Caspian Casks: multi-account isolated session and cookie vaults for ChatGPT, Gemini, Google, and YouTube, with 1-tap switching, custom emoji creator, and full persistence.'
               },
               {
                 id: 'mobile',
