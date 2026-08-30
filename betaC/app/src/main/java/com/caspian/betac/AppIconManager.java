@@ -61,6 +61,16 @@ public class AppIconManager {
     }
 
     public static String getActiveIconId(Context context) {
+        try {
+            PackageManager pm = context.getPackageManager();
+            List<IconOption> icons = getAvailableIcons(context);
+            for (IconOption icon : icons) {
+                int state = pm.getComponentEnabledSetting(new ComponentName(context.getPackageName(), icon.aliasClassName));
+                if (state == PackageManager.COMPONENT_ENABLED_STATE_ENABLED) {
+                    return icon.id;
+                }
+            }
+        } catch (Exception ignored) {}
         SharedPreferences prefs = context.getSharedPreferences(PREF_NAME, Context.MODE_PRIVATE);
         return prefs.getString(KEY_CURRENT_ICON, "default");
     }
@@ -85,7 +95,7 @@ public class AppIconManager {
         try {
             // Enable target alias first
             pm.setComponentEnabledSetting(
-                    new ComponentName(context, targetIcon.aliasClassName),
+                    new ComponentName(context.getPackageName(), targetIcon.aliasClassName),
                     PackageManager.COMPONENT_ENABLED_STATE_ENABLED,
                     PackageManager.DONT_KILL_APP
             );
@@ -94,7 +104,7 @@ public class AppIconManager {
             for (IconOption icon : icons) {
                 if (!icon.id.equalsIgnoreCase(iconId)) {
                     pm.setComponentEnabledSetting(
-                            new ComponentName(context, icon.aliasClassName),
+                            new ComponentName(context.getPackageName(), icon.aliasClassName),
                             PackageManager.COMPONENT_ENABLED_STATE_DISABLED,
                             PackageManager.DONT_KILL_APP
                     );

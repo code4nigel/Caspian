@@ -5,19 +5,19 @@
     android:viewportWidth="108"
     android:viewportHeight="108">
 
-    <!-- Subtle wave depth shadow -->
+    <!-- Subtle Depth Shadow beneath wave -->
     <path
-        android:fillColor="#20000000"
-        android:pathData="M -5,53 C 20,27 45,77 75,57 C 92,45 102,49 115,51 L 115,67 C 102,65 92,61 75,73 C 45,93 20,43 -5,69 Z" />
+        android:fillColor="#30000000"
+        android:pathData="M -5,47 C 22,63 48,19 80,37 C 95,46 102,51 115,51 L 115,68 C 102,68 95,63 80,54 C 48,36 22,80 -5,64 Z" />
 
-    <!-- Pure White Caspian Flow S-Wave Ribbon -->
+    <!-- Pure White Classic Caspian S-Curve Flow Wave -->
     <path
         android:fillColor="#FFFFFF"
-        android:pathData="M -5,50 C 20,24 45,74 75,54 C 92,42 102,46 115,48 L 115,62 C 102,60 92,56 75,68 C 45,88 20,38 -5,64 Z" />
+        android:pathData="M -5,44 C 22,60 48,16 80,34 C 95,43 102,48 115,48 L 115,64 C 102,64 95,59 80,50 C 48,32 22,76 -5,60 Z" />
 
-    <!-- Top highlight sheen -->
+    <!-- Subtle Top Surface Highlight -->
     <path
         android:strokeColor="#FFFFFF"
-        android:strokeWidth="1"
-        android:pathData="M -5,50 C 20,24 45,74 75,54 C 92,42 102,46 115,48" />
+        android:strokeWidth="1.2"
+        android:pathData="M -5,44 C 22,60 48,16 80,34 C 95,43 102,48 115,48" />
 </vector>

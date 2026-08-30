@@ -687,7 +687,7 @@ public class CaspianBridge {
         boolean success = AppIconManager.setAppIcon(activity, iconId);
         if (success) {
             activity.runOnUiThread(() -> {
-                Toast.makeText(activity, "App icon updated!", Toast.LENGTH_SHORT).show();
+                Toast.makeText(activity, "Launcher theme set! App drawer updated.", Toast.LENGTH_SHORT).show();
             });
         }
         return success;
