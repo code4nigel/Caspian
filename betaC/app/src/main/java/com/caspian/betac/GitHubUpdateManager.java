@@ -118,126 +118,214 @@ public class GitHubUpdateManager {
         }
 
         executor.execute(() -> {
-            HttpURLConnection conn = null;
+            UpdateInfo resolvedInfo = null;
+            String lastError = null;
+
+            // Strategy 1: GitHub REST API
             try {
-                URL url = new URL(GITHUB_RELEASES_API);
-                conn = (HttpURLConnection) url.openConnection();
-                conn.setRequestMethod("GET");
-                conn.setRequestProperty("User-Agent", "Caspian-Flow-App");
-                conn.setRequestProperty("Accept", "application/vnd.github.v3+json");
-                conn.setConnectTimeout(10000);
-                conn.setReadTimeout(10000);
+                resolvedInfo = checkViaRestApi();
+            } catch (Exception e) {
+                lastError = e.getMessage();
+                Log.w(TAG, "GitHub REST API failed, attempting Atom feed fallback: " + e.getMessage());
+            }
 
-                int responseCode = conn.getResponseCode();
-                if (responseCode != HttpURLConnection.HTTP_OK) {
-                    throw new Exception("GitHub API HTTP " + responseCode);
-                }
-
-                BufferedReader reader = new BufferedReader(new InputStreamReader(conn.getInputStream()));
-                StringBuilder sb = new StringBuilder();
-                String line;
-                while ((line = reader.readLine()) != null) {
-                    sb.append(line);
-                }
-                reader.close();
-
-                JSONArray releases = new JSONArray(sb.toString());
-                JSONObject latestFlowRelease = null;
-                String apkUrl = null;
-                String apkName = null;
-                long apkSize = 0;
-
-                // Find the latest Caspian Flow (Beta C) release with a valid APK asset
-                for (int i = 0; i < releases.length(); i++) {
-                    JSONObject rel = releases.getJSONObject(i);
-                    if (rel.optBoolean("draft", false)) continue;
-
-                    String tag = rel.optString("tag_name", "").trim();
-                    String title = rel.optString("name", "").trim();
-
-                    // Must strictly match Caspian Flow / Beta C track (exclude Mobile, Beta A, Beta B, Extension)
-                    String tagLower = tag.toLowerCase();
-                    String titleLower = title.toLowerCase();
-
-                    boolean isOtherVariant = tagLower.contains("mobile") 
-                                          || tagLower.contains("beta-a") 
-                                          || tagLower.contains("beta-b") 
-                                          || tagLower.contains("extension");
-
-                    boolean isFlowVariant = (tagLower.contains("flow") || tagLower.contains("betac") || titleLower.contains("flow") || titleLower.contains("beta c")) && !isOtherVariant;
-
-                    if (!isFlowVariant) continue;
-
-                    // Look for Caspian Flow APK in release assets
-                    JSONArray assets = rel.optJSONArray("assets");
-                    if (assets != null) {
-                        for (int j = 0; j < assets.length(); j++) {
-                            JSONObject asset = assets.getJSONObject(j);
-                            String name = asset.optString("name", "");
-                            String nameLower = name.toLowerCase();
-                            if (nameLower.endsWith(".apk") && (nameLower.contains("flow") || nameLower.contains("betac"))) {
-                                apkUrl = asset.optString("browser_download_url", "");
-                                apkName = name;
-                                apkSize = asset.optLong("size", 0);
-                                latestFlowRelease = rel;
-                                break;
-                            }
-                        }
-                    }
-
-                    if (latestFlowRelease != null) break;
-                }
-
-                if (latestFlowRelease == null) {
-                    mainHandler.post(() -> {
-                        if (callback != null) callback.onResult(new UpdateInfo(false, null, null, null, null, null, null, 0, null));
-                    });
-                    return;
-                }
-
-                String tagName = latestFlowRelease.optString("tag_name", "");
-                String releaseTitle = latestFlowRelease.optString("name", tagName);
-                String changelogBody = latestFlowRelease.optString("body", "No changelog provided.");
-                String publishedAt = latestFlowRelease.optString("published_at", "");
-
-                String cleanVersion = extractCleanVersion(tagName);
-                String currentVersion = "1.1.33-BetaC";
+            // Strategy 2: Fallback to GitHub Releases Atom Feed (Zero Rate Limit)
+            if (resolvedInfo == null) {
                 try {
-                    currentVersion = context.getPackageManager().getPackageInfo(context.getPackageName(), 0).versionName;
-                } catch (Exception ignored) {}
-                boolean hasUpdate = isNewerVersion(cleanVersion, currentVersion);
+                    resolvedInfo = checkViaAtomFeed();
+                } catch (Exception e) {
+                    lastError = (lastError != null ? lastError + " | " : "") + e.getMessage();
+                    Log.e(TAG, "GitHub Atom feed fallback failed: " + e.getMessage());
+                }
+            }
 
-                // Record check timestamp
+            if (resolvedInfo != null) {
+                // Record successful check timestamp
                 context.getSharedPreferences(PREF_NAME, Context.MODE_PRIVATE)
                         .edit()
                         .putLong(KEY_LAST_CHECK_TIME, System.currentTimeMillis())
                         .apply();
 
-                UpdateInfo info = new UpdateInfo(
-                        hasUpdate,
-                        tagName,
-                        cleanVersion,
-                        releaseTitle,
-                        changelogBody,
-                        apkUrl,
-                        apkName,
-                        apkSize,
-                        publishedAt
-                );
-
+                final UpdateInfo finalInfo = resolvedInfo;
                 mainHandler.post(() -> {
-                    if (callback != null) callback.onResult(info);
+                    if (callback != null) callback.onResult(finalInfo);
                 });
-
-            } catch (Exception e) {
-                Log.e(TAG, "Error checking updates from GitHub", e);
+            } else {
+                final String finalErr = lastError != null ? lastError : "Could not fetch releases";
                 mainHandler.post(() -> {
-                    if (callback != null) callback.onError(e.getMessage());
+                    if (callback != null) callback.onError(finalErr);
                 });
-            } finally {
-                if (conn != null) conn.disconnect();
             }
         });
+    }
+
+    private UpdateInfo checkViaRestApi() throws Exception {
+        HttpURLConnection conn = null;
+        try {
+            URL url = new URL(GITHUB_RELEASES_API);
+            conn = (HttpURLConnection) url.openConnection();
+            conn.setRequestMethod("GET");
+            conn.setRequestProperty("User-Agent", "Caspian-Flow-App");
+            conn.setRequestProperty("Accept", "application/vnd.github.v3+json");
+            conn.setConnectTimeout(10000);
+            conn.setReadTimeout(10000);
+
+            int responseCode = conn.getResponseCode();
+            if (responseCode != HttpURLConnection.HTTP_OK) {
+                throw new Exception("HTTP " + responseCode);
+            }
+
+            BufferedReader reader = new BufferedReader(new InputStreamReader(conn.getInputStream()));
+            StringBuilder sb = new StringBuilder();
+            String line;
+            while ((line = reader.readLine()) != null) {
+                sb.append(line);
+            }
+            reader.close();
+
+            JSONArray releases = new JSONArray(sb.toString());
+            JSONObject latestFlowRelease = null;
+            String apkUrl = null;
+            String apkName = null;
+            long apkSize = 0;
+
+            for (int i = 0; i < releases.length(); i++) {
+                JSONObject rel = releases.getJSONObject(i);
+                if (rel.optBoolean("draft", false)) continue;
+
+                String tag = rel.optString("tag_name", "").trim();
+                String title = rel.optString("name", "").trim();
+                String tagLower = tag.toLowerCase();
+                String titleLower = title.toLowerCase();
+
+                boolean isOtherVariant = tagLower.contains("mobile")
+                        || tagLower.contains("beta-a")
+                        || tagLower.contains("beta-b")
+                        || tagLower.contains("extension");
+
+                boolean isFlowVariant = (tagLower.contains("flow") || tagLower.contains("betac") || titleLower.contains("flow") || titleLower.contains("beta c")) && !isOtherVariant;
+
+                if (!isFlowVariant) continue;
+
+                JSONArray assets = rel.optJSONArray("assets");
+                if (assets != null) {
+                    for (int j = 0; j < assets.length(); j++) {
+                        JSONObject asset = assets.getJSONObject(j);
+                        String name = asset.optString("name", "");
+                        String nameLower = name.toLowerCase();
+                        if (nameLower.endsWith(".apk") && (nameLower.contains("flow") || nameLower.contains("betac"))) {
+                            apkUrl = asset.optString("browser_download_url", "");
+                            apkName = name;
+                            apkSize = asset.optLong("size", 0);
+                            latestFlowRelease = rel;
+                            break;
+                        }
+                    }
+                }
+
+                if (latestFlowRelease != null) break;
+            }
+
+            if (latestFlowRelease == null) return null;
+
+            String tagName = latestFlowRelease.optString("tag_name", "");
+            String releaseTitle = latestFlowRelease.optString("name", tagName);
+            String changelogBody = latestFlowRelease.optString("body", "No changelog provided.");
+            String publishedAt = latestFlowRelease.optString("published_at", "");
+
+            String cleanVersion = extractCleanVersion(tagName);
+            String currentVersion = "1.1.34-BetaC";
+            try {
+                currentVersion = context.getPackageManager().getPackageInfo(context.getPackageName(), 0).versionName;
+            } catch (Exception ignored) {}
+
+            boolean hasUpdate = isNewerVersion(cleanVersion, currentVersion);
+
+            return new UpdateInfo(
+                    hasUpdate,
+                    tagName,
+                    cleanVersion,
+                    releaseTitle,
+                    changelogBody,
+                    apkUrl,
+                    apkName,
+                    apkSize,
+                    publishedAt
+            );
+        } finally {
+            if (conn != null) conn.disconnect();
+        }
+    }
+
+    private UpdateInfo checkViaAtomFeed() throws Exception {
+        HttpURLConnection conn = null;
+        try {
+            URL url = new URL("https://github.com/code4nigel/Caspian/releases.atom");
+            conn = (HttpURLConnection) url.openConnection();
+            conn.setRequestMethod("GET");
+            conn.setRequestProperty("User-Agent", "Caspian-Flow-App");
+            conn.setConnectTimeout(10000);
+            conn.setReadTimeout(10000);
+
+            int responseCode = conn.getResponseCode();
+            if (responseCode != HttpURLConnection.HTTP_OK) {
+                throw new Exception("Atom Feed HTTP " + responseCode);
+            }
+
+            BufferedReader reader = new BufferedReader(new InputStreamReader(conn.getInputStream()));
+            StringBuilder sb = new StringBuilder();
+            String line;
+            while ((line = reader.readLine()) != null) {
+                sb.append(line).append("\n");
+            }
+            reader.close();
+
+            String xml = sb.toString();
+
+            // Extract tags
+            Pattern tagPattern = Pattern.compile("/releases/tag/([^\"'<>\\s]+)");
+            Matcher matcher = tagPattern.matcher(xml);
+
+            String matchedTag = null;
+            while (matcher.find()) {
+                String tag = matcher.group(1).trim();
+                String tagLower = tag.toLowerCase();
+
+                boolean isOther = tagLower.contains("mobile") || tagLower.contains("beta-a") || tagLower.contains("beta-b") || tagLower.contains("extension");
+                boolean isFlow = (tagLower.contains("flow") || tagLower.contains("betac")) && !isOther;
+
+                if (isFlow) {
+                    matchedTag = tag;
+                    break;
+                }
+            }
+
+            if (matchedTag == null) return null;
+
+            String cleanVersion = extractCleanVersion(matchedTag);
+            String currentVersion = "1.1.34-BetaC";
+            try {
+                currentVersion = context.getPackageManager().getPackageInfo(context.getPackageName(), 0).versionName;
+            } catch (Exception ignored) {}
+
+            boolean hasUpdate = isNewerVersion(cleanVersion, currentVersion);
+            String apkUrl = "https://github.com/code4nigel/Caspian/releases/download/" + matchedTag + "/" + matchedTag + ".apk";
+            String apkName = matchedTag + ".apk";
+
+            return new UpdateInfo(
+                    hasUpdate,
+                    matchedTag,
+                    cleanVersion,
+                    matchedTag,
+                    "Direct release from GitHub Atom feed.",
+                    apkUrl,
+                    apkName,
+                    0,
+                    ""
+            );
+        } finally {
+            if (conn != null) conn.disconnect();
+        }
     }
 
     /**

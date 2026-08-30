@@ -15,6 +15,8 @@ import android.webkit.WebViewClient;
 import android.widget.FrameLayout;
 import android.widget.Toast;
 
+import androidx.appcompat.app.AlertDialog;
+
 import org.json.JSONArray;
 import org.json.JSONObject;
 
@@ -635,10 +637,18 @@ public class CaspianBridge {
             public void onResult(GitHubUpdateManager.UpdateInfo info) {
                 if (activity != null) {
                     activity.runOnUiThread(() -> {
-                        if (isManual && !info.hasUpdate) {
-                            Toast.makeText(activity, "✅ App is up to date (v" + (info.cleanVersion != null ? info.cleanVersion : "") + ")", Toast.LENGTH_SHORT).show();
-                        } else if (info.hasUpdate) {
-                            Toast.makeText(activity, "🌟 Update available: v" + info.cleanVersion, Toast.LENGTH_SHORT).show();
+                        if (isManual) {
+                            if (!info.hasUpdate) {
+                                AlertDialog.Builder b = new AlertDialog.Builder(activity);
+                                b.setTitle("✅ App is Up to Date");
+                                String curVer = getAppVersion();
+                                String foundTag = (info.tagName != null && !info.tagName.isEmpty()) ? info.tagName : "v" + curVer;
+                                b.setMessage("You are running the latest version of Caspian Flow (" + curVer + ").\n\nLatest on GitHub: " + foundTag);
+                                b.setPositiveButton("OK", null);
+                                b.show();
+                            } else {
+                                Toast.makeText(activity, "🌟 Update available: v" + info.cleanVersion, Toast.LENGTH_SHORT).show();
+                            }
                         }
                     });
                     activity.evaluateJavascriptInControlSheet("if(window.onUpdateCheckResult) window.onUpdateCheckResult(" + info.toJson().toString() + ");");
@@ -650,7 +660,11 @@ public class CaspianBridge {
                 if (activity != null) {
                     activity.runOnUiThread(() -> {
                         if (isManual) {
-                            Toast.makeText(activity, "Update check failed: " + message, Toast.LENGTH_SHORT).show();
+                            AlertDialog.Builder b = new AlertDialog.Builder(activity);
+                            b.setTitle("⚠️ Update Check Notice");
+                            b.setMessage("Could not reach GitHub:\n" + message + "\n\nPlease check your internet connection and try again.");
+                            b.setPositiveButton("OK", null);
+                            b.show();
                         }
                     });
                     activity.evaluateJavascriptInControlSheet("if(window.onUpdateCheckError) window.onUpdateCheckError(" + JSONObject.quote(message) + ");");

@@ -3752,20 +3752,70 @@ public class MainActivity extends AppCompatActivity {
         Toast.makeText(this, "🔴 Diagnostic Recording Started", Toast.LENGTH_SHORT).show();
     }
 
+    private final static int SAVE_LOG_REQUEST_CODE = 1003;
+    private String pendingLogDataToSave = "";
+
     public void stopAndSaveDebugLog() {
         if (!isDebugRecording) return;
         isDebugRecording = false;
+        debugLogBuffer.append("\n=== END OF DIAGNOSTIC LOG ===\n");
+        debugLogBuffer.append("Stopped: ").append(new Date().toString()).append("\n");
+
+        final String logData = debugLogBuffer.toString();
+        pendingLogDataToSave = logData;
+        final String fileName = "Caspian_BetaC_Log_" + System.currentTimeMillis() + ".txt";
+
+        // 1. By default, save to public Downloads/Caspian/BetaC/Logs
         try {
-            File exportDir = new File(getExternalFilesDir(null), "Logs");
-            if (!exportDir.exists()) exportDir.mkdirs();
-            File file = new File(exportDir, "Caspian_Log_" + System.currentTimeMillis() + ".txt");
-            FileOutputStream fos = new FileOutputStream(file);
-            fos.write(debugLogBuffer.toString().getBytes(StandardCharsets.UTF_8));
+            File downloadsDir = Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_DOWNLOADS);
+            File caspianLogDir = new File(downloadsDir, "Caspian/BetaC/Logs");
+            if (!caspianLogDir.exists()) caspianLogDir.mkdirs();
+            File defaultLogFile = new File(caspianLogDir, fileName);
+            FileOutputStream fos = new FileOutputStream(defaultLogFile);
+            fos.write(logData.getBytes(StandardCharsets.UTF_8));
             fos.close();
-            Toast.makeText(this, "Log Saved: " + file.getName(), Toast.LENGTH_LONG).show();
+            Log.d(TAG, "Log saved to default path: " + defaultLogFile.getAbsolutePath());
         } catch (Exception e) {
-            Toast.makeText(this, "Failed to save log: " + e.getMessage(), Toast.LENGTH_SHORT).show();
+            Log.e(TAG, "Default download log save error: " + e.getMessage());
         }
+
+        // 2. Prompt user with dialog for custom location / share
+        AlertDialog.Builder builder = new AlertDialog.Builder(this);
+        builder.setTitle("📋 Developer Log Captured");
+        String message = "Log recorded (" + (logData.length() / 1024) + " KB).\n\n"
+                + "📁 Auto-saved to:\nDownload/Caspian/BetaC/Logs/" + fileName;
+        builder.setMessage(message);
+
+        builder.setPositiveButton("💾 Save Custom Location", (dialog, which) -> {
+            try {
+                Intent intent = new Intent(Intent.ACTION_CREATE_DOCUMENT);
+                intent.addCategory(Intent.CATEGORY_OPENABLE);
+                intent.setType("text/plain");
+                intent.putExtra(Intent.EXTRA_TITLE, fileName);
+                startActivityForResult(intent, SAVE_LOG_REQUEST_CODE);
+            } catch (Exception e) {
+                Toast.makeText(this, "Could not open file picker: " + e.getMessage(), Toast.LENGTH_SHORT).show();
+            }
+        });
+
+        builder.setNeutralButton("📤 Share / Copy", (dialog, which) -> {
+            try {
+                Intent shareIntent = new Intent(Intent.ACTION_SEND);
+                shareIntent.setType("text/plain");
+                shareIntent.putExtra(Intent.EXTRA_SUBJECT, "Caspian BetaC Developer Log");
+                shareIntent.putExtra(Intent.EXTRA_TEXT, logData);
+                startActivity(Intent.createChooser(shareIntent, "Share or Copy Developer Log"));
+            } catch (Exception e) {
+                Toast.makeText(this, "Share failed: " + e.getMessage(), Toast.LENGTH_SHORT).show();
+            }
+        });
+
+        builder.setNegativeButton("OK", (dialog, which) -> {
+            dialog.dismiss();
+            Toast.makeText(this, "✅ Log saved in Download/Caspian/BetaC/Logs", Toast.LENGTH_LONG).show();
+        });
+
+        builder.show();
     }
 
     public boolean isDebugRecordingActive() {
@@ -6587,6 +6637,18 @@ public class MainActivity extends AppCompatActivity {
             if (uploadMessage == null) return;
             uploadMessage.onReceiveValue(WebChromeClient.FileChooserParams.parseResult(resultCode, data));
             uploadMessage = null;
+        } else if (requestCode == SAVE_LOG_REQUEST_CODE && resultCode == RESULT_OK && data != null && data.getData() != null) {
+            try {
+                Uri uri = data.getData();
+                OutputStream os = getContentResolver().openOutputStream(uri);
+                if (os != null) {
+                    os.write(pendingLogDataToSave.getBytes(StandardCharsets.UTF_8));
+                    os.close();
+                    Toast.makeText(this, "✅ Log successfully saved to chosen location!", Toast.LENGTH_LONG).show();
+                }
+            } catch (Exception e) {
+                Toast.makeText(this, "Error saving log file: " + e.getMessage(), Toast.LENGTH_SHORT).show();
+            }
         } else {
             super.onActivityResult(requestCode, resultCode, data);
         }
