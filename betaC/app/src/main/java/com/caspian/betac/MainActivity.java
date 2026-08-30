@@ -3759,7 +3759,22 @@ public class MainActivity extends AppCompatActivity {
         if (!isDebugRecording) return;
         isDebugRecording = false;
         debugLogBuffer.append("\n=== END OF DIAGNOSTIC LOG ===\n");
-        debugLogBuffer.append("Stopped: ").append(new Date().toString()).append("\n");
+        debugLogBuffer.append("Stopped: ").append(new Date().toString()).append("\n\n");
+        debugLogBuffer.append("=== LOGCAT CAPTURE ===\n");
+
+        try {
+            Process process = Runtime.getRuntime().exec("logcat -d -v time");
+            BufferedReader bufferedReader = new BufferedReader(new InputStreamReader(process.getInputStream()));
+            String line;
+            int count = 0;
+            while ((line = bufferedReader.readLine()) != null && count < 3000) {
+                debugLogBuffer.append(line).append("\n");
+                count++;
+            }
+            bufferedReader.close();
+        } catch (Exception e) {
+            debugLogBuffer.append("Logcat read error: ").append(e.getMessage()).append("\n");
+        }
 
         final String logData = debugLogBuffer.toString();
         pendingLogDataToSave = logData;
