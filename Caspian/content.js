@@ -3,56 +3,281 @@
 // ==========================================
 
 // ------------------------------------------
-// 1. SITE & DOM TURBO PRUNER (Lag Fixer)
+// 1. HIGH-PERFORMANCE DOM LAG FIXER & PRUNER (Caspian Flow Engine)
 // ------------------------------------------
 function isSiteDisabled(disabledSites = []) {
   const host = window.location.hostname;
   return disabledSites.some(d => host.includes(d));
 }
 
-let isObserverActive = false;
-const observer = new MutationObserver(applyTurbo);
+let isTyping = false;
+let isScrolling = false;
+let scrollDebounceTimer = null;
+let currentWindowStart = -1;
+let currentStepTurnIndex = -1;
+let lastKnownTurnsCount = 0;
+let isPruningScheduled = false;
+let mutationDebounceTimer = null;
+
+function ensurePrunerStyles() {
+  if (document.getElementById('caspian-pruner-styles')) return;
+  const style = document.createElement('style');
+  style.id = 'caspian-pruner-styles';
+  style.textContent = `
+    .caspian-turn-pruned {
+      content-visibility: hidden !important;
+      contain: layout style paint !important;
+      contain-intrinsic-size: 0 120px !important;
+      opacity: 0 !important;
+      pointer-events: none !important;
+      user-select: none !important;
+    }
+    .caspian-turn-active {
+      content-visibility: auto !important;
+      contain-intrinsic-size: 0 250px;
+    }
+  `;
+  const target = document.head || document.documentElement;
+  if (target) target.appendChild(style);
+}
+
+function getTopLevelTurns() {
+  const host = (location && location.hostname) ? location.hostname.toLowerCase() : '';
+  const isGemini = host.includes('gemini.google.com');
+
+  if (!isGemini) {
+    // 1. ChatGPT primary selector: conversation turns
+    const turns = Array.from(document.querySelectorAll('[data-testid^="conversation-turn"]'));
+    if (turns.length > 0) return turns;
+
+    // 2. Standard article tag fallback
+    const articles = Array.from(document.querySelectorAll('main article, article'));
+    if (articles.length > 0) return articles;
+
+    // 3. Message role container fallback
+    const roleEls = Array.from(document.querySelectorAll('[data-message-author-role]'));
+    if (roleEls.length > 0) return roleEls;
+
+    // 4. Generic turn container fallback
+    const groupEls = Array.from(document.querySelectorAll('div[class*="group/conversation-turn"]'));
+    if (groupEls.length > 0) return groupEls;
+
+    return [];
+  }
+
+  // Google Gemini
+  let elements = Array.from(document.querySelectorAll('user-query, model-response, chat-turn'));
+  try {
+    const customHosts = document.querySelectorAll('user-query, model-response, chat-turn, gds-theme-provider');
+    for (let i = 0; i < customHosts.length; i++) {
+      const sr = customHosts[i].shadowRoot;
+      if (sr) {
+        elements = elements.concat(Array.from(sr.querySelectorAll('user-query, model-response, chat-turn')));
+      }
+    }
+  } catch(e) {}
+
+  return elements;
+}
+
+function clearAllPruning(turns) {
+  if (!turns) return;
+  for (let i = 0; i < turns.length; i++) {
+    turns[i].style.removeProperty('display');
+  }
+}
+
+function findVisibleCenterTurnIndex(turns) {
+  if (!turns || turns.length === 0) return -1;
+  const viewportHeight = window.innerHeight || document.documentElement.clientHeight || 800;
+  const centerY = viewportHeight / 2;
+
+  let closestIdx = -1;
+  let minDistance = Infinity;
+
+  for (let i = 0; i < turns.length; i++) {
+    const rect = turns[i].getBoundingClientRect();
+    if (rect.bottom >= 0 && rect.top <= viewportHeight) {
+      const turnCenter = (rect.top + rect.bottom) / 2;
+      const dist = Math.abs(turnCenter - centerY);
+      if (dist < minDistance) {
+        minDistance = dist;
+        closestIdx = i;
+      }
+    }
+  }
+  return closestIdx;
+}
 
 function applyTurbo() {
-  chrome.storage.local.get(['globalActive', 'pruningEnabled', 'enabled', 'limit', 'disabledSites'], (data) => {
+  chrome.storage.local.get(['globalActive', 'pruningEnabled', 'enabled', 'limit', 'disabledSites', 'chat_pruning_mode'], (data) => {
     const globalActive = data.globalActive ?? true;
     const isSiteOff = isSiteDisabled(data.disabledSites || []);
+    const turns = getTopLevelTurns();
 
     if (!globalActive || isSiteOff) {
-      if (isObserverActive) {
-        observer.disconnect();
-        isObserverActive = false;
-      }
-      const messages = document.querySelectorAll('[data-testid^="conversation-turn"], article, main div.group');
-      messages.forEach(msg => msg.style.setProperty('display', 'block', 'important'));
+      clearAllPruning(turns);
       return;
-    }
-
-    if (!isObserverActive) {
-      observer.observe(document.body, { childList: true, subtree: true });
-      isObserverActive = true;
     }
 
     const isEnabled = data.pruningEnabled ?? (data.enabled ?? true);
     const limit = data.limit ?? 5;
-    const messages = document.querySelectorAll('[data-testid^="conversation-turn"], article, main div.group');
+    const mode = data.chat_pruning_mode || 'sliding_window';
 
-    messages.forEach((msg, index) => {
-      if (isEnabled && limit < 9999 && index < messages.length - limit) {
-        msg.style.setProperty('display', 'none', 'important');
-      } else {
-        msg.style.setProperty('display', 'block', 'important');
+    if (turns.length === 0) return;
+
+    if (!isEnabled || limit >= 9999) {
+      clearAllPruning(turns);
+      return;
+    }
+
+    if (turns.length <= limit) {
+      clearAllPruning(turns);
+      return;
+    }
+
+    let startIdx = 0;
+    let endIdx = turns.length - 1;
+
+    if (mode === 'tail') {
+      startIdx = Math.max(0, turns.length - limit);
+      endIdx = turns.length - 1;
+    } else {
+      if (currentWindowStart < 0 || currentWindowStart > turns.length - limit) {
+        currentWindowStart = Math.max(0, turns.length - limit);
       }
-    });
+      startIdx = currentWindowStart;
+      endIdx = Math.min(turns.length - 1, currentWindowStart + limit - 1);
+    }
+
+    for (let i = 0; i < turns.length; i++) {
+      const t = turns[i];
+      const isVisible = (i >= startIdx && i <= endIdx);
+      if (isVisible) {
+        t.style.setProperty('display', 'block', 'important');
+      } else {
+        t.style.setProperty('display', 'none', 'important');
+      }
+    }
   });
 }
+
+function schedulePruning(immediate) {
+  if (isTyping) return;
+  if (isPruningScheduled && !immediate) return;
+
+  isPruningScheduled = true;
+  const runner = () => {
+    isPruningScheduled = false;
+    if (isTyping) return;
+    applyTurbo();
+  };
+
+  if (window.requestIdleCallback && !immediate) {
+    window.requestIdleCallback(runner, { timeout: 250 });
+  } else {
+    window.requestAnimationFrame(runner);
+  }
+}
+
+// Scroll listener for sliding window adjustment
+window.addEventListener('scroll', () => {
+  if (isTyping) return;
+  isScrolling = true;
+  if (scrollDebounceTimer) clearTimeout(scrollDebounceTimer);
+
+  scrollDebounceTimer = setTimeout(() => {
+    isScrolling = false;
+    chrome.storage.local.get(['pruningEnabled', 'enabled', 'limit', 'chat_pruning_mode'], (data) => {
+      const mode = data.chat_pruning_mode || 'sliding_window';
+      const isEnabled = data.pruningEnabled ?? (data.enabled ?? true);
+      if (mode === 'sliding_window' && isEnabled) {
+        const turns = getTopLevelTurns();
+        const visibleIdx = findVisibleCenterTurnIndex(turns);
+        if (visibleIdx >= 0) {
+          const limit = Math.max(1, data.limit || 5);
+          currentStepTurnIndex = visibleIdx;
+          currentWindowStart = Math.max(0, Math.min(turns.length - limit, visibleIdx - Math.floor(limit / 2)));
+          applyTurbo();
+        }
+      }
+    });
+  }, 180);
+}, { capture: true, passive: true });
+
+// DOM MutationObserver with debouncing
+const domObserver = new MutationObserver(() => {
+  if (isTyping || isScrolling) return;
+  if (!mutationDebounceTimer) {
+    mutationDebounceTimer = setTimeout(() => {
+      mutationDebounceTimer = null;
+      schedulePruning(false);
+    }, 300);
+  }
+});
+
+const targetObserverNode = document.body || document.documentElement;
+if (targetObserverNode) {
+  domObserver.observe(targetObserverNode, { childList: true, subtree: true });
+}
+
+// Typing detection so input focus never stutters
+document.addEventListener('focusin', (e) => {
+  const tag = e.target && e.target.tagName ? e.target.tagName.toLowerCase() : '';
+  if (tag === 'textarea' || tag === 'input' || (e.target && e.target.isContentEditable)) {
+    isTyping = true;
+  }
+});
+
+document.addEventListener('focusout', () => {
+  isTyping = false;
+  setTimeout(() => schedulePruning(false), 300);
+});
 
 chrome.storage.onChanged.addListener(applyTurbo);
 applyTurbo();
 
 // ------------------------------------------
-// 2. KEYBOARD SHORTCUT LISTENER (Ctrl+Shift+X / Ctrl+Shift+C)
+// 2. KEYBOARD SHORTCUT & AESTHETIC FLOATING TOAST
 // ------------------------------------------
+function showCaspianToast(message) {
+  const existing = document.getElementById('caspian-live-toast');
+  if (existing) existing.remove();
+
+  const toast = document.createElement('div');
+  toast.id = 'caspian-live-toast';
+  toast.style.cssText = `
+    position: fixed;
+    bottom: 24px;
+    right: 24px;
+    background: rgba(15, 23, 42, 0.92);
+    backdrop-filter: blur(12px);
+    -webkit-backdrop-filter: blur(12px);
+    color: #f8fafc;
+    padding: 10px 18px;
+    border-radius: 24px;
+    font-family: 'Outfit', -apple-system, BlinkMacSystemFont, sans-serif;
+    font-size: 12.5px;
+    font-weight: 600;
+    z-index: 99999999;
+    box-shadow: 0 8px 32px rgba(0, 0, 0, 0.35);
+    border: 1px solid rgba(255, 255, 255, 0.15);
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    pointer-events: none;
+  `;
+  toast.innerHTML = message;
+  document.body.appendChild(toast);
+
+  setTimeout(() => {
+    toast.style.opacity = '0';
+    toast.style.transform = 'translateY(8px)';
+    toast.style.transition = 'all 0.25s ease';
+    setTimeout(() => toast.remove(), 250);
+  }, 2400);
+}
+
 window.addEventListener('keydown', (e) => {
   const isTargetKey = (e.key === 'x' || e.key === 'X' || e.code === 'KeyX' || e.key === 'c' || e.key === 'C' || e.code === 'KeyC');
   const isCtrlAlt = e.ctrlKey && e.altKey;
@@ -64,7 +289,7 @@ window.addEventListener('keydown', (e) => {
       const current = data.pruningEnabled ?? (data.enabled ?? true);
       const nextState = !current;
       chrome.storage.local.set({ pruningEnabled: nextState, enabled: nextState }, () => {
-        showCaspianToast(`⚡ Chat Pruning ${nextState ? 'Activated' : 'Paused'}`);
+        showCaspianToast(`⚡ Chat Message Limit: <b>${nextState ? 'ON' : 'OFF'}</b>`);
       });
     });
   }

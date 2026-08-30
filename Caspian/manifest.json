@@ -1,13 +1,16 @@
 {
   "manifest_version": 3,
   "name": "Caspian - AI Chat Pruner",
-  "version": "6.0.0",
+  "version": "6.1.5",
   "description": "Chromium Browser Extension to fix AI chat lag via DOM pruning, convert temporary chats to permanent history, and export multi-format transcripts.",
   "permissions": ["storage", "tabs", "downloads", "scripting", "activeTab"],
   "host_permissions": [
+    "<all_urls>",
     "*://chatgpt.com/*",
     "*://*.chatgpt.com/*",
-    "*://gemini.google.com/*"
+    "*://gemini.google.com/*",
+    "*://www.youtube.com/*",
+    "*://youtube.com/*"
   ],
   "action": {
     "default_popup": "popup.html",
@@ -34,6 +37,20 @@
       ],
       "js": ["content.js"],
       "run_at": "document_end"
+    },
+    {
+      "matches": [
+        "*://*.youtube.com/*",
+        "*://youtube.com/*"
+      ],
+      "js": ["youtube_content.js"],
+      "run_at": "document_end"
+    },
+    {
+      "matches": ["<all_urls>"],
+      "js": ["speed_content.js"],
+      "all_frames": true,
+      "run_at": "document_start"
     }
   ],
   "commands": {
@@ -41,7 +58,7 @@
       "suggested_key": {
         "default": "Ctrl+Shift+X"
       },
-      "description": "Toggle Chat Pruning"
+      "description": "Toggle Chat Message Limit"
     },
     "reset-colors": {
       "suggested_key": {

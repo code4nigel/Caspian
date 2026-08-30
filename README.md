@@ -1,156 +1,117 @@
-# Caspian: AI Chat Pruner, Multi-Service Engine & Universal Document Exporter
+# Caspian: AI Chat Pruner, Universal Media Speed Engine & Productivity Suite
 
-> **Caspian** is a privacy-first AI productivity suite available as a Desktop Chromium Extension and standalone Native Android Applications (Caspian Mobile & Caspian Flow). It eliminates typing lag in massive conversations via real-time DOM pruning, converts temporary chats into permanent account history, integrates premier AI engines (ChatGPT and Google Gemini, plus Google Search and YouTube), and exports publication-ready multi-format transcripts (`.pdf`, `.md`, `.txt`, `.doc`, `.html`) with LaTeX math formulas and syntax-highlighted code blocks.
+Caspian is a lightweight, privacy-focused productivity tool available as a Chromium desktop extension and native Android companion applications (Caspian Flow & Caspian Mobile).
+
+It addresses everyday web performance and workflow friction: eliminating typing lag in long AI conversations via real-time DOM pruning, providing universal playback speed control across all media sites, cleaning up your YouTube homepage with quick feed limits and 1-click "Not interested" actions, converting temporary chats to permanent history, and exporting conversation transcripts to clean, publication-ready formats.
 
 ---
 
-## Ecosystem and Platforms
+## Platforms & Ecosystem
 
 | Desktop Extension (Chromium) | Caspian Flow / Mobile (Android) | Automatic Updates (Obtainium) |
 | :--- | :--- | :--- |
-| Injectable Extension Control Panel | Touch-Draggable Floating Action Pod & Bottom Sheet | One-click instant app updates via GitHub Releases |
-| Compatible with ChatGPT & Google Gemini | Omnibox Multi-Tab Browser & Dedicated AI Docks | Import configuration included in repository |
-| Multi-Format Exporters & Custom Themes | Zero-Lag DOM Pruner, Whisper STT & Video Remote | Background update notifications & direct installs |
+| Universal Chromium Extension (V6.1.5) | Floating Action Pod & Bottom Sheet UI | One-click app updates via GitHub Releases |
+| ChatGPT, Google Gemini, YouTube, Media | Omnibox Multi-Tab Browser & AI Docks | Import configuration file included in repo |
+| DOM Pruner, Flow Speed, Exporters & Themes | Zero-Lag DOM Pruning & Video Remote | Background update notifications & installs |
 
 ---
 
-## Caspian Flow Mobile Interface Showcase
+## Desktop Extension Highlights (V6.1.5)
 
-<p align="center">
-  <img src="Images/Capsian%20Flow/Flow_engine_example.jpg" width="31%" alt="Caspian Flow Engine Dashboard" />
-  <img src="Images/Capsian%20Flow/Flow_tab_example.jpg" width="31%" alt="Caspian Flow Tabs Manager" />
-  <img src="Images/Capsian%20Flow/Flow_settings_example.jpg" width="31%" alt="Caspian Flow Settings and Customization" />
-</p>
-<p align="center">
-  <img src="Images/Capsian%20Flow/Flow_chat_AI_example.jpg" width="31%" alt="Caspian Flow AI Chat Interface" />
-  <img src="Images/Capsian%20Flow/Flow_google_example.jpg" width="31%" alt="Caspian Flow Google Search Dock" />
-  <img src="Images/Capsian%20Flow/Flow_Youtube_example.jpg" width="31%" alt="Caspian Flow YouTube Floating Remote" />
-</p>
+### 1. Real-Time AI Chat DOM Pruning
+Long conversation threads on ChatGPT and Google Gemini often introduce severe typing latency, frame drops, and browser memory bloat due to thousands of rendered DOM elements. Caspian dynamically virtualizes offscreen conversation messages from the active viewport using lightweight CSS rules. Typing lag is eliminated immediately while 100% of your chat history remains intact in memory.
 
----
+### 2. Flow Speed: Universal Media Playback Controller
+A clean, system-wide media rate controller that works on `<video>` and `<audio>` elements across any website (YouTube, Netflix, Twitch, Coursera, Udemy, Vimeo, and embedded players):
+- **Precision Speed Control**: Adjust playback speed continuously from `0.25x` to `5.0x` or use instant preset pills.
+- **Smart A/B Toggle (<kbd>Alt</kbd> + <kbd>S</kbd>)**: Switches between `1.00x` and your last active custom speed (e.g. `1.75x`) with a single keypress.
+- **Speed Cycle (<kbd>Alt</kbd> + <kbd>D</kbd>)**: Rotates through a customizable comma-separated list of speeds (e.g. `1, 1.25, 1.5, 1.75, 2, 2.5, 3`).
+- **Fine Adjustment (<kbd>]</kbd> / <kbd>[</kbd>)**: Step up or down by `0.25x`.
+- **Left-Side Speed HUD**: A floating glassmorphic badge with a wave indicator appears on screen when shortcuts are pressed.
+- **Toolbar Icon Speed Badge**: Live speed badge on the extension icon with an ON/OFF toggle in settings.
+- **Input Protection**: Automatically disables shortcuts when typing inside search inputs, comment boxes, or editors.
 
-## Caspian Desktop Extension Showcase
+### 3. YouTube Home Feed Cleaner & Instant Feedback
+- **Feed Limit Control**: Limit the number of videos displayed on your YouTube homepage (in neat multiples of 3: `3`, `6`, `9`, `12`, `15`, `18`, `21`, `24`, `30`, or `∞ All`).
+- **1-Click "Not Interested" Button**: Hovering over any video thumbnail reveals an instant "Not interested" button at the top-left, automatically triggering YouTube's native feedback menu without requiring extra clicks.
 
-<p align="center">
-  <img src="Caspian/images/caspian_mainUI.png" width="45%" alt="Caspian Extension Engine UI" />
-  <img src="Caspian/images/Caspian_darkUI.png" width="45%" alt="Caspian Dark Mode UI" />
-</p>
-<p align="center">
-  <img src="Caspian/images/caspian_exportOptions.png" width="30%" alt="Caspian Export Options" />
-  <img src="Caspian/images/caspian_siteUI.png" width="30%" alt="Caspian Active Site Options" />
-  <img src="Caspian/images/caspian_settingsUI.png" width="30%" alt="Caspian Settings & Themes" />
-</p>
+### 4. Universal Transcript Exporter
+Export both normal and temporary conversations from ChatGPT and Google Gemini into five clean formats:
+- **Styled PDF / HTML**: Formatted document with KaTeX LaTeX math equations, language-tagged syntax-highlighted code blocks, tables, and conversation badges.
+- **Markdown (`.md`)**: Full Markdown transcripts with headers and code fences.
+- **Plain Text (`.txt`)**: Clean structured plain text logs.
+- **Microsoft Word / Google Docs (`.doc`)**: Editable structured document outlines.
+- **Clipboard Copy**: Instant 1-click transcript copying.
 
----
+### 5. Temporary Chat Vault
+Detects active temporary or guest chat sessions in ChatGPT and Gemini, allowing you to convert them into permanent account history before they disappear.
 
-## Core Features and Architecture
-
-### 1. Real-Time DOM Pruning and Performance Booster
-Long conversation threads on AI platforms introduce severe typing latency, frame drops, and browser crashes due to thousands of rendered DOM nodes. **Caspian** dynamically virtualizes offscreen conversation turns from the active viewport using high-performance CSS rules. This eliminates typing latency instantly while retaining 100% of your chat history in memory.
-
-### 2. Temporary Chat Saver and Vault
-Temporary chats disappear once closed, risking data loss when a quick query turns into valuable research. Caspian automatically detects active temporary chat sessions and enables 1-click conversion into permanent account history.
-
-### 3. Universal Multi-Format Export Suite
-Export both **normal and temporary chats** from ChatGPT and Google Gemini into 5 publication-ready formats:
-- **Caspian Styled PDF / HTML**: Publication-ready document with KaTeX LaTeX formulas, syntax-highlighted code blocks with language tags (`PYTHON`, `JAVA`, `C++`, etc.), formatted tables, and conversation badges.
-- **Markdown (`.md`)**: Complete Markdown transcript with code fences and headers.
-- **Plain Text (`.txt`)**: Clean structured plain-text transcript log.
-- **Microsoft Word / Google Docs (`.doc`)**: Editable structured document with heading outlines.
-- **1-Click Copy**: Copies entire conversation directly to your clipboard.
-
-### 4. Caspian Export Configurator
-Granular control over conversation extraction engines:
-- **ChatGPT Engines**:
-  - `Direct Session API`: Fast, server-side raw Markdown retrieval with full equation fidelity.
-  - `React Fiber State`: Deep memory extraction directly from React Fiber component tree.
-  - `DOM Layout Sweeper`: Direct live DOM crawler.
-- **Google Gemini Engines**:
-  - `DOM Layout Sweeper`: Intelligent DOM extractor that translates Gemini web components (`<code-block>`, `<h3>`, `<table>`) into styled Caspian blocks.
-  - `Deep Component Crawler`: Traverses custom shadow DOM component hierarchies.
+### 6. Settings Backup & Migration (JSON Import / Export)
+Easily backup all your theme accents, chat limits, YouTube preferences, and Flow Speed hotkeys to a `.json` file, and restore them instantly on another browser or device.
 
 ---
 
-## Caspian Desktop Extension (Chromium)
+## Desktop Extension Installation
 
 ### Supported Browsers
-- Google Chrome, Microsoft Edge, Brave, Opera, Vivaldi, Arc
+- Google Chrome, Microsoft Edge, Brave, Opera, Vivaldi, Arc, and other Chromium-based browsers.
 
-### Desktop Installation Guide
-1. Go to the [GitHub Releases Page](https://github.com/code4nigel/Caspian/releases) and download the latest extension release archive (`Caspian-Extension-v6.0.0.zip`).
-2. Extract (unzip) the `.zip` file to a folder on your computer.
-3. Open your browser and navigate to the extensions management page:
+### Installation Steps
+1. Download the latest release archive (`Caspian-Extension-v6.1.5.zip`) from the [GitHub Releases Page](https://github.com/code4nigel/Caspian/releases).
+2. Unzip the downloaded file to a local folder.
+3. Open your browser and go to the extensions management page:
    - **Chrome**: `chrome://extensions`
    - **Edge**: `edge://extensions`
    - **Brave**: `brave://extensions`
-4. Turn **ON** **Developer Mode** (toggle in top-right corner).
+4. Enable **Developer mode** (toggle in the top-right corner).
 5. Click **Load unpacked** and select the unzipped `Caspian` folder.
-6. Open [ChatGPT](https://chatgpt.com) or [Google Gemini](https://gemini.google.com) and click the Caspian extension icon.
+6. Pin Caspian to your toolbar for quick access.
 
 ---
 
 ## Caspian Flow and Caspian Mobile (Android)
 
 ### Mobile Highlights
-- **Integrated Service Hub**: Seamlessly launch and switch between ChatGPT, Google Gemini, Google Search, and YouTube.
-- **Dedicated Floating Docks**:
-  - **ChatGPT & Gemini Docks**: Instant reload, message navigation step controls, limit switcher, and word finder.
-  - **YouTube Floating Remote**: Custom obsidian frosted glass dropdowns for playback speed (`0.25x` to `2.0x`) and video resolution (`Auto` to `1080p`).
-  - **Google Search Dock**: Quick query switcher and top/bottom page scrolling.
-- **Liquid Glass Touch-Draggable Action Pod**: Move your control trigger anywhere on the screen with customizable shapes, gradient accents, and tactile SFX audio.
-- **Omnibox Browser**: Integrated URL bar with instant soft keyboard summon, tab switcher, privacy shields, and clipboard search previews.
-- **Samsung One UI Bottom Sheet**: Frosted glassmorphism slide-up sheet with customizable snap heights, animations, and theme tones.
+- **Integrated Service Hub**: Switch seamlessly between ChatGPT, Google Gemini, Google Search, and YouTube.
+- **Floating Docks**:
+  - **ChatGPT & Gemini Docks**: Reload triggers, turn navigators, and pruning limits.
+  - **YouTube Floating Remote**: Custom glass dropdowns for playback speed (`0.25x` to `2.0x`) and video quality.
+  - **Google Search Dock**: Quick query switcher and one-tap page scrolling.
+- **Touch-Draggable Action Pod**: Customizable trigger button positionable anywhere on screen.
+- **Omnibox Browser**: Integrated URL bar with tab switching, privacy controls, and clipboard search previews.
 
-### Direct APK Installation
-1. Download the latest release (`.apk`) from [GitHub Releases](https://github.com/code4nigel/Caspian/releases):
+### APK Installation
+1. Download the latest `.apk` from [GitHub Releases](https://github.com/code4nigel/Caspian/releases):
    - **Caspian Flow (Beta C)**: `Caspian-Flow-v1.1.31-BetaC.apk`
    - **Caspian Mobile (Stable)**: `Caspian-Mobile-v1.2.40.apk`
    - **Caspian Beta A (Experimental)**: `Caspian-Beta-A-v1.2.48.apk`
-2. Open the `.apk` file on your Android device (Android 7.0+ supported).
-3. Allow "Install from Unknown Sources" if prompted.
-4. Launch the application.
+2. Open the file on your Android device (Android 7.0+).
+3. Allow installation from unknown sources if prompted.
 
 ---
 
-## Automatic Updates via Obtainium Setup
+## Automatic Updates via Obtainium
 
-You can use [Obtainium](https://github.com/ImranR98/Obtainium) to receive automatic background update notifications and install releases directly from GitHub without needing to manually download APKs for every update.
+You can use [Obtainium](https://github.com/ImranR98/Obtainium) to receive automatic background update notifications and install releases directly from GitHub.
 
-### Option 1: 1-Click Setup with Import File (Recommended)
-1. Install **Obtainium** on your Android device from the [official Obtainium repository](https://github.com/ImranR98/Obtainium).
-2. Download the pre-configured import file from this repository: [`obtanium setup/Caspian_Obtainium_Setup_V2.json`](obtanium%20setup/Caspian_Obtainium_Setup_V2.json).
-3. Open Obtainium ➔ Navigate to **Settings** ➔ Tap **Import/Export** ➔ Tap **Import configuration**.
-4. Select `Caspian_Obtainium_Setup_V2.json`.
-5. All three Caspian variants (**Caspian Flow**, **Caspian Mobile**, and **Caspian Beta A**) will be automatically configured with their correct release filters, regex trimmers, and categories!
-
-### Option 2: Manual Regex Configuration
-
-If adding repository apps manually in Obtainium (`https://github.com/code4nigel/Caspian`), configure the following settings:
-
-| App | Filter Release Titles Regex | Trim Version String RegEx | Match Group | Filter APKs Regex |
-| :--- | :--- | :--- | :--- | :--- |
-| **Caspian Flow (Beta C)** | `.*Flow.*` | `([0-9]+\.[0-9]+\.[0-9]+-BetaC)` | `1` | `.*Flow.*\.apk$` |
-| **Caspian Mobile (Stable)** | `.*Mobile.*` | `([0-9]+\.[0-9]+\.[0-9]+)` | `1` | `.*Mobile.*\.apk$` |
-| **Caspian Beta A** | `.*Beta.*A.*` | `([0-9]+\.[0-9]+\.[0-9]+.*)` | `1` | `.*Beta.*A.*\.apk$` |
-
-> **Tip**: Toggle **ON** *"Include prereleases"* and *"Fallback to older releases"*, and set *"Sort method"* to **Release date**.
-
-### Video Walkthrough Guide
-Watch the quick setup demonstration on YouTube:
-- **YouTube Video Guide**: [Watch How to Setup Caspian in Obtainium](https://youtube.com/shorts/16XPiOxabTo)
+### 1-Click Setup with Configuration File
+1. Install **Obtainium** from the [official repository](https://github.com/ImranR98/Obtainium).
+2. Download the pre-configured setup file: [`obtanium setup/Caspian_Obtainium_Setup_V2.json`](obtanium%20setup/Caspian_Obtainium_Setup_V2.json).
+3. In Obtainium, go to **Settings** ➔ **Import/Export** ➔ **Import configuration**.
+4. Select the file to automatically configure all three Caspian app tracks.
 
 ---
 
-## Privacy and Security Guarantee
+## Privacy & Security
 
-- **100% Local Processing**: Caspian operates entirely within your browser's local sandbox and native Android app sandbox.
-- **Zero Data Collection**: No prompts, personal credentials, or conversation transcripts are tracked, collected, or transmitted.
-- **Zero Third-Party Telemetry**: Caspian makes zero external tracking calls. All computation and DOM operations remain completely local to your device.
+- **100% Local Execution**: Caspian runs entirely inside your browser's local sandbox and Android app runtime.
+- **Zero Data Collection**: No prompts, chat logs, account credentials, or telemetry data are collected or transmitted.
+- **No External Tracking**: Caspian makes no third-party network requests.
 
 ---
 
-## Developer and License
+## License
 
-- **Creator & Copyright**: Copyright © 2026 **NigelWeb** ([github.com/code4nigel](https://github.com/code4nigel)), Lead Architect of **Lsync**, **Caspian**, and **Scrobby**.
+- **Author**: Copyright © 2026 **NigelWeb** ([github.com/code4nigel](https://github.com/code4nigel))
 - **Repository**: [https://github.com/code4nigel/Caspian](https://github.com/code4nigel/Caspian)
 - **License**: [GNU General Public License v3.0 (GPL-3.0)](LICENSE)

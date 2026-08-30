@@ -6,7 +6,7 @@
   <title>Caspian</title>
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;600&family=Outfit:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+  <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;600;700&family=Outfit:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="popup.css">
 </head>
 <body>
@@ -28,7 +28,7 @@
         </div>
         <div class="brand-text">
           <span class="brand-name">CASPIAN</span>
-          <span class="brand-tag">V6.0.0</span>
+          <span class="brand-tag" id="extension-version">V6.1.5</span>
         </div>
       </div>
       
@@ -66,35 +66,27 @@
     <main class="content-area">
       <!-- TAB 1: ENGINE CONTROLS -->
       <div id="tab-engine" class="tab-pane active">
-        <!-- System Status Banner (Clickable Toggle Card) -->
-        <div id="pruning-status-card" class="status-card clickable-toggle-card" title="Click to toggle Chat Pruning ON/OFF">
-          <div class="status-left">
-            <div id="status-indicator" class="pulse-dot active"></div>
-            <div class="status-info">
-              <span id="status-state-text" class="status-title">Chat Pruning Active</span>
-              <span id="status-sub-text" class="status-sub">Lag Fixer & DOM Limit Active</span>
+        
+        <!-- 1. Temporary Chat Vault & Exporter Card -->
+        <div id="temp-vault-card" class="glass-card temp-vault-card">
+          <div class="card-header-row" id="temp-vault-header">
+            <div class="card-header-left">
+              <div id="temp-indicator-dot" class="pulse-dot active"></div>
+              <div class="card-title-group">
+                <span id="temp-vault-title" class="card-title">Temporary Chat Saver</span>
+                <span id="temp-vault-desc" class="card-sub">Save or convert temporary sessions into permanent history.</span>
+              </div>
+            </div>
+            <div class="card-header-right">
+              <span id="temp-turn-count" class="count-badge">0 Messages</span>
+              <button id="toggle-temp-saver-btn" class="pill-toggle-btn active" title="Toggle Temporary Chat Saver">ON</button>
             </div>
           </div>
-          <div class="status-badge" id="active-limit-badge">5 Turns</div>
-        </div>
-
-        <!-- Temporary Chat Vault & Exporter Card (Clickable Toggle Card) -->
-        <div id="temp-vault-card" class="glass-card temp-vault-card clickable-toggle-card" title="Click header to toggle Vault ON/OFF">
-          <div class="temp-vault-header">
-            <div class="temp-badge">
-              <span id="temp-indicator-dot" class="pulse-dot active" style="background: var(--accent); box-shadow: 0 0 10px var(--accent-glow);"></span>
-              <span id="temp-vault-title" class="temp-badge-text">Temporary Chat Saver</span>
-            </div>
-            <span id="temp-turn-count" class="temp-count-badge">0 Messages</span>
-          </div>
-          
-          <p id="temp-vault-desc" class="temp-vault-desc">Save or convert temporary session into a permanent chat saved in your history.</p>
 
           <div class="temp-action-row">
             <button id="convert-chat-btn" class="temp-act-btn primary pill-btn" title="Convert to Permanent Saved Chat">
-              <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
-                <path d="M2 6c.6.5 1.2 1 2.5 1 2.5 0 2.5-2 5-2 2.5 0 2.5 2 5 2 2.5 0 2.5-2 5-2 1.3 0 1.9.5 2.5 1"></path>
-                <path d="M2 12c.6.5 1.2 1 2.5 1 2.5 0 2.5-2 5-2 2.5 0 2.5-2 5-2 1.3 0 1.9.5 2.5 1"></path>
+              <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+                <path d="M21.5 2v6h-6M21.34 15.57a10 10 0 1 1-.57-8.38l5.67-5.67"></path>
               </svg>
               <span>Convert Chat</span>
             </button>
@@ -102,7 +94,7 @@
             <!-- Export Multi-Format Dropdown -->
             <div class="export-dropdown-wrapper">
               <button id="export-menu-btn" class="temp-act-btn secondary pill-btn" title="Export Conversation">
-                <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
                   <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path>
                   <polyline points="7 10 12 15 17 10"></polyline>
                   <line x1="12" y1="15" x2="12" y2="3"></line>
@@ -120,7 +112,7 @@
             </div>
 
             <button id="copy-chat-btn" class="temp-act-btn secondary copy-icon-only-btn" title="Copy Full Markdown Transcript">
-              <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
                 <rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect>
                 <path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path>
               </svg>
@@ -128,35 +120,274 @@
           </div>
         </div>
 
-        <!-- Section: Message Limit Selection -->
-        <section class="section">
-          <div class="section-title-row">
-            <span class="section-label">Visible Message Turns</span>
-            <span class="section-hint">Auto-Prune Older</span>
+        <!-- 2. Collapsible Chat Message Limit Container -->
+        <div id="card-chat-limit" class="glass-card limit-container-card expandable">
+          <div class="card-header-row" id="chat-limit-header" style="cursor: pointer;" title="Tap to expand or collapse message limits">
+            <div class="card-header-left">
+              <div id="status-indicator" class="pulse-dot active"></div>
+              <div class="card-title-group">
+                <span id="status-state-text" class="card-title">Chat Message Limit: ON</span>
+                <span id="status-sub-text" class="card-sub">Limits message count to improve performance & prevent lag. Tap to collapse.</span>
+              </div>
+            </div>
+            <div class="card-header-right">
+              <span class="status-badge" id="active-limit-badge">5 Messages</span>
+              <button id="toggle-chat-limit-btn" class="pill-toggle-btn active" title="Toggle Message Limit ON/OFF">ON</button>
+            </div>
           </div>
-          <div class="pill-grid">
-            <button class="pill" data-val="1">1</button>
-            <button class="pill" data-val="3">3</button>
-            <button class="pill" data-val="5">5</button>
-            <button class="pill" data-val="8">8</button>
-            <button class="pill" data-val="15">15</button>
-            <button class="pill" data-val="9999" title="Unlimited (Show All)">∞</button>
+
+          <!-- Collapsible Accordion Body: Virtualization Pruning Mode & Numerical Pills -->
+          <div class="limit-inner-body" id="chat-limit-body">
+            <div class="inner-section-label">
+              <span>VIRTUALIZATION PRUNING MODE</span>
+            </div>
+            <div class="mode-grid">
+              <button class="pruner-mode-pill active" data-mode="sliding_window" id="btn-mode-sliding">🪟 Sliding Window</button>
+              <button class="pruner-mode-pill" data-mode="tail" id="btn-mode-tail">📌 Tail Window</button>
+            </div>
+
+            <div class="inner-section-label" style="margin-top: 10px;">
+              <span>VISIBLE MESSAGES LIMIT</span>
+              <span class="section-hint">AUTO-PRUNE OLDER</span>
+            </div>
+            <div class="pill-grid">
+              <button class="pill" data-val="1">1</button>
+              <button class="pill" data-val="2">2</button>
+              <button class="pill" data-val="3">3</button>
+              <button class="pill" data-val="5">5</button>
+              <button class="pill" data-val="8">8</button>
+              <button class="pill" data-val="10">10</button>
+              <button class="pill" data-val="15">15</button>
+              <button class="pill" data-val="20">20</button>
+              <button class="pill" data-val="30">30</button>
+              <button class="pill" data-val="9999" title="Unlimited (Show All)">∞</button>
+            </div>
           </div>
-        </section>
+        </div>
+
+        <!-- 3. Collapsible YouTube Home Optimizer Container -->
+        <div id="card-youtube-home" class="glass-card expandable" style="margin-top: 2px;">
+          <div class="card-header-row" id="youtube-home-header" style="cursor: pointer;" title="Tap to expand or collapse YouTube options">
+            <div class="card-header-left">
+              <span class="chip-icon" style="font-size: 13px;">📺</span>
+              <div class="card-title-group">
+                <span class="card-title" id="yt-status-title">YouTube Home Feed: ON</span>
+                <span id="yt-status-sub-text" class="card-sub">Feed video limits & quick Not-Interested button. Tap to collapse.</span>
+              </div>
+            </div>
+            <div class="card-header-right">
+              <span class="status-badge" id="yt-active-limit-badge">12 Videos</span>
+              <button id="toggle-yt-feed-btn" class="pill-toggle-btn active" title="Toggle YouTube Feed Limiter">ON</button>
+            </div>
+          </div>
+
+          <!-- Collapsible Body for YouTube -->
+          <div class="limit-inner-body" id="youtube-home-body" style="gap: 8px;">
+            <div class="inner-section-label">
+              <span>FEED RECOMMENDATION LIMIT</span>
+              <span class="section-hint">LIMIT FEED ROWS</span>
+            </div>
+            <div class="pill-grid">
+              <button class="pill yt-pill" data-yt="3">3</button>
+              <button class="pill yt-pill" data-yt="6">6</button>
+              <button class="pill yt-pill" data-yt="9">9</button>
+              <button class="pill yt-pill active" data-yt="12">12</button>
+              <button class="pill yt-pill" data-yt="15">15</button>
+              <button class="pill yt-pill" data-yt="18">18</button>
+              <button class="pill yt-pill" data-yt="21">21</button>
+              <button class="pill yt-pill" data-yt="24">24</button>
+              <button class="pill yt-pill" data-yt="30">30</button>
+              <button class="pill yt-pill" data-yt="9999" title="Unlimited (Show All)">∞</button>
+            </div>
+
+            <!-- Quick Not Interested Button Toggle Row -->
+            <div class="theme-mode-row" style="margin-top: 4px; padding: 4px 6px; background: var(--input-bg); border-radius: 9px; border: 1px solid var(--border-glass); justify-content: space-between;">
+              <div class="card-title-group" style="flex: 1;">
+                <span class="input-label" style="color: var(--text-main); font-weight: 700; font-size: calc(9.5px * var(--font-scale, 1));">🚫 Quick "Not Interested" Button</span>
+                <span class="card-sub" style="font-size: calc(8px * var(--font-scale, 1));">Floating 1-tap dismiss icon on every video</span>
+              </div>
+              <button class="pill-toggle-btn active" id="toggle-yt-not-interested-btn" title="Toggle Floating Not Interested Icon">ON</button>
+            </div>
+          </div>
+        </div>
+
+        <!-- 4. Collapsible Flow Speed Universal Controller -->
+        <div id="card-flow-speed" class="glass-card expandable" style="margin-top: 2px;">
+          <div class="card-header-row" id="flow-speed-header" style="cursor: pointer;" title="Tap to expand or collapse Flow Speed options">
+            <div class="card-header-left">
+              <span class="chip-icon" style="font-size: 13px;">🌊</span>
+              <div class="card-title-group">
+                <span class="card-title" id="flow-speed-status-title">Flow Speed: ON</span>
+                <span id="flow-speed-status-sub-text" class="card-sub">Universal video & audio speed engine. Tap to collapse.</span>
+              </div>
+            </div>
+            <div class="card-header-right">
+              <span class="status-badge" id="flow-speed-active-badge">1.00x</span>
+              <button id="toggle-flow-speed-btn" class="pill-toggle-btn active" title="Toggle Flow Speed Engine">ON</button>
+            </div>
+          </div>
+
+          <!-- Collapsible Body for Flow Speed -->
+          <div class="limit-inner-body" id="flow-speed-body" style="gap: 8px;">
+            <!-- Speed Slider & Input -->
+            <div class="inner-section-label">
+              <span>PLAYBACK SPEED</span>
+              <span class="section-hint" id="flow-speed-val-display" style="font-family: 'JetBrains Mono', monospace; font-weight: 700; color: var(--accent);">1.00x</span>
+            </div>
+            <div class="zoom-slider-row" style="padding: 0 4px;">
+              <span class="zoom-btn" id="speed-down-btn" title="Decrease speed (-0.25x)">-</span>
+              <input type="range" id="flow-speed-slider" min="0.25" max="5.0" step="0.05" value="1.00" class="custom-range-slider">
+              <span class="zoom-btn" id="speed-up-btn" title="Increase speed (+0.25x)">+</span>
+            </div>
+
+            <!-- Preset Pills -->
+            <div class="pill-grid" style="grid-template-columns: repeat(5, 1fr);">
+              <button class="pill speed-pill" data-speed="0.75">0.75x</button>
+              <button class="pill speed-pill active" data-speed="1.0">1.0x</button>
+              <button class="pill speed-pill" data-speed="1.25">1.25x</button>
+              <button class="pill speed-pill" data-speed="1.5">1.5x</button>
+              <button class="pill speed-pill" data-speed="1.75">1.75x</button>
+              <button class="pill speed-pill" data-speed="2.0">2.0x</button>
+              <button class="pill speed-pill" data-speed="2.5">2.5x</button>
+              <button class="pill speed-pill" data-speed="3.0">3.0x</button>
+              <button class="pill speed-pill" data-speed="4.0">4.0x</button>
+              <button class="pill speed-pill" data-speed="5.0">5.0x</button>
+            </div>
+
+            <!-- Cycle Speeds List Input -->
+            <div class="theme-mode-row" style="margin-top: 4px; padding: 5px 8px; background: var(--input-bg); border-radius: 9px; border: 1px solid var(--border-glass); flex-direction: column; align-items: flex-start; gap: 4px;">
+              <div style="display: flex; justify-content: space-between; width: 100%;">
+                <span class="input-label" style="color: var(--text-main); font-weight: 700; font-size: calc(9.5px * var(--font-scale, 1));">🔄 Cycle Speeds List</span>
+                <span class="card-sub" style="font-size: calc(8px * var(--font-scale, 1));">Comma-separated</span>
+              </div>
+              <input type="text" id="flow-speed-cycle-input" class="custom-text-input" value="1, 1.25, 1.5, 1.75, 2, 2.5, 3" style="width: 100%; box-sizing: border-box; padding: 4px 8px; font-size: 10.5px; border-radius: 6px; background: var(--bg-card); color: var(--text-main); border: 1px solid var(--border-glass);" placeholder="1, 1.25, 1.5, 2, 2.5, 3">
+            </div>
+
+            <!-- Hotkey Customization Row -->
+            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 6px; margin-top: 2px;">
+              <div class="theme-mode-row" style="padding: 4px 6px; background: var(--input-bg); border-radius: 8px; border: 1px solid var(--border-glass); justify-content: space-between;">
+                <span class="card-sub" style="font-weight: 700; color: var(--text-main); font-size: 9px;">Default 1.0x:</span>
+                <input type="text" id="shortcut-reset-input" maxlength="6" value="Alt+S" style="width: 44px; text-align: center; text-transform: uppercase; font-weight: 800; font-size: 10px; border-radius: 4px; background: var(--accent-light); color: var(--accent); border: 1px solid var(--accent);">
+              </div>
+              <div class="theme-mode-row" style="padding: 4px 6px; background: var(--input-bg); border-radius: 8px; border: 1px solid var(--border-glass); justify-content: space-between;">
+                <span class="card-sub" style="font-weight: 700; color: var(--text-main); font-size: 9px;">Cycle Key:</span>
+                <input type="text" id="shortcut-cycle-input" maxlength="6" value="Alt+D" style="width: 44px; text-align: center; text-transform: uppercase; font-weight: 800; font-size: 10px; border-radius: 4px; background: var(--accent-light); color: var(--accent); border: 1px solid var(--accent);">
+              </div>
+            </div>
+
+            <!-- On-Screen HUD Toggle -->
+            <div class="theme-mode-row" style="margin-top: 2px; padding: 4px 6px; background: var(--input-bg); border-radius: 9px; border: 1px solid var(--border-glass); justify-content: space-between;">
+              <div class="card-title-group" style="flex: 1;">
+                <span class="input-label" style="color: var(--text-main); font-weight: 700; font-size: calc(9.5px * var(--font-scale, 1));">🌊 On-Screen Speed HUD</span>
+                <span class="card-sub" style="font-size: calc(8px * var(--font-scale, 1));">Left-side badge indicator on speed change</span>
+              </div>
+              <button class="pill-toggle-btn active" id="toggle-flow-speed-hud-btn" title="Toggle On-Screen Speed Badge">ON</button>
+            </div>
+
+            <!-- Toolbar Icon Speed Badge Toggle -->
+            <div class="theme-mode-row" style="margin-top: 2px; padding: 4px 6px; background: var(--input-bg); border-radius: 9px; border: 1px solid var(--border-glass); justify-content: space-between;">
+              <div class="card-title-group" style="flex: 1;">
+                <span class="input-label" style="color: var(--text-main); font-weight: 700; font-size: calc(9.5px * var(--font-scale, 1));">🏷️ Toolbar Icon Speed Badge</span>
+                <span class="card-sub" style="font-size: calc(8px * var(--font-scale, 1));">Show live playback speed on extension icon</span>
+              </div>
+              <button class="pill-toggle-btn active" id="toggle-flow-speed-badge-btn" title="Toggle Extension Icon Speed Badge">ON</button>
+            </div>
+          </div>
+        </div>
 
         <!-- Hotkey Info Footer Chip -->
         <div class="shortcut-chip">
           <span class="chip-icon">🌊</span>
           <span>Hotkey: <kbd>Ctrl</kbd> + <kbd>Shift</kbd> + <kbd>X</kbd></span>
         </div>
-        <p class="shortcut-prompt-hint">If shortcut doesn't trigger, click the <b>Sites</b> tab for Browser Setup Guide.</p>
+        <p class="shortcut-prompt-hint">If shortcut doesn't trigger, check the <b>Sites</b> tab for the setup guide.</p>
       </div>
 
-      <!-- TAB 2: AI SITES TOGGLE & SHORTCUT GUIDE -->
+      <!-- TAB 2: AI SITES TOGGLE, BOOKMARKS & SHORTCUT GUIDE -->
       <div id="tab-sites" class="tab-pane">
+        <!-- Quick Launch Bookmarks Section -->
         <div class="section-title-row">
-          <span class="section-label">Active AI Sites</span>
-          <span class="section-hint">Auto-Enable Caspian</span>
+          <span class="section-label">Quick Launch AI & Web</span>
+          <span class="section-hint">Open In Tab</span>
+        </div>
+
+        <div class="glass-card site-bookmarks-grid">
+          <!-- ChatGPT Bookmark -->
+          <div class="site-bookmark-card" data-url="https://chatgpt.com" title="Open ChatGPT">
+            <div class="site-bm-icon-box" style="background: rgba(16, 163, 127, 0.15); border-color: rgba(16, 163, 127, 0.35);">
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none">
+                <path d="M22.28 9.87a5.98 5.98 0 0 0-.52-4.93 6.05 6.05 0 0 0-5.71-3.1 6.03 6.03 0 0 0-4.73 2.27 6.02 6.02 0 0 0-6.93 2.92 6.05 6.05 0 0 0-.74 5.68 6.04 6.04 0 0 0-2.22 4.77 6.05 6.05 0 0 0 3.1 5.71 6.02 6.02 0 0 0 4.73 2.27 6.02 6.02 0 0 0 6.93-2.92 6.05 6.05 0 0 0 .74-5.68 6.04 6.04 0 0 0 2.22-4.77c0-.75-.13-1.48-.37-2.2z" stroke="#10a37f" stroke-width="1.8" stroke-linejoin="round"/>
+                <path d="M12 7v10M8.5 8.5l7 7M15.5 8.5l-7 7" stroke="#10a37f" stroke-width="1.6" stroke-linecap="round"/>
+              </svg>
+            </div>
+            <span class="site-bm-name">ChatGPT</span>
+          </div>
+
+          <!-- Google Gemini Bookmark -->
+          <div class="site-bookmark-card" data-url="https://gemini.google.com" title="Open Google Gemini">
+            <div class="site-bm-icon-box" style="background: rgba(124, 58, 237, 0.15); border-color: rgba(124, 58, 237, 0.35);">
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none">
+                <path d="M12 2L14.5 9.5L22 12L14.5 14.5L12 22L9.5 14.5L2 12L9.5 9.5L12 2Z" fill="url(#gemini-grad)" stroke="#9333ea" stroke-width="1.2"/>
+                <defs>
+                  <linearGradient id="gemini-grad" x1="2" y1="2" x2="22" y2="22">
+                    <stop offset="0%" stop-color="#38bdf8"/>
+                    <stop offset="100%" stop-color="#a855f7"/>
+                  </linearGradient>
+                </defs>
+              </svg>
+            </div>
+            <span class="site-bm-name">Gemini</span>
+          </div>
+
+          <!-- Claude AI Bookmark -->
+          <div class="site-bookmark-card" data-url="https://claude.ai" title="Open Claude AI">
+            <div class="site-bm-icon-box" style="background: rgba(217, 119, 6, 0.15); border-color: rgba(217, 119, 6, 0.35);">
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none">
+                <circle cx="12" cy="12" r="9" stroke="#d97706" stroke-width="1.8"/>
+                <path d="M12 6v12M8 9l8 6M16 9l-8 6" stroke="#d97706" stroke-width="1.6" stroke-linecap="round"/>
+              </svg>
+            </div>
+            <span class="site-bm-name">Claude</span>
+          </div>
+
+          <!-- Perplexity AI Bookmark -->
+          <div class="site-bookmark-card" data-url="https://www.perplexity.ai" title="Open Perplexity AI">
+            <div class="site-bm-icon-box" style="background: rgba(6, 182, 212, 0.15); border-color: rgba(6, 182, 212, 0.35);">
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none">
+                <rect x="4" y="4" width="16" height="16" rx="4" stroke="#06b6d4" stroke-width="1.8"/>
+                <circle cx="12" cy="12" r="3.5" stroke="#06b6d4" stroke-width="1.6"/>
+              </svg>
+            </div>
+            <span class="site-bm-name">Perplexity</span>
+          </div>
+
+          <!-- Google Search Bookmark -->
+          <div class="site-bookmark-card" data-url="https://www.google.com" title="Open Google Search">
+            <div class="site-bm-icon-box" style="background: rgba(59, 130, 246, 0.15); border-color: rgba(59, 130, 246, 0.35);">
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none">
+                <circle cx="11" cy="11" r="7" stroke="#3b82f6" stroke-width="2"/>
+                <path d="M21 21l-4.35-4.35" stroke="#3b82f6" stroke-width="2" stroke-linecap="round"/>
+              </svg>
+            </div>
+            <span class="site-bm-name">Google</span>
+          </div>
+
+          <!-- YouTube Bookmark -->
+          <div class="site-bookmark-card" data-url="https://www.youtube.com" title="Open YouTube">
+            <div class="site-bm-icon-box" style="background: rgba(239, 68, 68, 0.15); border-color: rgba(239, 68, 68, 0.35);">
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none">
+                <rect x="3" y="5" width="18" height="14" rx="4" fill="#ef4444"/>
+                <polygon points="10,8 16,12 10,16" fill="#ffffff"/>
+              </svg>
+            </div>
+            <span class="site-bm-name">YouTube</span>
+          </div>
+        </div>
+
+        <!-- Active AI Site Extension Toggles -->
+        <div class="section-title-row" style="margin-top: 4px;">
+          <span class="section-label">Active AI Sites Auto-Limit</span>
+          <span class="section-hint">Auto-Enable</span>
         </div>
 
         <div class="glass-card site-card-list">
@@ -195,19 +426,19 @@
         </div>
         
         <div class="glass-card shortcut-guide-card">
-          <p class="guide-intro">If <kbd>Ctrl</kbd>+<kbd>Shift</kbd>+<kbd>C</kbd> is not triggering, activate it in your browser settings:</p>
+          <p class="guide-intro">If <kbd>Ctrl</kbd>+<kbd>Shift</kbd>+<kbd>X</kbd> is not triggering, activate it in your browser settings:</p>
           <div class="guide-steps">
             <div class="guide-step">
               <span class="browser-badge edge">Edge</span>
-              <span>Open <kbd>edge://extensions/shortcuts</kbd> ➔ Find <b>Caspian</b> ➔ Set <kbd>Ctrl+Shift+C</kbd></span>
+              <span>Open <kbd>edge://extensions/shortcuts</kbd> ➔ Find <b>Caspian</b> ➔ Set <kbd>Ctrl+Shift+X</kbd></span>
             </div>
             <div class="guide-step">
               <span class="browser-badge chrome">Chrome</span>
-              <span>Open <kbd>chrome://extensions/shortcuts</kbd> ➔ Find <b>Caspian</b> ➔ Set <kbd>Ctrl+Shift+C</kbd></span>
+              <span>Open <kbd>chrome://extensions/shortcuts</kbd> ➔ Find <b>Caspian</b> ➔ Set <kbd>Ctrl+Shift+X</kbd></span>
             </div>
             <div class="guide-step">
               <span class="browser-badge brave">Brave</span>
-              <span>Open <kbd>brave://extensions/shortcuts</kbd> ➔ Find <b>Caspian</b> ➔ Set <kbd>Ctrl+Shift+C</kbd></span>
+              <span>Open <kbd>brave://extensions/shortcuts</kbd> ➔ Find <b>Caspian</b> ➔ Set <kbd>Ctrl+Shift+X</kbd></span>
             </div>
           </div>
         </div>
@@ -215,62 +446,192 @@
 
       <!-- TAB 3: COMBINED SETTINGS & DEVELOPER -->
       <div id="tab-settings" class="tab-pane">
-        <!-- Aesthetics Section -->
-        <div class="section-title-row">
-          <span class="section-label">Aesthetics & Theme</span>
-          <span id="reset-link" class="reset-btn" title="Reset to default colors">Reset Defaults</span>
+        <!-- Collapsible Aesthetics & Themes Container -->
+        <div id="card-aesthetics" class="glass-card expandable">
+          <div class="card-header-row" id="aesthetics-header" style="cursor: pointer;" title="Tap to expand or collapse aesthetics options">
+            <div class="card-header-left">
+              <span class="chip-icon" style="font-size: 13px;">🎨</span>
+              <div class="card-title-group">
+                <span class="card-title">Aesthetics & Themes</span>
+                <span id="aesthetics-sub-text" class="card-sub">Customize colors, gradients & background tones. Tap to collapse.</span>
+              </div>
+            </div>
+            <div class="card-header-right">
+              <span id="reset-link" class="reset-btn" title="Reset to default colors">Reset</span>
+            </div>
+          </div>
+
+          <!-- Collapsible Body for Aesthetics -->
+          <div class="limit-inner-body" id="aesthetics-body" style="gap: 8px;">
+            <!-- Light / Dark Mode Toggle Segment -->
+            <div class="theme-mode-row">
+              <span class="input-label">Appearance Mode</span>
+              <div class="mode-segmented-control">
+                <button id="mode-opt-dark" class="mode-opt" data-mode="dark">Dark</button>
+                <button id="mode-opt-light" class="mode-opt active" data-mode="light">Light</button>
+              </div>
+            </div>
+
+            <!-- Theme Presets Header with Pin Button -->
+            <div class="preset-header-row">
+              <span class="preset-label">Quick Presets</span>
+              <button id="pin-current-btn" class="pin-action-btn" title="Pin current custom gradient">
+                <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+                  <line x1="12" y1="5" x2="12" y2="19"></line>
+                  <line x1="5" y1="12" x2="19" y2="12"></line>
+                </svg>
+                <span>Pin Gradient</span>
+              </button>
+            </div>
+
+            <!-- Presets Grid Container -->
+            <div id="preset-grid" class="preset-row">
+              <!-- Rendered dynamically in popup.js -->
+            </div>
+
+            <!-- Compact Custom Palette Studio Grid -->
+            <div class="custom-palette-studio">
+              <div class="palette-studio-row">
+                <div class="studio-color-cell">
+                  <span class="studio-label">Start</span>
+                  <div class="color-input-wrapper compact">
+                    <input type="color" id="accent-picker" value="#A2A9A9" tabindex="-1">
+                    <input type="text" id="primary-hex" placeholder="#A2A9A9" spellcheck="false">
+                  </div>
+                </div>
+                <div class="studio-color-cell">
+                  <span class="studio-label">End</span>
+                  <div class="color-input-wrapper compact">
+                    <input type="color" id="secondary-picker" value="#1B4264" tabindex="-1">
+                    <input type="text" id="secondary-hex" placeholder="#1B4264" spellcheck="false">
+                  </div>
+                </div>
+                <div class="studio-color-cell">
+                  <span class="studio-label">Canvas</span>
+                  <div class="color-input-wrapper compact">
+                    <input type="color" id="custom-bg-picker" value="#0a1128" tabindex="-1">
+                    <input type="text" id="custom-bg-hex" placeholder="#0A1128" spellcheck="false">
+                  </div>
+                </div>
+              </div>
+
+              <!-- Compact Smart Palette Import -->
+              <div class="palette-import-compact">
+                <input type="text" id="palette-import" placeholder="Import Palette: paste hex codes (e.g. #ff0055 #110033)..." spellcheck="false">
+              </div>
+            </div>
+
+            <!-- Background Canvas Color Section (Dark Theme Default Tone) -->
+            <div class="preset-header-row" style="margin-top: 4px;">
+              <span class="preset-label">Dark Canvas Tone</span>
+              <span class="section-hint">Auto-White in Light</span>
+            </div>
+
+            <div class="bg-tones-grid">
+              <button class="bg-tone-btn active" data-bg="" title="Default Caspian Dark Canvas">
+                <span class="bg-swatch" style="background: linear-gradient(135deg, #0a1128, #1c2541);"></span>
+                <span>Default</span>
+              </button>
+              <button class="bg-tone-btn" data-bg="#000000" title="Pure OLED Black">
+                <span class="bg-swatch" style="background: #000000; border-color: #333;"></span>
+                <span>OLED</span>
+              </button>
+              <button class="bg-tone-btn" data-bg="#070d18" title="Midnight Navy">
+                <span class="bg-swatch" style="background: #070d18;"></span>
+                <span>Midnight</span>
+              </button>
+              <button class="bg-tone-btn" data-bg="#0f172a" title="Slate Obsidian">
+                <span class="bg-swatch" style="background: #0f172a;"></span>
+                <span>Slate</span>
+              </button>
+              <button class="bg-tone-btn" data-bg="#141110" title="Warm Espresso">
+                <span class="bg-swatch" style="background: #141110;"></span>
+                <span>Espresso</span>
+              </button>
+            </div>
+          </div>
         </div>
 
-        <div class="glass-card theme-box">
-          <!-- Light / Dark Mode Toggle Segment -->
-          <div class="theme-mode-row">
-            <span class="input-label">Appearance Mode</span>
-            <div class="mode-segmented-control">
-              <button id="mode-opt-dark" class="mode-opt" data-mode="dark">Dark</button>
-              <button id="mode-opt-light" class="mode-opt active" data-mode="light">Light</button>
+        <!-- Display & Scaling Section -->
+        <div id="card-display" class="glass-card expandable" style="margin-top: 6px;">
+          <div class="card-header-row" id="display-header" style="cursor: pointer;" title="Tap to expand or collapse display sizing options">
+            <div class="card-header-left">
+              <span class="chip-icon" style="font-size: 13px;">🔍</span>
+              <div class="card-title-group">
+                <span class="card-title">Display & Scaling</span>
+                <span id="display-sub-text" class="card-sub">Adjust UI window size and font scale independently. Tap to collapse.</span>
+              </div>
             </div>
           </div>
 
-          <!-- Theme Presets Header with Pin Button -->
-          <div class="preset-header-row">
-            <span class="preset-label">Quick Presets</span>
-            <button id="pin-current-btn" class="pin-action-btn" title="Pin current custom gradient">
-              <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
-                <line x1="12" y1="5" x2="12" y2="19"></line>
-                <line x1="5" y1="12" x2="19" y2="12"></line>
+          <!-- Collapsible Body for Display -->
+          <div class="limit-inner-body" id="display-body" style="gap: 8px;">
+            <!-- UI Window Scale Slider -->
+            <div class="preset-header-row">
+              <span class="preset-label">UI Window Scale</span>
+              <span id="ui-zoom-badge" class="section-hint" style="font-family: 'JetBrains Mono', monospace; font-weight: 700; color: var(--accent);">95%</span>
+            </div>
+
+            <div class="zoom-slider-row">
+              <span class="zoom-btn" id="ui-zoom-out-btn" title="Decrease UI window size">UI -</span>
+              <input type="range" id="ui-zoom-slider" min="75" max="115" step="5" value="95" class="custom-range-slider">
+              <span class="zoom-btn" id="ui-zoom-in-btn" title="Increase UI window size">UI +</span>
+            </div>
+
+            <!-- Typography Font Scale Slider -->
+            <div class="preset-header-row" style="margin-top: 4px;">
+              <span class="preset-label">Typography Font Size</span>
+              <span id="font-scale-badge" class="section-hint" style="font-family: 'JetBrains Mono', monospace; font-weight: 700; color: var(--accent);">100%</span>
+            </div>
+
+            <div class="zoom-slider-row">
+              <span class="zoom-btn" id="font-size-out-btn" title="Decrease font size">A-</span>
+              <input type="range" id="font-size-slider" min="80" max="125" step="5" value="100" class="custom-range-slider">
+              <span class="zoom-btn" id="font-size-in-btn" title="Increase font size">A+</span>
+            </div>
+
+            <!-- Toolbar Icon Speed Badge Toggle in Settings -->
+            <div class="theme-mode-row" style="margin-top: 6px; padding: 4px 6px; background: var(--input-bg); border-radius: 9px; border: 1px solid var(--border-glass); justify-content: space-between;">
+              <div class="card-title-group" style="flex: 1;">
+                <span class="input-label" style="color: var(--text-main); font-weight: 700; font-size: calc(9.5px * var(--font-scale, 1));">🏷️ Toolbar Icon Speed Badge</span>
+                <span class="card-sub" style="font-size: calc(8px * var(--font-scale, 1));">Show live speed badge on browser extension icon</span>
+              </div>
+              <button class="pill-toggle-btn active" id="toggle-settings-speed-badge-btn" title="Toggle Extension Icon Speed Badge">ON</button>
+            </div>
+          </div>
+        </div>
+
+        <!-- Settings Backup & Sync (Import / Export) -->
+        <div class="section-title-row" style="margin-top: 4px;">
+          <span class="section-label">Backup & Sync</span>
+          <span class="section-hint">JSON Migration</span>
+        </div>
+
+        <div class="glass-card" style="padding: 9px; gap: 6px; display: flex; flex-direction: column;">
+          <div style="display: flex; justify-content: space-between; align-items: center;">
+            <div class="card-title-group">
+              <span class="input-label" style="font-weight: 700; color: var(--text-main); font-size: calc(9.5px * var(--font-scale, 1));">📦 Configuration Backup</span>
+              <span class="card-sub" style="font-size: calc(8px * var(--font-scale, 1));">Export your settings or restore on any browser</span>
+            </div>
+          </div>
+          <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 6px; margin-top: 2px;">
+            <button id="export-settings-btn" class="pill" style="display: flex; align-items: center; justify-content: center; gap: 5px; font-weight: 700; background: var(--accent-light); color: var(--accent); border: 1px solid var(--accent); padding: 5px 8px; border-radius: 7px; cursor: pointer; font-size: calc(9px * var(--font-scale, 1));">
+              <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+                <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path>
+                <polyline points="7 10 12 15 17 10"></polyline>
+                <line x1="12" y1="15" x2="12" y2="3"></line>
               </svg>
-              <span>Pin Gradient</span>
+              <span>Export JSON</span>
             </button>
-          </div>
-
-          <!-- Presets Grid Container -->
-          <div id="preset-grid" class="preset-row">
-            <!-- Rendered dynamically in popup.js -->
-          </div>
-
-          <!-- Dual Custom Gradient Accent Controls -->
-          <div class="input-row">
-            <label for="primary-hex" class="input-label">Gradient Start</label>
-            <div class="color-input-wrapper">
-              <input type="color" id="accent-picker" value="#A2A9A9" tabindex="-1">
-              <input type="text" id="primary-hex" placeholder="#A2A9A9" spellcheck="false">
-            </div>
-          </div>
-
-          <div class="input-row">
-            <label for="secondary-hex" class="input-label">Gradient End</label>
-            <div class="color-input-wrapper">
-              <input type="color" id="secondary-picker" value="#1B4264" tabindex="-1">
-              <input type="text" id="secondary-hex" placeholder="#1B4264" spellcheck="false">
-            </div>
-          </div>
-
-          <!-- Smart Palette Import -->
-          <div class="input-row">
-            <label for="palette-import" class="input-label">Import Palette</label>
-            <div class="text-input-wrapper">
-              <input type="text" id="palette-import" placeholder="Paste hex codes..." spellcheck="false">
-            </div>
+            <button id="import-settings-btn" class="pill" style="display: flex; align-items: center; justify-content: center; gap: 5px; font-weight: 700; background: var(--input-bg); color: var(--text-main); border: 1px solid var(--border-glass); padding: 5px 8px; border-radius: 7px; cursor: pointer; font-size: calc(9px * var(--font-scale, 1));">
+              <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+                <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path>
+                <polyline points="17 8 12 3 7 8"></polyline>
+                <line x1="12" y1="3" x2="12" y2="15"></line>
+              </svg>
+              <span>Import JSON</span>
+            </button>
+            <input type="file" id="import-file-input" accept=".json" style="display: none;">
           </div>
         </div>
 
@@ -295,7 +656,7 @@
 
             <div class="dev-identity">
               <span class="dev-name">NigelWeb</span>
-              <span class="dev-title">Lead Architect of Lsync & Caspian</span>
+              <span class="dev-title">Lead Architect of Caspian</span>
               
               <a href="https://github.com/code4nigel" target="_blank" rel="noopener noreferrer" class="dev-github-link">
                 <svg viewBox="0 0 24 24" width="12" height="12" fill="currentColor">
@@ -303,6 +664,23 @@
                 </svg>
                 <span>github.com/code4nigel</span>
               </a>
+            </div>
+          </div>
+
+          <div class="dev-divider"></div>
+
+          <!-- Developer Exclusive Themes Section -->
+          <div class="dev-exclusive-box">
+            <div class="dev-exclusive-title">
+              👑 DEVELOPER EXCLUSIVE THEMES
+            </div>
+            <div class="dev-exclusive-row">
+              <button class="ena-shine-chip dev-theme-chip" data-start="#fbbf24" data-end="#78350f" title="Apply Golden Premium Ena Shine Theme">
+                <span>👑 Ena Shine</span>
+              </button>
+              <button class="cosmic-gemini-chip dev-theme-chip" data-start="#7c3aed" data-end="#1e1b4b" title="Apply Cosmic Gemini Theme">
+                <span>✨ Cosmic</span>
+              </button>
             </div>
           </div>
 
@@ -325,8 +703,8 @@
 
       <button class="dock-tab-btn active" data-target="engine">
         <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
-          <path d="M2 6c.6.5 1.2 1 2.5 1 2.5 0 2.5-2 5-2 2.5 0 2.5 2 5 2 2.5 0 2.5-2 5-2 1.3 0 1.9.5 2.5 1"></path>
-          <path d="M2 12c.6.5 1.2 1 2.5 1 2.5 0 2.5-2 5-2 2.5 0 2.5 2 5 2 2.5 0 2.5-2 5-2 1.3 0 1.9.5 2.5 1"></path>
+          <path d="M2 6c.6.5 1.2 1 2.5 1 2.5 0 2.5-2 5-2 2.5 0 2.5-2 5-2 2.5 0 2.5-2 5-2 1.3 0 1.9.5 2.5 1"></path>
+          <path d="M2 12c.6.5 1.2 1 2.5 1 2.5 0 2.5-2 5-2 2.5 0 2.5-2 5-2 1.3 0 1.9.5 2.5 1"></path>
           <path d="M2 18c.6.5 1.2 1 2.5 1 2.5 0 2.5-2 5-2 2.5 0 2.5-2 5-2 1.3 0 1.9.5 2.5 1"></path>
         </svg>
         <span>Engine</span>
@@ -344,7 +722,7 @@
       <button class="dock-tab-btn" data-target="settings">
         <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
           <circle cx="12" cy="12" r="3"></circle>
-          <path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"></path>
+          <path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0 2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"></path>
         </svg>
         <span>Settings</span>
       </button>

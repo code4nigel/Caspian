@@ -2,19 +2,38 @@ const DEFAULTS = {
   mode: 'light',
   accent: '#A2A9A9',
   secondary: '#1B4264',
+  customBgColor: '',
+  ui_zoom: 95,
+  font_scale: 100,
   limit: 5,
   pruningEnabled: true,
   vaultEnabled: true,
+  chat_pruning_mode: 'sliding_window',
+  yt_feed_limit_enabled: true,
+  yt_feed_limit: 12,
+  yt_not_interested_enabled: true,
+  flow_speed_enabled: true,
+  flow_speed_val: 1.0,
+  flow_speed_cycle_list: '1, 1.25, 1.5, 1.75, 2, 2.5, 3',
+  flow_speed_shortcut_reset: 'alt+s',
+  flow_speed_shortcut_cycle: 'alt+d',
+  flow_speed_shortcut_up: ']',
+  flow_speed_shortcut_down: '[',
+  flow_speed_show_hud: true,
+  flow_speed_badge_enabled: true,
+  flow_speed_card_collapsed: false,
   disabledSites: [],
   pinnedPresets: []
 };
 
 const DEFAULT_PRESETS = [
   { id: 'caspian', name: 'Caspian', accent: '#A2A9A9', secondary: '#1B4264' },
-  { id: 'cyan', name: 'Cyan', accent: '#00f2fe', secondary: '#4facfe' },
+  { id: 'sunset', name: 'Sunset', accent: '#ff512f', secondary: '#dd2476' },
+  { id: 'cyan', name: 'Neon', accent: '#00f2fe', secondary: '#4facfe' },
   { id: 'violet', name: 'Violet', accent: '#a855f7', secondary: '#ec4899' },
-  { id: 'azure', name: 'Azure', accent: '#38bdf8', secondary: '#0284c7' },
-  { id: 'emerald', name: 'Emerald', accent: '#10b981', secondary: '#34d399' }
+  { id: 'emerald', name: 'Emerald', accent: '#10b981', secondary: '#047857' },
+  { id: 'crimson', name: 'Crimson', accent: '#e11d48', secondary: '#881337' },
+  { id: 'azure', name: 'Azure', accent: '#38bdf8', secondary: '#0284c7' }
 ];
 
 const DEV_FACTS = [
@@ -198,6 +217,23 @@ function hexToRgba(hex, alpha = 0.35) {
   return `rgba(${(num >> 16) & 255}, ${(num >> 8) & 255}, ${num & 255}, ${alpha})`;
 }
 
+function getElevatedToneColor(hexOrRgb, opacity = 0.94) {
+  if (!hexOrRgb) return '';
+  let hex = hexOrRgb.replace('#', '');
+  if (hex.length === 3) hex = hex.split('').map(x => x + x).join('');
+  if (hex.length !== 6) return '';
+
+  let r = parseInt(hex.substring(0, 2), 16);
+  let g = parseInt(hex.substring(2, 4), 16);
+  let b = parseInt(hex.substring(4, 6), 16);
+
+  r = Math.min(255, r + 14);
+  g = Math.min(255, g + 16);
+  b = Math.min(255, b + 22);
+
+  return `rgba(${r}, ${g}, ${b}, ${opacity})`;
+}
+
 function updateThemeMode(mode) {
   const activeMode = mode || 'light';
   document.documentElement.setAttribute('data-theme', activeMode);
@@ -217,10 +253,30 @@ function updateThemeMode(mode) {
 function updateThemeColors(theme) {
   const accent = theme.accent || DEFAULTS.accent;
   const secondary = theme.secondary || DEFAULTS.secondary;
+  const mode = theme.mode || DEFAULTS.mode;
 
   document.documentElement.style.setProperty('--accent', accent);
   document.documentElement.style.setProperty('--secondary', secondary);
   document.documentElement.style.setProperty('--accent-glow', hexToRgba(accent, 0.35));
+
+  if (mode === 'dark') {
+    if (theme.customBgColor) {
+      document.documentElement.style.setProperty('--bg-deep', theme.customBgColor);
+      document.body.style.background = theme.customBgColor;
+      const dockElevated = getElevatedToneColor(theme.customBgColor, 0.94);
+      if (dockElevated) {
+        document.documentElement.style.setProperty('--dock-bg', dockElevated);
+      }
+    } else {
+      document.documentElement.style.removeProperty('--bg-deep');
+      document.documentElement.style.setProperty('--dock-bg', 'rgba(14, 19, 32, 0.94)');
+      document.body.style.background = '';
+    }
+  } else {
+    document.documentElement.style.removeProperty('--bg-deep');
+    document.documentElement.style.setProperty('--dock-bg', 'rgba(255, 255, 255, 0.96)');
+    document.body.style.background = '';
+  }
 }
 
 function renderPresets(pinnedList = []) {
@@ -1399,28 +1455,301 @@ function exportStyledPdfDocument(data) {
   });
 }
 
-// Interactive Card Toggle Handlers
+// Interactive Card & Mode Toggle Handlers
 function setupCardToggleHandlers() {
-  const pruningCard = document.getElementById('pruning-status-card');
-  if (pruningCard) {
-    pruningCard.addEventListener('click', () => {
-      chrome.storage.local.get('pruningEnabled', (data) => {
-        const next = !(data.pruningEnabled ?? true);
-        chrome.storage.local.set({ pruningEnabled: next }, loadSettings);
+  const toggleLimitBtn = document.getElementById('toggle-chat-limit-btn');
+  const limitHeader = document.getElementById('chat-limit-header');
+  
+  function toggleLimit() {
+    chrome.storage.local.get(['pruningEnabled', 'enabled'], (data) => {
+      const current = data.pruningEnabled ?? (data.enabled ?? true);
+      const next = !current;
+      chrome.storage.local.set({ pruningEnabled: next, enabled: next }, loadSettings);
+    });
+  }
+
+  if (toggleLimitBtn) {
+    toggleLimitBtn.addEventListener('click', (e) => {
+      e.stopPropagation();
+      toggleLimit();
+    });
+  }
+
+  // Collapsible Accordion Header Handler
+  if (limitHeader) {
+    limitHeader.addEventListener('click', (e) => {
+      if (e.target.closest('#toggle-chat-limit-btn')) return;
+      const limitBody = document.getElementById('chat-limit-body');
+      const statusSub = document.getElementById('status-sub-text');
+      if (!limitBody) return;
+      const isCurrentlyVisible = limitBody.style.display !== 'none';
+      const nextVisible = !isCurrentlyVisible;
+      limitBody.style.display = nextVisible ? 'flex' : 'none';
+      chrome.storage.local.set({ limit_card_collapsed: !nextVisible });
+      if (statusSub) {
+        chrome.storage.local.get(['pruningEnabled', 'enabled'], (data) => {
+          const isEnabled = data.pruningEnabled ?? (data.enabled ?? true);
+          if (isEnabled) {
+            statusSub.textContent = nextVisible ? 'Limits message count to improve performance & prevent lag. Tap to collapse.' : 'Limits message count to improve performance & prevent lag. Tap to expand.';
+          }
+        });
+      }
+    });
+  }
+
+  const toggleTempBtn = document.getElementById('toggle-temp-saver-btn');
+  const tempHeader = document.getElementById('temp-vault-header');
+
+  function toggleVault() {
+    chrome.storage.local.get('vaultEnabled', (data) => {
+      const next = !(data.vaultEnabled ?? true);
+      chrome.storage.local.set({ vaultEnabled: next }, loadSettings);
+    });
+  }
+
+  if (toggleTempBtn) {
+    toggleTempBtn.addEventListener('click', (e) => {
+      e.stopPropagation();
+      toggleVault();
+    });
+  }
+
+  if (tempHeader) {
+    tempHeader.addEventListener('click', toggleVault);
+  }
+
+  // Virtualization Mode Pills (Sliding Window / Tail Window)
+  const btnSliding = document.getElementById('btn-mode-sliding');
+  const btnTail = document.getElementById('btn-mode-tail');
+
+  if (btnSliding) {
+    btnSliding.addEventListener('click', () => {
+      chrome.storage.local.set({ chat_pruning_mode: 'sliding_window' }, loadSettings);
+    });
+  }
+
+  if (btnTail) {
+    btnTail.addEventListener('click', () => {
+      chrome.storage.local.set({ chat_pruning_mode: 'tail' }, loadSettings);
+    });
+  }
+
+  // Collapsible Aesthetics & Themes Card Handler
+  const aestheticsHeader = document.getElementById('aesthetics-header');
+  if (aestheticsHeader) {
+    aestheticsHeader.addEventListener('click', (e) => {
+      if (e.target.closest('#reset-link')) return;
+      const aesBody = document.getElementById('aesthetics-body');
+      const aesSub = document.getElementById('aesthetics-sub-text');
+      if (!aesBody) return;
+      const isCurrentlyVisible = aesBody.style.display !== 'none';
+      const nextVisible = !isCurrentlyVisible;
+      aesBody.style.display = nextVisible ? 'flex' : 'none';
+      chrome.storage.local.set({ aesthetics_card_collapsed: !nextVisible });
+      if (aesSub) {
+        aesSub.textContent = nextVisible ? 'Customize colors, gradients & background tones. Tap to collapse.' : 'Customize colors, gradients & background tones. Tap to expand.';
+      }
+    });
+  }
+
+  // Collapsible Display & Scaling Card Handler
+  const displayHeader = document.getElementById('display-header');
+  if (displayHeader) {
+    displayHeader.addEventListener('click', () => {
+      const displayBody = document.getElementById('display-body');
+      const displaySub = document.getElementById('display-sub-text');
+      if (!displayBody) return;
+      const isCurrentlyVisible = displayBody.style.display !== 'none';
+      const nextVisible = !isCurrentlyVisible;
+      displayBody.style.display = nextVisible ? 'flex' : 'none';
+      chrome.storage.local.set({ display_card_collapsed: !nextVisible });
+      if (displaySub) {
+        displaySub.textContent = nextVisible ? 'Adjust UI window size and font scale independently. Tap to collapse.' : 'Adjust UI window size and font scale independently. Tap to expand.';
+      }
+    });
+  }
+
+  // Collapsible YouTube Home Card Handler
+  const ytHeader = document.getElementById('youtube-home-header');
+  const toggleYtFeedBtn = document.getElementById('toggle-yt-feed-btn');
+  const toggleYtNotInterestedBtn = document.getElementById('toggle-yt-not-interested-btn');
+
+  function toggleYtFeed() {
+    chrome.storage.local.get('yt_feed_limit_enabled', (data) => {
+      const current = data.yt_feed_limit_enabled ?? DEFAULTS.yt_feed_limit_enabled;
+      chrome.storage.local.set({ yt_feed_limit_enabled: !current }, loadSettings);
+    });
+  }
+
+  if (toggleYtFeedBtn) {
+    toggleYtFeedBtn.addEventListener('click', (e) => {
+      e.stopPropagation();
+      toggleYtFeed();
+    });
+  }
+
+  if (ytHeader) {
+    ytHeader.addEventListener('click', (e) => {
+      if (e.target.closest('#toggle-yt-feed-btn')) return;
+      const ytBody = document.getElementById('youtube-home-body');
+      const ytSub = document.getElementById('yt-status-sub-text');
+      if (!ytBody) return;
+      const isCurrentlyVisible = ytBody.style.display !== 'none';
+      const nextVisible = !isCurrentlyVisible;
+      ytBody.style.display = nextVisible ? 'flex' : 'none';
+      chrome.storage.local.set({ yt_card_collapsed: !nextVisible });
+      if (ytSub) {
+        ytSub.textContent = nextVisible ? 'Feed video limits & quick Not-Interested button. Tap to collapse.' : 'Feed video limits & quick Not-Interested button. Tap to expand.';
+      }
+    });
+  }
+
+  if (toggleYtNotInterestedBtn) {
+    toggleYtNotInterestedBtn.addEventListener('click', (e) => {
+      e.stopPropagation();
+      chrome.storage.local.get('yt_not_interested_enabled', (data) => {
+        const current = data.yt_not_interested_enabled ?? DEFAULTS.yt_not_interested_enabled;
+        chrome.storage.local.set({ yt_not_interested_enabled: !current }, loadSettings);
       });
     });
   }
 
-  const vaultCard = document.getElementById('temp-vault-card');
-  if (vaultCard) {
-    vaultCard.addEventListener('click', (e) => {
-      if (e.target.closest('.temp-act-btn') || e.target.closest('.export-dropdown-wrapper')) return;
-      chrome.storage.local.get('vaultEnabled', (data) => {
-        const next = !(data.vaultEnabled ?? true);
-        chrome.storage.local.set({ vaultEnabled: next }, loadSettings);
+  // YouTube Limit numerical pills
+  document.querySelectorAll('.yt-pill').forEach(pill => {
+    pill.addEventListener('click', (e) => {
+      e.stopPropagation();
+      const val = parseInt(pill.dataset.yt);
+      if (!isNaN(val)) {
+        chrome.storage.local.set({ yt_feed_limit: val }, loadSettings);
+      }
+    });
+  });
+
+  // Flow Speed Card Handlers
+  const toggleFlowSpeedBtn = document.getElementById('toggle-flow-speed-btn');
+  const flowSpeedHeader = document.getElementById('flow-speed-header');
+  const flowSpeedBody = document.getElementById('flow-speed-body');
+  const flowSpeedSub = document.getElementById('flow-speed-status-sub-text');
+  const toggleFlowSpeedHudBtn = document.getElementById('toggle-flow-speed-hud-btn');
+  const flowSpeedSlider = document.getElementById('flow-speed-slider');
+  const speedDownBtn = document.getElementById('speed-down-btn');
+  const speedUpBtn = document.getElementById('speed-up-btn');
+  const flowSpeedCycleInput = document.getElementById('flow-speed-cycle-input');
+  const shortcutResetInput = document.getElementById('shortcut-reset-input');
+  const shortcutCycleInput = document.getElementById('shortcut-cycle-input');
+
+  if (toggleFlowSpeedBtn) {
+    toggleFlowSpeedBtn.addEventListener('click', (e) => {
+      e.stopPropagation();
+      chrome.storage.local.get('flow_speed_enabled', (data) => {
+        const current = data.flow_speed_enabled ?? DEFAULTS.flow_speed_enabled;
+        chrome.storage.local.set({ flow_speed_enabled: !current }, loadSettings);
       });
     });
   }
+
+  if (flowSpeedHeader && flowSpeedBody) {
+    flowSpeedHeader.addEventListener('click', () => {
+      const isVisible = flowSpeedBody.style.display !== 'none';
+      const nextVisible = !isVisible;
+      flowSpeedBody.style.display = nextVisible ? 'flex' : 'none';
+      chrome.storage.local.set({ flow_speed_card_collapsed: !nextVisible });
+      if (flowSpeedSub) {
+        flowSpeedSub.textContent = nextVisible ? 'Universal video & audio speed engine. Tap to collapse.' : 'Universal video & audio speed engine. Tap to expand.';
+      }
+    });
+  }
+
+  if (flowSpeedSlider) {
+    flowSpeedSlider.addEventListener('input', (e) => {
+      const val = parseFloat(e.target.value);
+      if (!isNaN(val)) {
+        const display = document.getElementById('flow-speed-val-display');
+        const badge = document.getElementById('flow-speed-active-badge');
+        if (display) display.textContent = `${val.toFixed(2)}x`;
+        if (badge) badge.textContent = `${val.toFixed(2)}x`;
+        chrome.storage.local.set({ flow_speed_val: val });
+        document.querySelectorAll('.speed-pill').forEach(p => {
+          p.classList.toggle('active', Math.abs(parseFloat(p.dataset.speed) - val) < 0.02);
+        });
+      }
+    });
+  }
+
+  if (speedDownBtn && flowSpeedSlider) {
+    speedDownBtn.addEventListener('click', (e) => {
+      e.stopPropagation();
+      const current = parseFloat(flowSpeedSlider.value) || 1.0;
+      const next = Math.max(0.25, parseFloat((current - 0.25).toFixed(2)));
+      flowSpeedSlider.value = next;
+      flowSpeedSlider.dispatchEvent(new Event('input'));
+    });
+  }
+
+  if (speedUpBtn && flowSpeedSlider) {
+    speedUpBtn.addEventListener('click', (e) => {
+      e.stopPropagation();
+      const current = parseFloat(flowSpeedSlider.value) || 1.0;
+      const next = Math.min(5.0, parseFloat((current + 0.25).toFixed(2)));
+      flowSpeedSlider.value = next;
+      flowSpeedSlider.dispatchEvent(new Event('input'));
+    });
+  }
+
+  document.querySelectorAll('.speed-pill').forEach(pill => {
+    pill.addEventListener('click', (e) => {
+      e.stopPropagation();
+      const speed = parseFloat(pill.dataset.speed);
+      if (!isNaN(speed)) {
+        if (flowSpeedSlider) flowSpeedSlider.value = speed;
+        chrome.storage.local.set({ flow_speed_val: speed }, loadSettings);
+      }
+    });
+  });
+
+  if (flowSpeedCycleInput) {
+    flowSpeedCycleInput.addEventListener('change', (e) => {
+      chrome.storage.local.set({ flow_speed_cycle_list: e.target.value.trim() });
+    });
+  }
+
+  if (shortcutResetInput) {
+    shortcutResetInput.addEventListener('input', (e) => {
+      const val = e.target.value.trim().toLowerCase();
+      if (val) chrome.storage.local.set({ flow_speed_shortcut_reset: val });
+    });
+  }
+
+  if (shortcutCycleInput) {
+    shortcutCycleInput.addEventListener('input', (e) => {
+      const val = e.target.value.trim().toLowerCase();
+      if (val) chrome.storage.local.set({ flow_speed_shortcut_cycle: val });
+    });
+  }
+
+  if (toggleFlowSpeedHudBtn) {
+    toggleFlowSpeedHudBtn.addEventListener('click', (e) => {
+      e.stopPropagation();
+      chrome.storage.local.get('flow_speed_show_hud', (data) => {
+        const current = data.flow_speed_show_hud ?? DEFAULTS.flow_speed_show_hud;
+        chrome.storage.local.set({ flow_speed_show_hud: !current }, loadSettings);
+      });
+    });
+  }
+
+  const toggleFlowSpeedBadgeBtn = document.getElementById('toggle-flow-speed-badge-btn');
+  const toggleSettingsSpeedBadgeBtn = document.getElementById('toggle-settings-speed-badge-btn');
+
+  const handleBadgeToggle = (e) => {
+    e.stopPropagation();
+    chrome.storage.local.get('flow_speed_badge_enabled', (data) => {
+      const current = data.flow_speed_badge_enabled ?? DEFAULTS.flow_speed_badge_enabled;
+      chrome.storage.local.set({ flow_speed_badge_enabled: !current }, loadSettings);
+    });
+  };
+
+  if (toggleFlowSpeedBadgeBtn) toggleFlowSpeedBadgeBtn.addEventListener('click', handleBadgeToggle);
+  if (toggleSettingsSpeedBadgeBtn) toggleSettingsSpeedBadgeBtn.addEventListener('click', handleBadgeToggle);
 }
 
 // Sites Toggles Setup (ChatGPT & Gemini)
@@ -1447,11 +1776,24 @@ function setupSiteToggles(disabledSites = []) {
   });
 }
 
+// Developer Exclusive Themes Click Handlers
+function setupDevExclusiveThemes() {
+  document.querySelectorAll('.dev-theme-chip').forEach(chip => {
+    chip.addEventListener('click', () => {
+      const accent = chip.dataset.start;
+      const secondary = chip.dataset.end;
+      chrome.storage.local.set({ accent, secondary }, loadSettings);
+    });
+  });
+}
+
 function loadSettings() {
-  chrome.storage.local.get(['pruningEnabled', 'vaultEnabled', 'enabled', 'limit', 'mode', 'accent', 'secondary', 'pinnedPresets', 'disabledSites'], (data) => {
+  chrome.storage.local.get(['pruningEnabled', 'vaultEnabled', 'enabled', 'limit', 'mode', 'accent', 'secondary', 'customBgColor', 'ui_zoom', 'font_scale', 'pinnedPresets', 'disabledSites', 'chat_pruning_mode', 'limit_card_collapsed', 'aesthetics_card_collapsed', 'display_card_collapsed', 'yt_feed_limit_enabled', 'yt_feed_limit', 'yt_not_interested_enabled', 'yt_card_collapsed', 'flow_speed_enabled', 'flow_speed_badge_enabled', 'flow_speed_val', 'flow_speed_cycle_list', 'flow_speed_shortcut_reset', 'flow_speed_shortcut_cycle', 'flow_speed_shortcut_up', 'flow_speed_shortcut_down', 'flow_speed_show_hud', 'flow_speed_card_collapsed'], (data) => {
     const currentMode = data.mode || DEFAULTS.mode;
     updateThemeMode(currentMode);
     updateThemeColors(data);
+    applyUiZoom(data.ui_zoom ?? DEFAULTS.ui_zoom);
+    applyFontScale(data.font_scale ?? DEFAULTS.font_scale);
 
     renderPresets(data.pinnedPresets || []);
 
@@ -1468,45 +1810,184 @@ function loadSettings() {
     if (secondaryHexInput) secondaryHexInput.value = secondaryVal.toUpperCase();
     if (secondaryPicker) secondaryPicker.value = secondaryVal.length === 7 ? secondaryVal : DEFAULTS.secondary;
 
-    // Pruning Card State
+    // Background Canvas State Sync
+    const customBg = data.customBgColor || '';
+    document.querySelectorAll('.bg-tone-btn').forEach(btn => {
+      btn.classList.toggle('active', (btn.dataset.bg || '').toLowerCase() === customBg.toLowerCase());
+    });
+    const customBgHexInput = document.getElementById('custom-bg-hex');
+    const customBgPicker = document.getElementById('custom-bg-picker');
+    if (customBgHexInput) customBgHexInput.value = customBg ? customBg.toUpperCase() : '';
+    if (customBgPicker) customBgPicker.value = customBg && customBg.length === 7 ? customBg : '#0a1128';
+
+    // Aesthetics Card Collapsible State
+    const isAesCollapsed = data.aesthetics_card_collapsed ?? false;
+    const aesBody = document.getElementById('aesthetics-body');
+    const aesSub = document.getElementById('aesthetics-sub-text');
+    if (aesBody) aesBody.style.display = isAesCollapsed ? 'none' : 'flex';
+    if (aesSub) {
+      aesSub.textContent = isAesCollapsed ? 'Customize colors, gradients & background tones. Tap to expand.' : 'Customize colors, gradients & background tones. Tap to collapse.';
+    }
+
+    // Display Card Collapsible State
+    const isDisplayCollapsed = data.display_card_collapsed ?? false;
+    const displayBody = document.getElementById('display-body');
+    const displaySub = document.getElementById('display-sub-text');
+    if (displayBody) displayBody.style.display = isDisplayCollapsed ? 'none' : 'flex';
+    if (displaySub) {
+      displaySub.textContent = isDisplayCollapsed ? 'Adjust UI window size and font scale independently. Tap to expand.' : 'Adjust UI window size and font scale independently. Tap to collapse.';
+    }
+
+    // YouTube Home Card State
+    const ytFeedEnabled = data.yt_feed_limit_enabled ?? DEFAULTS.yt_feed_limit_enabled;
+    const ytLimit = data.yt_feed_limit ?? DEFAULTS.yt_feed_limit;
+    const ytNotInterestedEnabled = data.yt_not_interested_enabled ?? DEFAULTS.yt_not_interested_enabled;
+    const isYtCollapsed = data.yt_card_collapsed ?? false;
+
+    const ytCard = document.getElementById('card-youtube-home');
+    const ytStatusTitle = document.getElementById('yt-status-title');
+    const ytActiveBadge = document.getElementById('yt-active-limit-badge');
+    const ytFeedBtn = document.getElementById('toggle-yt-feed-btn');
+    const ytNotInterestedBtn = document.getElementById('toggle-yt-not-interested-btn');
+    const ytBody = document.getElementById('youtube-home-body');
+
+    if (ytBody) ytBody.style.display = isYtCollapsed ? 'none' : 'flex';
+    if (ytCard) ytCard.classList.toggle('is-disabled', !ytFeedEnabled);
+    if (ytStatusTitle) ytStatusTitle.textContent = ytFeedEnabled ? 'YouTube Home Feed: ON' : 'YouTube Home Feed: OFF';
+    if (ytActiveBadge) ytActiveBadge.textContent = ytLimit >= 9999 ? '∞ All' : `${ytLimit} Videos`;
+    if (ytFeedBtn) {
+      ytFeedBtn.textContent = ytFeedEnabled ? 'ON' : 'OFF';
+      ytFeedBtn.classList.toggle('active', ytFeedEnabled);
+    }
+    if (ytNotInterestedBtn) {
+      ytNotInterestedBtn.textContent = ytNotInterestedEnabled ? 'ON' : 'OFF';
+      ytNotInterestedBtn.classList.toggle('active', ytNotInterestedEnabled);
+    }
+
+    document.querySelectorAll('.yt-pill').forEach(p => {
+      p.classList.toggle('active', parseInt(p.dataset.yt) === ytLimit);
+    });
+
+    // Flow Speed Card State & Sync
+    const flowSpeedEnabled = data.flow_speed_enabled ?? DEFAULTS.flow_speed_enabled;
+    const flowSpeedVal = parseFloat(data.flow_speed_val) || DEFAULTS.flow_speed_val;
+    const flowSpeedCycleList = data.flow_speed_cycle_list ?? DEFAULTS.flow_speed_cycle_list;
+    const shortcutReset = data.flow_speed_shortcut_reset ?? DEFAULTS.flow_speed_shortcut_reset;
+    const shortcutCycle = data.flow_speed_shortcut_cycle ?? DEFAULTS.flow_speed_shortcut_cycle;
+    const flowSpeedShowHud = data.flow_speed_show_hud ?? DEFAULTS.flow_speed_show_hud;
+    const isFlowSpeedCollapsed = data.flow_speed_card_collapsed ?? false;
+
+    const flowSpeedCard = document.getElementById('card-flow-speed');
+    const flowSpeedStatusTitle = document.getElementById('flow-speed-status-title');
+    const flowSpeedActiveBadge = document.getElementById('flow-speed-active-badge');
+    const flowSpeedValDisplay = document.getElementById('flow-speed-val-display');
+    const flowSpeedBtn = document.getElementById('toggle-flow-speed-btn');
+    const flowSpeedHudBtn = document.getElementById('toggle-flow-speed-hud-btn');
+    const flowSpeedBody = document.getElementById('flow-speed-body');
+    const flowSpeedSlider = document.getElementById('flow-speed-slider');
+    const flowSpeedCycleInput = document.getElementById('flow-speed-cycle-input');
+    const shortcutResetInput = document.getElementById('shortcut-reset-input');
+    const shortcutCycleInput = document.getElementById('shortcut-cycle-input');
+
+    if (flowSpeedBody) flowSpeedBody.style.display = isFlowSpeedCollapsed ? 'none' : 'flex';
+    if (flowSpeedCard) flowSpeedCard.classList.toggle('is-disabled', !flowSpeedEnabled);
+    if (flowSpeedStatusTitle) flowSpeedStatusTitle.textContent = flowSpeedEnabled ? 'Flow Speed: ON' : 'Flow Speed: OFF';
+    if (flowSpeedActiveBadge) flowSpeedActiveBadge.textContent = `${flowSpeedVal.toFixed(2)}x`;
+    if (flowSpeedValDisplay) flowSpeedValDisplay.textContent = `${flowSpeedVal.toFixed(2)}x`;
+    if (flowSpeedSlider) flowSpeedSlider.value = flowSpeedVal;
+    if (flowSpeedCycleInput) flowSpeedCycleInput.value = flowSpeedCycleList;
+    if (shortcutResetInput) shortcutResetInput.value = shortcutReset.toUpperCase();
+    if (shortcutCycleInput) shortcutCycleInput.value = shortcutCycle.toUpperCase();
+
+    if (flowSpeedBtn) {
+      flowSpeedBtn.textContent = flowSpeedEnabled ? 'ON' : 'OFF';
+      flowSpeedBtn.classList.toggle('active', flowSpeedEnabled);
+    }
+    if (flowSpeedHudBtn) {
+      flowSpeedHudBtn.textContent = flowSpeedShowHud ? 'ON' : 'OFF';
+      flowSpeedHudBtn.classList.toggle('active', flowSpeedShowHud);
+    }
+
+    const flowSpeedBadgeEnabled = data.flow_speed_badge_enabled ?? DEFAULTS.flow_speed_badge_enabled;
+    const flowSpeedBadgeBtn = document.getElementById('toggle-flow-speed-badge-btn');
+    const settingsBadgeBtn = document.getElementById('toggle-settings-speed-badge-btn');
+
+    if (flowSpeedBadgeBtn) {
+      flowSpeedBadgeBtn.textContent = flowSpeedBadgeEnabled ? 'ON' : 'OFF';
+      flowSpeedBadgeBtn.classList.toggle('active', flowSpeedBadgeEnabled);
+    }
+    if (settingsBadgeBtn) {
+      settingsBadgeBtn.textContent = flowSpeedBadgeEnabled ? 'ON' : 'OFF';
+      settingsBadgeBtn.classList.toggle('active', flowSpeedBadgeEnabled);
+    }
+
+    document.querySelectorAll('.speed-pill').forEach(p => {
+      p.classList.toggle('active', Math.abs(parseFloat(p.dataset.speed) - flowSpeedVal) < 0.02);
+    });
+
+    // Chat Message Limit Card State & Collapsible Accordion
     const pruningEnabled = data.pruningEnabled ?? (data.enabled ?? true);
-    const pruningCard = document.getElementById('pruning-status-card');
+    const limitCard = document.getElementById('card-chat-limit');
     const statusDot = document.getElementById('status-indicator');
     const statusText = document.getElementById('status-state-text');
     const statusSub = document.getElementById('status-sub-text');
+    const toggleLimitBtn = document.getElementById('toggle-chat-limit-btn');
+    const limitBody = document.getElementById('chat-limit-body');
+    const isCollapsed = data.limit_card_collapsed ?? false;
 
-    if (pruningCard) pruningCard.classList.toggle('is-disabled', !pruningEnabled);
+    if (limitBody) limitBody.style.display = isCollapsed ? 'none' : 'flex';
+    if (limitCard) limitCard.classList.toggle('is-disabled', !pruningEnabled);
     if (statusDot) {
       statusDot.classList.toggle('active', pruningEnabled);
       statusDot.classList.toggle('inactive', !pruningEnabled);
     }
     if (statusText) {
-      statusText.textContent = pruningEnabled ? 'Chat Pruning Active' : 'Chat Pruning Disabled';
+      statusText.textContent = pruningEnabled ? 'Chat Message Limit: ON' : 'Chat Message Limit: OFF';
     }
     if (statusSub) {
-      statusSub.textContent = pruningEnabled ? 'Lag Fixer & DOM Limit Active' : 'Click card to activate Chat Pruning';
+      if (!pruningEnabled) {
+        statusSub.textContent = 'Click to activate Chat Message Limit.';
+      } else {
+        statusSub.textContent = isCollapsed ? 'Limits message count to improve performance & prevent lag. Tap to expand.' : 'Limits message count to improve performance & prevent lag. Tap to collapse.';
+      }
     }
+    if (toggleLimitBtn) {
+      toggleLimitBtn.textContent = pruningEnabled ? 'ON' : 'OFF';
+      toggleLimitBtn.classList.toggle('active', pruningEnabled);
+    }
+
+    // Pruning Virtualization Mode Pills State
+    const currentPruningMode = data.chat_pruning_mode || DEFAULTS.chat_pruning_mode;
+    const btnSliding = document.getElementById('btn-mode-sliding');
+    const btnTail = document.getElementById('btn-mode-tail');
+    if (btnSliding) btnSliding.classList.toggle('active', currentPruningMode === 'sliding_window');
+    if (btnTail) btnTail.classList.toggle('active', currentPruningMode === 'tail');
 
     // Vault Card State
     const vaultEnabled = data.vaultEnabled ?? true;
     const vaultCard = document.getElementById('temp-vault-card');
     const tempDot = document.getElementById('temp-indicator-dot');
     const tempDesc = document.getElementById('temp-vault-desc');
+    const toggleTempBtn = document.getElementById('toggle-temp-saver-btn');
 
     if (vaultCard) vaultCard.classList.toggle('is-disabled', !vaultEnabled);
     if (tempDot) {
       tempDot.classList.toggle('active', vaultEnabled);
       tempDot.classList.toggle('inactive', !vaultEnabled);
     }
+    if (toggleTempBtn) {
+      toggleTempBtn.textContent = vaultEnabled ? 'ON' : 'OFF';
+      toggleTempBtn.classList.toggle('active', vaultEnabled);
+    }
     if (tempDesc) {
       if (!vaultEnabled) {
-        tempDesc.textContent = 'Temporary Chat Vault Disabled (Click card to enable)';
+        tempDesc.textContent = 'Temporary Chat Saver Disabled (Click to enable)';
       } else {
         fetchCurrentTabData((tabData) => {
           if (tabData && tabData.isTemporary) {
-            tempDesc.textContent = 'Convert this temporary session into a permanent saved chat in your history.';
+            tempDesc.textContent = 'Convert this temporary session into permanent history.';
           } else {
-            tempDesc.textContent = 'Export or copy this conversation transcript anytime.';
+            tempDesc.textContent = 'Save or convert temporary sessions into permanent history.';
           }
         });
       }
@@ -1517,11 +1998,11 @@ function loadSettings() {
     const powerToggle = document.getElementById('power-toggle');
     if (powerToggle) powerToggle.classList.toggle('active', isMasterOn);
 
-    // Limit badge
+    // Limit badge & Pills
     const limit = data.limit || DEFAULTS.limit;
     const limitBadge = document.getElementById('active-limit-badge');
     if (limitBadge) {
-      limitBadge.textContent = limit >= 9999 ? '∞ All' : `${limit} ${limit === 1 ? 'Turn' : 'Turns'}`;
+      limitBadge.textContent = limit >= 9999 ? '∞ All' : `${limit} ${limit === 1 ? 'Message' : 'Messages'}`;
     }
 
     document.querySelectorAll('.pill').forEach(p => {
@@ -1532,18 +2013,14 @@ function loadSettings() {
   });
 }
 
-// Floating Dock Slider & Navigation Handler (3 Tabs)
+// Floating Dock Slider & Navigation Handler (3 Tabs with Persistent Active Tab Memory)
 function updateDockIndicator(targetTab) {
   const activeBtn = document.querySelector(`.dock-tab-btn[data-target="${targetTab}"]`);
   const indicator = document.getElementById('dock-indicator');
-  const dock = document.getElementById('floating-dock');
 
-  if (activeBtn && indicator && dock) {
-    const btnRect = activeBtn.getBoundingClientRect();
-    const dockRect = dock.getBoundingClientRect();
-
-    indicator.style.left = `${btnRect.left - dockRect.left}px`;
-    indicator.style.width = `${btnRect.width}px`;
+  if (activeBtn && indicator) {
+    indicator.style.left = `${activeBtn.offsetLeft}px`;
+    indicator.style.width = `${activeBtn.offsetWidth}px`;
   }
 }
 
@@ -1557,6 +2034,11 @@ function switchTab(targetTab) {
   });
 
   updateDockIndicator(targetTab);
+
+  // Save active tab preference so it reopens in the same tab
+  try {
+    chrome.storage.local.set({ active_popup_tab: targetTab });
+  } catch(e) {}
 }
 
 document.querySelectorAll('.dock-tab-btn').forEach(btn => {
@@ -1707,10 +2189,237 @@ if (factBubble && factText) {
   });
 }
 
-// Initialize Position, Settings & Temp Vault
+// Background Canvas Options Handler
+function setupBackgroundOptions() {
+  document.querySelectorAll('.bg-tone-btn').forEach(btn => {
+    btn.addEventListener('click', () => {
+      const chosenBg = btn.dataset.bg || '';
+      chrome.storage.local.set({ customBgColor: chosenBg }, loadSettings);
+    });
+  });
+
+  const bgPicker = document.getElementById('custom-bg-picker');
+  if (bgPicker) {
+    bgPicker.addEventListener('input', (e) => {
+      const val = e.target.value;
+      chrome.storage.local.set({ customBgColor: val }, loadSettings);
+    });
+  }
+
+  const bgHexInput = document.getElementById('custom-bg-hex');
+  if (bgHexInput) {
+    bgHexInput.addEventListener('input', (e) => {
+      let val = e.target.value.trim();
+      if (!val) {
+        chrome.storage.local.set({ customBgColor: '' }, loadSettings);
+        return;
+      }
+      if (!val.startsWith('#')) val = '#' + val;
+      if (/^#[0-9A-F]{6}$/i.test(val)) {
+        chrome.storage.local.set({ customBgColor: val }, loadSettings);
+      }
+    });
+  }
+}
+
+// UI Zoom Scale Controller
+function applyUiZoom(zoomPercent = 100) {
+  const pct = parseInt(zoomPercent) || 100;
+  const factor = pct / 100;
+  document.documentElement.style.setProperty('--ui-scale', factor);
+  const badge = document.getElementById('ui-zoom-badge');
+  if (badge) badge.textContent = `${pct}%`;
+  const slider = document.getElementById('ui-zoom-slider');
+  if (slider) slider.value = pct;
+
+  // Re-align dock indicator seamlessly
+  chrome.storage.local.get('active_popup_tab', (data) => {
+    updateDockIndicator(data.active_popup_tab || 'engine');
+  });
+}
+
+// Typography Font Scale Controller
+function applyFontScale(fontPercent = 100) {
+  const pct = parseInt(fontPercent) || 100;
+  const factor = pct / 100;
+  document.documentElement.style.setProperty('--font-scale', factor);
+  const badge = document.getElementById('font-scale-badge');
+  if (badge) badge.textContent = `${pct}%`;
+  const slider = document.getElementById('font-size-slider');
+  if (slider) slider.value = pct;
+}
+
+function setupZoomAndFontControls() {
+  // 1. UI Window Zoom Controls
+  const uiSlider = document.getElementById('ui-zoom-slider');
+  const uiZoomIn = document.getElementById('ui-zoom-in-btn');
+  const uiZoomOut = document.getElementById('ui-zoom-out-btn');
+
+  if (uiSlider) {
+    uiSlider.addEventListener('input', (e) => {
+      const val = parseInt(e.target.value);
+      applyUiZoom(val);
+      chrome.storage.local.set({ ui_zoom: val });
+    });
+  }
+
+  if (uiZoomIn) {
+    uiZoomIn.addEventListener('click', () => {
+      const slider = document.getElementById('ui-zoom-slider');
+      const current = parseInt(slider?.value || 100);
+      const next = Math.min(115, current + 5);
+      applyUiZoom(next);
+      chrome.storage.local.set({ ui_zoom: next });
+    });
+  }
+
+  if (uiZoomOut) {
+    uiZoomOut.addEventListener('click', () => {
+      const slider = document.getElementById('ui-zoom-slider');
+      const current = parseInt(slider?.value || 100);
+      const next = Math.max(75, current - 5);
+      applyUiZoom(next);
+      chrome.storage.local.set({ ui_zoom: next });
+    });
+  }
+
+  // 2. Typography Font Scale Controls
+  const fontSlider = document.getElementById('font-size-slider');
+  const fontIn = document.getElementById('font-size-in-btn');
+  const fontOut = document.getElementById('font-size-out-btn');
+
+  if (fontSlider) {
+    fontSlider.addEventListener('input', (e) => {
+      const val = parseInt(e.target.value);
+      applyFontScale(val);
+      chrome.storage.local.set({ font_scale: val });
+    });
+  }
+
+  if (fontIn) {
+    fontIn.addEventListener('click', () => {
+      const slider = document.getElementById('font-size-slider');
+      const current = parseInt(slider?.value || 100);
+      const next = Math.min(125, current + 5);
+      applyFontScale(next);
+      chrome.storage.local.set({ font_scale: next });
+    });
+  }
+
+  if (fontOut) {
+    fontOut.addEventListener('click', () => {
+      const slider = document.getElementById('font-size-slider');
+      const current = parseInt(slider?.value || 100);
+      const next = Math.max(80, current - 5);
+      applyFontScale(next);
+      chrome.storage.local.set({ font_scale: next });
+    });
+  }
+}
+
+// Settings Backup & Sync (Export / Import JSON)
+function setupSettingsBackupSync() {
+  const exportBtn = document.getElementById('export-settings-btn');
+  const importBtn = document.getElementById('import-settings-btn');
+  const fileInput = document.getElementById('import-file-input');
+
+  if (exportBtn) {
+    exportBtn.addEventListener('click', () => {
+      chrome.storage.local.get(null, (data) => {
+        const exportObj = {
+          app: 'Caspian',
+          version: chrome.runtime?.getManifest?.()?.version || '6.1.1',
+          exportDate: new Date().toISOString(),
+          settings: data
+        };
+        const blob = new Blob([JSON.stringify(exportObj, null, 2)], { type: 'application/json' });
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = `caspian_settings_backup_${new Date().toISOString().slice(0, 10)}.json`;
+        document.body.appendChild(a);
+        a.click();
+        document.body.removeChild(a);
+        URL.revokeObjectURL(url);
+      });
+    });
+  }
+
+  if (importBtn && fileInput) {
+    importBtn.addEventListener('click', () => {
+      fileInput.click();
+    });
+
+    fileInput.addEventListener('change', (e) => {
+      const file = e.target.files?.[0];
+      if (!file) return;
+
+      const reader = new FileReader();
+      reader.onload = (event) => {
+        try {
+          const parsed = JSON.parse(event.target.result);
+          const settingsToRestore = parsed.settings || parsed;
+          if (typeof settingsToRestore === 'object' && settingsToRestore !== null) {
+            chrome.storage.local.set(settingsToRestore, () => {
+              loadSettings();
+              syncVersionTag();
+              alert('✅ Caspian Settings successfully imported!');
+            });
+          } else {
+            alert('❌ Invalid settings format in JSON file.');
+          }
+        } catch (err) {
+          alert('❌ Failed to parse JSON settings file.');
+        }
+      };
+      reader.readAsText(file);
+      fileInput.value = '';
+    });
+  }
+}
+
+// Quick Launch Site Bookmarks Click Handler
+function setupSiteBookmarks() {
+  document.querySelectorAll('.site-bookmark-card').forEach(card => {
+    card.addEventListener('click', () => {
+      const targetUrl = card.dataset.url;
+      if (targetUrl) {
+        chrome.tabs.create({ url: targetUrl });
+      }
+    });
+  });
+}
+
+// Dynamic Manifest Version Synchronization
+function syncVersionTag() {
+  try {
+    const manifestVer = chrome.runtime?.getManifest?.()?.version;
+    const verTag = document.getElementById('extension-version') || document.querySelector('.brand-tag');
+    if (verTag && manifestVer) {
+      verTag.textContent = `V${manifestVer}`;
+    }
+  } catch (e) {}
+}
+
+if (document.readyState === 'complete' || document.readyState === 'interactive') {
+  syncVersionTag();
+}
+
+// Initialize Position, Settings & Temp Vault with Tab Memory
 window.addEventListener('DOMContentLoaded', () => {
+  syncVersionTag();
   loadSettings();
   initTempChatVault();
   setupCardToggleHandlers();
-  setTimeout(() => updateDockIndicator('engine'), 50);
+  setupSiteBookmarks();
+  setupDevExclusiveThemes();
+  setupBackgroundOptions();
+  setupZoomAndFontControls();
+  setupSettingsBackupSync();
+
+  // Restore previously opened tab
+  chrome.storage.local.get('active_popup_tab', (data) => {
+    const tab = data.active_popup_tab || 'engine';
+    switchTab(tab);
+  });
 });
