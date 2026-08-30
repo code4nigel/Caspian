@@ -657,32 +657,7 @@ public class CaspianBridge {
         updateManager.checkForUpdates(isManual, new GitHubUpdateManager.UpdateCheckCallback() {
             @Override
             public void onResult(GitHubUpdateManager.UpdateInfo info) {
-                if (activity != null) {
-                    activity.runOnUiThread(() -> {
-                        if (isManual) {
-                            if (!info.hasUpdate) {
-                                AlertDialog.Builder b = new AlertDialog.Builder(activity);
-                                b.setTitle("✅ App is Up to Date");
-                                String curVer = getAppVersion();
-                                String foundTag = (info.tagName != null && !info.tagName.isEmpty()) ? info.tagName : "v" + curVer;
-                                b.setMessage("You are running the latest version of Caspian Flow (" + curVer + ").\n\nLatest on GitHub: " + foundTag);
-                                b.setPositiveButton("OK", null);
-                                b.show();
-                            } else {
-                                AlertDialog.Builder b = new AlertDialog.Builder(activity);
-                                b.setTitle("🚀 Update Available: v" + info.cleanVersion);
-                                String notes = (info.changelogBody != null && !info.changelogBody.trim().isEmpty()) ? ("\n\nWhat's New:\n" + info.changelogBody) : "";
-                                b.setMessage("A new version of Caspian Flow is ready to install!" + notes);
-                                b.setPositiveButton("Download & Install", (dialog, which) -> {
-                                    downloadAndInstallUpdate(info.apkDownloadUrl, info.apkFileName);
-                                });
-                                b.setNegativeButton("Later", null);
-                                b.show();
-                            }
-                        }
-                    });
                     activity.evaluateJavascriptInControlSheet("if(window.onUpdateCheckResult) window.onUpdateCheckResult(" + info.toJson().toString() + ");");
-                }
             }
 
             @Override

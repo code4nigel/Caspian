@@ -5,6 +5,8 @@
   --accent-gradient: linear-gradient(135deg, var(--accent), var(--secondary));
   --sheet-bg: #050811;
   --card-bg: rgba(28, 37, 65, 0.75);
+  --bg-card: #121824;
+  --bg-deep: #050811;
   --border-glass: rgba(255, 255, 255, 0.12);
   --text-main: #f8fafc;
   --text-muted: #94a3b8;
@@ -16,6 +18,8 @@
 [data-theme="dark"], .dark {
   --sheet-bg: #050811;
   --card-bg: rgba(28, 37, 65, 0.75);
+  --bg-card: #121824;
+  --bg-deep: #050811;
   --border-glass: rgba(255, 255, 255, 0.12);
   --text-main: #f8fafc !important;
   --text-muted: #94a3b8 !important;
@@ -26,13 +30,34 @@
 
 [data-theme="light"], .light {
   --sheet-bg: #ffffff;
-  --card-bg: rgba(255, 255, 255, 0.88);
+  --card-bg: #ffffff;
+  --bg-card: #ffffff;
+  --bg-deep: #f8fafc;
   --border-glass: rgba(0, 0, 0, 0.08);
   --text-main: #0f172a !important;
   --text-muted: #64748b !important;
   --text-sub: #64748b !important;
   --input-bg: rgba(0, 0, 0, 0.04);
-  --shadow-glass: 0 12px 32px rgba(0, 0, 0, 0.12);
+  --shadow-glass: 0 12px 32px rgba(0, 0, 0, 0.08);
+}
+
+.cask-item-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 10px 12px;
+  border-radius: 14px;
+  background: var(--bg-deep);
+  border: 1.5px solid var(--border-glass);
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+.cask-item-row:active {
+  transform: scale(0.98);
+}
+.cask-item-row.active {
+  border-color: var(--accent, #00E5FF);
+  background: var(--accent-glow, rgba(0, 229, 255, 0.08));
 }
 
 /* Glassmorphism Toggle Disabled State */

@@ -237,7 +237,31 @@
   }
 
   function hideUpdateModal() {
+    try { playSFX('tb_clicks'); } catch (e) {}
     const modal = document.getElementById('caspian-update-modal');
+    if (modal) modal.style.display = 'none';
+  }
+
+  function showUpToDateModal(info) {
+    const modal = document.getElementById('caspian-uptodate-modal');
+    if (!modal) return;
+    try { playSFX('tb_clicks'); } catch (e) {}
+
+    const curVer = window.CaspianBridge && typeof window.CaspianBridge.getAppVersion === 'function' ? window.CaspianBridge.getAppVersion() : '1.1.42-BetaC';
+    const tag = (info && info.tagName) ? info.tagName : ('v' + curVer);
+
+    const curEl = document.getElementById('uptodate-current-ver');
+    if (curEl) curEl.textContent = 'v' + curVer;
+
+    const gitEl = document.getElementById('uptodate-github-tag');
+    if (gitEl) gitEl.textContent = tag;
+
+    modal.style.display = 'flex';
+  }
+
+  function hideUpToDateModal() {
+    try { playSFX('tb_clicks'); } catch (e) {}
+    const modal = document.getElementById('caspian-uptodate-modal');
     if (modal) modal.style.display = 'none';
   }
 
@@ -250,6 +274,7 @@
 
     const statusSub = document.getElementById('updater-status-sub');
     const statusDot = document.getElementById('updater-status-dot');
+    const curVer = window.CaspianBridge && typeof window.CaspianBridge.getAppVersion === 'function' ? window.CaspianBridge.getAppVersion() : '1.1.42-BetaC';
 
     if (info && info.hasUpdate) {
       if (statusSub) statusSub.textContent = `🌟 Update Available: v${info.cleanVersion} • Tap to view notes & install.`;
@@ -258,14 +283,15 @@
       // Pulsating badge in header brand tag
       const brandTags = document.querySelectorAll('.sheet-brand-tag');
       brandTags.forEach(el => {
-        el.innerHTML = `V${window.CaspianBridge ? window.CaspianBridge.getAppVersion() : '1.1.31-BetaC'} <span style="background:#10b981; color:#000; font-size:9px; padding:1px 5px; border-radius:4px; margin-left:4px; font-weight:800;">NEW v${info.cleanVersion}</span>`;
+        el.innerHTML = `V${curVer} <span style="background:#10b981; color:#000; font-size:9px; padding:1px 5px; border-radius:4px; margin-left:4px; font-weight:800;">NEW v${info.cleanVersion}</span>`;
         el.style.cursor = 'pointer';
         el.onclick = () => showUpdateModal(latestUpdateInfo);
       });
 
       showUpdateModal(info);
     } else {
-      if (statusSub) statusSub.textContent = `✅ App is up to date (V${window.CaspianBridge ? window.CaspianBridge.getAppVersion() : '1.1.31-BetaC'})`;
+      if (statusSub) statusSub.textContent = `✅ App is up to date (V${curVer})`;
+      showUpToDateModal(info);
     }
   };
 
@@ -567,7 +593,8 @@
           </button>
         ` : '';
 
-        const caskBadge = tab.caskIcon ? `<span style="font-size: 9px; font-weight: 700; color: var(--text-main); background: rgba(255,255,255,0.08); border: 1px solid ${tab.caskColor || 'var(--accent, #00E5FF)'}; padding: 2px 6px; border-radius: 6px; display: inline-flex; align-items: center; gap: 3px;" title="Container Vault: ${tab.caskName || 'Caspian Cask'}"><span>${tab.caskIcon}</span><span>${tab.caskName ? tab.caskName.split(' ')[0] : 'Cask'}</span></span>` : '';
+        const isDefaultCask = !tab.caskId || tab.caskId === 'cask_caspian' || (tab.caskName && (tab.caskName.toLowerCase().includes('caspian') || tab.caskName.toLowerCase().includes('default')));
+        const caskBadge = (!isDefaultCask && tab.caskIcon) ? `<span style="font-size: 9px; font-weight: 700; color: var(--text-main); background: var(--input-bg, rgba(128,128,128,0.08)); border: 1px solid ${tab.caskColor || 'var(--accent, #00E5FF)'}; padding: 2px 6px; border-radius: 6px; display: inline-flex; align-items: center; gap: 3px;" title="Container Vault: ${tab.caskName || 'Cask'}"><span>${tab.caskIcon}</span><span>${tab.caskName ? tab.caskName.split(' ')[0] : 'Cask'}</span></span>` : '';
 
         const favStarBadge = tab.isFavorite ? '<span style="color: #eab308; font-size: 11px; margin-right: 2px;" title="Favorited Tab">⭐</span>' : '';
         const optionMenuBtn = `<button class="chrome-tab-menu-btn icon-btn" data-tabmenuid="${tab.id}" title="Tab Options" style="font-size: 14px; width: 22px; height: 22px; border: none; background: none; color: var(--text-sub); cursor: pointer; display: inline-flex; align-items: center; justify-content: center; margin-right: 2px;">⋮</button>`;
@@ -2027,8 +2054,22 @@
     document.documentElement.classList.toggle('light', activeTheme === 'light');
     if (activeTheme === 'light') {
       document.documentElement.style.setProperty('--sheet-bg', '#ffffff');
+      document.documentElement.style.setProperty('--card-bg', '#ffffff');
+      document.documentElement.style.setProperty('--bg-card', '#ffffff');
+      document.documentElement.style.setProperty('--bg-deep', '#f8fafc');
+      document.documentElement.style.setProperty('--text-main', '#0f172a');
+      document.documentElement.style.setProperty('--text-muted', '#64748b');
+      document.documentElement.style.setProperty('--border-glass', 'rgba(0, 0, 0, 0.08)');
+      document.documentElement.style.setProperty('--input-bg', 'rgba(0, 0, 0, 0.04)');
     } else {
       document.documentElement.style.setProperty('--sheet-bg', selectedDarkBg);
+      document.documentElement.style.setProperty('--card-bg', 'rgba(28, 37, 65, 0.75)');
+      document.documentElement.style.setProperty('--bg-card', '#121824');
+      document.documentElement.style.setProperty('--bg-deep', '#050811');
+      document.documentElement.style.setProperty('--text-main', '#f8fafc');
+      document.documentElement.style.setProperty('--text-muted', '#94a3b8');
+      document.documentElement.style.setProperty('--border-glass', 'rgba(255, 255, 255, 0.12)');
+      document.documentElement.style.setProperty('--input-bg', 'rgba(255, 255, 255, 0.06)');
     }
     if (themeBtnDark) themeBtnDark.classList.toggle('active', activeTheme === 'dark');
     if (themeBtnLight) themeBtnLight.classList.toggle('active', activeTheme === 'light');
@@ -3870,12 +3911,11 @@
       casks.forEach(cask => {
         const isActive = cask.id === controlCasksData.activeCaskId;
         const row = document.createElement('div');
-        row.style.cssText = `display:flex; align-items:center; justify-content:space-between; padding:10px 12px; border-radius:14px; background:var(--bg-deep); border:1.5px solid ${isActive ? 'var(--accent, #00E5FF)' : 'var(--border-glass)'}; cursor:pointer; transition: all 0.2s ease;`;
-        if (isActive) row.style.background = 'var(--accent-glow, rgba(0, 229, 255, 0.1))';
+        row.className = 'cask-item-row' + (isActive ? ' active' : '');
 
         row.innerHTML = `
           <div style="display:flex; align-items:center; gap:10px;">
-            <div style="width:34px; height:34px; border-radius:10px; background:rgba(255,255,255,0.06); border:1.5px solid ${cask.color || 'var(--accent, #00E5FF)'}; display:flex; align-items:center; justify-content:center; font-size:16px;">
+            <div style="width:34px; height:34px; border-radius:10px; background:var(--input-bg, rgba(128,128,128,0.08)); border:1.5px solid ${cask.color || 'var(--accent, #00E5FF)'}; display:flex; align-items:center; justify-content:center; font-size:16px;">
               ${cask.icon || '🌊'}
             </div>
             <div>
@@ -4008,9 +4048,15 @@
         hideControlNewCaskForm();
       } else if (e.target.closest('#btn-control-create-confirm')) {
         confirmControlCreateCask();
+      } else if (e.target.closest('#close-uptodate-modal-btn')) {
+        hideUpToDateModal();
+      } else if (e.target.closest('#close-update-modal-btn') || e.target.closest('#update-modal-later-btn')) {
+        hideUpdateModal();
       } else if (e.target.closest('.sheet-brand-tag') || e.target.closest('#card-app-updater')) {
         if (latestUpdateInfo && latestUpdateInfo.hasUpdate) {
           showUpdateModal(latestUpdateInfo);
+        } else if (latestUpdateInfo && !latestUpdateInfo.hasUpdate) {
+          showUpToDateModal(latestUpdateInfo);
         }
       }
     });
