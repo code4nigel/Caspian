@@ -534,9 +534,23 @@ public class CaspianBridge {
     }
 
     @JavascriptInterface
+    public void updateTabDetails(int tabId, String nickname, String url, String targetCaskId) {
+        if (activity != null) {
+            activity.runOnUiThread(() -> activity.updateTabDetails(tabId, nickname, url, targetCaskId));
+        }
+    }
+
+    @JavascriptInterface
     public void updateTabDetails(int tabId, String nickname, String url) {
         if (activity != null) {
-            activity.runOnUiThread(() -> activity.updateTabDetails(tabId, nickname, url));
+            activity.runOnUiThread(() -> activity.updateTabDetails(tabId, nickname, url, null));
+        }
+    }
+
+    @JavascriptInterface
+    public void changeTabCask(int tabId, String targetCaskId) {
+        if (activity != null) {
+            activity.runOnUiThread(() -> activity.changeTabCask(tabId, targetCaskId));
         }
     }
 

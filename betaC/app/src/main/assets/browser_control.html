@@ -55,9 +55,9 @@
         </div>
         <div style="display: flex; flex-direction: column;">
           <span class="sheet-brand-name">CASPIAN FLOW</span>
-          <span class="sheet-brand-tag">V1.1.43-BetaC</span>
+          <span class="sheet-brand-tag">V1.1.44-BetaC</span>
         </div>
-        <div id="header-cask-pill" onclick="if(window.CaspianBridge && typeof window.CaspianBridge.openLaunchHubInNewTab === 'function'){window.CaspianBridge.openLaunchHubInNewTab();}else if(window.CaspianBridge && typeof window.CaspianBridge.openNewTab === 'function'){window.CaspianBridge.openNewTab('file:///android_asset/launch_hub.html');}" style="display: flex; align-items: center; justify-content: center; width: 30px; height: 30px; min-width: 30px; border-radius: 10px; background: var(--bg-card); border: 1.5px solid var(--accent, #00E5FF); box-shadow: 0 2px 8px var(--accent-glow, rgba(0,0,0,0.3)); cursor: pointer; margin-left: 6px; transition: all 0.2s ease;" title="Active Caspian Cask - Tap to open Hub in new tab">
+        <div id="header-cask-pill" onclick="if(typeof openControlCasksModal==='function'){openControlCasksModal();}else{window.CaspianBridge&&window.CaspianBridge.showControlSheet&&window.CaspianBridge.showControlSheet();}" style="display: flex; align-items: center; justify-content: center; width: 30px; height: 30px; min-width: 30px; border-radius: 10px; background: var(--bg-card); border: 1.5px solid var(--accent, #00E5FF); box-shadow: 0 2px 8px var(--accent-glow, rgba(0,0,0,0.3)); cursor: pointer; margin-left: 6px; transition: all 0.2s ease;" title="Caspian Casks - Tap to switch container vault">
           <span id="header-cask-icon" style="font-size: 15px; line-height: 1;">🌊</span>
         </div>
       </div>
@@ -1057,7 +1057,7 @@
             <div id="updater-status-dot" class="status-dot active"></div>
             <div>
               <div class="m3-card-title">Caspian Flow Updates</div>
-              <div id="updater-status-sub" class="m3-card-sub">Current: V1.1.43-BetaC • Direct in-app GitHub updater.</div>
+              <div id="updater-status-sub" class="m3-card-sub">Current: V1.1.44-BetaC • Direct in-app GitHub updater.</div>
             </div>
           </div>
           <button id="check-updates-btn" class="oneui-pill-btn primary" style="font-size: 11px; padding: 6px 12px; display: flex; align-items: center; gap: 4px;">
@@ -1197,6 +1197,15 @@
           <button id="modal-copy-url-btn" class="oneui-pill-btn secondary icon-only" style="width: 38px; height: 38px; border-radius: 12px;" title="Copy Link">
             <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path></svg>
           </button>
+        </div>
+      </div>
+
+      <div style="margin-bottom: 14px;">
+        <label style="font-size: 11px; font-weight: 700; color: var(--text-muted); display: block; margin-bottom: 6px;">Caspian Cask (Container Vault)</label>
+        <div style="display: flex; gap: 8px; align-items: center;">
+          <select id="tab-cask-select" class="m3-text-input" style="flex: 1; min-width: 0; box-sizing: border-box; background: var(--input-bg); border: 1px solid var(--border-glass); border-radius: 12px; padding: 10px; color: var(--text-main); font-size: 12px; font-weight: 600; cursor: pointer; outline: none;">
+            <!-- Casks options populated dynamically -->
+          </select>
         </div>
       </div>
       
@@ -1347,11 +1356,11 @@
       <div style="display: flex; flex-direction: column; gap: 8px; background: var(--bg-deep); border: 1px solid var(--border-glass); border-radius: 14px; padding: 12px 14px; margin-bottom: 18px; text-align: left; font-size: 11px;">
         <div style="display: flex; justify-content: space-between; align-items: center;">
           <span style="color: var(--text-muted); font-weight: 600;">Installed Version</span>
-          <span id="uptodate-current-ver" style="font-weight: 700; color: #10b981; background: rgba(16,185,129,0.12); padding: 2px 8px; border-radius: 6px;">v1.1.43-BetaC</span>
+          <span id="uptodate-current-ver" style="font-weight: 700; color: #10b981; background: rgba(16,185,129,0.12); padding: 2px 8px; border-radius: 6px;">v1.1.44-BetaC</span>
         </div>
         <div style="display: flex; justify-content: space-between; align-items: center;">
           <span style="color: var(--text-muted); font-weight: 600;">Latest on GitHub</span>
-          <span id="uptodate-github-tag" style="font-weight: 600; color: var(--text-main); font-family: monospace;">v1.1.43-BetaC</span>
+          <span id="uptodate-github-tag" style="font-weight: 600; color: var(--text-main); font-family: monospace;">v1.1.44-BetaC</span>
         </div>
       </div>
       <button id="close-uptodate-modal-btn" class="oneui-pill-btn primary" style="width: 100%; padding: 11px; border-radius: 14px; font-size: 12.5px; font-weight: 700; display: flex; align-items: center; justify-content: center; gap: 6px;">

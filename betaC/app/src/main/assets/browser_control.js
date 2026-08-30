@@ -594,7 +594,7 @@
         ` : '';
 
         const isDefaultCask = !tab.caskId || tab.caskId === 'cask_caspian' || (tab.caskName && (tab.caskName.toLowerCase().includes('caspian') || tab.caskName.toLowerCase().includes('default')));
-        const caskBadge = (!isDefaultCask && tab.caskIcon) ? `<span style="font-size: 9px; font-weight: 700; color: var(--text-main); background: var(--input-bg, rgba(128,128,128,0.08)); border: 1px solid ${tab.caskColor || 'var(--accent, #00E5FF)'}; padding: 2px 6px; border-radius: 6px; display: inline-flex; align-items: center; gap: 3px;" title="Container Vault: ${tab.caskName || 'Cask'}"><span>${tab.caskIcon}</span><span>${tab.caskName ? tab.caskName.split(' ')[0] : 'Cask'}</span></span>` : '';
+        const caskBadge = (!isDefaultCask && tab.caskIcon) ? `<span style="font-size: 9.5px; font-weight: 600; color: var(--text-muted); background: var(--input-bg, rgba(128,128,128,0.1)); border: none; padding: 2px 7px; border-radius: 6px; display: inline-flex; align-items: center; gap: 3px;" title="Container Vault: ${tab.caskName || 'Cask'}"><span>${tab.caskIcon}</span><span>${tab.caskName ? tab.caskName.split(' ')[0] : 'Cask'}</span></span>` : '';
 
         const favStarBadge = tab.isFavorite ? '<span style="color: #eab308; font-size: 11px; margin-right: 2px;" title="Favorited Tab">⭐</span>' : '';
         const optionMenuBtn = `<button class="chrome-tab-menu-btn icon-btn" data-tabmenuid="${tab.id}" title="Tab Options" style="font-size: 14px; width: 22px; height: 22px; border: none; background: none; color: var(--text-sub); cursor: pointer; display: inline-flex; align-items: center; justify-content: center; margin-right: 2px;">⋮</button>`;
@@ -2907,6 +2907,40 @@
       }
     };
 
+    // Populate Caspian Casks in Tab Options
+    const caskSelect = document.getElementById('tab-cask-select');
+    if (caskSelect) {
+      let casksList = (controlCasksData && Array.isArray(controlCasksData.casks) && controlCasksData.casks.length > 0)
+        ? controlCasksData.casks
+        : null;
+
+      if (!casksList && window.CaspianBridge && typeof window.CaspianBridge.getCaspianCasksJson === 'function') {
+        try {
+          const raw = window.CaspianBridge.getCaspianCasksJson();
+          if (raw) {
+            const parsed = JSON.parse(raw);
+            if (parsed && Array.isArray(parsed.casks)) {
+              casksList = parsed.casks;
+              controlCasksData = parsed;
+            }
+          }
+        } catch (e) {}
+      }
+
+      if (!casksList || casksList.length === 0) {
+        casksList = [
+          { id: 'cask_caspian', name: 'Caspian Cask', icon: '🌊', isDefault: true }
+        ];
+      }
+
+      caskSelect.innerHTML = casksList.map(c => {
+        const isSelected = (c.id === (tab.caskId || 'cask_caspian'));
+        return `<option value="${c.id}" ${isSelected ? 'selected' : ''}>${c.icon || '🌊'} ${c.name}${c.isDefault ? ' (Default)' : ''}</option>`;
+      }).join('');
+
+      caskSelect.value = tab.caskId || 'cask_caspian';
+    }
+
     const clearNicknameBtn = document.getElementById('modal-clear-nickname-btn');
     if (clearNicknameBtn) {
       clearNicknameBtn.onclick = () => {
@@ -2915,8 +2949,13 @@
         urlDisplay.blur();
         nicknameInput.value = '';
         const url = urlDisplay.value.trim();
+        const currentCaskId = caskSelect ? caskSelect.value : (tab.caskId || 'cask_caspian');
         if (window.CaspianBridge && typeof window.CaspianBridge.updateTabDetails === 'function') {
-          window.CaspianBridge.updateTabDetails(tab.id, '', url);
+          try {
+            window.CaspianBridge.updateTabDetails(tab.id, '', url, currentCaskId);
+          } catch (e) {
+            window.CaspianBridge.updateTabDetails(tab.id, '', url);
+          }
         }
         modal.style.display = 'none';
         setTimeout(() => {
@@ -2935,15 +2974,29 @@
         urlDisplay.blur();
         const nick = nicknameInput.value.trim();
         const url = urlDisplay.value.trim();
+        const newCaskId = caskSelect ? caskSelect.value : (tab.caskId || 'cask_caspian');
+        const oldCaskId = tab.caskId || 'cask_caspian';
+        const caskChanged = (newCaskId !== oldCaskId);
+
         if (window.CaspianBridge && typeof window.CaspianBridge.updateTabDetails === 'function') {
-          window.CaspianBridge.updateTabDetails(tab.id, nick, url);
+          try {
+            window.CaspianBridge.updateTabDetails(tab.id, nick, url, newCaskId);
+          } catch (err) {
+            window.CaspianBridge.updateTabDetails(tab.id, nick, url);
+            if (caskChanged && typeof window.CaspianBridge.changeTabCask === 'function') {
+              window.CaspianBridge.changeTabCask(tab.id, newCaskId);
+            }
+          }
+        } else if (caskChanged && window.CaspianBridge && typeof window.CaspianBridge.changeTabCask === 'function') {
+          window.CaspianBridge.changeTabCask(tab.id, newCaskId);
         }
+
         modal.style.display = 'none';
         setTimeout(() => {
           if (typeof window.renderOpenTabs === 'function') {
             window.renderOpenTabs();
           }
-        }, 100);
+        }, 150);
       };
     }
   }
@@ -3632,6 +3685,8 @@
     }
 
     // Floating Multi-Select Group Toolbar Event Listeners
+    let selectedGroupEmoji = '📁';
+    let selectedGroupColor = '#ef4444';
     const toolbarGroupBtn = document.getElementById('toolbar-group-btn');
     const toolbarDeselectBtn = document.getElementById('toolbar-deselect-btn');
     const toolbarDeleteBtn = document.getElementById('toolbar-delete-btn');
@@ -3644,6 +3699,14 @@
         if (modalCreateGroup && inputGroupTitle) {
           editingGroupId = null;
           inputGroupTitle.value = `Tab Group ${tabGroups.length + 1}`;
+          selectedGroupEmoji = '📁';
+          selectedGroupColor = '#ef4444';
+          document.querySelectorAll('.group-emoji-dot').forEach(d => {
+            d.classList.toggle('active', d.dataset.emoji === '📁');
+          });
+          document.querySelectorAll('.group-color-dot').forEach(d => {
+            d.classList.toggle('active', d.dataset.color === '#ef4444');
+          });
           modalCreateGroup.style.display = 'flex';
         }
       });
@@ -3705,20 +3768,22 @@
       btnConfirmCreateGroup.addEventListener('click', () => {
         playSFX('tb_modal');
         const title = inputGroupTitle ? (inputGroupTitle.value.trim() || 'Tab Group') : 'Tab Group';
+        const groupEmoji = (selectedGroupEmoji && selectedGroupEmoji.trim()) ? selectedGroupEmoji.trim() : '📁';
+        const groupColor = selectedGroupColor || '#ef4444';
 
         if (editingGroupId) {
           const group = tabGroups.find(g => g.id === editingGroupId);
           if (group) {
             group.title = title;
-            group.color = selectedGroupColor;
-            group.icon = selectedGroupEmoji;
+            group.color = groupColor;
+            group.icon = groupEmoji;
           }
         } else {
           const newGroup = {
             id: `group_${Date.now()}`,
             title: title,
-            color: selectedGroupColor,
-            icon: selectedGroupEmoji,
+            color: groupColor,
+            icon: groupEmoji,
             tabIds: Array.from(selectedTabIds)
           };
           tabGroups.push(newGroup);
@@ -3757,8 +3822,12 @@
           editingGroupId = group.id;
           inputGroupTitle.value = group.title;
           selectedGroupColor = group.color || '#ef4444';
+          selectedGroupEmoji = group.icon || '📁';
           document.querySelectorAll('.group-color-dot').forEach(d => {
             d.classList.toggle('active', d.dataset.color === selectedGroupColor);
+          });
+          document.querySelectorAll('.group-emoji-dot').forEach(d => {
+            d.classList.toggle('active', d.dataset.emoji === selectedGroupEmoji);
           });
           modalCreateGroup.style.display = 'flex';
         }
@@ -4032,11 +4101,7 @@
     document.addEventListener('click', (e) => {
       if (e.target.closest('#header-cask-pill')) {
         try { playSFX('tb_clicks'); } catch (e) {}
-        if (window.CaspianBridge && typeof window.CaspianBridge.openLaunchHubInNewTab === 'function') {
-          window.CaspianBridge.openLaunchHubInNewTab();
-        } else if (window.CaspianBridge && typeof window.CaspianBridge.openNewTab === 'function') {
-          window.CaspianBridge.openNewTab('file:///android_asset/launch_hub.html');
-        }
+        openControlCasksModal();
         return;
       } else if (e.target.closest('#menu-switch-cask-btn') || e.target.closest('#card-casks-manager')) {
         openControlCasksModal();

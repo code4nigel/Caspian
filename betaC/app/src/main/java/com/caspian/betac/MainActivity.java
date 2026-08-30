@@ -6123,17 +6123,68 @@ public class MainActivity extends AppCompatActivity {
         }
     }
 
-    public void updateTabDetails(int tabId, String nickname, String url) {
+    public void changeTabCask(int tabId, String newCaskId) {
+        TabItem tab = getTabById(tabId);
+        if (tab == null || newCaskId == null || newCaskId.trim().isEmpty()) return;
+        if (newCaskId.equals(tab.caskId)) return; // Didn't change, do nothing
+
+        CaskManager cm = new CaskManager(this);
+        CaskManager.CaskItem cask = cm.getCaskById(newCaskId);
+        if (cask == null) return;
+
+        tab.caskId = newCaskId;
+        tab.caskName = cask.name;
+        tab.caskIcon = cask.icon;
+        tab.caskColor = cask.color;
+
+        if (tab.webView != null) {
+            String currentUrl = (tab.url != null && !tab.url.isEmpty()) ? tab.url : tab.webView.getUrl();
+            if (currentUrl == null || currentUrl.isEmpty()) {
+                currentUrl = "file:///android_asset/launch_hub.html";
+            }
+            if (CaskManager.isMultiProfileSupported()) {
+                boolean isCurrentActive = (tab.id == activeTabId);
+                if (tab.webView.getParent() != null) {
+                    ((ViewGroup) tab.webView.getParent()).removeView(tab.webView);
+                }
+                tab.webView.destroy();
+                TabItem refreshed = createNewTabInstance(tab.id, currentUrl, tab.service, null, tab.isIncognito, newCaskId);
+                tab.webView = refreshed.webView;
+                if (isCurrentActive) {
+                    if (splitModeState == 0) {
+                        webViewContainer.addView(tab.webView);
+                    } else {
+                        applySplitViewLayout();
+                    }
+                }
+            } else {
+                tab.webView.loadUrl(currentUrl);
+            }
+        }
+        Toast.makeText(this, "Vault switched to " + cask.name, Toast.LENGTH_SHORT).show();
+        saveOpenTabsState();
+    }
+
+    public void updateTabDetails(int tabId, String nickname, String url, String newCaskId) {
         TabItem tab = getTabById(tabId);
         if (tab != null) {
             tab.nickname = nickname;
-            if (url != null && !url.isEmpty() && !url.equals(tab.url)) {
+            boolean urlChanged = (url != null && !url.isEmpty() && !url.equals(tab.url));
+            if (urlChanged) {
                 tab.url = url;
-                if (tab.webView != null) tab.webView.loadUrl(url);
+            }
+            if (newCaskId != null && !newCaskId.trim().isEmpty() && !newCaskId.equals(tab.caskId)) {
+                changeTabCask(tabId, newCaskId);
+            } else if (urlChanged && tab.webView != null) {
+                tab.webView.loadUrl(url);
             }
             Toast.makeText(this, "Tab Details Updated", Toast.LENGTH_SHORT).show();
             saveOpenTabsState();
         }
+    }
+
+    public void updateTabDetails(int tabId, String nickname, String url) {
+        updateTabDetails(tabId, nickname, url, null);
     }
 
     public void reorderTabs(String newIdsJson) {
