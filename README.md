@@ -144,3 +144,9 @@ You can use [Obtainium](https://github.com/ImranR98/Obtainium) to receive automa
 - **Author**: Copyright © 2026 **NigelWeb** ([github.com/code4nigel](https://github.com/code4nigel))
 - **Repository**: [https://github.com/code4nigel/Caspian](https://github.com/code4nigel/Caspian)
 - **License**: [GNU General Public License v3.0 (GPL-3.0)](LICENSE)
+
+---
+
+<p align="center">
+  Built with 💗 by <a href="https://github.com/code4nigel">code4nigel</a>
+</p>
