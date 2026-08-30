@@ -1,23 +1,23 @@
 <?xml version="1.0" encoding="utf-8"?>
 <vector xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:aapt="http://schemas.android.com/aapt"
     android:width="108dp"
     android:height="108dp"
     android:viewportWidth="108"
     android:viewportHeight="108">
     
-    <!-- Classic Slate Gray to Deep Navy split gradient -->
     <path
         android:pathData="M0,0 L108,0 L108,108 L0,108 Z">
-        <aapt:attr name="android:fillColor" xmlns:aapt="http://schemas.android.com/aapt">
+        <aapt:attr name="android:fillColor">
             <gradient
                 android:type="linear"
                 android:startX="0"
                 android:startY="0"
                 android:endX="108"
                 android:endY="108"
-                android:startColor="#7B8D9E"
-                android:centerColor="#3A5774"
-                android:endColor="#183652" />
+                android:startColor="#062414"
+                android:centerColor="#0B3E22"
+                android:endColor="#02140A" />
         </aapt:attr>
     </path>
 </vector>

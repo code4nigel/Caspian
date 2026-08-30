@@ -622,4 +622,74 @@ public class CaspianBridge {
             activity.runOnUiThread(activity::printPage);
         }
     }
+
+    @JavascriptInterface
+    public void checkForAppUpdates(boolean isManual) {
+        if (activity == null) return;
+        GitHubUpdateManager updateManager = new GitHubUpdateManager(activity);
+        updateManager.checkForUpdates(isManual, new GitHubUpdateManager.UpdateCheckCallback() {
+            @Override
+            public void onResult(GitHubUpdateManager.UpdateInfo info) {
+                if (activity != null) {
+                    activity.evaluateJavascriptInControlSheet("if(window.onUpdateCheckResult) window.onUpdateCheckResult(" + info.toJson().toString() + ");");
+                }
+            }
+
+            @Override
+            public void onError(String message) {
+                if (activity != null) {
+                    activity.evaluateJavascriptInControlSheet("if(window.onUpdateCheckError) window.onUpdateCheckError(" + JSONObject.quote(message) + ");");
+                }
+            }
+        });
+    }
+
+    @JavascriptInterface
+    public void downloadAndInstallUpdate(String apkUrl, String apkFileName) {
+        if (activity == null) return;
+        GitHubUpdateManager updateManager = new GitHubUpdateManager(activity);
+        updateManager.downloadApk(apkUrl, apkFileName, new GitHubUpdateManager.DownloadCallback() {
+            @Override
+            public void onProgress(int percent, long downloadedBytes, long totalBytes) {
+                if (activity != null) {
+                    activity.evaluateJavascriptInControlSheet("if(window.onUpdateDownloadProgress) window.onUpdateDownloadProgress(" + percent + ", " + downloadedBytes + ", " + totalBytes + ");");
+                }
+            }
+
+            @Override
+            public void onComplete(File apkFile) {
+                if (activity != null) {
+                    activity.runOnUiThread(() -> {
+                        boolean initiated = updateManager.installApk(activity, apkFile);
+                        activity.evaluateJavascriptInControlSheet("if(window.onUpdateDownloadComplete) window.onUpdateDownloadComplete(" + initiated + ");");
+                    });
+                }
+            }
+
+            @Override
+            public void onError(String message) {
+                if (activity != null) {
+                    activity.evaluateJavascriptInControlSheet("if(window.onUpdateDownloadError) window.onUpdateDownloadError(" + JSONObject.quote(message) + ");");
+                }
+            }
+        });
+    }
+
+    @JavascriptInterface
+    public String getAvailableAppIcons() {
+        if (activity == null) return "[]";
+        return AppIconManager.getAvailableIconsJson(activity);
+    }
+
+    @JavascriptInterface
+    public boolean setAppIcon(String iconId) {
+        if (activity == null || iconId == null) return false;
+        boolean success = AppIconManager.setAppIcon(activity, iconId);
+        if (success) {
+            activity.runOnUiThread(() -> {
+                Toast.makeText(activity, "App icon updated!", Toast.LENGTH_SHORT).show();
+            });
+        }
+        return success;
+    }
 }

@@ -55,7 +55,7 @@
         </div>
         <div style="display: flex; flex-direction: column;">
           <span class="sheet-brand-name">CASPIAN FLOW</span>
-          <span class="sheet-brand-tag">V1.1.31-BetaC</span>
+          <span class="sheet-brand-tag">V1.1.32-BetaC</span>
         </div>
       </div>
       <div class="header-icon-actions">
@@ -1020,14 +1020,39 @@
 
             <!-- Live Icon Preview -->
             <div style="display: flex; align-items: center; justify-content: space-between; background: var(--input-bg); padding: 10px 14px; border-radius: 8px; border: 1px solid var(--border-glass);">
-              <span id="icon-preview-label" style="font-size: 11px; color: var(--text-sub); font-weight: 600;">Icon Preview</span>
+              <span id="icon-preview-label" style="font-size: 11px; color: var(--text-sub); font-weight: 600;">Action Pod Preview</span>
               <div id="icon-preview-box" style="width: 42px; height: 42px; border-radius: 12px; background: linear-gradient(135deg, #A2A9A9, #1B4264); display: flex; align-items: center; justify-content: center; box-shadow: 0 2px 8px rgba(0,0,0,0.3);">
                 <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#ffffff" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M2 6c.6.5 1.2 1 2.5 1C7 7 7 5 9.5 5c2.6 0 2.4 2 5 2 2.5 0 2.5-2 5-2 1.3 0 1.9.5 2.5 1"/><path d="M2 12c.6.5 1.2 1 2.5 1 2.5 0 2.5-2 5-2 2.6 0 2.4 2 5 2 2.5 0 2.5-2 5-2 1.3 0 1.9.5 2.5 1"/><path d="M2 18c.6.5 1.2 1 2.5 1 2.5 0 2.5-2 5-2 2.6 0 2.4 2 5 2 2.5 0 2.5-2 5-2 1.3 0 1.9.5 2.5 1"/></svg>
+              </div>
+            </div>
+
+            <!-- Dynamic Launcher App Icon Theme Selector -->
+            <div style="margin-top: 14px; border-top: 1px dashed rgba(255,255,255,0.15); padding-top: 12px; position: relative;">
+              <div style="font-size: 11px; font-weight: 700; color: #10b981; margin-bottom: 4px;">LAUNCHER APP ICON THEME</div>
+              <div class="m3-card-sub" style="margin-bottom: 10px;">Select your Android home screen & app drawer launcher icon theme.</div>
+              <div id="launcher-icon-grid" style="display: grid; grid-template-columns: repeat(auto-fit, minmax(130px, 1fr)); gap: 8px;">
+                <!-- Populated dynamically via AppIconManager in JS -->
               </div>
             </div>
           </div>
         </div>
       </details>
+
+      <!-- Updates & Changelog Card -->
+      <div class="m3-card" id="card-app-updater" style="margin-top: 14px;">
+        <div class="m3-card-row">
+          <div class="m3-card-left">
+            <div id="updater-status-dot" class="status-dot active"></div>
+            <div>
+              <div class="m3-card-title">Caspian Flow Updates</div>
+              <div id="updater-status-sub" class="m3-card-sub">Current: V1.1.32-BetaC • Direct in-app GitHub updater.</div>
+            </div>
+          </div>
+          <button id="check-updates-btn" class="oneui-pill-btn primary" style="font-size: 11px; padding: 6px 12px; display: flex; align-items: center; gap: 4px;">
+            <span id="check-updates-btn-text">Check Updates</span>
+          </button>
+        </div>
+      </div>
 
       <!-- Developer Profile Card -->
       <div class="m3-card">
@@ -1244,6 +1269,50 @@
            <button id="group-modal-cancel-btn" class="oneui-pill-btn secondary" style="padding: 8px 16px; border-radius: 12px;">Cancel</button>
            <button id="group-modal-save-btn" class="oneui-pill-btn primary" style="padding: 8px 16px; border-radius: 12px;">Save</button>
          </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Caspian In-App Update Modal -->
+  <div id="caspian-update-modal" class="modal-overlay" style="display: none; align-items: center; justify-content: center; z-index: 10000;">
+    <div class="modal-card" style="width: 90%; max-width: 360px; max-height: 85vh; display: flex; flex-direction: column; background: var(--bg-card); border: 1px solid var(--border-glow); border-radius: 16px; padding: 18px; box-shadow: 0 10px 40px rgba(0,0,0,0.8); backdrop-filter: blur(24px);">
+      <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 12px;">
+        <div style="display: flex; align-items: center; gap: 8px;">
+          <span style="font-size: 22px;">🌟</span>
+          <div>
+            <div id="update-modal-title" style="font-size: 14px; font-weight: 800; color: #fff;">New Version Available!</div>
+            <div id="update-modal-tag" style="font-size: 11px; color: #10b981; font-weight: 700;">v1.1.31-BetaC</div>
+          </div>
+        </div>
+        <button id="close-update-modal-btn" style="background: none; border: none; color: var(--text-muted); font-size: 22px; cursor: pointer; padding: 0 4px;">&times;</button>
+      </div>
+
+      <div id="update-modal-meta" style="display: flex; gap: 12px; font-size: 10px; color: var(--text-sub); margin-bottom: 12px; padding: 8px 12px; background: rgba(255,255,255,0.04); border-radius: 8px; border: 1px solid rgba(255,255,255,0.08);">
+        <span id="update-modal-date">📅 Release Update</span>
+        <span id="update-modal-size">📦 Direct APK</span>
+      </div>
+
+      <div style="font-size: 11px; font-weight: 700; color: #10b981; margin-bottom: 6px;">WHAT'S NEW:</div>
+      <div id="update-modal-changelog" style="flex: 1; overflow-y: auto; background: rgba(0,0,0,0.3); border: 1px solid var(--border-glass); border-radius: 8px; padding: 10px; font-size: 11px; line-height: 1.5; color: var(--text-main); margin-bottom: 14px; max-height: 200px; white-space: pre-wrap; word-break: break-word;">
+        <!-- Changelog will be inserted here -->
+      </div>
+
+      <!-- Download progress container -->
+      <div id="update-progress-container" style="display: none; margin-bottom: 14px;">
+        <div style="display: flex; justify-content: space-between; font-size: 10px; color: var(--text-sub); margin-bottom: 6px;">
+          <span id="update-progress-text">Downloading update...</span>
+          <span id="update-progress-percent" style="font-weight: 700; color: #00e5ff;">0%</span>
+        </div>
+        <div style="width: 100%; height: 6px; background: rgba(255,255,255,0.1); border-radius: 3px; overflow: hidden;">
+          <div id="update-progress-bar" style="width: 0%; height: 100%; background: linear-gradient(90deg, #10b981, #00e5ff); transition: width 0.1s linear;"></div>
+        </div>
+      </div>
+
+      <div style="display: flex; gap: 10px; justify-content: flex-end;">
+        <button id="update-modal-later-btn" class="oneui-pill-btn secondary" style="padding: 8px 16px; border-radius: 10px; font-size: 11px;">Later</button>
+        <button id="update-modal-action-btn" class="oneui-pill-btn primary" style="padding: 8px 16px; border-radius: 10px; font-size: 11px; display: flex; align-items: center; gap: 6px;">
+          <span>🚀 Update & Install</span>
+        </button>
       </div>
     </div>
   </div>

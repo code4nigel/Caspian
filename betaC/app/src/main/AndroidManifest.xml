@@ -12,6 +12,8 @@
     <uses-permission android:name="android.permission.RECORD_AUDIO" />
     <uses-permission android:name="android.permission.MODIFY_AUDIO_SETTINGS" />
 
+    <uses-permission android:name="android.permission.REQUEST_INSTALL_PACKAGES" />
+
     <application
         android:allowBackup="true"
         android:icon="@mipmap/ic_launcher"
@@ -26,11 +28,6 @@
             android:launchMode="singleTask"
             android:windowSoftInputMode="adjustResize"
             android:exported="true">
-
-            <intent-filter>
-                <action android:name="android.intent.action.MAIN" />
-                <category android:name="android.intent.category.LAUNCHER" />
-            </intent-filter>
 
             <intent-filter android:autoVerify="true">
                 <action android:name="android.intent.action.VIEW" />
@@ -51,6 +48,81 @@
                     android:host="auth" />
             </intent-filter>
         </activity>
+
+        <!-- Default App Icon Launcher Alias -->
+        <activity-alias
+            android:name=".AliasDefault"
+            android:targetActivity=".MainActivity"
+            android:icon="@mipmap/ic_launcher"
+            android:roundIcon="@mipmap/ic_launcher_round"
+            android:label="Caspian Flow"
+            android:enabled="true"
+            android:exported="true">
+            <intent-filter>
+                <action android:name="android.intent.action.MAIN" />
+                <category android:name="android.intent.category.LAUNCHER" />
+            </intent-filter>
+        </activity-alias>
+
+        <!-- Cyber Obsidian Cyan Icon Alias -->
+        <activity-alias
+            android:name=".AliasCyberCyan"
+            android:targetActivity=".MainActivity"
+            android:icon="@mipmap/ic_launcher_cyber_cyan"
+            android:roundIcon="@mipmap/ic_launcher_cyber_cyan"
+            android:label="Caspian Flow"
+            android:enabled="false"
+            android:exported="true">
+            <intent-filter>
+                <action android:name="android.intent.action.MAIN" />
+                <category android:name="android.intent.category.LAUNCHER" />
+            </intent-filter>
+        </activity-alias>
+
+        <!-- Cosmic Golden Shimmer Icon Alias -->
+        <activity-alias
+            android:name=".AliasGoldenShimmer"
+            android:targetActivity=".MainActivity"
+            android:icon="@mipmap/ic_launcher_gold_shimmer"
+            android:roundIcon="@mipmap/ic_launcher_gold_shimmer"
+            android:label="Caspian Flow"
+            android:enabled="false"
+            android:exported="true">
+            <intent-filter>
+                <action android:name="android.intent.action.MAIN" />
+                <category android:name="android.intent.category.LAUNCHER" />
+            </intent-filter>
+        </activity-alias>
+
+        <!-- Midnight Violet Icon Alias -->
+        <activity-alias
+            android:name=".AliasMidnightViolet"
+            android:targetActivity=".MainActivity"
+            android:icon="@mipmap/ic_launcher_midnight_violet"
+            android:roundIcon="@mipmap/ic_launcher_midnight_violet"
+            android:label="Caspian Flow"
+            android:enabled="false"
+            android:exported="true">
+            <intent-filter>
+                <action android:name="android.intent.action.MAIN" />
+                <category android:name="android.intent.category.LAUNCHER" />
+            </intent-filter>
+        </activity-alias>
+
+        <!-- Matrix Emerald Icon Alias -->
+        <activity-alias
+            android:name=".AliasMatrixEmerald"
+            android:targetActivity=".MainActivity"
+            android:icon="@mipmap/ic_launcher_matrix_emerald"
+            android:roundIcon="@mipmap/ic_launcher_matrix_emerald"
+            android:label="Caspian Flow"
+            android:enabled="false"
+            android:exported="true">
+            <intent-filter>
+                <action android:name="android.intent.action.MAIN" />
+                <category android:name="android.intent.category.LAUNCHER" />
+            </intent-filter>
+        </activity-alias>
 
         <provider
             android:name="androidx.core.content.FileProvider"

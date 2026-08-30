@@ -1423,3 +1423,28 @@ body.theme-ena-shine .oneui-pill-btn.primary {
   font-weight: 800 !important;
   box-shadow: 0 0 14px rgba(251, 191, 36, 0.5) !important;
 }
+
+/* Launcher App Icon Chips */
+.launcher-icon-chip {
+  position: relative;
+  overflow: hidden;
+}
+.launcher-icon-chip:hover {
+  background: rgba(255,255,255,0.08) !important;
+}
+.launcher-icon-chip.active {
+  background: rgba(16, 185, 129, 0.12) !important;
+  border-color: #10b981 !important;
+  box-shadow: 0 0 12px rgba(16, 185, 129, 0.25) !important;
+}
+
+/* Caspian In-App Update Modal */
+#caspian-update-modal .modal-card {
+  animation: updateModalPop 0.25s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+}
+
+@keyframes updateModalPop {
+  0% { transform: scale(0.92); opacity: 0; }
+  100% { transform: scale(1); opacity: 1; }
+}
+

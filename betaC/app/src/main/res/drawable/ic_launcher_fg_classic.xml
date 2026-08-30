@@ -1,0 +1,23 @@
+<?xml version="1.0" encoding="utf-8"?>
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="108dp"
+    android:height="108dp"
+    android:viewportWidth="108"
+    android:viewportHeight="108">
+
+    <!-- Subtle wave depth shadow -->
+    <path
+        android:fillColor="#20000000"
+        android:pathData="M -5,53 C 20,27 45,77 75,57 C 92,45 102,49 115,51 L 115,67 C 102,65 92,61 75,73 C 45,93 20,43 -5,69 Z" />
+
+    <!-- Pure White Caspian Flow S-Wave Ribbon -->
+    <path
+        android:fillColor="#FFFFFF"
+        android:pathData="M -5,50 C 20,24 45,74 75,54 C 92,42 102,46 115,48 L 115,62 C 102,60 92,56 75,68 C 45,88 20,38 -5,64 Z" />
+
+    <!-- Top highlight sheen -->
+    <path
+        android:strokeColor="#FFFFFF"
+        android:strokeWidth="1"
+        android:pathData="M -5,50 C 20,24 45,74 75,54 C 92,42 102,46 115,48" />
+</vector>

@@ -204,6 +204,213 @@
     } catch (e) { }
   }
 
+  function renderLauncherIcons() {
+    const grid = document.getElementById('launcher-icon-grid');
+    if (!grid) return;
+    try {
+      if (window.CaspianBridge && typeof window.CaspianBridge.getAvailableAppIcons === 'function') {
+        const raw = window.CaspianBridge.getAvailableAppIcons();
+        const icons = JSON.parse(raw);
+        grid.innerHTML = icons.map(icon => `
+          <div class="launcher-icon-chip ${icon.isActive ? 'active' : ''}" data-icon-id="${icon.id}" style="display: flex; align-items: center; gap: 8px; padding: 8px 10px; background: rgba(255,255,255,0.04); border: 1.5px solid ${icon.isActive ? '#10b981' : 'var(--border-glass)'}; border-radius: 10px; cursor: pointer; transition: all 0.2s;">
+            <div style="width: 28px; height: 28px; border-radius: 8px; background: ${icon.primaryColor}; display: flex; align-items: center; justify-content: center; box-shadow: 0 2px 6px rgba(0,0,0,0.3); flex-shrink: 0;">
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+                <path d="M5 8c1 1 2 1.5 4 1.5s3-2 6-2 3 .5 4 1.5"></path>
+                <path d="M5 12c1 1 2 1.5 4 1.5s3-2 6-2 3 .5 4 1.5"></path>
+                <path d="M5 16c1 1 2 1.5 4 1.5s3-2 6-2 3 .5 4 1.5"></path>
+              </svg>
+            </div>
+            <div style="flex: 1; min-width: 0;">
+              <div style="font-size: 11px; font-weight: 700; color: ${icon.isActive ? '#10b981' : '#fff'}; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">${icon.title}</div>
+              <div style="font-size: 9px; color: var(--text-sub); white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">${icon.subtitle}</div>
+            </div>
+            ${icon.isActive ? '<span class="chip-checkmark" style="color: #10b981; font-weight: 800; font-size: 12px;">✓</span>' : ''}
+          </div>
+        `).join('');
+
+        grid.querySelectorAll('.launcher-icon-chip').forEach(chip => {
+          chip.addEventListener('click', (e) => {
+            e.stopPropagation();
+            const iconId = chip.getAttribute('data-icon-id');
+            if (!iconId) return;
+
+            // Instant Optimistic UI Update
+            grid.querySelectorAll('.launcher-icon-chip').forEach(c => {
+              c.classList.remove('active');
+              c.style.borderColor = 'var(--border-glass)';
+              const chk = c.querySelector('.chip-checkmark');
+              if (chk) chk.remove();
+            });
+            chip.classList.add('active');
+            chip.style.borderColor = '#10b981';
+            const chkSpan = document.createElement('span');
+            chkSpan.className = 'chip-checkmark';
+            chkSpan.style.cssText = 'color: #10b981; font-weight: 800; font-size: 12px;';
+            chkSpan.textContent = '✓';
+            chip.appendChild(chkSpan);
+
+            playAssetSound(sfxConfig.tb_clicks || 'tap_button.mp3');
+            if (window.CaspianBridge && typeof window.CaspianBridge.setAppIcon === 'function') {
+              window.CaspianBridge.setAppIcon(iconId);
+            }
+            setTimeout(renderLauncherIcons, 250);
+          });
+        });
+      }
+    } catch (e) {
+      console.error('Error rendering launcher icons', e);
+    }
+  }
+
+  let latestUpdateInfo = null;
+
+  function showUpdateModal(info) {
+    if (!info) return;
+    const modal = document.getElementById('caspian-update-modal');
+    if (!modal) return;
+    
+    document.getElementById('update-modal-tag').textContent = 'v' + info.cleanVersion;
+    if (info.publishedAt) {
+      document.getElementById('update-modal-date').textContent = '📅 ' + info.publishedAt.substring(0, 10);
+    }
+    if (info.apkSize > 0) {
+      document.getElementById('update-modal-size').textContent = '📦 ' + (info.apkSize / (1024 * 1024)).toFixed(1) + ' MB';
+    }
+
+    const changelogEl = document.getElementById('update-modal-changelog');
+    if (changelogEl) {
+      changelogEl.textContent = info.changelogBody || 'No release notes provided.';
+    }
+
+    const progressContainer = document.getElementById('update-progress-container');
+    if (progressContainer) progressContainer.style.display = 'none';
+
+    const actionBtn = document.getElementById('update-modal-action-btn');
+    if (actionBtn) {
+      actionBtn.disabled = false;
+      actionBtn.innerHTML = '<span>🚀 Update & Install</span>';
+    }
+
+    modal.style.display = 'flex';
+  }
+
+  function hideUpdateModal() {
+    const modal = document.getElementById('caspian-update-modal');
+    if (modal) modal.style.display = 'none';
+  }
+
+  // Update Check Callback from Android Java
+  window.onUpdateCheckResult = function (info) {
+    console.log('Update check result:', info);
+    latestUpdateInfo = info;
+    const checkBtnText = document.getElementById('check-updates-btn-text');
+    if (checkBtnText) checkBtnText.textContent = 'Check Updates';
+
+    const statusSub = document.getElementById('updater-status-sub');
+    const statusDot = document.getElementById('updater-status-dot');
+
+    if (info && info.hasUpdate) {
+      if (statusSub) statusSub.textContent = `🌟 Update Available: v${info.cleanVersion} • Tap to view notes & install.`;
+      if (statusDot) statusDot.style.background = '#10b981';
+
+      // Pulsating badge in header brand tag
+      const brandTags = document.querySelectorAll('.sheet-brand-tag');
+      brandTags.forEach(el => {
+        el.innerHTML = `V${window.CaspianBridge ? window.CaspianBridge.getAppVersion() : '1.1.31-BetaC'} <span style="background:#10b981; color:#000; font-size:9px; padding:1px 5px; border-radius:4px; margin-left:4px; font-weight:800;">NEW v${info.cleanVersion}</span>`;
+        el.style.cursor = 'pointer';
+        el.onclick = () => showUpdateModal(latestUpdateInfo);
+      });
+
+      showUpdateModal(info);
+    } else {
+      if (statusSub) statusSub.textContent = `✅ App is up to date (V${window.CaspianBridge ? window.CaspianBridge.getAppVersion() : '1.1.31-BetaC'})`;
+    }
+  };
+
+  window.onUpdateCheckError = function (msg) {
+    const checkBtnText = document.getElementById('check-updates-btn-text');
+    if (checkBtnText) checkBtnText.textContent = 'Check Updates';
+    const statusSub = document.getElementById('updater-status-sub');
+    if (statusSub) statusSub.textContent = 'Update check failed: ' + (msg || 'Network error');
+  };
+
+  window.onUpdateDownloadProgress = function (percent, downloadedBytes, totalBytes) {
+    const progressContainer = document.getElementById('update-progress-container');
+    if (progressContainer) progressContainer.style.display = 'block';
+
+    const percentEl = document.getElementById('update-progress-percent');
+    if (percentEl) percentEl.textContent = (percent >= 0 ? percent : 0) + '%';
+
+    const barEl = document.getElementById('update-progress-bar');
+    if (barEl) barEl.style.width = (percent >= 0 ? percent : 100) + '%';
+
+    const textEl = document.getElementById('update-progress-text');
+    if (textEl && totalBytes > 0) {
+      textEl.textContent = `Downloading: ${(downloadedBytes / (1024 * 1024)).toFixed(1)} MB / ${(totalBytes / (1024 * 1024)).toFixed(1)} MB`;
+    }
+  };
+
+  window.onUpdateDownloadComplete = function (initiated) {
+    const textEl = document.getElementById('update-progress-text');
+    if (textEl) textEl.textContent = '✅ Download complete! Prompting installer...';
+    const actionBtn = document.getElementById('update-modal-action-btn');
+    if (actionBtn) {
+      actionBtn.innerHTML = '<span>✅ Ready to Install</span>';
+      actionBtn.disabled = true;
+    }
+  };
+
+  window.onUpdateDownloadError = function (err) {
+    const textEl = document.getElementById('update-progress-text');
+    if (textEl) textEl.textContent = '❌ Download failed: ' + err;
+    const actionBtn = document.getElementById('update-modal-action-btn');
+    if (actionBtn) {
+      actionBtn.innerHTML = '<span>Retry Download</span>';
+      actionBtn.disabled = false;
+    }
+  };
+
+  // Immediate Setup for Updater UI listeners
+  setTimeout(() => {
+    const checkUpdatesBtn = document.getElementById('check-updates-btn');
+    if (checkUpdatesBtn) {
+      checkUpdatesBtn.addEventListener('click', () => {
+        playAssetSound(sfxConfig.tb_clicks || 'tap_button.mp3');
+        const checkBtnText = document.getElementById('check-updates-btn-text');
+        if (checkBtnText) checkBtnText.textContent = 'Checking...';
+        if (window.CaspianBridge && typeof window.CaspianBridge.checkForAppUpdates === 'function') {
+          window.CaspianBridge.checkForAppUpdates(true);
+        }
+      });
+    }
+
+    const updateActionBtn = document.getElementById('update-modal-action-btn');
+    if (updateActionBtn) {
+      updateActionBtn.addEventListener('click', () => {
+        if (!latestUpdateInfo || !latestUpdateInfo.apkDownloadUrl) {
+          if (window.CaspianBridge && typeof window.CaspianBridge.showToast === 'function') {
+            window.CaspianBridge.showToast('No APK download URL found.');
+          }
+          return;
+        }
+        playAssetSound(sfxConfig.tb_clicks || 'tap_button.mp3');
+        updateActionBtn.disabled = true;
+        updateActionBtn.innerHTML = '<span>⏳ Downloading...</span>';
+        if (window.CaspianBridge && typeof window.CaspianBridge.downloadAndInstallUpdate === 'function') {
+          window.CaspianBridge.downloadAndInstallUpdate(latestUpdateInfo.apkDownloadUrl, latestUpdateInfo.apkFileName);
+        }
+      });
+    }
+
+    const closeUpdateModalBtn = document.getElementById('close-update-modal-btn');
+    if (closeUpdateModalBtn) closeUpdateModalBtn.addEventListener('click', hideUpdateModal);
+
+    const updateModalLaterBtn = document.getElementById('update-modal-later-btn');
+    if (updateModalLaterBtn) updateModalLaterBtn.addEventListener('click', hideUpdateModal);
+
+    renderLauncherIcons();
+  }, 200);
+
   function updateDebugRecUI() {
     try {
       if (window.CaspianBridge && typeof window.CaspianBridge.isDebugRecording === 'function') {

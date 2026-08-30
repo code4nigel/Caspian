@@ -90,11 +90,11 @@ jobs:
               {
                 id: 'flow',
                 productName: 'Caspian Flow (Beta C)',
-                tag: 'Caspian-Flow-v1.1.31-BetaC',
-                title: '[Beta C] Caspian Flow v1.1.31-BetaC',
-                assetPattern: 'Caspian-Flow-v1.1.31-BetaC.apk',
+                tag: 'Caspian-Flow-v1.1.32-BetaC',
+                title: '[Beta C] Caspian Flow v1.1.32-BetaC',
+                assetPattern: 'Caspian-Flow-v1.1.32-BetaC.apk',
                 isPrerelease: true,
-                desc: 'Features multi-tab bulk drag & drop reordering and group movement in Caspian Menu tabs, smooth browser tab slot displacement animations, multi-tier ranking, and developer exclusive themes.'
+                desc: 'Features in-app GitHub auto-updater with rich changelog viewer, 1-tap direct APK download & install without Obtainium, dynamic adaptive app launcher icon themes (Classic, Cyber Cyan, Gold Shimmer, Midnight Violet, Matrix Emerald), and multi-tab bulk drag & drop reordering.'
               },
               {
                 id: 'mobile',

@@ -107,11 +107,13 @@ Easily backup all your theme accents, chat limits, YouTube preferences, and Flow
   - **YouTube Floating Remote**: Custom glass dropdowns for playback speed (`0.25x` to `2.0x`) and video quality.
   - **Google Search Dock**: Quick query switcher and one-tap page scrolling.
 - **Touch-Draggable Action Pod**: Customizable trigger button positionable anywhere on screen.
+- **In-App Auto-Updater**: Direct GitHub releases query, changelog viewer, and 1-tap in-app APK installer without external tools.
+- **Dynamic App Launcher Icons**: Choose between 5 custom app icon themes (Classic, Cyber Cyan, Gold Shimmer, Midnight Violet, Matrix Emerald).
 - **Omnibox Browser**: Integrated URL bar with tab switching, privacy controls, and clipboard search previews.
 
 ### APK Installation
 1. Download the latest `.apk` from [GitHub Releases](https://github.com/code4nigel/Caspian/releases):
-   - **Caspian Flow (Beta C)**: `Caspian-Flow-v1.1.31-BetaC.apk`
+   - **Caspian Flow (Beta C)**: `Caspian-Flow-v1.1.32-BetaC.apk`
    - **Caspian Mobile (Stable)**: `Caspian-Mobile-v1.2.40.apk`
    - **Caspian Beta A (Experimental)**: `Caspian-Beta-A-v1.2.48.apk`
 2. Open the file on your Android device (Android 7.0+).

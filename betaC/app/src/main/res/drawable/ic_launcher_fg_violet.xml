@@ -1,0 +1,35 @@
+<?xml version="1.0" encoding="utf-8"?>
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:aapt="http://schemas.android.com/aapt"
+    android:width="108dp"
+    android:height="108dp"
+    android:viewportWidth="108"
+    android:viewportHeight="108">
+
+    <!-- Midnight Violet Outer Glow -->
+    <path
+        android:fillColor="#50C084FC"
+        android:pathData="M -5,48 C 20,22 45,72 75,52 C 92,40 102,44 115,46 L 115,64 C 102,62 92,58 75,70 C 45,90 20,40 -5,66 Z" />
+
+    <!-- Pure White to Violet Caspian Flow Ribbon -->
+    <path
+        android:pathData="M -5,50 C 20,24 45,74 75,54 C 92,42 102,46 115,48 L 115,62 C 102,60 92,56 75,68 C 45,88 20,38 -5,64 Z">
+        <aapt:attr name="android:fillColor">
+            <gradient
+                android:type="linear"
+                android:startX="0"
+                android:startY="50"
+                android:endX="108"
+                android:endY="60"
+                android:startColor="#FFFFFF"
+                android:centerColor="#F3E8FF"
+                android:endColor="#C084FC" />
+        </aapt:attr>
+    </path>
+
+    <!-- Top Highlight Edge -->
+    <path
+        android:strokeColor="#FFFFFF"
+        android:strokeWidth="1.2"
+        android:pathData="M -5,50 C 20,24 45,74 75,54 C 92,42 102,46 115,48" />
+</vector>

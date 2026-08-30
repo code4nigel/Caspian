@@ -6368,9 +6368,32 @@ public class MainActivity extends AppCompatActivity {
             controlWebView.loadUrl("file:///android_asset/browser_control.html");
 
             sheetBackdrop.setOnClickListener(v -> hideControlSheet());
+
+            // Check for updates in background (auto-throttled to 4+ hours)
+            new Handler(Looper.getMainLooper()).postDelayed(() -> {
+                new GitHubUpdateManager(this).checkForUpdates(false, new GitHubUpdateManager.UpdateCheckCallback() {
+                    @Override
+                    public void onResult(GitHubUpdateManager.UpdateInfo info) {
+                        if (info.hasUpdate) {
+                            evaluateJavascriptInControlSheet("if(window.onUpdateCheckResult) window.onUpdateCheckResult(" + info.toJson().toString() + ");");
+                        }
+                    }
+
+                    @Override
+                    public void onError(String message) {}
+                });
+            }, 3000);
         } catch (Exception e) {
             Log.e(TAG, "setupControlSheet error: " + e.getMessage());
         }
+    }
+
+    public void evaluateJavascriptInControlSheet(String js) {
+        runOnUiThread(() -> {
+            if (controlWebView != null) {
+                controlWebView.evaluateJavascript(js, null);
+            }
+        });
     }
 
     public void openControlSheet() {

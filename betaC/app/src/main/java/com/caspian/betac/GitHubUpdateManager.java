@@ -1,0 +1,389 @@
+package com.caspian.betac;
+
+import android.app.Activity;
+import android.content.Context;
+import android.content.Intent;
+import android.content.SharedPreferences;
+import android.net.Uri;
+import android.os.Build;
+import android.os.Handler;
+import android.os.Looper;
+import android.provider.Settings;
+import android.util.Log;
+
+import androidx.core.content.FileProvider;
+
+import org.json.JSONArray;
+import org.json.JSONObject;
+
+import java.io.BufferedReader;
+import java.io.File;
+import java.io.FileOutputStream;
+import java.io.InputStream;
+import java.io.InputStreamReader;
+import java.net.HttpURLConnection;
+import java.net.URL;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
+
+/**
+ * Manages checking for releases on GitHub, parsing changelogs, downloading APKs, and 1-tap in-app installation.
+ */
+public class GitHubUpdateManager {
+    private static final String TAG = "GitHubUpdateManager";
+    private static final String GITHUB_RELEASES_API = "https://api.github.com/repos/code4nigel/Caspian/releases";
+    private static final String PREF_NAME = "caspian_update_prefs";
+    private static final String KEY_LAST_CHECK_TIME = "last_update_check_time";
+
+    private final Context context;
+    private final ExecutorService executor = Executors.newSingleThreadExecutor();
+    private final Handler mainHandler = new Handler(Looper.getMainLooper());
+
+    public static class UpdateInfo {
+        public final boolean hasUpdate;
+        public final String tagName;
+        public final String cleanVersion;
+        public final String releaseTitle;
+        public final String changelogBody;
+        public final String apkDownloadUrl;
+        public final String apkFileName;
+        public final long apkSize;
+        public final String publishedAt;
+
+        public UpdateInfo(boolean hasUpdate, String tagName, String cleanVersion, String releaseTitle,
+                          String changelogBody, String apkDownloadUrl, String apkFileName, long apkSize, String publishedAt) {
+            this.hasUpdate = hasUpdate;
+            this.tagName = tagName;
+            this.cleanVersion = cleanVersion;
+            this.releaseTitle = releaseTitle;
+            this.changelogBody = changelogBody;
+            this.apkDownloadUrl = apkDownloadUrl;
+            this.apkFileName = apkFileName;
+            this.apkSize = apkSize;
+            this.publishedAt = publishedAt;
+        }
+
+        public JSONObject toJson() {
+            try {
+                JSONObject obj = new JSONObject();
+                obj.put("hasUpdate", hasUpdate);
+                obj.put("tagName", tagName != null ? tagName : "");
+                obj.put("cleanVersion", cleanVersion != null ? cleanVersion : "");
+                obj.put("releaseTitle", releaseTitle != null ? releaseTitle : "");
+                obj.put("changelogBody", changelogBody != null ? changelogBody : "");
+                obj.put("apkDownloadUrl", apkDownloadUrl != null ? apkDownloadUrl : "");
+                obj.put("apkFileName", apkFileName != null ? apkFileName : "");
+                obj.put("apkSize", apkSize);
+                obj.put("publishedAt", publishedAt != null ? publishedAt : "");
+                return obj;
+            } catch (Exception e) {
+                return new JSONObject();
+            }
+        }
+    }
+
+    public interface UpdateCheckCallback {
+        void onResult(UpdateInfo info);
+        void onError(String message);
+    }
+
+    public interface DownloadCallback {
+        void onProgress(int percent, long downloadedBytes, long totalBytes);
+        void onComplete(File apkFile);
+        void onError(String message);
+    }
+
+    public GitHubUpdateManager(Context context) {
+        this.context = context.getApplicationContext();
+    }
+
+    /**
+     * Checks for updates.
+     * @param isManual true if triggered by user button; false if automatic on startup (throttled to 1 check per 24 hours).
+     */
+    public void checkForUpdates(boolean isManual, UpdateCheckCallback callback) {
+        if (!isManual) {
+            SharedPreferences prefs = context.getSharedPreferences(PREF_NAME, Context.MODE_PRIVATE);
+            long lastCheck = prefs.getLong(KEY_LAST_CHECK_TIME, 0);
+            long now = System.currentTimeMillis();
+            // Throttle automatic checks to at least 4 hours
+            if (now - lastCheck < 4 * 60 * 60 * 1000) {
+                if (callback != null) {
+                    mainHandler.post(() -> callback.onResult(new UpdateInfo(false, null, null, null, null, null, null, 0, null)));
+                }
+                return;
+            }
+        }
+
+        executor.execute(() -> {
+            HttpURLConnection conn = null;
+            try {
+                URL url = new URL(GITHUB_RELEASES_API);
+                conn = (HttpURLConnection) url.openConnection();
+                conn.setRequestMethod("GET");
+                conn.setRequestProperty("User-Agent", "Caspian-Flow-App");
+                conn.setRequestProperty("Accept", "application/vnd.github.v3+json");
+                conn.setConnectTimeout(10000);
+                conn.setReadTimeout(10000);
+
+                int responseCode = conn.getResponseCode();
+                if (responseCode != HttpURLConnection.HTTP_OK) {
+                    throw new Exception("GitHub API HTTP " + responseCode);
+                }
+
+                BufferedReader reader = new BufferedReader(new InputStreamReader(conn.getInputStream()));
+                StringBuilder sb = new StringBuilder();
+                String line;
+                while ((line = reader.readLine()) != null) {
+                    sb.append(line);
+                }
+                reader.close();
+
+                JSONArray releases = new JSONArray(sb.toString());
+                JSONObject latestFlowRelease = null;
+
+                // Find the latest Caspian Flow release
+                for (int i = 0; i < releases.length(); i++) {
+                    JSONObject rel = releases.getJSONObject(i);
+                    String tag = rel.optString("tag_name", "");
+                    String title = rel.optString("name", "");
+                    if (tag.toLowerCase().contains("flow") || tag.toLowerCase().contains("betac") || title.toLowerCase().contains("flow")) {
+                        latestFlowRelease = rel;
+                        break;
+                    }
+                }
+
+                if (latestFlowRelease == null && releases.length() > 0) {
+                    latestFlowRelease = releases.getJSONObject(0);
+                }
+
+                if (latestFlowRelease == null) {
+                    mainHandler.post(() -> {
+                        if (callback != null) callback.onResult(new UpdateInfo(false, null, null, null, null, null, null, 0, null));
+                    });
+                    return;
+                }
+
+                String tagName = latestFlowRelease.optString("tag_name", "");
+                String releaseTitle = latestFlowRelease.optString("name", tagName);
+                String changelogBody = latestFlowRelease.optString("body", "No changelog provided.");
+                String publishedAt = latestFlowRelease.optString("published_at", "");
+
+                // Find APK asset
+                String apkUrl = null;
+                String apkName = null;
+                long apkSize = 0;
+                JSONArray assets = latestFlowRelease.optJSONArray("assets");
+                if (assets != null) {
+                    for (int j = 0; j < assets.length(); j++) {
+                        JSONObject asset = assets.getJSONObject(j);
+                        String name = asset.optString("name", "");
+                        if (name.toLowerCase().endsWith(".apk") && (name.toLowerCase().contains("flow") || name.toLowerCase().contains("betac"))) {
+                            apkUrl = asset.optString("browser_download_url", "");
+                            apkName = name;
+                            apkSize = asset.optLong("size", 0);
+                            break;
+                        }
+                    }
+                    if (apkUrl == null && assets.length() > 0) {
+                        for (int j = 0; j < assets.length(); j++) {
+                            JSONObject asset = assets.getJSONObject(j);
+                            String name = asset.optString("name", "");
+                            if (name.toLowerCase().endsWith(".apk")) {
+                                apkUrl = asset.optString("browser_download_url", "");
+                                apkName = name;
+                                apkSize = asset.optLong("size", 0);
+                                break;
+                            }
+                        }
+                    }
+                }
+
+                String cleanVersion = extractCleanVersion(tagName);
+                String currentVersion = "1.1.31-BetaC";
+                try {
+                    currentVersion = context.getPackageManager().getPackageInfo(context.getPackageName(), 0).versionName;
+                } catch (Exception ignored) {}
+                boolean hasUpdate = isNewerVersion(cleanVersion, currentVersion);
+
+                // Record check timestamp
+                context.getSharedPreferences(PREF_NAME, Context.MODE_PRIVATE)
+                        .edit()
+                        .putLong(KEY_LAST_CHECK_TIME, System.currentTimeMillis())
+                        .apply();
+
+                UpdateInfo info = new UpdateInfo(
+                        hasUpdate,
+                        tagName,
+                        cleanVersion,
+                        releaseTitle,
+                        changelogBody,
+                        apkUrl,
+                        apkName,
+                        apkSize,
+                        publishedAt
+                );
+
+                mainHandler.post(() -> {
+                    if (callback != null) callback.onResult(info);
+                });
+
+            } catch (Exception e) {
+                Log.e(TAG, "Error checking updates from GitHub", e);
+                mainHandler.post(() -> {
+                    if (callback != null) callback.onError(e.getMessage());
+                });
+            } finally {
+                if (conn != null) conn.disconnect();
+            }
+        });
+    }
+
+    /**
+     * Downloads APK directly into cache and invokes installation callback.
+     */
+    public void downloadApk(String downloadUrl, String apkFileName, DownloadCallback callback) {
+        executor.execute(() -> {
+            HttpURLConnection conn = null;
+            InputStream is = null;
+            FileOutputStream fos = null;
+            try {
+                URL url = new URL(downloadUrl);
+                conn = (HttpURLConnection) url.openConnection();
+                conn.setRequestProperty("User-Agent", "Caspian-Flow-App");
+                conn.setConnectTimeout(15000);
+                conn.setReadTimeout(30000);
+                conn.connect();
+
+                // Follow redirects if any
+                int status = conn.getResponseCode();
+                if (status == HttpURLConnection.HTTP_MOVED_TEMP || status == HttpURLConnection.HTTP_MOVED_PERM || status == 307 || status == 308) {
+                    String newUrl = conn.getHeaderField("Location");
+                    conn.disconnect();
+                    url = new URL(newUrl);
+                    conn = (HttpURLConnection) url.openConnection();
+                    conn.setRequestProperty("User-Agent", "Caspian-Flow-App");
+                    conn.connect();
+                }
+
+                long totalBytes = conn.getContentLength();
+                is = conn.getInputStream();
+
+                File cacheDir = context.getExternalCacheDir() != null ? context.getExternalCacheDir() : context.getCacheDir();
+                File outputFile = new File(cacheDir, apkFileName != null ? apkFileName : "caspian_flow_update.apk");
+                fos = new FileOutputStream(outputFile);
+
+                byte[] buffer = new byte[8192];
+                long downloadedBytes = 0;
+                int read;
+                long lastProgressUpdate = 0;
+
+                while ((read = is.read(buffer)) != -1) {
+                    fos.write(buffer, 0, read);
+                    downloadedBytes += read;
+
+                    long now = System.currentTimeMillis();
+                    if (now - lastProgressUpdate > 100 || downloadedBytes == totalBytes) {
+                        lastProgressUpdate = now;
+                        int percent = totalBytes > 0 ? (int) ((downloadedBytes * 100) / totalBytes) : -1;
+                        long current = downloadedBytes;
+                        mainHandler.post(() -> {
+                            if (callback != null) callback.onProgress(percent, current, totalBytes);
+                        });
+                    }
+                }
+
+                fos.flush();
+                fos.close();
+                fos = null;
+
+                mainHandler.post(() -> {
+                    if (callback != null) callback.onComplete(outputFile);
+                });
+
+            } catch (Exception e) {
+                Log.e(TAG, "Error downloading APK update", e);
+                mainHandler.post(() -> {
+                    if (callback != null) callback.onError(e.getMessage());
+                });
+            } finally {
+                try {
+                    if (is != null) is.close();
+                    if (fos != null) fos.close();
+                    if (conn != null) conn.disconnect();
+                } catch (Exception ignored) {}
+            }
+        });
+    }
+
+    /**
+     * Prompts the native Android package installer to install the downloaded APK.
+     */
+    public boolean installApk(Activity activity, File apkFile) {
+        if (apkFile == null || !apkFile.exists()) {
+            Log.e(TAG, "APK file does not exist");
+            return false;
+        }
+
+        try {
+            // Check unknown sources permission on Android 8.0+
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+                if (!activity.getPackageManager().canRequestPackageInstalls()) {
+                    Intent allowIntent = new Intent(Settings.ACTION_MANAGE_UNKNOWN_APP_SOURCES,
+                            Uri.parse("package:" + activity.getPackageName()));
+                    activity.startActivity(allowIntent);
+                    return false;
+                }
+            }
+
+            Uri apkUri = FileProvider.getUriForFile(
+                    activity,
+                    activity.getPackageName() + ".fileprovider",
+                    apkFile
+            );
+
+            Intent installIntent = new Intent(Intent.ACTION_VIEW);
+            installIntent.setDataAndType(apkUri, "application/vnd.android.package-archive");
+            installIntent.addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION);
+            installIntent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
+            activity.startActivity(installIntent);
+            return true;
+        } catch (Exception e) {
+            Log.e(TAG, "Error initiating package installation", e);
+            return false;
+        }
+    }
+
+    public static String extractCleanVersion(String tag) {
+        if (tag == null) return "0.0.0";
+        Pattern pattern = Pattern.compile("([0-9]+\\.[0-9]+\\.[0-9]+(?:-[A-Za-z0-9]+)?)");
+        Matcher matcher = pattern.matcher(tag);
+        if (matcher.find()) {
+            return matcher.group(1);
+        }
+        return tag.replace("Caspian-Flow-", "").replace("v", "").trim();
+    }
+
+    public static boolean isNewerVersion(String remoteVersion, String localVersion) {
+        try {
+            String cleanRemote = remoteVersion.replaceAll("[^0-9.]", "").trim();
+            String cleanLocal = localVersion.replaceAll("[^0-9.]", "").trim();
+
+            String[] rParts = cleanRemote.split("\\.");
+            String[] lParts = cleanLocal.split("\\.");
+
+            int maxLen = Math.max(rParts.length, lParts.length);
+            for (int i = 0; i < maxLen; i++) {
+                int rNum = i < rParts.length && !rParts[i].isEmpty() ? Integer.parseInt(rParts[i]) : 0;
+                int lNum = i < lParts.length && !lParts[i].isEmpty() ? Integer.parseInt(lParts[i]) : 0;
+                if (rNum > lNum) return true;
+                if (rNum < lNum) return false;
+            }
+            return false;
+        } catch (Exception e) {
+            return !remoteVersion.equalsIgnoreCase(localVersion);
+        }
+    }
+}
