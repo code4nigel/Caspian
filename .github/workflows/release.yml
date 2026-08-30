@@ -90,11 +90,11 @@ jobs:
               {
                 id: 'flow',
                 productName: 'Caspian Flow (Beta C)',
-                tag: 'Caspian-Flow-v1.1.34-BetaC',
-                title: '[Beta C] Caspian Flow v1.1.34-BetaC',
-                assetPattern: 'Caspian-Flow-v1.1.34-BetaC.apk',
+                tag: 'Caspian-Flow-v1.1.35-BetaC',
+                title: '[Beta C] Caspian Flow v1.1.35-BetaC',
+                assetPattern: 'Caspian-Flow-v1.1.35-BetaC.apk',
                 isPrerelease: true,
-                desc: 'Features in-app GitHub auto-updater with rich changelog viewer, 1-tap direct APK download & install without Obtainium, authentic signature S-curve adaptive launcher icon theming with zero gaps, and multi-tab bulk drag & drop reordering.'
+                desc: 'Features authentic horizontal Caspian S-curve wave launcher icon, in-app GitHub auto-updater with rich changelog viewer, 1-tap direct APK download & install, and multi-tab bulk drag & drop reordering.'
               },
               {
                 id: 'mobile',
