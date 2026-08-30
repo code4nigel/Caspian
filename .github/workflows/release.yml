@@ -44,6 +44,11 @@ jobs:
             cp "versions/Caspian-v1.2.40.apk" "versions/Caspian-Mobile-v1.2.40.apk"
           fi
 
+          # Ensure Flow APKs in betaC/versions are synchronized to versions/
+          if [ -d "betaC/versions" ]; then
+            cp -f betaC/versions/*.apk versions/ 2>/dev/null || true
+          fi
+
       - name: Publish Unified & Individual Releases via GitHub API
         uses: actions/github-script@v7
         with:
@@ -181,7 +186,11 @@ jobs:
 
             // 1. Publish Individual Standalone Releases
             for (const config of platformConfigs) {
-              const matched = allAssets.find(a => a.name === config.assetPattern || a.name.includes(config.tag));
+              const matched = allAssets.find(a => 
+                a.name === config.assetPattern || 
+                a.name.includes(config.tag) ||
+                (config.id === 'flow' && (a.name.toLowerCase().includes('flow') || a.name.toLowerCase().includes('betac')) && a.name.includes(flowVersion))
+              );
               if (!matched) {
                 console.log(`Warning: Could not find asset matching ${config.assetPattern}`);
                 continue;
