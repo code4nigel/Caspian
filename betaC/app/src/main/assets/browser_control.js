@@ -4233,8 +4233,7 @@
       selectedNewCaskEmoji = '🌊';
       const emojiDisplayEl = document.getElementById('control-cask-emoji-display');
       if (emojiDisplayEl) emojiDisplayEl.textContent = '🌊';
-      const presetSelectEl = document.getElementById('control-cask-preset-select');
-      if (presetSelectEl) presetSelectEl.selectedIndex = 0;
+      resetControlPresetDropdown();
       const nameInput = document.getElementById('control-new-cask-name');
       if (nameInput) {
         nameInput.value = '';
@@ -4252,8 +4251,7 @@
       selectedNewCaskEmoji = '🌊';
       const emojiDisplayEl = document.getElementById('control-cask-emoji-display');
       if (emojiDisplayEl) emojiDisplayEl.textContent = '🌊';
-      const presetSelectEl = document.getElementById('control-cask-preset-select');
-      if (presetSelectEl) presetSelectEl.selectedIndex = 0;
+      resetControlPresetDropdown();
     }
 
     function confirmControlCreateCask() {
@@ -4326,13 +4324,120 @@
     const emojiInputEl = document.getElementById('control-cask-emoji-input');
     const emojiDisplayEl = document.getElementById('control-cask-emoji-display');
     const emojiBtnEl = document.getElementById('control-cask-emoji-btn');
-    const presetSelectEl = document.getElementById('control-cask-preset-select');
     const emojiRegex = /\p{Extended_Pictographic}/u;
+
+    const CASPIAN_CASK_PRESETS = [
+      { name: 'Work Cask', emoji: '💼', tag: 'Productivity' },
+      { name: 'Personal Vault', emoji: '🏠', tag: 'Personal' },
+      { name: 'Research & Study', emoji: '🔬', tag: 'Education' },
+      { name: 'Coding & Dev', emoji: '💻', tag: 'Development' },
+      { name: 'Social & Media', emoji: '🌐', tag: 'Networking' },
+      { name: 'Entertainment & Video', emoji: '🎬', tag: 'Streaming' },
+      { name: 'Finance & Crypto', emoji: '📈', tag: 'Finance' },
+      { name: 'Pacific Cask', emoji: '⚓', tag: 'Ocean' },
+      { name: 'Coral Reef', emoji: '🪸', tag: 'Marine' },
+      { name: 'Iceberg Vault', emoji: '🧊', tag: 'Cold Storage' },
+      { name: 'Trident Vault', emoji: '🔱', tag: 'Security' },
+      { name: 'Deep Ocean', emoji: '🌊', tag: 'Default' },
+      { name: 'Travel & Navigation', emoji: '⛵', tag: 'Travel' }
+    ];
+
+    function resetControlPresetDropdown() {
+      const triggerIcon = document.getElementById('control-cask-preset-trigger-icon');
+      const triggerLabel = document.getElementById('control-cask-preset-trigger-label');
+      const chevron = document.getElementById('control-cask-preset-chevron');
+      const menu = document.getElementById('control-cask-preset-menu');
+      if (triggerIcon) triggerIcon.textContent = '✨';
+      if (triggerLabel) {
+        triggerLabel.textContent = 'Choose a Cask Preset (Optional)...';
+        triggerLabel.style.color = 'var(--text-muted)';
+      }
+      if (chevron) chevron.style.transform = 'rotate(0deg)';
+      if (menu) {
+        menu.style.display = 'none';
+        const items = menu.querySelectorAll('.preset-dropdown-item');
+        items.forEach(el => el.classList.remove('selected'));
+      }
+    }
+
+    function initControlPresetDropdown() {
+      const trigger = document.getElementById('control-cask-preset-trigger');
+      const menu = document.getElementById('control-cask-preset-menu');
+      const chevron = document.getElementById('control-cask-preset-chevron');
+      if (!trigger || !menu) return;
+
+      menu.innerHTML = CASPIAN_CASK_PRESETS.map(p => `
+        <div class="preset-dropdown-item" data-name="${p.name}" data-emoji="${p.emoji}" style="display:flex; align-items:center; justify-content:space-between; padding:8px 10px; border-radius:10px; cursor:pointer; transition:all 0.15s ease;">
+          <div style="display:flex; align-items:center; gap:9px;">
+            <div style="width:28px; height:28px; border-radius:8px; background:var(--input-bg, rgba(128,128,128,0.08)); border:1px solid var(--border-glass); display:flex; align-items:center; justify-content:center; font-size:14px;">
+              ${p.emoji}
+            </div>
+            <span style="font-size:12px; font-weight:700; color:var(--text-main);">${p.name}</span>
+          </div>
+          <span style="font-size:9.5px; font-weight:700; color:var(--text-muted); background:rgba(128,128,128,0.12); padding:2px 7px; border-radius:6px;">${p.tag}</span>
+        </div>
+      `).join('');
+
+      trigger.addEventListener('click', (e) => {
+        e.stopPropagation();
+        try { playSFX('tb_clicks'); } catch (e) {}
+        const isOpen = menu.style.display === 'flex';
+        menu.style.display = isOpen ? 'none' : 'flex';
+        if (chevron) chevron.style.transform = isOpen ? 'rotate(0deg)' : 'rotate(180deg)';
+      });
+
+      menu.querySelectorAll('.preset-dropdown-item').forEach(item => {
+        item.addEventListener('click', (e) => {
+          e.stopPropagation();
+          try { playSFX('tb_clicks'); } catch (e) {}
+          const name = item.getAttribute('data-name');
+          const emoji = item.getAttribute('data-emoji');
+
+          const nameInput = document.getElementById('control-new-cask-name');
+          if (nameInput) nameInput.value = name;
+
+          selectedNewCaskEmoji = emoji;
+          const emojiDisp = document.getElementById('control-cask-emoji-display');
+          if (emojiDisp) emojiDisp.textContent = emoji;
+
+          const triggerIcon = document.getElementById('control-cask-preset-trigger-icon');
+          const triggerLabel = document.getElementById('control-cask-preset-trigger-label');
+          if (triggerIcon) triggerIcon.textContent = emoji;
+          if (triggerLabel) {
+            triggerLabel.textContent = name;
+            triggerLabel.style.color = 'var(--text-main)';
+          }
+
+          menu.querySelectorAll('.preset-dropdown-item').forEach(el => el.classList.remove('selected'));
+          item.classList.add('selected');
+
+          menu.style.display = 'none';
+          if (chevron) chevron.style.transform = 'rotate(0deg)';
+        });
+      });
+    }
+
+    initControlPresetDropdown();
+
+    let lastEmojiToastTime = 0;
+    function notifyEmojiInput() {
+      const now = Date.now();
+      if (now - lastEmojiToastTime > 1500) {
+        lastEmojiToastTime = now;
+        if (window.CaspianBridge && typeof window.CaspianBridge.showToast === 'function') {
+          window.CaspianBridge.showToast('Enter an emoji for this Cask ✨');
+        }
+      }
+    }
 
     if (emojiBtnEl && emojiInputEl) {
       emojiBtnEl.addEventListener('click', () => {
         try { playSFX('tb_clicks'); } catch (e) {}
+        notifyEmojiInput();
         emojiInputEl.focus();
+      });
+      emojiInputEl.addEventListener('focus', () => {
+        notifyEmojiInput();
       });
     }
 
@@ -4348,26 +4453,10 @@
         } else {
           // Reject normal text
           if (window.CaspianBridge && typeof window.CaspianBridge.showToast === 'function') {
-            window.CaspianBridge.showToast('Please enter an emoji icon');
+            window.CaspianBridge.showToast('Please enter an emoji icon ✨');
           }
         }
         emojiInputEl.value = '';
-      });
-    }
-
-    if (presetSelectEl) {
-      presetSelectEl.addEventListener('change', () => {
-        const val = presetSelectEl.value;
-        if (!val) return;
-        const parts = val.split('|');
-        if (parts.length === 2) {
-          const [presetName, presetEmoji] = parts;
-          const nameInput = document.getElementById('control-new-cask-name');
-          if (nameInput) nameInput.value = presetName;
-          selectedNewCaskEmoji = presetEmoji;
-          if (emojiDisplayEl) emojiDisplayEl.textContent = presetEmoji;
-          try { playSFX('tb_clicks'); } catch (e) {}
-        }
       });
     }
 

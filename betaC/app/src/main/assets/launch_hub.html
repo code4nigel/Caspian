@@ -208,34 +208,56 @@
       </div>
 
       <!-- Create New Cask Button & Form -->
-      <div id="create-cask-section" style="border-top: 1px dashed var(--border-glass); padding-top: 12px;">
-        <button id="btn-show-new-cask" style="width: 100%; padding: 10px; border-radius: 14px; background: var(--accent-glow, rgba(0,229,255,0.08)); border: 1px solid var(--accent, #00E5FF); color: var(--accent, #00E5FF); font-size: 12px; font-weight: 700; cursor: pointer; display: flex; align-items: center; justify-content: center; gap: 6px;">
+      <div id="create-cask-section" style="border-top: 1px dashed var(--border-glass); padding-top: 12px; box-sizing: border-box; width: 100%;">
+        <button id="btn-show-new-cask"
+          style="width: 100%; padding: 10px; border-radius: 14px; background: rgba(128,128,128,0.08); border: 1px solid var(--border-glass); color: var(--text-main); font-size: 12px; font-weight: 700; cursor: pointer; display: flex; align-items: center; justify-content: center; gap: 6px; box-sizing: border-box;">
           <span>➕ New Caspian Cask</span>
         </button>
 
-        <div id="new-cask-form" style="display: none; margin-top: 10px; flex-direction: column; gap: 8px;">
-          <input id="new-cask-name" type="text" placeholder="Cask Name (e.g. Pacific Work)" style="padding: 10px 12px; border-radius: 10px; border: 1px solid var(--border-glass); background: var(--bg-deep); color: var(--text-main); font-size: 12px; outline: none;" />
-          <div style="display: flex; gap: 6px; align-items: center;">
-            <select id="new-cask-icon" style="flex: 1.2; padding: 8px; border-radius: 10px; border: 1px solid var(--border-glass); background: var(--bg-deep); color: var(--text-main); font-size: 12px; outline: none;">
-              <option value="🌊">🌊 Wave</option>
-              <option value="⚓">⚓ Anchor</option>
-              <option value="🐬">🐬 Dolphin</option>
-              <option value="🧊">🧊 Iceberg</option>
-              <option value="🪸">🪸 Coral</option>
-              <option value="🔱">🔱 Trident</option>
-              <option value="⛵">⛵ Sailboat</option>
-              <option value="🏝️">🏝️ Island</option>
-              <option value="🐳">🐳 Whale</option>
-              <option value="🦈">🦈 Shark</option>
-              <option value="🐙">🐙 Octopus</option>
-              <option value="🚢">🚢 Ship</option>
-              <option value="custom">✏️ Custom Emoji...</option>
-            </select>
-            <input id="new-cask-custom-emoji" type="text" placeholder="Emoji" maxlength="4" style="flex: 1; padding: 8px 10px; border-radius: 10px; border: 1px solid var(--border-glass); background: var(--bg-deep); color: var(--text-main); font-size: 12px; outline: none; text-align: center;" />
+        <div id="new-cask-form" style="display: none; margin-top: 10px; flex-direction: column; gap: 10px; width: 100%; box-sizing: border-box;">
+          <!-- Name Row with Emoji Icon Button on Left -->
+          <div style="display: flex; gap: 8px; align-items: center; width: 100%; box-sizing: border-box;">
+            <!-- Clickable Emoji Picker Button on Left -->
+            <div id="hub-cask-emoji-btn" title="Tap to choose emoji"
+              style="width: 40px; height: 40px; min-width: 40px; border-radius: 12px; background: var(--bg-deep); border: 1.5px solid var(--border-glass); display: flex; align-items: center; justify-content: center; font-size: 19px; cursor: pointer; position: relative; box-sizing: border-box; flex-shrink: 0; transition: border-color 0.2s ease;">
+              <span id="hub-cask-emoji-display">🌊</span>
+              <!-- Hidden transparent input strictly filtering for emoji input from keyboard -->
+              <input id="hub-cask-emoji-input" type="text" maxlength="4"
+                style="position: absolute; inset: 0; width: 100%; height: 100%; opacity: 0; cursor: pointer; font-size: 16px; box-sizing: border-box;" />
+            </div>
+            <!-- Cask Name Input -->
+            <input id="new-cask-name" type="text" placeholder="Cask Name (e.g. Work Cask)"
+              style="flex: 1; min-width: 0; width: 100%; box-sizing: border-box; padding: 10px 12px; border-radius: 12px; border: 1px solid var(--border-glass); background: var(--bg-deep); color: var(--text-main); font-size: 12px; font-weight: 600; outline: none;" />
           </div>
-          <div style="display: flex; gap: 6px;">
-            <button id="btn-confirm-create-cask" style="flex: 1; padding: 9px 12px; border-radius: 10px; background: var(--accent-gradient, #00E5FF); border: none; color: #fff; font-size: 12px; font-weight: 700; cursor: pointer; box-shadow: 0 4px 12px var(--accent-glow);">Create</button>
-            <button id="btn-cancel-create-cask" style="padding: 9px 12px; border-radius: 10px; background: rgba(128,128,128,0.15); border: none; color: var(--text-muted); font-size: 12px; cursor: pointer;">Cancel</button>
+
+          <!-- Predefined Cask Presets Custom Dropdown UI -->
+          <div style="position: relative; width: 100%; box-sizing: border-box;">
+            <div id="hub-cask-preset-trigger"
+              style="display: flex; align-items: center; justify-content: space-between; background: var(--bg-deep); border: 1px solid var(--border-glass); border-radius: 12px; padding: 10px 12px; cursor: pointer; transition: all 0.2s ease;">
+              <div style="display: flex; align-items: center; gap: 8px; overflow: hidden;">
+                <span id="hub-cask-preset-trigger-icon" style="font-size: 14px;">✨</span>
+                <span id="hub-cask-preset-trigger-label"
+                  style="font-size: 11.5px; font-weight: 600; color: var(--text-muted); white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">Choose a Cask Preset (Optional)...</span>
+              </div>
+              <svg id="hub-cask-preset-chevron" width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"
+                style="color: var(--text-muted); transition: transform 0.2s ease; flex-shrink: 0;">
+                <polyline points="6 9 12 15 18 9"></polyline>
+              </svg>
+            </div>
+
+            <!-- Custom Presets Dropdown Menu -->
+            <div id="hub-cask-preset-menu"
+              style="display: none; flex-direction: column; gap: 4px; margin-top: 6px; max-height: 160px; overflow-y: auto; background: var(--bg-deep); border: 1px solid var(--border-glass); border-radius: 14px; padding: 6px; box-shadow: 0 12px 32px rgba(0,0,0,0.4); box-sizing: border-box;">
+              <!-- Rendered via JS -->
+            </div>
+          </div>
+
+          <!-- Action Buttons -->
+          <div style="display: flex; gap: 8px; width: 100%; box-sizing: border-box;">
+            <button id="btn-confirm-create-cask" class="oneui-pill-btn primary"
+              style="flex: 1; min-width: 0; padding: 9px 12px; border-radius: 10px; font-size: 12px; font-weight: 700; cursor: pointer;">Create</button>
+            <button id="btn-cancel-create-cask" class="oneui-pill-btn secondary"
+              style="padding: 9px 14px; border-radius: 10px; font-size: 12px; cursor: pointer;">Cancel</button>
           </div>
         </div>
       </div>
@@ -264,6 +286,50 @@
     .cask-item-row.active {
       border-color: var(--accent, #00E5FF);
       background: var(--accent-glow, rgba(0, 229, 255, 0.08));
+    }
+    .oneui-pill-btn {
+      border: 1px solid var(--border-glass);
+      background: rgba(128,128,128,0.08);
+      color: var(--text-main);
+      padding: 10px 14px;
+      border-radius: 18px;
+      font-size: 12px;
+      font-weight: 700;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 6px;
+      cursor: pointer;
+      transition: all 0.2s ease;
+    }
+    .oneui-pill-btn.primary {
+      background: var(--accent-gradient, #00E5FF);
+      color: #ffffff;
+      border: none;
+      box-shadow: 0 4px 14px var(--accent-glow, rgba(0,229,255,0.3));
+    }
+    .oneui-pill-btn.secondary {
+      background: rgba(128,128,128,0.08);
+    }
+    .oneui-pill-btn:active {
+      transform: scale(0.95);
+    }
+    .preset-dropdown-item {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 8px 10px;
+      border-radius: 10px;
+      cursor: pointer;
+      transition: all 0.15s ease;
+      user-select: none;
+    }
+    .preset-dropdown-item:hover, .preset-dropdown-item:active {
+      background: rgba(128,128,128,0.12);
+    }
+    .preset-dropdown-item.selected {
+      background: var(--accent-glow, rgba(0,229,255,0.12));
+      border: 1px solid var(--accent, #00E5FF);
     }
   </style>
 
@@ -413,12 +479,156 @@
       }, 200);
     }
 
+    let hubSelectedEmoji = '🌊';
+    const hubEmojiInputEl = document.getElementById('hub-cask-emoji-input');
+    const hubEmojiDisplayEl = document.getElementById('hub-cask-emoji-display');
+    const hubEmojiBtnEl = document.getElementById('hub-cask-emoji-btn');
+    const emojiRegex = /\p{Extended_Pictographic}/u;
+
+    const CASPIAN_CASK_PRESETS = [
+      { name: 'Work Cask', emoji: '💼', tag: 'Productivity' },
+      { name: 'Personal Vault', emoji: '🏠', tag: 'Personal' },
+      { name: 'Research & Study', emoji: '🔬', tag: 'Education' },
+      { name: 'Coding & Dev', emoji: '💻', tag: 'Development' },
+      { name: 'Social & Media', emoji: '🌐', tag: 'Networking' },
+      { name: 'Entertainment & Video', emoji: '🎬', tag: 'Streaming' },
+      { name: 'Finance & Crypto', emoji: '📈', tag: 'Finance' },
+      { name: 'Pacific Cask', emoji: '⚓', tag: 'Ocean' },
+      { name: 'Coral Reef', emoji: '🪸', tag: 'Marine' },
+      { name: 'Iceberg Vault', emoji: '🧊', tag: 'Cold Storage' },
+      { name: 'Trident Vault', emoji: '🔱', tag: 'Security' },
+      { name: 'Deep Ocean', emoji: '🌊', tag: 'Default' },
+      { name: 'Travel & Navigation', emoji: '⛵', tag: 'Travel' }
+    ];
+
+    function resetHubPresetDropdown() {
+      const triggerIcon = document.getElementById('hub-cask-preset-trigger-icon');
+      const triggerLabel = document.getElementById('hub-cask-preset-trigger-label');
+      const chevron = document.getElementById('hub-cask-preset-chevron');
+      const menu = document.getElementById('hub-cask-preset-menu');
+      if (triggerIcon) triggerIcon.textContent = '✨';
+      if (triggerLabel) {
+        triggerLabel.textContent = 'Choose a Cask Preset (Optional)...';
+        triggerLabel.style.color = 'var(--text-muted)';
+      }
+      if (chevron) chevron.style.transform = 'rotate(0deg)';
+      if (menu) {
+        menu.style.display = 'none';
+        const items = menu.querySelectorAll('.preset-dropdown-item');
+        items.forEach(el => el.classList.remove('selected'));
+      }
+    }
+
+    function initHubPresetDropdown() {
+      const trigger = document.getElementById('hub-cask-preset-trigger');
+      const menu = document.getElementById('hub-cask-preset-menu');
+      const chevron = document.getElementById('hub-cask-preset-chevron');
+      if (!trigger || !menu) return;
+
+      menu.innerHTML = CASPIAN_CASK_PRESETS.map(p => `
+        <div class="preset-dropdown-item" data-name="${p.name}" data-emoji="${p.emoji}" style="display:flex; align-items:center; justify-content:space-between; padding:8px 10px; border-radius:10px; cursor:pointer; transition:all 0.15s ease;">
+          <div style="display:flex; align-items:center; gap:9px;">
+            <div style="width:28px; height:28px; border-radius:8px; background:rgba(128,128,128,0.08); border:1px solid var(--border-glass); display:flex; align-items:center; justify-content:center; font-size:14px;">
+              ${p.emoji}
+            </div>
+            <span style="font-size:12px; font-weight:700; color:var(--text-main);">${p.name}</span>
+          </div>
+          <span style="font-size:9.5px; font-weight:700; color:var(--text-muted); background:rgba(128,128,128,0.12); padding:2px 7px; border-radius:6px;">${p.tag}</span>
+        </div>
+      `).join('');
+
+      trigger.addEventListener('click', (e) => {
+        e.stopPropagation();
+        playTapSFX();
+        const isOpen = menu.style.display === 'flex';
+        menu.style.display = isOpen ? 'none' : 'flex';
+        if (chevron) chevron.style.transform = isOpen ? 'rotate(0deg)' : 'rotate(180deg)';
+      });
+
+      menu.querySelectorAll('.preset-dropdown-item').forEach(item => {
+        item.addEventListener('click', (e) => {
+          e.stopPropagation();
+          playTapSFX();
+          const name = item.getAttribute('data-name');
+          const emoji = item.getAttribute('data-emoji');
+
+          const nameInput = document.getElementById('new-cask-name');
+          if (nameInput) nameInput.value = name;
+
+          hubSelectedEmoji = emoji;
+          if (hubEmojiDisplayEl) hubEmojiDisplayEl.textContent = emoji;
+
+          const triggerIcon = document.getElementById('hub-cask-preset-trigger-icon');
+          const triggerLabel = document.getElementById('hub-cask-preset-trigger-label');
+          if (triggerIcon) triggerIcon.textContent = emoji;
+          if (triggerLabel) {
+            triggerLabel.textContent = name;
+            triggerLabel.style.color = 'var(--text-main)';
+          }
+
+          menu.querySelectorAll('.preset-dropdown-item').forEach(el => el.classList.remove('selected'));
+          item.classList.add('selected');
+
+          menu.style.display = 'none';
+          if (chevron) chevron.style.transform = 'rotate(0deg)';
+        });
+      });
+    }
+
+    let lastHubEmojiToastTime = 0;
+    function notifyHubEmojiInput() {
+      const now = Date.now();
+      if (now - lastHubEmojiToastTime > 1500) {
+        lastHubEmojiToastTime = now;
+        if (window.CaspianBridge && typeof window.CaspianBridge.showToast === 'function') {
+          window.CaspianBridge.showToast('Enter an emoji for this Cask ✨');
+        }
+      }
+    }
+
+    if (hubEmojiBtnEl && hubEmojiInputEl) {
+      hubEmojiBtnEl.addEventListener('click', () => {
+        playTapSFX();
+        notifyHubEmojiInput();
+        hubEmojiInputEl.focus();
+      });
+      hubEmojiInputEl.addEventListener('focus', () => {
+        notifyHubEmojiInput();
+      });
+    }
+
+    if (hubEmojiInputEl) {
+      hubEmojiInputEl.addEventListener('input', () => {
+        const val = hubEmojiInputEl.value.trim();
+        if (!val) return;
+        const match = val.match(emojiRegex);
+        if (match) {
+          hubSelectedEmoji = match[0];
+          if (hubEmojiDisplayEl) hubEmojiDisplayEl.textContent = hubSelectedEmoji;
+          playTapSFX();
+        } else {
+          if (window.CaspianBridge && typeof window.CaspianBridge.showToast === 'function') {
+            window.CaspianBridge.showToast('Please enter an emoji icon ✨');
+          }
+        }
+        hubEmojiInputEl.value = '';
+      });
+    }
+
     function showNewCaskForm() {
       playTapSFX();
       const form = document.getElementById('new-cask-form');
       const btn = document.getElementById('btn-show-new-cask');
       if (form) form.style.display = 'flex';
       if (btn) btn.style.display = 'none';
+      hubSelectedEmoji = '🌊';
+      if (hubEmojiDisplayEl) hubEmojiDisplayEl.textContent = '🌊';
+      resetHubPresetDropdown();
+      const nameInput = document.getElementById('new-cask-name');
+      if (nameInput) {
+        nameInput.value = '';
+        setTimeout(() => nameInput.focus(), 80);
+      }
     }
 
     function hideNewCaskForm() {
@@ -428,18 +638,16 @@
       if (btn) btn.style.display = 'flex';
       const nameInput = document.getElementById('new-cask-name');
       if (nameInput) nameInput.value = '';
-      const customEmoji = document.getElementById('new-cask-custom-emoji');
-      if (customEmoji) customEmoji.value = '';
+      hubSelectedEmoji = '🌊';
+      if (hubEmojiDisplayEl) hubEmojiDisplayEl.textContent = '🌊';
+      resetHubPresetDropdown();
     }
 
     function confirmCreateCask() {
       playTapSFX();
       const nameInput = document.getElementById('new-cask-name');
-      const iconSelect = document.getElementById('new-cask-icon');
-      const customEmojiInput = document.getElementById('new-cask-custom-emoji');
       const name = nameInput ? nameInput.value.trim() : '';
-      const customEmoji = customEmojiInput ? customEmojiInput.value.trim() : '';
-      const icon = customEmoji || (iconSelect && iconSelect.value !== 'custom' ? iconSelect.value : '🌊');
+      const icon = hubSelectedEmoji || '🌊';
 
       if (!name) {
         if (window.CaspianBridge && typeof window.CaspianBridge.showToast === 'function') {
@@ -459,15 +667,17 @@
       }, 200);
     }
 
-    const hubIconSelect = document.getElementById('new-cask-icon');
-    if (hubIconSelect) {
-      hubIconSelect.addEventListener('change', () => {
-        const customEmojiInput = document.getElementById('new-cask-custom-emoji');
-        if (hubIconSelect.value !== 'custom' && customEmojiInput) {
-          customEmojiInput.value = hubIconSelect.value;
+    window.onCaspianCasksUpdated = function (jsonStr) {
+      try {
+        if (jsonStr) {
+          currentCasksData = JSON.parse(jsonStr);
+          renderActiveCaskUI();
+          renderCasksList();
         }
-      });
-    }
+      } catch (e) {}
+    };
+
+    initHubPresetDropdown();
 
     // Modal Listeners
     document.getElementById('active-cask-selector').addEventListener('click', openCasksModal);

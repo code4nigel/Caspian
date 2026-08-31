@@ -759,7 +759,9 @@ public class CaspianBridge {
                     showToast(active.icon + " Switched to " + active.name + "! ✨");
                     activity.reloadActiveTabOrHub();
                     String payload = manager.getCasksPayloadJson();
-                    activity.evaluateJavascriptInControlSheet("if(window.onCaspianCasksUpdated) window.onCaspianCasksUpdated(" + JSONObject.quote(payload) + ");");
+                    String js = "if(window.onCaspianCasksUpdated) window.onCaspianCasksUpdated(" + JSONObject.quote(payload) + ");";
+                    activity.evaluateJavascriptInControlSheet(js);
+                    activity.evaluateJavascriptInActiveTab(js);
                 });
             });
             return true;
@@ -778,7 +780,9 @@ public class CaspianBridge {
                 activity.runOnUiThread(() -> {
                     showToast("🌊 Cask '" + name + "' created!");
                     String payload = manager.getCasksPayloadJson();
-                    activity.evaluateJavascriptInControlSheet("if(window.onCaspianCasksUpdated) window.onCaspianCasksUpdated(" + JSONObject.quote(payload) + ");");
+                    String js = "if(window.onCaspianCasksUpdated) window.onCaspianCasksUpdated(" + JSONObject.quote(payload) + ");";
+                    activity.evaluateJavascriptInControlSheet(js);
+                    activity.evaluateJavascriptInActiveTab(js);
                 });
             }
             return created;
@@ -797,7 +801,9 @@ public class CaspianBridge {
                 activity.runOnUiThread(() -> {
                     showToast("Cask deleted.");
                     String payload = manager.getCasksPayloadJson();
-                    activity.evaluateJavascriptInControlSheet("if(window.onCaspianCasksUpdated) window.onCaspianCasksUpdated(" + JSONObject.quote(payload) + ");");
+                    String js = "if(window.onCaspianCasksUpdated) window.onCaspianCasksUpdated(" + JSONObject.quote(payload) + ");";
+                    activity.evaluateJavascriptInControlSheet(js);
+                    activity.evaluateJavascriptInActiveTab(js);
                 });
             }
             return deleted;
@@ -815,12 +821,23 @@ public class CaspianBridge {
             if (renamed) {
                 activity.runOnUiThread(() -> {
                     String payload = manager.getCasksPayloadJson();
-                    activity.evaluateJavascriptInControlSheet("if(window.onCaspianCasksUpdated) window.onCaspianCasksUpdated(" + JSONObject.quote(payload) + ");");
+                    String js = "if(window.onCaspianCasksUpdated) window.onCaspianCasksUpdated(" + JSONObject.quote(payload) + ");";
+                    activity.evaluateJavascriptInControlSheet(js);
+                    activity.evaluateJavascriptInActiveTab(js);
                 });
             }
             return renamed;
         } catch (Exception e) {
             return false;
         }
+    }
+
+    @JavascriptInterface
+    public void openControlCasksModal() {
+        if (activity == null) return;
+        activity.runOnUiThread(() -> {
+            activity.openControlSheet();
+            activity.evaluateJavascriptInControlSheet("if(typeof window.openControlCasksModal === 'function') window.openControlCasksModal();");
+        });
     }
 }

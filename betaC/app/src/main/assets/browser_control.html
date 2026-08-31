@@ -60,7 +60,7 @@
         </div>
         <div style="display: flex; flex-direction: column;">
           <span class="sheet-brand-name">CASPIAN FLOW</span>
-          <span class="sheet-brand-tag">V1.1.47-BetaC</span>
+          <span class="sheet-brand-tag">V1.1.48-BetaC</span>
         </div>
       </div>
       <div class="header-icon-actions">
@@ -1289,7 +1289,7 @@
             <div id="updater-status-dot" class="status-dot active"></div>
             <div>
               <div class="m3-card-title">Caspian Flow Updates</div>
-              <div id="updater-status-sub" class="m3-card-sub">Current: V1.1.47-BetaC • Direct in-app GitHub updater.
+              <div id="updater-status-sub" class="m3-card-sub">Current: V1.1.48-BetaC • Direct in-app GitHub updater.
               </div>
             </div>
           </div>
@@ -1725,12 +1725,12 @@
         <div style="display: flex; justify-content: space-between; align-items: center;">
           <span style="color: var(--text-muted); font-weight: 600;">Installed Version</span>
           <span id="uptodate-current-ver"
-            style="font-weight: 700; color: #10b981; background: rgba(16,185,129,0.12); padding: 2px 8px; border-radius: 6px;">v1.1.47-BetaC</span>
+            style="font-weight: 700; color: #10b981; background: rgba(16,185,129,0.12); padding: 2px 8px; border-radius: 6px;">v1.1.48-BetaC</span>
         </div>
         <div style="display: flex; justify-content: space-between; align-items: center;">
           <span style="color: var(--text-muted); font-weight: 600;">Latest on GitHub</span>
           <span id="uptodate-github-tag"
-            style="font-weight: 600; color: var(--text-main); font-family: monospace;">v1.1.47-BetaC</span>
+            style="font-weight: 600; color: var(--text-main); font-family: monospace;">v1.1.48-BetaC</span>
         </div>
       </div>
       <button id="close-uptodate-modal-btn" class="oneui-pill-btn primary"
@@ -1787,25 +1787,26 @@
               style="flex: 1; min-width: 0; width: 100%; box-sizing: border-box; padding: 10px 12px; border-radius: 12px; border: 1px solid var(--border-glass); background: var(--bg-deep); color: var(--text-main); font-size: 12px; font-weight: 600; outline: none;" />
           </div>
 
-          <!-- Predefined Cask Presets Dropdown -->
-          <div style="width: 100%; box-sizing: border-box;">
-            <select id="control-cask-preset-select"
-              style="width: 100%; box-sizing: border-box; padding: 9px 10px; border-radius: 10px; border: 1px solid var(--border-glass); background: var(--bg-deep); color: var(--text-main); font-size: 11.5px; font-weight: 600; outline: none; cursor: pointer;">
-              <option value="" disabled selected>✨ Choose a Cask Preset (Optional)...</option>
-              <option value="Work Cask|💼">💼 Work Cask</option>
-              <option value="Personal Vault|🏠">🏠 Personal Vault</option>
-              <option value="Research & Study|🔬">🔬 Research & Study</option>
-              <option value="Coding & Dev|💻">💻 Coding & Dev</option>
-              <option value="Social & Media|🌐">🌐 Social & Media</option>
-              <option value="Entertainment & Video|🎬">🎬 Entertainment & Video</option>
-              <option value="Finance & Crypto|📈">📈 Finance & Crypto</option>
-              <option value="Pacific Cask|⚓">⚓ Pacific Cask</option>
-              <option value="Coral Reef|🪸">🪸 Coral Reef</option>
-              <option value="Iceberg Vault|🧊">🧊 Iceberg Vault</option>
-              <option value="Trident Vault|🔱">🔱 Trident Vault</option>
-              <option value="Deep Ocean|🌊">🌊 Deep Ocean</option>
-              <option value="Travel & Navigation|⛵">⛵ Travel & Navigation</option>
-            </select>
+          <!-- Predefined Cask Presets Custom Dropdown UI -->
+          <div style="position: relative; width: 100%; box-sizing: border-box;">
+            <div id="control-cask-preset-trigger"
+              style="display: flex; align-items: center; justify-content: space-between; background: var(--bg-deep); border: 1px solid var(--border-glass); border-radius: 12px; padding: 10px 12px; cursor: pointer; transition: all 0.2s ease;">
+              <div style="display: flex; align-items: center; gap: 8px; overflow: hidden;">
+                <span id="control-cask-preset-trigger-icon" style="font-size: 14px;">✨</span>
+                <span id="control-cask-preset-trigger-label"
+                  style="font-size: 11.5px; font-weight: 600; color: var(--text-muted); white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">Choose a Cask Preset (Optional)...</span>
+              </div>
+              <svg id="control-cask-preset-chevron" width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"
+                style="color: var(--text-muted); transition: transform 0.2s ease; flex-shrink: 0;">
+                <polyline points="6 9 12 15 18 9"></polyline>
+              </svg>
+            </div>
+
+            <!-- Custom Presets Dropdown Menu -->
+            <div id="control-cask-preset-menu"
+              style="display: none; flex-direction: column; gap: 4px; margin-top: 6px; max-height: 160px; overflow-y: auto; background: var(--bg-deep); border: 1px solid var(--border-glass); border-radius: 14px; padding: 6px; box-shadow: 0 12px 32px rgba(0,0,0,0.4); box-sizing: border-box;">
+              <!-- Rendered via JS -->
+            </div>
           </div>
 
           <!-- Action Buttons -->

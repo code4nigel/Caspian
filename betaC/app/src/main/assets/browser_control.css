@@ -597,6 +597,27 @@ body {
   transform: scale(0.95);
 }
 
+.preset-dropdown-item {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 8px 10px;
+  border-radius: 10px;
+  cursor: pointer;
+  transition: all 0.15s ease;
+  user-select: none;
+}
+
+.preset-dropdown-item:hover,
+.preset-dropdown-item:active {
+  background: var(--input-bg, rgba(128, 128, 128, 0.12));
+}
+
+.preset-dropdown-item.selected {
+  background: var(--accent-glow, rgba(0, 229, 255, 0.12));
+  border: 1px solid var(--accent, #00e5ff);
+}
+
 .limit-section-title {
   display: flex;
   justify-content: space-between;

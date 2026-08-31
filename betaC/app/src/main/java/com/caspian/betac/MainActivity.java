@@ -6705,6 +6705,17 @@ public class MainActivity extends AppCompatActivity {
         });
     }
 
+    public void evaluateJavascriptInActiveTab(String js) {
+        runOnUiThread(() -> {
+            try {
+                TabItem activeTab = getTabById(activeTabId);
+                if (activeTab != null && activeTab.webView != null) {
+                    activeTab.webView.evaluateJavascript(js, null);
+                }
+            } catch (Exception ignored) {}
+        });
+    }
+
     public void reloadActiveTabOrHub() {
         runOnUiThread(() -> {
             try {
