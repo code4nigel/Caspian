@@ -11,6 +11,7 @@ import android.content.SharedPreferences;
 import android.content.pm.PackageManager;
 import android.content.res.AssetFileDescriptor;
 import android.graphics.Bitmap;
+import android.graphics.BitmapFactory;
 import android.graphics.Canvas;
 import android.graphics.Color;
 import android.graphics.SurfaceTexture;
@@ -273,6 +274,7 @@ public class MainActivity extends AppCompatActivity {
 
     private CardView floatingCaspianCard;
     private ImageView floatingCaspianIcon;
+    private CabRadialMenuView cabRadialMenu;
     private FrameLayout sheetOverlayContainer;
     private View sheetBackdrop;
     private WebView controlWebView;
@@ -592,6 +594,148 @@ public class MainActivity extends AppCompatActivity {
             addNewTab("gemini", prompt, "https://gemini.google.com/app", false);
         } else {
             addNewTab("chatgpt", prompt, "https://chatgpt.com", false);
+        }
+    }
+
+    public void handleAskAiFromPdfWithImage(String selectedText, String base64Image, String targetService) {
+        handleAskAiFromPdf(selectedText, targetService);
+    }
+
+    public void launchGoogleLensWithBase64(String base64Image) {
+        if (base64Image == null || base64Image.isEmpty()) return;
+        try {
+            String cleanB64 = base64Image;
+            int commaIdx = cleanB64.indexOf(",");
+            if (commaIdx >= 0) {
+                cleanB64 = cleanB64.substring(commaIdx + 1);
+            }
+            byte[] bytes = android.util.Base64.decode(cleanB64, android.util.Base64.DEFAULT);
+            Bitmap bitmap = BitmapFactory.decodeByteArray(bytes, 0, bytes.length);
+            launchGoogleLensWithBitmap(bitmap);
+        } catch (Exception e) {
+            Log.e(TAG, "decodeBase64 for Lens error: " + e.getMessage());
+            Toast.makeText(this, "Unable to process image for Google Lens", Toast.LENGTH_SHORT).show();
+        }
+    }
+
+    public void launchGoogleLensWithBitmap(Bitmap bitmap) {
+        if (bitmap == null) return;
+        try {
+            File cacheDir = new File(getCacheDir(), "whirlpool");
+            if (!cacheDir.exists()) cacheDir.mkdirs();
+            File imageFile = new File(cacheDir, "lens_query.png");
+            try (FileOutputStream fos = new FileOutputStream(imageFile)) {
+                bitmap.compress(Bitmap.CompressFormat.PNG, 100, fos);
+            }
+            Uri contentUri = FileProvider.getUriForFile(this, getPackageName() + ".fileprovider", imageFile);
+
+            // 1. Google Lens direct intent
+            Intent lensIntent = new Intent(Intent.ACTION_SEND);
+            lensIntent.setType("image/png");
+            lensIntent.putExtra(Intent.EXTRA_STREAM, contentUri);
+            lensIntent.setPackage("com.google.android.apps.lens");
+            lensIntent.addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION);
+
+            if (lensIntent.resolveActivity(getPackageManager()) != null) {
+                startActivity(lensIntent);
+                return;
+            }
+
+            // 2. Google Search App (GSA) QuickSearchBox
+            Intent gsaIntent = new Intent(Intent.ACTION_SEND);
+            gsaIntent.setType("image/png");
+            gsaIntent.putExtra(Intent.EXTRA_STREAM, contentUri);
+            gsaIntent.setPackage("com.google.android.googlequicksearchbox");
+            gsaIntent.addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION);
+
+            if (gsaIntent.resolveActivity(getPackageManager()) != null) {
+                startActivity(gsaIntent);
+                return;
+            }
+
+            // 3. Chooser or fallback
+            Intent chooser = new Intent(Intent.ACTION_SEND);
+            chooser.setType("image/png");
+            chooser.putExtra(Intent.EXTRA_STREAM, contentUri);
+            chooser.addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION);
+            startActivity(Intent.createChooser(chooser, "Search with Google Lens..."));
+        } catch (Exception e) {
+            Log.e(TAG, "launchGoogleLens error: " + e.getMessage());
+            Toast.makeText(this, "Google Lens search error: " + e.getMessage(), Toast.LENGTH_SHORT).show();
+        }
+    }
+
+    public void searchGoogleWithText(String text) {
+        if (text == null || text.trim().isEmpty()) return;
+        addNewTab("google", "", "https://www.google.com/search?q=" + Uri.encode(text.trim()), false);
+    }
+
+    public void copyImageToClipboard(String base64Image) {
+        if (base64Image == null || base64Image.isEmpty()) return;
+        try {
+            String cleanB64 = base64Image;
+            int commaIdx = cleanB64.indexOf(",");
+            if (commaIdx >= 0) {
+                cleanB64 = cleanB64.substring(commaIdx + 1);
+            }
+            byte[] bytes = android.util.Base64.decode(cleanB64, android.util.Base64.DEFAULT);
+            File cacheDir = new File(getCacheDir(), "whirlpool");
+            if (!cacheDir.exists()) cacheDir.mkdirs();
+            File imageFile = new File(cacheDir, "copied_crop.png");
+            try (FileOutputStream fos = new FileOutputStream(imageFile)) {
+                fos.write(bytes);
+            }
+            Uri uri = FileProvider.getUriForFile(this, getPackageName() + ".fileprovider", imageFile);
+            ClipboardManager cm = (ClipboardManager) getSystemService(Context.CLIPBOARD_SERVICE);
+            if (cm != null) {
+                ClipData clip = ClipData.newUri(getContentResolver(), "Caspian Whirlpool Image", uri);
+                cm.setPrimaryClip(clip);
+                Toast.makeText(this, "Copied image crop to clipboard", Toast.LENGTH_SHORT).show();
+            }
+        } catch (Exception e) {
+            Log.e(TAG, "copyImageToClipboard error: " + e.getMessage());
+        }
+    }
+
+    public void startCaspianWhirlpool() {
+        TabItem currentTab = getTabById(activeTabId);
+        if (currentTab == null || currentTab.webView == null) {
+            Toast.makeText(this, "No active tab to search", Toast.LENGTH_SHORT).show();
+            return;
+        }
+
+        // If the active tab is currently a PDF tab, trigger the PDF in-reader Whirlpool mode!
+        boolean isPdf = "pdf".equalsIgnoreCase(currentTab.service) || (currentTab.url != null && currentTab.url.contains("pdf_viewer.html"));
+        if (isPdf) {
+            currentTab.webView.evaluateJavascript("if (typeof toggleWhirlpoolMode === 'function') toggleWhirlpoolMode();", null);
+            return;
+        }
+
+        // Otherwise capture bitmap of active WebView and attach WhirlpoolOverlayView
+        try {
+            WebView wv = currentTab.webView;
+            int width = wv.getWidth();
+            int height = wv.getHeight();
+            if (width <= 0 || height <= 0) {
+                width = rootContainer != null ? rootContainer.getWidth() : 1080;
+                height = rootContainer != null ? rootContainer.getHeight() : 1920;
+            }
+
+            Bitmap bitmap = Bitmap.createBitmap(width, height, Bitmap.Config.ARGB_8888);
+            Canvas canvas = new Canvas(bitmap);
+            wv.draw(canvas);
+
+            WhirlpoolOverlayView overlay = new WhirlpoolOverlayView(this, bitmap);
+            if (rootContainer != null) {
+                rootContainer.addView(overlay, new FrameLayout.LayoutParams(
+                        ViewGroup.LayoutParams.MATCH_PARENT,
+                        ViewGroup.LayoutParams.MATCH_PARENT
+                ));
+            }
+            Toast.makeText(this, "🌀 Caspian Whirlpool: Circle or drag to search", Toast.LENGTH_SHORT).show();
+        } catch (Exception e) {
+            Log.e(TAG, "startCaspianWhirlpool error: " + e.getMessage());
+            Toast.makeText(this, "Could not capture screen: " + e.getMessage(), Toast.LENGTH_SHORT).show();
         }
     }
 
@@ -5718,14 +5862,24 @@ public class MainActivity extends AppCompatActivity {
 
                 if ("convert".equalsIgnoreCase(exportFmt)) {
                     String sourceService = "chatgpt";
-                    TabItem currentTab = getTabById(activeTabId);
-                    if (currentTab != null && currentTab.service != null && !currentTab.service.isEmpty()) {
+                    TabItem currentTab = getActiveOrDominantTab();
+                    if (currentTab == null) currentTab = getTabById(activeTabId);
+                    if (currentTab != null && currentTab.webView != null && currentTab.webView.getUrl() != null) {
+                        String curUrl = currentTab.webView.getUrl().toLowerCase(Locale.ROOT);
+                        if (curUrl.contains("gemini")) {
+                            sourceService = "gemini";
+                        } else if (curUrl.contains("chatgpt")) {
+                            sourceService = "chatgpt";
+                        } else if (currentTab.service != null && !currentTab.service.isEmpty()) {
+                            sourceService = currentTab.service;
+                        }
+                    } else if (currentTab != null && currentTab.service != null && !currentTab.service.isEmpty()) {
                         sourceService = currentTab.service;
                     } else if (turnsArray.length() > 0) {
                         sourceService = turnsArray.getJSONObject(0).optString("service", "chatgpt");
                     }
                     createNewTabWithPrefill(sourceService, sb.toString());
-                    Toast.makeText(this, "Copied context to clipboard & opened in new tab!", Toast.LENGTH_LONG).show();
+                    Toast.makeText(this, "Copied context to clipboard & opened in new " + ("gemini".equalsIgnoreCase(sourceService) ? "Gemini" : "ChatGPT") + " tab!", Toast.LENGTH_LONG).show();
                 }
             }
         } catch (Exception e) {
@@ -6742,14 +6896,23 @@ public class MainActivity extends AppCompatActivity {
                             isLongPressedInThisGesture = true;
                             view.performHapticFeedback(HapticFeedbackConstants.LONG_PRESS);
                             playAssetSound("sfx/pop_button_v2.mp3");
-                            isUniversalVoiceActive = true;
-                            startSpeechToText();
+
+                            // Reveal CAB Radial Dial centered at CAB
+                            float cx = view.getX() + (view.getWidth() / 2f);
+                            float cy = view.getY() + (view.getHeight() / 2f);
+                            cabRadialMenu = new CabRadialMenuView(MainActivity.this);
+                            cabRadialMenu.showAt(cx, cy, rootContainer);
                         }
                     };
-                    longPressHandler.postDelayed(longPressRunnable, 450);
+                    longPressHandler.postDelayed(longPressRunnable, 400);
                     return true;
 
                 case MotionEvent.ACTION_MOVE:
+                    if (isLongPressed && cabRadialMenu != null) {
+                        cabRadialMenu.updateTouch(event.getRawX(), event.getRawY());
+                        return true;
+                    }
+
                     float deltaX = Math.abs(event.getRawX() - startRawX);
                     float deltaY = Math.abs(event.getRawY() - startRawY);
                     if (deltaX > 10 || deltaY > 10) {
@@ -6765,6 +6928,29 @@ public class MainActivity extends AppCompatActivity {
 
                 case MotionEvent.ACTION_UP:
                     if (longPressRunnable != null) longPressHandler.removeCallbacks(longPressRunnable);
+
+                    if (isLongPressed && cabRadialMenu != null) {
+                        cabRadialMenu.finishGesture(new CabRadialMenuView.OnRadialActionSelectedListener() {
+                            @Override
+                            public void onActionSelected(int action) {
+                                if (action == CabRadialMenuView.ACTION_WHIRLPOOL) {
+                                    startCaspianWhirlpool();
+                                } else if (action == CabRadialMenuView.ACTION_DRIFT) {
+                                    isUniversalVoiceActive = true;
+                                    startSpeechToText();
+                                }
+                            }
+
+                            @Override
+                            public void onCancelled() {
+                                // User cancelled in center deadzone
+                            }
+                        });
+                        cabRadialMenu = null;
+                        isLongPressed = false;
+                        isLongPressedInThisGesture = false;
+                        return true;
+                    }
 
                     if (isLongPressedInThisGesture) {
                         isLongPressedInThisGesture = false;
@@ -6797,6 +6983,11 @@ public class MainActivity extends AppCompatActivity {
 
                 case MotionEvent.ACTION_CANCEL:
                     if (longPressRunnable != null) longPressHandler.removeCallbacks(longPressRunnable);
+                    if (cabRadialMenu != null) {
+                        cabRadialMenu.dismiss();
+                        cabRadialMenu = null;
+                    }
+                    isLongPressed = false;
                     isLongPressedInThisGesture = false;
                     return true;
             }

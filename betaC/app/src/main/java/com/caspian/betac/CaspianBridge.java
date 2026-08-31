@@ -854,6 +854,38 @@ public class CaspianBridge {
     }
 
     @JavascriptInterface
+    public void askAiFromPdfWithImage(String text, String base64Image, String targetService) {
+        if (activity == null) return;
+        activity.runOnUiThread(() -> {
+            activity.handleAskAiFromPdfWithImage(text, base64Image, targetService);
+        });
+    }
+
+    @JavascriptInterface
+    public void launchGoogleLensWithBase64(String base64Image) {
+        if (activity == null || base64Image == null) return;
+        activity.runOnUiThread(() -> {
+            activity.launchGoogleLensWithBase64(base64Image);
+        });
+    }
+
+    @JavascriptInterface
+    public void copyImageToClipboard(String base64Image) {
+        if (activity == null || base64Image == null) return;
+        activity.runOnUiThread(() -> {
+            activity.copyImageToClipboard(base64Image);
+        });
+    }
+
+    @JavascriptInterface
+    public void triggerCaspianWhirlpool() {
+        if (activity == null) return;
+        activity.runOnUiThread(() -> {
+            activity.startCaspianWhirlpool();
+        });
+    }
+
+    @JavascriptInterface
     public String getPdfBase64(String path) {
         if (path == null || path.trim().isEmpty()) return "";
         try {

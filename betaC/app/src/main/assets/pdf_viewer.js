@@ -49,14 +49,24 @@
   const jumpInput = document.getElementById('pdf-jump-input');
   const jumpCancel = document.getElementById('btn-jump-cancel');
   const jumpConfirm = document.getElementById('btn-jump-confirm');
-  const backBtn = document.getElementById('btn-pdf-back');
+  const btnWhirlpool = document.getElementById('btn-pdf-whirlpool');
+  const whirlpoolOverlay = document.getElementById('pdf-whirlpool-overlay');
+  const whirlpoolCanvas = document.getElementById('pdf-whirlpool-canvas');
+  const whirlpoolClose = document.getElementById('btn-whirlpool-close');
   const aiFloatingMenu = document.getElementById('pdf-ai-floating-menu');
 
   // AI Menu Buttons
+  const btnAiGoogle = document.getElementById('btn-ai-google');
   const btnAiChatgpt = document.getElementById('btn-ai-chatgpt');
   const btnAiGemini = document.getElementById('btn-ai-gemini');
   const btnAiSplit = document.getElementById('btn-ai-split');
   const btnAiCopy = document.getElementById('btn-ai-copy');
+
+  // Whirlpool State
+  let isWhirlpoolActive = false;
+  let isDrawingWhirlpool = false;
+  let whirlpoolCropBase64 = '';
+  let whirlpoolPoints = [];
 
   // Zoom Buttons
   const btnZoomIn = document.getElementById('btn-zoom-in');
@@ -511,34 +521,55 @@
       btnRotateRight.addEventListener('click', () => rotatePages(90));
     }
 
-    // Back to Tabs
-    backBtn.addEventListener('click', () => {
-      if (window.CaspianBridge && typeof window.CaspianBridge.closeActiveTab === 'function') {
-        window.CaspianBridge.closeActiveTab();
-      } else {
-        window.history.back();
-      }
-    });
+    // Caspian Whirlpool Toggle
+    if (btnWhirlpool) {
+      btnWhirlpool.addEventListener('click', () => {
+        toggleWhirlpoolMode();
+      });
+    }
 
-    // Contextual AI Actions (Ask Caspian AI)
+    // Contextual AI Actions (Ask Google / ChatGPT / Gemini / Split / Copy)
+    if (btnAiGoogle) {
+      btnAiGoogle.addEventListener('click', () => {
+        if (whirlpoolCropBase64 && window.CaspianBridge && typeof window.CaspianBridge.launchGoogleLensWithBase64 === 'function') {
+          window.CaspianBridge.launchGoogleLensWithBase64(whirlpoolCropBase64);
+        } else if (selectedTextCache && window.CaspianBridge && typeof window.CaspianBridge.searchGoogleWithText === 'function') {
+          window.CaspianBridge.searchGoogleWithText(selectedTextCache);
+        } else if (selectedTextCache && window.CaspianBridge) {
+          window.CaspianBridge.askAiFromPdf(selectedTextCache, 'gemini');
+        }
+        closeWhirlpoolMode();
+        hideAiMenu();
+      });
+    }
+
     btnAiChatgpt.addEventListener('click', () => {
-      if (selectedTextCache && window.CaspianBridge) {
+      if (whirlpoolCropBase64 && window.CaspianBridge && typeof window.CaspianBridge.askAiFromPdfWithImage === 'function') {
+        window.CaspianBridge.askAiFromPdfWithImage(selectedTextCache || 'Explain this selected image/diagram', whirlpoolCropBase64, 'chatgpt');
+      } else if (selectedTextCache && window.CaspianBridge) {
         window.CaspianBridge.askAiFromPdf(selectedTextCache, 'chatgpt');
       }
+      closeWhirlpoolMode();
       hideAiMenu();
     });
 
     btnAiGemini.addEventListener('click', () => {
-      if (selectedTextCache && window.CaspianBridge) {
+      if (whirlpoolCropBase64 && window.CaspianBridge && typeof window.CaspianBridge.askAiFromPdfWithImage === 'function') {
+        window.CaspianBridge.askAiFromPdfWithImage(selectedTextCache || 'Explain this selected image/diagram', whirlpoolCropBase64, 'gemini');
+      } else if (selectedTextCache && window.CaspianBridge) {
         window.CaspianBridge.askAiFromPdf(selectedTextCache, 'gemini');
       }
+      closeWhirlpoolMode();
       hideAiMenu();
     });
 
     btnAiSplit.addEventListener('click', () => {
-      if (selectedTextCache && window.CaspianBridge) {
+      if (whirlpoolCropBase64 && window.CaspianBridge && typeof window.CaspianBridge.askAiFromPdfWithImage === 'function') {
+        window.CaspianBridge.askAiFromPdfWithImage(selectedTextCache || 'Explain this selected image/diagram', whirlpoolCropBase64, 'split');
+      } else if (selectedTextCache && window.CaspianBridge) {
         window.CaspianBridge.askAiFromPdf(selectedTextCache, 'split');
       }
+      closeWhirlpoolMode();
       hideAiMenu();
     });
 
@@ -550,8 +581,14 @@
           navigator.clipboard.writeText(selectedTextCache);
         }
       }
+      if (whirlpoolCropBase64 && window.CaspianBridge && typeof window.CaspianBridge.copyImageToClipboard === 'function') {
+        window.CaspianBridge.copyImageToClipboard(whirlpoolCropBase64);
+      }
+      closeWhirlpoolMode();
       hideAiMenu();
     });
+
+    setupWhirlpoolEngine();
   }
 
   function jumpToPage(pageNum) {
@@ -649,6 +686,228 @@
     searchMatches = [];
     currentSearchIndex = -1;
     searchCount.textContent = '0 / 0';
+  }
+
+  // =========================================================
+  // CASPIAN WHIRLPOOL ENGINE (CIRCLE TO SEARCH / VISUAL CROP)
+  // =========================================================
+  function setupWhirlpoolEngine() {
+    if (!whirlpoolOverlay || !whirlpoolCanvas) return;
+
+    function resizeCanvas() {
+      whirlpoolCanvas.width = window.innerWidth;
+      whirlpoolCanvas.height = window.innerHeight;
+    }
+    window.addEventListener('resize', resizeCanvas);
+    resizeCanvas();
+
+    const ctx = whirlpoolCanvas.getContext('2d');
+
+    function startDraw(e) {
+      if (!isWhirlpoolActive) return;
+      isDrawingWhirlpool = true;
+      hideAiMenu();
+      const pt = getEventCoord(e);
+      whirlpoolPoints = [pt];
+      ctx.clearRect(0, 0, whirlpoolCanvas.width, whirlpoolCanvas.height);
+    }
+
+    function moveDraw(e) {
+      if (!isWhirlpoolActive || !isDrawingWhirlpool) return;
+      e.preventDefault();
+      const pt = getEventCoord(e);
+      whirlpoolPoints.push(pt);
+      renderWhirlpoolPath(ctx, whirlpoolPoints);
+    }
+
+    function endDraw(e) {
+      if (!isWhirlpoolActive || !isDrawingWhirlpool) return;
+      isDrawingWhirlpool = false;
+      if (whirlpoolPoints.length < 3) {
+        ctx.clearRect(0, 0, whirlpoolCanvas.width, whirlpoolCanvas.height);
+        return;
+      }
+      processWhirlpoolSelection(ctx, whirlpoolPoints);
+    }
+
+    whirlpoolOverlay.addEventListener('mousedown', startDraw);
+    whirlpoolOverlay.addEventListener('mousemove', moveDraw);
+    window.addEventListener('mouseup', endDraw);
+
+    whirlpoolOverlay.addEventListener('touchstart', startDraw, { passive: false });
+    whirlpoolOverlay.addEventListener('touchmove', moveDraw, { passive: false });
+    window.addEventListener('touchend', endDraw);
+
+    if (whirlpoolClose) {
+      whirlpoolClose.addEventListener('click', (e) => {
+        e.stopPropagation();
+        closeWhirlpoolMode();
+      });
+    }
+  }
+
+  function getEventCoord(e) {
+    if (e.touches && e.touches.length > 0) {
+      return { x: e.touches[0].clientX, y: e.touches[0].clientY };
+    }
+    return { x: e.clientX, y: e.clientY };
+  }
+
+  function renderWhirlpoolPath(ctx, pts) {
+    ctx.clearRect(0, 0, whirlpoolCanvas.width, whirlpoolCanvas.height);
+    if (pts.length < 2) return;
+
+    ctx.save();
+    ctx.beginPath();
+    ctx.moveTo(pts[0].x, pts[0].y);
+    for (let i = 1; i < pts.length; i++) {
+      ctx.lineTo(pts[i].x, pts[i].y);
+    }
+    ctx.closePath();
+
+    // Glowing cyan stroke
+    ctx.strokeStyle = '#38bdf8';
+    ctx.lineWidth = 2.5;
+    ctx.shadowColor = '#0284c7';
+    ctx.shadowBlur = 10;
+    ctx.stroke();
+
+    // Subtle inner fill
+    ctx.fillStyle = 'rgba(56, 189, 248, 0.10)';
+    ctx.fill();
+    ctx.restore();
+  }
+
+  function processWhirlpoolSelection(ctx, pts) {
+    let minX = Infinity, minY = Infinity, maxX = -Infinity, maxY = -Infinity;
+    pts.forEach(p => {
+      if (p.x < minX) minX = p.x;
+      if (p.y < minY) minY = p.y;
+      if (p.x > maxX) maxX = p.x;
+      if (p.y > maxY) maxY = p.y;
+    });
+
+    const width = maxX - minX;
+    const height = maxY - minY;
+
+    if (width < 18 || height < 18) {
+      ctx.clearRect(0, 0, whirlpoolCanvas.width, whirlpoolCanvas.height);
+      return;
+    }
+
+    // Keep visual frame with glowing accent
+    ctx.save();
+    ctx.strokeStyle = '#10b981';
+    ctx.lineWidth = 2;
+    ctx.setLineDash([6, 4]);
+    ctx.strokeRect(minX, minY, width, height);
+    ctx.restore();
+
+    // Crop image from active rendered page canvas
+    cropImageFromSelection(minX, minY, width, height);
+
+    // Extract any text within the selection bounding box
+    extractTextInBounds(minX, minY, maxX, maxY);
+
+    // Position floating AI menu near the selection
+    positionAiMenu({
+      left: minX,
+      top: minY,
+      width: width,
+      height: height,
+      bottom: maxY
+    });
+  }
+
+  function cropImageFromSelection(screenX, screenY, width, height) {
+    whirlpoolCropBase64 = '';
+    const pageContainers = document.querySelectorAll('.pdf-page-container');
+    for (const container of pageContainers) {
+      const rect = container.getBoundingClientRect();
+      const interLeft = Math.max(screenX, rect.left);
+      const interTop = Math.max(screenY, rect.top);
+      const interRight = Math.min(screenX + width, rect.right);
+      const interBottom = Math.min(screenY + height, rect.bottom);
+
+      if (interRight > interLeft && interBottom > interTop) {
+        const pageCanvas = container.querySelector('canvas');
+        if (pageCanvas) {
+          try {
+            const scaleX = pageCanvas.width / rect.width;
+            const scaleY = pageCanvas.height / rect.height;
+
+            const cropX = (interLeft - rect.left) * scaleX;
+            const cropY = (interTop - rect.top) * scaleY;
+            const cropW = (interRight - interLeft) * scaleX;
+            const cropH = (interBottom - interTop) * scaleY;
+
+            const offscreen = document.createElement('canvas');
+            offscreen.width = cropW;
+            offscreen.height = cropH;
+            const offCtx = offscreen.getContext('2d');
+            offCtx.drawImage(pageCanvas, cropX, cropY, cropW, cropH, 0, 0, cropW, cropH);
+
+            whirlpoolCropBase64 = offscreen.toDataURL('image/png');
+          } catch (e) {
+            console.error('Whirlpool crop error:', e);
+          }
+        }
+        break;
+      }
+    }
+  }
+
+  function extractTextInBounds(minX, minY, maxX, maxY) {
+    let collected = [];
+    const textSpans = document.querySelectorAll('.textLayer span');
+    for (const span of textSpans) {
+      const r = span.getBoundingClientRect();
+      if (r.right >= minX && r.left <= maxX && r.bottom >= minY && r.top <= maxY) {
+        const t = span.textContent.trim();
+        if (t) collected.push(t);
+      }
+    }
+    if (collected.length > 0) {
+      selectedTextCache = collected.join(' ');
+    }
+  }
+
+  function toggleWhirlpoolMode() {
+    if (isWhirlpoolActive) {
+      closeWhirlpoolMode();
+    } else {
+      openWhirlpoolMode();
+    }
+  }
+
+  function openWhirlpoolMode() {
+    isWhirlpoolActive = true;
+    if (whirlpoolOverlay) {
+      whirlpoolOverlay.style.display = 'block';
+      whirlpoolCanvas.width = window.innerWidth;
+      whirlpoolCanvas.height = window.innerHeight;
+      const ctx = whirlpoolCanvas.getContext('2d');
+      ctx.clearRect(0, 0, whirlpoolCanvas.width, whirlpoolCanvas.height);
+    }
+    if (btnWhirlpool) btnWhirlpool.classList.add('whirlpool-active');
+    hideAiMenu();
+    if (window.CaspianBridge && typeof window.CaspianBridge.showToast === 'function') {
+      window.CaspianBridge.showToast('🌀 Caspian Whirlpool: Circle or drag to search');
+    }
+  }
+
+  function closeWhirlpoolMode() {
+    isWhirlpoolActive = false;
+    isDrawingWhirlpool = false;
+    if (whirlpoolOverlay) {
+      whirlpoolOverlay.style.display = 'none';
+      if (whirlpoolCanvas) {
+        const ctx = whirlpoolCanvas.getContext('2d');
+        ctx.clearRect(0, 0, whirlpoolCanvas.width, whirlpoolCanvas.height);
+      }
+    }
+    if (btnWhirlpool) btnWhirlpool.classList.remove('whirlpool-active');
+    hideAiMenu();
   }
 
   // Start on DOMContentLoaded

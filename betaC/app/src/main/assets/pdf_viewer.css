@@ -369,6 +369,13 @@ body.night-mode .textLayer span::-moz-selection {
   transform: scale(0.94);
 }
 
+.ai-menu-item.google {
+  color: #60a5fa;
+}
+.ai-menu-item.google:active {
+  background: rgba(59, 130, 246, 0.2);
+}
+
 .ai-menu-item.chatgpt {
   color: #34d399;
 }
@@ -607,3 +614,89 @@ body.night-mode .textLayer span::-moz-selection {
 @keyframes spin {
   to { transform: rotate(360deg); }
 }
+
+/* =========================================================
+   CASPIAN WHIRLPOOL OVERLAY (CIRCLE-TO-SEARCH)
+   ========================================================= */
+.icon-btn.whirlpool-active {
+  background: rgba(56, 189, 248, 0.22) !important;
+  color: #38bdf8 !important;
+  border-color: rgba(56, 189, 248, 0.5) !important;
+  box-shadow: 0 0 14px rgba(56, 189, 248, 0.4);
+}
+
+.pdf-whirlpool-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 2500;
+  cursor: crosshair;
+  touch-action: none;
+  user-select: none;
+  -webkit-user-select: none;
+  background: rgba(4, 7, 18, 0.35);
+  backdrop-filter: blur(1.5px);
+  -webkit-backdrop-filter: blur(1.5px);
+  animation: whirlpoolFadeIn 0.18s ease-out;
+}
+
+@keyframes whirlpoolFadeIn {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+#pdf-whirlpool-canvas {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  pointer-events: none;
+}
+
+.pdf-whirlpool-hint {
+  position: fixed;
+  top: 62px;
+  left: 50%;
+  transform: translateX(-50%);
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  background: rgba(15, 23, 42, 0.94);
+  border: 1px solid rgba(56, 189, 248, 0.4);
+  border-radius: 9999px;
+  padding: 6px 14px;
+  color: #38bdf8;
+  font-size: 12px;
+  font-weight: 600;
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.7), 0 0 16px rgba(56, 189, 248, 0.3);
+  pointer-events: auto;
+  z-index: 2600;
+  animation: pulseHint 2s infinite ease-in-out;
+}
+
+@keyframes pulseHint {
+  0%, 100% { transform: translateX(-50%) scale(1); }
+  50% { transform: translateX(-50%) scale(1.02); }
+}
+
+.whirlpool-close-btn {
+  background: rgba(255, 255, 255, 0.15);
+  border: none;
+  color: #cbd5e1;
+  width: 20px;
+  height: 20px;
+  border-radius: 50%;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 11px;
+  cursor: pointer;
+  margin-left: 6px;
+  transition: all 0.15s ease;
+}
+
+.whirlpool-close-btn:active {
+  background: rgba(239, 68, 68, 0.4);
+  color: #ffffff;
+}
+
