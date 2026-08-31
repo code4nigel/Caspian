@@ -275,6 +275,7 @@ public class MainActivity extends AppCompatActivity {
     private CardView floatingCaspianCard;
     private ImageView floatingCaspianIcon;
     private CabRadialMenuView cabRadialMenu;
+    private WhirlpoolOverlayView currentWhirlpoolOverlay;
     private FrameLayout sheetOverlayContainer;
     private View sheetBackdrop;
     private WebView controlWebView;
@@ -697,6 +698,132 @@ public class MainActivity extends AppCompatActivity {
         }
     }
 
+    public void copyImageToClipboard(Bitmap bitmap) {
+        if (bitmap == null) return;
+        try {
+            File cacheDir = new File(getCacheDir(), "whirlpool");
+            if (!cacheDir.exists()) cacheDir.mkdirs();
+            File imageFile = new File(cacheDir, "copied_crop.png");
+            try (FileOutputStream fos = new FileOutputStream(imageFile)) {
+                bitmap.compress(Bitmap.CompressFormat.PNG, 100, fos);
+            }
+            Uri uri = FileProvider.getUriForFile(this, getPackageName() + ".fileprovider", imageFile);
+            ClipboardManager cm = (ClipboardManager) getSystemService(Context.CLIPBOARD_SERVICE);
+            if (cm != null) {
+                ClipData clip = ClipData.newUri(getContentResolver(), "Caspian Whirlpool Image", uri);
+                cm.setPrimaryClip(clip);
+                Toast.makeText(this, "Copied image crop to clipboard", Toast.LENGTH_SHORT).show();
+            }
+        } catch (Exception e) {
+            Log.e(TAG, "copyImageToClipboard bitmap error: " + e.getMessage());
+        }
+    }
+
+    public void onWhirlpoolDismissed() {
+        currentWhirlpoolOverlay = null;
+        if (floatingCaspianCard != null) {
+            float defaultElevation = TypedValue.applyDimension(TypedValue.COMPLEX_UNIT_DIP, 24, getResources().getDisplayMetrics());
+            floatingCaspianCard.setElevation(defaultElevation);
+        }
+    }
+
+    public void launchChatGPTWithBitmap(Bitmap bitmap) {
+        if (bitmap == null) return;
+        try {
+            File cacheDir = new File(getCacheDir(), "whirlpool");
+            if (!cacheDir.exists()) cacheDir.mkdirs();
+            File imageFile = new File(cacheDir, "gpt_query.png");
+            try (FileOutputStream fos = new FileOutputStream(imageFile)) {
+                bitmap.compress(Bitmap.CompressFormat.PNG, 100, fos);
+            }
+            Uri contentUri = FileProvider.getUriForFile(this, getPackageName() + ".fileprovider", imageFile);
+
+            // Copy image URI to clipboard so it is immediately pasteable in web or app
+            ClipboardManager cm = (ClipboardManager) getSystemService(Context.CLIPBOARD_SERVICE);
+            if (cm != null) {
+                ClipData clip = ClipData.newUri(getContentResolver(), "Caspian Crop", contentUri);
+                cm.setPrimaryClip(clip);
+            }
+
+            // Check if ChatGPT official app is installed
+            Intent gptIntent = new Intent(Intent.ACTION_SEND);
+            gptIntent.setType("image/png");
+            gptIntent.putExtra(Intent.EXTRA_STREAM, contentUri);
+            gptIntent.setPackage("com.openai.chatgpt");
+            gptIntent.addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION);
+
+            if (gptIntent.resolveActivity(getPackageManager()) != null) {
+                startActivity(gptIntent);
+                Toast.makeText(this, "Sent image crop to ChatGPT", Toast.LENGTH_SHORT).show();
+                return;
+            }
+
+            // Otherwise open ChatGPT in Caspian Flow browser tab with image ready on clipboard
+            addNewTab("chatgpt", "", "https://chatgpt.com", false);
+            Toast.makeText(this, "Image copied to clipboard! Ready to paste into ChatGPT.", Toast.LENGTH_LONG).show();
+        } catch (Exception e) {
+            Log.e(TAG, "launchChatGPTWithBitmap error: " + e.getMessage());
+            Toast.makeText(this, "ChatGPT error: " + e.getMessage(), Toast.LENGTH_SHORT).show();
+        }
+    }
+
+    public void launchGeminiWithBitmap(Bitmap bitmap) {
+        if (bitmap == null) return;
+        try {
+            File cacheDir = new File(getCacheDir(), "whirlpool");
+            if (!cacheDir.exists()) cacheDir.mkdirs();
+            File imageFile = new File(cacheDir, "gemini_query.png");
+            try (FileOutputStream fos = new FileOutputStream(imageFile)) {
+                bitmap.compress(Bitmap.CompressFormat.PNG, 100, fos);
+            }
+            Uri contentUri = FileProvider.getUriForFile(this, getPackageName() + ".fileprovider", imageFile);
+
+            // Copy image URI to clipboard
+            ClipboardManager cm = (ClipboardManager) getSystemService(Context.CLIPBOARD_SERVICE);
+            if (cm != null) {
+                ClipData clip = ClipData.newUri(getContentResolver(), "Caspian Crop", contentUri);
+                cm.setPrimaryClip(clip);
+            }
+
+            // Check if Gemini app is installed
+            Intent geminiIntent = new Intent(Intent.ACTION_SEND);
+            geminiIntent.setType("image/png");
+            geminiIntent.putExtra(Intent.EXTRA_STREAM, contentUri);
+            geminiIntent.setPackage("com.google.android.apps.bard");
+            geminiIntent.addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION);
+
+            if (geminiIntent.resolveActivity(getPackageManager()) != null) {
+                startActivity(geminiIntent);
+                Toast.makeText(this, "Sent image crop to Gemini", Toast.LENGTH_SHORT).show();
+                return;
+            }
+
+            // Otherwise open Gemini in Caspian Flow browser tab
+            addNewTab("gemini", "", "https://gemini.google.com/app", false);
+            Toast.makeText(this, "Image copied to clipboard! Ready to paste into Gemini.", Toast.LENGTH_LONG).show();
+        } catch (Exception e) {
+            Log.e(TAG, "launchGeminiWithBitmap error: " + e.getMessage());
+            Toast.makeText(this, "Gemini error: " + e.getMessage(), Toast.LENGTH_SHORT).show();
+        }
+    }
+
+    public void launchSplitWithBitmap(Bitmap bitmap) {
+        if (bitmap != null) {
+            copyImageToClipboard(bitmap);
+        }
+        int id = nextTabId++;
+        TabItem gptTab = createNewTabInstance(id, "https://chatgpt.com", "chatgpt", "", false);
+        gptTab.title = "ChatGPT";
+        tabsList.add(gptTab);
+
+        secondarySplitTabId = gptTab.id;
+        splitModeState = 1;
+        splitRatio = 0.5f;
+        applySplitViewLayout();
+        saveOpenTabsState();
+        Toast.makeText(this, "Image copied to clipboard! Split Screen Active.", Toast.LENGTH_SHORT).show();
+    }
+
     public void startCaspianWhirlpool() {
         TabItem currentTab = getTabById(activeTabId);
         if (currentTab == null || currentTab.webView == null) {
@@ -704,34 +831,59 @@ public class MainActivity extends AppCompatActivity {
             return;
         }
 
-        // If the active tab is currently a PDF tab, trigger the PDF in-reader Whirlpool mode!
-        boolean isPdf = "pdf".equalsIgnoreCase(currentTab.service) || (currentTab.url != null && currentTab.url.contains("pdf_viewer.html"));
-        if (isPdf) {
-            currentTab.webView.evaluateJavascript("if (typeof toggleWhirlpoolMode === 'function') toggleWhirlpoolMode();", null);
-            return;
-        }
-
-        // Otherwise capture bitmap of active WebView and attach WhirlpoolOverlayView
         try {
-            WebView wv = currentTab.webView;
-            int width = wv.getWidth();
-            int height = wv.getHeight();
-            if (width <= 0 || height <= 0) {
-                width = rootContainer != null ? rootContainer.getWidth() : 1080;
-                height = rootContainer != null ? rootContainer.getHeight() : 1920;
-            }
+            int width = rootContainer != null ? rootContainer.getWidth() : 1080;
+            int height = rootContainer != null ? rootContainer.getHeight() : 1920;
+            if (width <= 0) width = 1080;
+            if (height <= 0) height = 1920;
 
             Bitmap bitmap = Bitmap.createBitmap(width, height, Bitmap.Config.ARGB_8888);
             Canvas canvas = new Canvas(bitmap);
-            wv.draw(canvas);
+
+            // Hide CAB and radial dial during screen capture so they don't get stamped into the screenshot
+            if (floatingCaspianCard != null) floatingCaspianCard.setVisibility(View.INVISIBLE);
+            if (cabRadialMenu != null) cabRadialMenu.setVisibility(View.INVISIBLE);
+
+            if (rootContainer != null) {
+                rootContainer.draw(canvas);
+            }
+
+            // Also draw all currently visible WebViews (e.g. main tab, split pane tabs, pdf viewer) at exact window offsets
+            for (TabItem tab : tabsList) {
+                if (tab != null && tab.webView != null && tab.webView.getVisibility() == View.VISIBLE) {
+                    int[] wvLoc = new int[2];
+                    tab.webView.getLocationInWindow(wvLoc);
+                    int[] rootLoc = new int[2];
+                    if (rootContainer != null) rootContainer.getLocationInWindow(rootLoc);
+                    int offX = wvLoc[0] - rootLoc[0];
+                    int offY = wvLoc[1] - rootLoc[1];
+
+                    canvas.save();
+                    canvas.translate(offX, offY);
+                    tab.webView.draw(canvas);
+                    canvas.restore();
+                }
+            }
+
+            if (floatingCaspianCard != null) {
+                floatingCaspianCard.setVisibility(View.VISIBLE);
+            }
 
             WhirlpoolOverlayView overlay = new WhirlpoolOverlayView(this, bitmap);
+            currentWhirlpoolOverlay = overlay;
             if (rootContainer != null) {
                 rootContainer.addView(overlay, new FrameLayout.LayoutParams(
                         ViewGroup.LayoutParams.MATCH_PARENT,
                         ViewGroup.LayoutParams.MATCH_PARENT
                 ));
             }
+
+            // Elevate CAB so it stays on top of Whirlpool and single-tapping it cancels Whirlpool
+            if (floatingCaspianCard != null) {
+                floatingCaspianCard.bringToFront();
+                floatingCaspianCard.setElevation(1000f);
+            }
+
             Toast.makeText(this, "🌀 Caspian Whirlpool: Circle or drag to search", Toast.LENGTH_SHORT).show();
         } catch (Exception e) {
             Log.e(TAG, "startCaspianWhirlpool error: " + e.getMessage());
@@ -6958,6 +7110,11 @@ public class MainActivity extends AppCompatActivity {
                     }
 
                     if (!isDragging && !isLongPressed) {
+                        if (currentWhirlpoolOverlay != null) {
+                            currentWhirlpoolOverlay.dismiss();
+                            currentWhirlpoolOverlay = null;
+                            return true;
+                        }
                         actionButtonClickCount++;
                         SharedPreferences appPrefs = getSharedPreferences(PREFS_NAME, MODE_PRIVATE);
                         appPrefs.edit().putInt("action_btn_click_count", actionButtonClickCount).apply();

@@ -115,7 +115,20 @@ public class WhirlpoolOverlayView extends FrameLayout {
     }
 
     private void setupActionButtons(float density) {
-        // 1. Ask Google (Google Lens)
+        // Drag handle for moving the menu anywhere
+        TextView dragHandle = new TextView(activity);
+        dragHandle.setText("⠿");
+        dragHandle.setTextColor(Color.parseColor("#94A3B8"));
+        dragHandle.setTextSize(16f);
+        dragHandle.setGravity(Gravity.CENTER);
+        dragHandle.setPadding((int) (8 * density), (int) (6 * density), (int) (4 * density), (int) (6 * density));
+        setupDragListener(dragHandle);
+        setupDragListener(menuContainer);
+        menuContainer.addView(dragHandle);
+
+        addDivider(density);
+
+        // 1. Ask Google (Google Lens with Image)
         Button btnGoogle = createActionButton("🔍 Ask Google", "#60A5FA", density);
         btnGoogle.setOnClickListener(v -> {
             if (croppedBitmap != null) {
@@ -129,52 +142,53 @@ public class WhirlpoolOverlayView extends FrameLayout {
 
         addDivider(density);
 
-        // 2. Ask ChatGPT
+        // 2. Ask ChatGPT (Send Image)
         Button btnGpt = createActionButton("✳️ Ask ChatGPT", "#34D399", density);
         btnGpt.setOnClickListener(v -> {
-            String prompt = recognizedText.isEmpty()
-                    ? "Explain this concept in simple terms"
-                    : "Explain this concept in simple terms:\n\n\"" + recognizedText + "\"";
-            activity.addNewTab("chatgpt", prompt, "https://chatgpt.com", false);
+            if (croppedBitmap != null) {
+                activity.launchChatGPTWithBitmap(croppedBitmap);
+            } else {
+                activity.addNewTab("chatgpt", "", "https://chatgpt.com", false);
+            }
             dismiss();
         });
         menuContainer.addView(btnGpt);
 
-        // 3. Ask Gemini
+        // 3. Ask Gemini (Send Image)
         Button btnGemini = createActionButton("✦ Ask Gemini", "#A78BFA", density);
         btnGemini.setOnClickListener(v -> {
-            String prompt = recognizedText.isEmpty()
-                    ? "Explain this concept in simple terms"
-                    : "Explain this concept in simple terms:\n\n\"" + recognizedText + "\"";
-            activity.addNewTab("gemini", prompt, "https://gemini.google.com/app", false);
+            if (croppedBitmap != null) {
+                activity.launchGeminiWithBitmap(croppedBitmap);
+            } else {
+                activity.addNewTab("gemini", "", "https://gemini.google.com/app", false);
+            }
             dismiss();
         });
         menuContainer.addView(btnGemini);
 
         addDivider(density);
 
-        // 4. Split Arena
+        // 4. Split Arena (Send Image)
         Button btnSplit = createActionButton("◫ Split Arena", "#38BDF8", density);
         btnSplit.setOnClickListener(v -> {
-            String prompt = recognizedText.isEmpty()
-                    ? "Explain this concept in simple terms"
-                    : "Explain this concept in simple terms:\n\n\"" + recognizedText + "\"";
-            activity.handleAskAiFromPdf(prompt, "split");
+            activity.launchSplitWithBitmap(croppedBitmap);
             dismiss();
         });
         menuContainer.addView(btnSplit);
 
-        // 5. Copy
+        // 5. Copy Image Crop to Clipboard
         Button btnCopy = createActionButton("📋 Copy", "#94A3B8", density);
         btnCopy.setOnClickListener(v -> {
-            if (!recognizedText.isEmpty()) {
+            if (croppedBitmap != null) {
+                activity.copyImageToClipboard(croppedBitmap);
+            } else if (!recognizedText.isEmpty()) {
                 ClipboardManager cm = (ClipboardManager) activity.getSystemService(Context.CLIPBOARD_SERVICE);
                 if (cm != null) {
                     cm.setPrimaryClip(ClipData.newPlainText("Caspian Whirlpool", recognizedText));
                     Toast.makeText(activity, "Copied recognized text to clipboard", Toast.LENGTH_SHORT).show();
                 }
             } else {
-                Toast.makeText(activity, "No text detected in selection", Toast.LENGTH_SHORT).show();
+                Toast.makeText(activity, "No selection found", Toast.LENGTH_SHORT).show();
             }
             dismiss();
         });
@@ -186,6 +200,49 @@ public class WhirlpoolOverlayView extends FrameLayout {
         Button btnClose = createActionButton("✕", "#EF4444", density);
         btnClose.setOnClickListener(v -> dismiss());
         menuContainer.addView(btnClose);
+    }
+
+    @SuppressLint("ClickableViewAccessibility")
+    private void setupDragListener(View handle) {
+        handle.setOnTouchListener(new OnTouchListener() {
+            private float startRawX, startRawY;
+            private float initialMenuX, initialMenuY;
+
+            @Override
+            public boolean onTouch(View v, MotionEvent event) {
+                switch (event.getActionMasked()) {
+                    case MotionEvent.ACTION_DOWN:
+                        startRawX = event.getRawX();
+                        startRawY = event.getRawY();
+                        initialMenuX = menuScrollView.getX();
+                        initialMenuY = menuScrollView.getY();
+                        v.performHapticFeedback(HapticFeedbackConstants.CLOCK_TICK);
+                        return true;
+
+                    case MotionEvent.ACTION_MOVE:
+                        float dx = event.getRawX() - startRawX;
+                        float dy = event.getRawY() - startRawY;
+
+                        float newX = initialMenuX + dx;
+                        float newY = initialMenuY + dy;
+
+                        // Clamping to screen boundaries
+                        int maxX = Math.max(10, getWidth() - menuScrollView.getWidth() - 10);
+                        int maxY = Math.max(60, getHeight() - menuScrollView.getHeight() - 60);
+                        newX = Math.max(10, Math.min(maxX, newX));
+                        newY = Math.max(60, Math.min(maxY, newY));
+
+                        menuScrollView.setX(newX);
+                        menuScrollView.setY(newY);
+                        return true;
+
+                    case MotionEvent.ACTION_UP:
+                    case MotionEvent.ACTION_CANCEL:
+                        return true;
+                }
+                return false;
+            }
+        });
     }
 
     private Button createActionButton(String label, String textColor, float density) {
@@ -209,6 +266,7 @@ public class WhirlpoolOverlayView extends FrameLayout {
     }
 
     public void dismiss() {
+        activity.onWhirlpoolDismissed();
         animate()
                 .alpha(0f)
                 .setDuration(160)
