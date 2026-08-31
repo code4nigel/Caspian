@@ -463,6 +463,136 @@ public class MainActivity extends AppCompatActivity {
         } catch (Throwable t) {
             Log.e(TAG, "restoreOpenTabsState error: ", t);
         }
+
+        try {
+            handleIncomingPdfIntent(getIntent());
+        } catch (Throwable t) {
+            Log.e(TAG, "handleIncomingPdfIntent error: ", t);
+        }
+    }
+
+    @Override
+    protected void onNewIntent(Intent intent) {
+        super.onNewIntent(intent);
+        setIntent(intent);
+        try {
+            handleIncomingPdfIntent(intent);
+        } catch (Throwable t) {
+            Log.e(TAG, "handleIncomingPdfIntent onNewIntent error: ", t);
+        }
+    }
+
+    public void handleIncomingPdfIntent(Intent intent) {
+        if (intent == null) return;
+        String action = intent.getAction();
+        Uri pdfUri = null;
+
+        if (Intent.ACTION_VIEW.equals(action)) {
+            pdfUri = intent.getData();
+        } else if (Intent.ACTION_SEND.equals(action)) {
+            if (intent.hasExtra(Intent.EXTRA_STREAM)) {
+                try {
+                    pdfUri = intent.getParcelableExtra(Intent.EXTRA_STREAM);
+                } catch (Exception ignored) {}
+            }
+        }
+
+        if (pdfUri != null) {
+            openPdfFromUriInNewTab(pdfUri);
+        }
+    }
+
+    public void openPdfFromUriInNewTab(Uri pdfUri) {
+        if (pdfUri == null) return;
+        String displayName = "Document.pdf";
+        try {
+            if ("content".equalsIgnoreCase(pdfUri.getScheme())) {
+                try (android.database.Cursor cursor = getContentResolver().query(pdfUri, null, null, null, null)) {
+                    if (cursor != null && cursor.moveToFirst()) {
+                        int nameIndex = cursor.getColumnIndex(android.provider.OpenableColumns.DISPLAY_NAME);
+                        if (nameIndex != -1) {
+                            String name = cursor.getString(nameIndex);
+                            if (name != null && !name.trim().isEmpty()) {
+                                displayName = name;
+                            }
+                        }
+                    }
+                }
+            } else if ("file".equalsIgnoreCase(pdfUri.getScheme())) {
+                String lastSeg = pdfUri.getLastPathSegment();
+                if (lastSeg != null && !lastSeg.trim().isEmpty()) {
+                    displayName = lastSeg;
+                }
+            }
+        } catch (Exception e) {
+            Log.e(TAG, "Error resolving PDF display name: " + e.getMessage());
+        }
+
+        if (!displayName.toLowerCase().endsWith(".pdf")) {
+            displayName += ".pdf";
+        }
+
+        try {
+            File pdfDir = new File(getCacheDir(), "pdf_cache");
+            if (!pdfDir.exists()) pdfDir.mkdirs();
+            String safeFileName = System.currentTimeMillis() + "_" + displayName.replaceAll("[^a-zA-Z0-9._-]", "_");
+            File targetFile = new File(pdfDir, safeFileName);
+
+            try (InputStream in = getContentResolver().openInputStream(pdfUri);
+                 FileOutputStream out = new FileOutputStream(targetFile)) {
+                if (in == null) return;
+                byte[] buffer = new byte[8192];
+                int read;
+                while ((read = in.read(buffer)) != -1) {
+                    out.write(buffer, 0, read);
+                }
+                out.flush();
+            }
+
+            openCachedPdfInNewTab(targetFile.getAbsolutePath(), displayName);
+        } catch (Exception e) {
+            Log.e(TAG, "Failed to copy incoming PDF: " + e.getMessage());
+            Toast.makeText(this, "Unable to open PDF", Toast.LENGTH_SHORT).show();
+        }
+    }
+
+    public void openCachedPdfInNewTab(String absolutePath, String displayName) {
+        int id = nextTabId++;
+        String encodedPath = Uri.encode(absolutePath);
+        String encodedTitle = Uri.encode(displayName);
+        String viewerUrl = "file:///android_asset/pdf_viewer.html?file=" + encodedPath + "&title=" + encodedTitle;
+
+        CaskManager cm = new CaskManager(this);
+        String caskId = cm.getActiveCaskId();
+        TabItem tab = createNewTabInstance(id, viewerUrl, "pdf", null, false, caskId);
+        tab.title = displayName;
+        tabsList.add(tab);
+        switchToTab(id);
+        saveOpenTabsState();
+        Toast.makeText(this, "Opened PDF: " + displayName, Toast.LENGTH_SHORT).show();
+    }
+
+    public void handleAskAiFromPdf(String selectedText, String targetService) {
+        String prompt = "Explain this concept in simple terms from the document:\n\n\"" + selectedText + "\"";
+
+        if ("split".equalsIgnoreCase(targetService)) {
+            // Open Split Arena: Active PDF on the Left, ChatGPT on the Right
+            int id = nextTabId++;
+            TabItem gptTab = createNewTabInstance(id, "https://chatgpt.com", "chatgpt", prompt, false);
+            gptTab.title = "ChatGPT";
+            tabsList.add(gptTab);
+
+            secondarySplitTabId = gptTab.id;
+            splitModeState = 1;
+            splitRatio = 0.5f;
+            applySplitViewLayout();
+            saveOpenTabsState();
+            Toast.makeText(this, "Split Screen Study Active!", Toast.LENGTH_SHORT).show();
+        } else if ("gemini".equalsIgnoreCase(targetService)) {
+            addNewTab("gemini", prompt, "https://gemini.google.com/app", false);
+        } else {
+            addNewTab("chatgpt", prompt, "https://chatgpt.com", false);
+        }
     }
 
     public void saveOpenTabsState() {
@@ -5796,6 +5926,26 @@ public class MainActivity extends AppCompatActivity {
 
             @Override
             public WebResourceResponse shouldInterceptRequest(WebView view, WebResourceRequest request) {
+                if (request != null && request.getUrl() != null) {
+                    Uri reqUri = request.getUrl();
+                    if ("caspian.pdf".equalsIgnoreCase(reqUri.getHost()) && "/stream".equalsIgnoreCase(reqUri.getPath())) {
+                        String filePath = reqUri.getQueryParameter("path");
+                        if (filePath != null) {
+                            File file = new File(filePath);
+                            if (file.exists() && file.canRead()) {
+                                try {
+                                    java.io.FileInputStream fis = new java.io.FileInputStream(file);
+                                    Map<String, String> headers = new java.util.HashMap<>();
+                                    headers.put("Access-Control-Allow-Origin", "*");
+                                    headers.put("Accept-Ranges", "bytes");
+                                    headers.put("Content-Type", "application/pdf");
+                                    headers.put("Content-Disposition", "inline; filename=\"" + file.getName() + "\"");
+                                    return new WebResourceResponse("application/pdf", "identity", 200, "OK", headers, fis);
+                                } catch (Exception ignored) {}
+                            }
+                        }
+                    }
+                }
                 if (adBlockShield != null && adBlockShield.isBlocked(request.getUrl().toString())) {
                     return new WebResourceResponse("text/plain", "UTF-8", new ByteArrayInputStream("".getBytes()));
                 }

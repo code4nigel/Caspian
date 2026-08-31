@@ -840,4 +840,32 @@ public class CaspianBridge {
             activity.evaluateJavascriptInControlSheet("if(typeof window.openControlCasksModal === 'function') window.openControlCasksModal();");
         });
     }
+
+    // ==========================================
+    // PDF STUDY READER BRIDGE
+    // ==========================================
+
+    @JavascriptInterface
+    public void askAiFromPdf(String text, String targetService) {
+        if (activity == null || text == null || text.trim().isEmpty()) return;
+        activity.runOnUiThread(() -> {
+            activity.handleAskAiFromPdf(text.trim(), targetService);
+        });
+    }
+
+    @JavascriptInterface
+    public String getPdfBase64(String path) {
+        if (path == null || path.trim().isEmpty()) return "";
+        try {
+            File f = new File(path);
+            if (!f.exists() || !f.canRead()) return "";
+            byte[] bytes = new byte[(int) f.length()];
+            try (java.io.FileInputStream fis = new java.io.FileInputStream(f)) {
+                fis.read(bytes);
+            }
+            return android.util.Base64.encodeToString(bytes, android.util.Base64.NO_WRAP);
+        } catch (Exception e) {
+            return "";
+        }
+    }
 }
