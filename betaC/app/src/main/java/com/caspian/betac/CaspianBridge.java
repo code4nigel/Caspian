@@ -174,6 +174,11 @@ public class CaspianBridge {
     }
 
     @JavascriptInterface
+    public void setTabsFavorite(String jsonIds, boolean isFav) {
+        setGroupTabsFavorite(jsonIds, isFav);
+    }
+
+    @JavascriptInterface
     public void closeAllTabs() {
         if (activity != null) {
             activity.runOnUiThread(activity::closeAllTabs);

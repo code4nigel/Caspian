@@ -84,6 +84,9 @@ import androidx.core.content.ContextCompat;
 
 import androidx.webkit.WebSettingsCompat;
 import androidx.webkit.WebViewFeature;
+import androidx.core.content.FileProvider;
+import android.provider.MediaStore;
+import android.webkit.PermissionRequest;
 
 import org.json.JSONArray;
 import org.json.JSONObject;
@@ -396,6 +399,9 @@ public class MainActivity extends AppCompatActivity {
 
     private ValueCallback<Uri[]> uploadMessage;
     private final static int FILECHOOSER_RESULTCODE = 1;
+    private Uri cameraCapturedUri = null;
+    private PermissionRequest pendingWebPermissionRequest = null;
+    private static final int WEBVIEW_PERMISSION_REQUEST_CODE = 9021;
 
     private SoundPool soundPool;
     private final Map<String, Integer> soundIdMap = new ConcurrentHashMap<>();
@@ -5900,14 +5906,100 @@ public class MainActivity extends AppCompatActivity {
             }
 
             @Override
+            public void onPermissionRequest(final PermissionRequest request) {
+                runOnUiThread(() -> {
+                    String[] requestedResources = request.getResources();
+                    boolean needAudio = false;
+                    boolean needVideo = false;
+                    for (String r : requestedResources) {
+                        if (PermissionRequest.RESOURCE_AUDIO_CAPTURE.equals(r)) needAudio = true;
+                        if (PermissionRequest.RESOURCE_VIDEO_CAPTURE.equals(r)) needVideo = true;
+                    }
+
+                    boolean hasAudioPerm = !needAudio || (ContextCompat.checkSelfPermission(MainActivity.this, Manifest.permission.RECORD_AUDIO) == PackageManager.PERMISSION_GRANTED);
+                    boolean hasVideoPerm = !needVideo || (ContextCompat.checkSelfPermission(MainActivity.this, Manifest.permission.CAMERA) == PackageManager.PERMISSION_GRANTED);
+
+                    if (hasAudioPerm && hasVideoPerm) {
+                        request.grant(requestedResources);
+                    } else {
+                        List<String> permsToRequest = new ArrayList<>();
+                        if (needAudio && !hasAudioPerm) permsToRequest.add(Manifest.permission.RECORD_AUDIO);
+                        if (needVideo && !hasVideoPerm) permsToRequest.add(Manifest.permission.CAMERA);
+
+                        if (!permsToRequest.isEmpty()) {
+                            pendingWebPermissionRequest = request;
+                            ActivityCompat.requestPermissions(MainActivity.this, permsToRequest.toArray(new String[0]), WEBVIEW_PERMISSION_REQUEST_CODE);
+                        } else {
+                            request.grant(requestedResources);
+                        }
+                    }
+                });
+            }
+
+            @Override
             public boolean onShowFileChooser(WebView webView, ValueCallback<Uri[]> filePathCallback, FileChooserParams fileChooserParams) {
-                if (uploadMessage != null) uploadMessage.onReceiveValue(null);
-                uploadMessage = filePathCallback;
-                Intent intent = fileChooserParams.createIntent();
-                try {
-                    startActivityForResult(intent, FILECHOOSER_RESULTCODE);
-                } catch (Exception e) {
+                if (uploadMessage != null) {
+                    uploadMessage.onReceiveValue(null);
                     uploadMessage = null;
+                }
+                uploadMessage = filePathCallback;
+                cameraCapturedUri = null;
+
+                Intent takePictureIntent = null;
+                try {
+                    File photoFile = createImageFile();
+                    if (photoFile != null) {
+                        cameraCapturedUri = FileProvider.getUriForFile(
+                            MainActivity.this,
+                            getPackageName() + ".fileprovider",
+                            photoFile
+                        );
+                        takePictureIntent = new Intent(MediaStore.ACTION_IMAGE_CAPTURE);
+                        takePictureIntent.putExtra(MediaStore.EXTRA_OUTPUT, cameraCapturedUri);
+                        takePictureIntent.addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION | Intent.FLAG_GRANT_WRITE_URI_PERMISSION);
+                    }
+                } catch (Exception e) {
+                    cameraCapturedUri = null;
+                }
+
+                boolean isCapture = fileChooserParams != null && fileChooserParams.isCaptureEnabled();
+                String[] acceptTypes = fileChooserParams != null ? fileChooserParams.getAcceptTypes() : null;
+                boolean isImage = false;
+                if (acceptTypes != null) {
+                    for (String t : acceptTypes) {
+                        if (t != null && (t.toLowerCase().contains("image") || t.equals("*/*"))) {
+                            isImage = true;
+                            break;
+                        }
+                    }
+                } else {
+                    isImage = true;
+                }
+
+                // If website explicitly requested direct capture (like Camera in Gemini/ChatGPT), launch camera directly!
+                if (isCapture && takePictureIntent != null) {
+                    try {
+                        startActivityForResult(takePictureIntent, FILECHOOSER_RESULTCODE);
+                        return true;
+                    } catch (Exception ignored) {}
+                }
+
+                // Otherwise, present standard chooser with Camera as an option
+                Intent contentIntent = fileChooserParams != null ? fileChooserParams.createIntent() : new Intent(Intent.ACTION_GET_CONTENT).setType("*/*");
+                Intent chooserIntent = new Intent(Intent.ACTION_CHOOSER);
+                chooserIntent.putExtra(Intent.EXTRA_INTENT, contentIntent);
+                chooserIntent.putExtra(Intent.EXTRA_TITLE, "Select or Take Photo");
+                if (isImage && takePictureIntent != null) {
+                    chooserIntent.putExtra(Intent.EXTRA_INITIAL_INTENTS, new Intent[]{ takePictureIntent });
+                }
+
+                try {
+                    startActivityForResult(chooserIntent, FILECHOOSER_RESULTCODE);
+                } catch (Exception e) {
+                    if (uploadMessage != null) {
+                        uploadMessage.onReceiveValue(null);
+                        uploadMessage = null;
+                    }
                     return false;
                 }
                 return true;
@@ -6033,8 +6125,18 @@ public class MainActivity extends AppCompatActivity {
     }
 
     public void closeTab(int tabId) {
+        TabItem toRemove = getTabById(tabId);
+        if (toRemove != null && toRemove.isFavorite) {
+            Toast.makeText(this, "⭐ Favorited tabs are locked. Unfavorite first to close.", Toast.LENGTH_SHORT).show();
+            return;
+        }
+
         if (tabsList.size() <= 1) {
             TabItem last = tabsList.get(0);
+            if (last != null && last.isFavorite) {
+                Toast.makeText(this, "⭐ Favorited tabs are locked. Unfavorite first to close.", Toast.LENGTH_SHORT).show();
+                return;
+            }
             last.url = "file:///android_asset/launch_hub.html";
             last.service = "hub";
             last.title = "Caspian Hub";
@@ -6043,8 +6145,6 @@ public class MainActivity extends AppCompatActivity {
             saveOpenTabsState();
             return;
         }
-
-        TabItem toRemove = getTabById(tabId);
         if (toRemove != null) {
             if (!toRemove.isIncognito) {
                 closedTabsHistory.add(toRemove);
@@ -6209,25 +6309,41 @@ public class MainActivity extends AppCompatActivity {
     }
 
     public void closeAllTabs() {
-        for (int i = tabsList.size() - 1; i > 0; i--) {
-            TabItem item = tabsList.get(i);
-            if (item.isFavorite) continue;
-            if (item.webView.getParent() != null) {
-                ((ViewGroup) item.webView.getParent()).removeView(item.webView);
+        List<TabItem> nonFavorites = new ArrayList<>();
+        for (TabItem item : tabsList) {
+            if (!item.isFavorite) {
+                nonFavorites.add(item);
             }
-            item.webView.destroy();
-            tabsList.remove(i);
         }
-        tabGroupsList.clear();
+
+        if (nonFavorites.isEmpty()) {
+            Toast.makeText(this, "⭐ All tabs are favorited and protected.", Toast.LENGTH_SHORT).show();
+            return;
+        }
+
+        for (TabItem toRemove : nonFavorites) {
+            if (toRemove.webView.getParent() != null) {
+                ((ViewGroup) toRemove.webView.getParent()).removeView(toRemove.webView);
+            }
+            toRemove.webView.destroy();
+            tabsList.remove(toRemove);
+        }
+
+        tabGroupsList.removeIf(g -> {
+            for (TabItem removed : nonFavorites) {
+                g.tabIds.remove((Integer) removed.id);
+            }
+            return g.tabIds.isEmpty();
+        });
         saveTabGroups();
 
-        if (!tabsList.isEmpty()) {
-            TabItem first = tabsList.get(0);
-            first.url = "https://www.google.com";
-            first.service = "web";
-            first.webView.loadUrl(first.url);
-            activeTabId = first.id;
-            switchToTab(first.id);
+        if (tabsList.isEmpty()) {
+            addNewTab("hub", null);
+        } else {
+            if (getTabById(activeTabId) == null) {
+                activeTabId = tabsList.get(0).id;
+            }
+            switchToTab(activeTabId);
         }
         updateOmniboxState();
         saveOpenTabsState();
@@ -6789,12 +6905,63 @@ public class MainActivity extends AppCompatActivity {
         super.onBackPressed();
     }
 
+    private File createImageFile() {
+        try {
+            String timeStamp = new SimpleDateFormat("yyyyMMdd_HHmmss", Locale.getDefault()).format(new Date());
+            String imageFileName = "JPEG_" + timeStamp + "_";
+            File storageDir = getExternalFilesDir(Environment.DIRECTORY_PICTURES);
+            if (storageDir == null) {
+                storageDir = getCacheDir();
+            }
+            return File.createTempFile(imageFileName, ".jpg", storageDir);
+        } catch (Exception e) {
+            return null;
+        }
+    }
+
+    @Override
+    public void onRequestPermissionsResult(int requestCode, String[] permissions, int[] grantResults) {
+        if (requestCode == WEBVIEW_PERMISSION_REQUEST_CODE) {
+            if (pendingWebPermissionRequest != null) {
+                boolean allGranted = true;
+                for (int res : grantResults) {
+                    if (res != PackageManager.PERMISSION_GRANTED) {
+                        allGranted = false;
+                        break;
+                    }
+                }
+                if (allGranted) {
+                    pendingWebPermissionRequest.grant(pendingWebPermissionRequest.getResources());
+                } else {
+                    pendingWebPermissionRequest.deny();
+                }
+                pendingWebPermissionRequest = null;
+            }
+            return;
+        }
+        super.onRequestPermissionsResult(requestCode, permissions, grantResults);
+    }
+
     @Override
     protected void onActivityResult(int requestCode, int resultCode, Intent data) {
         if (requestCode == FILECHOOSER_RESULTCODE) {
             if (uploadMessage == null) return;
-            uploadMessage.onReceiveValue(WebChromeClient.FileChooserParams.parseResult(resultCode, data));
+            Uri[] results = null;
+            if (resultCode == RESULT_OK) {
+                if (data == null || (data.getData() == null && data.getClipData() == null)) {
+                    if (cameraCapturedUri != null) {
+                        results = new Uri[]{ cameraCapturedUri };
+                    }
+                } else {
+                    results = WebChromeClient.FileChooserParams.parseResult(resultCode, data);
+                    if (results == null && data.getData() != null) {
+                        results = new Uri[]{ data.getData() };
+                    }
+                }
+            }
+            uploadMessage.onReceiveValue(results);
             uploadMessage = null;
+            cameraCapturedUri = null;
         } else if (requestCode == SAVE_LOG_REQUEST_CODE && resultCode == RESULT_OK && data != null && data.getData() != null) {
             try {
                 Uri uri = data.getData();

@@ -461,6 +461,7 @@
   let editingGroupId = null;
   let activeTabFilter = 'all'; // 'all', 'groups', 'single'
   let lastDeletedGroup = null;
+  let cachedOpenTabs = [];
 
   function saveTabGroups() {
     try {
@@ -488,6 +489,7 @@
         }
       }
     } catch (e) { }
+    cachedOpenTabs = tabs;
 
     if (countBadge) {
       countBadge.textContent = tabs.length === 1 ? '1 Tab' : `${tabs.length} Tabs`;
@@ -505,6 +507,13 @@
       groupToolbar.style.display = isMultiSelectMode ? 'block' : 'none';
       const selectCount = document.getElementById('grouping-select-count');
       if (selectCount) selectCount.textContent = `${selectedTabIds.size} Selected`;
+      const favBtn = document.getElementById('toolbar-favorite-btn');
+      if (favBtn && isMultiSelectMode) {
+        const selTabs = cachedOpenTabs.filter(t => selectedTabIds.has(t.id));
+        const allFav = selTabs.length > 0 && selTabs.every(t => t.isFavorite);
+        favBtn.textContent = allFav ? '★' : '⭐';
+        favBtn.title = allFav ? 'Unfavorite Selected Tabs' : 'Favorite Selected Tabs';
+      }
     }
 
     // Inside Group View Header
@@ -1029,7 +1038,17 @@
             if (tab) openTabOptionsMenu(tab);
           } else if (diffX < -80) {
             const tabId = parseInt(card.dataset.tabid);
-            triggerCloseTab(tabId);
+            const tab = tabs.find(t => t.id === tabId);
+            if (tab && tab.isFavorite) {
+              playSFX('tb_alert');
+              if (window.CaspianBridge && typeof window.CaspianBridge.showToast === 'function') {
+                window.CaspianBridge.showToast('⭐ Favorited tabs are locked. Unfavorite first to close.');
+              }
+              card.style.transition = 'transform 0.25s cubic-bezier(0.175, 0.885, 0.32, 1.275)';
+              card.style.transform = '';
+            } else {
+              triggerCloseTab(tabId);
+            }
           }
           isSwipe = false;
         }
@@ -1041,6 +1060,10 @@
       card.addEventListener('touchcancel', onTouchEnd);
       card.addEventListener('contextmenu', (e) => e.preventDefault());
 
+      // Two-tap (double tap) vs single tap handling
+      let lastCardTapTime = 0;
+      let cardClickTimer = null;
+
       // Click Event for switching tab or toggling selection in multi-select mode
       card.addEventListener('click', (e) => {
         if (e.target.classList.contains('chrome-tab-close') || e.target.closest('.chrome-tab-close') || e.target.closest('.chrome-tab-menu-btn') || e.target.closest('.chrome-tab-mute-btn')) return;
@@ -1049,6 +1072,34 @@
         if (Math.abs(diffX) > 15 || Math.abs(diffY) > 15) return;
 
         const tabId = parseInt(card.dataset.tabid);
+
+        const now = Date.now();
+        const timeSinceLastTap = now - lastCardTapTime;
+        lastCardTapTime = now;
+
+        // Two-Tap Gesture (Double Tap) activates or toggles multi-select!
+        if (timeSinceLastTap < 350 && timeSinceLastTap > 0) {
+          if (cardClickTimer) {
+            clearTimeout(cardClickTimer);
+            cardClickTimer = null;
+          }
+          if (navigator.vibrate) navigator.vibrate(50);
+          playSFX('tb_clicks');
+          if (!isMultiSelectMode) {
+            isMultiSelectMode = true;
+            selectedTabIds.clear();
+            selectedTabIds.add(tabId);
+          } else {
+            if (selectedTabIds.has(tabId)) {
+              selectedTabIds.delete(tabId);
+              if (selectedTabIds.size === 0) isMultiSelectMode = false;
+            } else {
+              selectedTabIds.add(tabId);
+            }
+          }
+          renderOpenTabs();
+          return;
+        }
 
         if (isMultiSelectMode) {
           playSFX('tb_clicks');
@@ -1064,15 +1115,18 @@
           return;
         }
 
-        container.querySelectorAll('.chrome-tab-card').forEach(c => {
-          c.classList.remove('active');
-        });
-        card.classList.add('active');
+        // Single tap when not in multi-select mode: switch tab after brief delay to differentiate from double tap
+        cardClickTimer = setTimeout(() => {
+          container.querySelectorAll('.chrome-tab-card').forEach(c => {
+            c.classList.remove('active');
+          });
+          card.classList.add('active');
 
-        if (window.CaspianBridge && typeof window.CaspianBridge.switchTab === 'function') {
-          window.CaspianBridge.switchTab(tabId);
-          setTimeout(renderOpenTabs, 400);
-        }
+          if (window.CaspianBridge && typeof window.CaspianBridge.switchTab === 'function') {
+            window.CaspianBridge.switchTab(tabId);
+            setTimeout(renderOpenTabs, 400);
+          }
+        }, 220);
       });
     });
 
@@ -1081,6 +1135,14 @@
       btn.addEventListener('click', (e) => {
         e.stopPropagation();
         const tabId = parseInt(btn.dataset.closeid);
+        const tab = (cachedOpenTabs || []).find(t => t.id === tabId);
+        if (tab && tab.isFavorite) {
+          playSFX('tb_alert');
+          if (window.CaspianBridge && typeof window.CaspianBridge.showToast === 'function') {
+            window.CaspianBridge.showToast('⭐ Favorited tabs are locked. Unfavorite first to close.');
+          }
+          return;
+        }
         triggerCloseTab(tabId);
       });
     });
@@ -2314,6 +2376,14 @@
 
   if (closeAllTabsBtn) {
     closeAllTabsBtn.addEventListener('click', () => {
+      const nonFavorites = (cachedOpenTabs || []).filter(t => !t.isFavorite);
+      if (cachedOpenTabs.length > 0 && nonFavorites.length === 0) {
+        playSFX('tb_alert');
+        if (window.CaspianBridge && typeof window.CaspianBridge.showToast === 'function') {
+          window.CaspianBridge.showToast('⭐ All tabs are favorited and locked!');
+        }
+        return;
+      }
       playSFX('tb_close');
       if (window.CaspianBridge && typeof window.CaspianBridge.closeAllTabs === 'function') {
         window.CaspianBridge.closeAllTabs();
@@ -3074,6 +3144,14 @@
   }
 
   function triggerCloseTab(tabId) {
+    const tab = (cachedOpenTabs || []).find(t => t.id === tabId);
+    if (tab && tab.isFavorite) {
+      playSFX('tb_alert');
+      if (window.CaspianBridge && typeof window.CaspianBridge.showToast === 'function') {
+        window.CaspianBridge.showToast('⭐ Favorited tabs are locked. Unfavorite first to close.');
+      }
+      return;
+    }
     playSFX('tb_close');
     showUndoToast();
     if (window.CaspianBridge && typeof window.CaspianBridge.closeTab === 'function') {
@@ -3781,6 +3859,39 @@
           });
           modalCreateGroup.style.display = 'flex';
         }
+      });
+    }
+
+    const toolbarFavoriteBtn = document.getElementById('toolbar-favorite-btn');
+    if (toolbarFavoriteBtn) {
+      toolbarFavoriteBtn.addEventListener('click', () => {
+        playSFX('tb_clicks');
+        if (selectedTabIds.size === 0) return;
+
+        const selTabs = (cachedOpenTabs || []).filter(t => selectedTabIds.has(t.id));
+        if (selTabs.length === 0) return;
+
+        const anyNotFav = selTabs.some(t => !t.isFavorite);
+        const targetFavState = anyNotFav;
+
+        const idsArray = selTabs.map(t => t.id);
+        if (window.CaspianBridge && typeof window.CaspianBridge.setTabsFavorite === 'function') {
+          window.CaspianBridge.setTabsFavorite(JSON.stringify(idsArray), targetFavState);
+        } else if (window.CaspianBridge && typeof window.CaspianBridge.setGroupTabsFavorite === 'function') {
+          window.CaspianBridge.setGroupTabsFavorite(JSON.stringify(idsArray), targetFavState);
+        }
+
+        if (window.CaspianBridge && typeof window.CaspianBridge.showToast === 'function') {
+          window.CaspianBridge.showToast(targetFavState ? `⭐ ${idsArray.length} Tabs Favorited!` : `★ ${idsArray.length} Tabs Unfavorited`);
+        }
+
+        selTabs.forEach(t => t.isFavorite = targetFavState);
+        renderOpenTabs();
+        setTimeout(() => {
+          if (typeof window.renderOpenTabs === 'function') {
+            window.renderOpenTabs();
+          }
+        }, 150);
       });
     }
 
