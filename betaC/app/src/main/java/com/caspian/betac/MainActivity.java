@@ -1506,8 +1506,9 @@ public class MainActivity extends AppCompatActivity {
 
     private void captureTabSnapshot(TabItem tab) {
         if (tab == null || tab.webView == null) return;
-        tab.webView.post(() -> {
+        tab.webView.postDelayed(() -> {
             try {
+                if (tab.url != null && tab.url.contains("pdf_viewer.html")) return;
                 int w = tab.webView.getWidth();
                 int h = tab.webView.getHeight();
                 if (w > 0 && h > 0) {
@@ -1518,7 +1519,7 @@ public class MainActivity extends AppCompatActivity {
                     tab.snapshotBitmap = bmp;
                 }
             } catch (Exception ignored) {}
-        });
+        }, 500);
     }
 
     private void setupModernTabGridOverlay() {
@@ -7214,6 +7215,9 @@ public class MainActivity extends AppCompatActivity {
             controlWebView.loadUrl("file:///android_asset/browser_control.html");
 
             sheetBackdrop.setOnClickListener(v -> hideControlSheet());
+
+            // Clean up any old downloaded APK files left in cache from previous updates
+            new Thread(() -> GitHubUpdateManager.cleanOldApks(MainActivity.this)).start();
 
             // Check for updates in background (auto-throttled to 4+ hours)
             new Handler(Looper.getMainLooper()).postDelayed(() -> {

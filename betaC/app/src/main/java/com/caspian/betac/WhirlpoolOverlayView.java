@@ -142,36 +142,33 @@ public class WhirlpoolOverlayView extends FrameLayout {
 
         addDivider(density);
 
-        // 2. Ask ChatGPT (Send Image)
+        // 2. Ask ChatGPT (OCR Text)
         Button btnGpt = createActionButton("✳️ Ask ChatGPT", "#34D399", density);
         btnGpt.setOnClickListener(v -> {
-            if (croppedBitmap != null) {
-                activity.launchChatGPTWithBitmap(croppedBitmap);
-            } else {
-                activity.addNewTab("chatgpt", "", "https://chatgpt.com", false);
-            }
+            String query = recognizedText.isEmpty() ? "Help me understand this content" : recognizedText;
+            String prompt = "Explain this concept in simple terms:\n\n\"" + query + "\"";
+            activity.addNewTab("chatgpt", prompt, "https://chatgpt.com", false);
             dismiss();
         });
         menuContainer.addView(btnGpt);
 
-        // 3. Ask Gemini (Send Image)
+        // 3. Ask Gemini (OCR Text)
         Button btnGemini = createActionButton("✦ Ask Gemini", "#A78BFA", density);
         btnGemini.setOnClickListener(v -> {
-            if (croppedBitmap != null) {
-                activity.launchGeminiWithBitmap(croppedBitmap);
-            } else {
-                activity.addNewTab("gemini", "", "https://gemini.google.com/app", false);
-            }
+            String query = recognizedText.isEmpty() ? "Help me understand this content" : recognizedText;
+            String prompt = "Explain this concept in simple terms:\n\n\"" + query + "\"";
+            activity.addNewTab("gemini", prompt, "https://gemini.google.com/app", false);
             dismiss();
         });
         menuContainer.addView(btnGemini);
 
         addDivider(density);
 
-        // 4. Split Arena (Send Image)
+        // 4. Split Arena (OCR Text)
         Button btnSplit = createActionButton("◫ Split Arena", "#38BDF8", density);
         btnSplit.setOnClickListener(v -> {
-            activity.launchSplitWithBitmap(croppedBitmap);
+            String query = recognizedText.isEmpty() ? "Help me understand this content" : recognizedText;
+            activity.handleAskAiFromPdf(query, "split");
             dismiss();
         });
         menuContainer.addView(btnSplit);

@@ -358,6 +358,7 @@ public class GitHubUpdateManager {
                 long totalBytes = conn.getContentLength();
                 is = conn.getInputStream();
 
+                cleanOldApks(context);
                 File cacheDir = context.getExternalCacheDir() != null ? context.getExternalCacheDir() : context.getCacheDir();
                 File outputFile = new File(cacheDir, apkFileName != null ? apkFileName : "caspian_flow_update.apk");
                 fos = new FileOutputStream(outputFile);
@@ -483,5 +484,26 @@ public class GitHubUpdateManager {
             return m.group(1);
         }
         return version.replaceAll("[^0-9.]", "").trim();
+    }
+
+    public static void cleanOldApks(Context context) {
+        try {
+            File cacheDir = context.getExternalCacheDir() != null ? context.getExternalCacheDir() : context.getCacheDir();
+            if (cacheDir != null && cacheDir.exists()) {
+                File[] files = cacheDir.listFiles((dir, name) -> name != null && name.toLowerCase().endsWith(".apk"));
+                if (files != null) {
+                    for (File f : files) {
+                        try {
+                            if (f.exists()) {
+                                f.delete();
+                                Log.d(TAG, "Deleted old cached APK: " + f.getName());
+                            }
+                        } catch (Exception ignored) {}
+                    }
+                }
+            }
+        } catch (Exception e) {
+            Log.e(TAG, "Error cleaning old APKs: " + e.getMessage());
+        }
     }
 }
