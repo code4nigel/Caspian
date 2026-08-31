@@ -5718,7 +5718,10 @@ public class MainActivity extends AppCompatActivity {
 
                 if ("convert".equalsIgnoreCase(exportFmt)) {
                     String sourceService = "chatgpt";
-                    if (turnsArray.length() > 0) {
+                    TabItem currentTab = getTabById(activeTabId);
+                    if (currentTab != null && currentTab.service != null && !currentTab.service.isEmpty()) {
+                        sourceService = currentTab.service;
+                    } else if (turnsArray.length() > 0) {
                         sourceService = turnsArray.getJSONObject(0).optString("service", "chatgpt");
                     }
                     createNewTabWithPrefill(sourceService, sb.toString());
@@ -5740,11 +5743,11 @@ public class MainActivity extends AppCompatActivity {
     }
 
     public void createNewTabWithPrefill(String sourceService, String prompt) {
-        String targetUrl = "https://gemini.google.com/app";
-        String targetService = "gemini";
+        String targetUrl = "https://chatgpt.com";
+        String targetService = "chatgpt";
         if ("gemini".equalsIgnoreCase(sourceService)) {
-            targetUrl = "https://chatgpt.com";
-            targetService = "chatgpt";
+            targetUrl = "https://gemini.google.com/app";
+            targetService = "gemini";
         }
         addNewTab(targetService, prompt, targetUrl, false);
     }

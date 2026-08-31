@@ -16,6 +16,7 @@
   let totalPages = 0;
   let currentPage = 1;
   let currentScale = 1.0;
+  let currentRotation = 0;
   let pdfPath = '';
   let pdfTitle = 'Document.pdf';
   let selectedTextCache = '';
@@ -32,6 +33,8 @@
   const zoomLabel = document.getElementById('pdf-zoom-label');
   const nightBtn = document.getElementById('btn-pdf-night');
   const searchBtn = document.getElementById('btn-pdf-search');
+  const btnRotateLeft = document.getElementById('btn-pdf-rotate-left');
+  const btnRotateRight = document.getElementById('btn-pdf-rotate-right');
   const searchBar = document.getElementById('pdf-search-bar');
   const searchInput = document.getElementById('pdf-search-input');
   const searchCount = document.getElementById('pdf-search-count');
@@ -197,7 +200,8 @@
 
     try {
       const page = await pdfDoc.getPage(pageNum);
-      const viewportData = page.getViewport({ scale: currentScale });
+      const totalRotation = ((page.rotate || 0) + currentRotation) % 360;
+      const viewportData = page.getViewport({ scale: currentScale, rotation: totalRotation });
 
       // Update container dimensions
       container.style.width = `${viewportData.width}px`;
@@ -288,9 +292,21 @@
       const container = document.getElementById(`page-container-${pageNum}`);
       if (container) {
         container.innerHTML = '';
+        container.style.width = '';
+        container.style.height = '';
+        container.style.maxWidth = '';
+        container.style.minHeight = '';
       }
     }
     renderVisiblePages();
+  }
+
+  function rotatePages(deltaDegrees) {
+    currentRotation = (currentRotation + deltaDegrees + 360) % 360;
+    reRenderAllPages();
+    if (window.CaspianBridge && typeof window.CaspianBridge.showToast === 'function') {
+      window.CaspianBridge.showToast(`Rotated to ${currentRotation}°`);
+    }
   }
 
   // =========================================================
@@ -486,6 +502,14 @@
       outlineDrawer.classList.remove('open');
       outlineBtn.classList.remove('active');
     });
+
+    // Rotate PDF Pages 90° Left and Right
+    if (btnRotateLeft) {
+      btnRotateLeft.addEventListener('click', () => rotatePages(-90));
+    }
+    if (btnRotateRight) {
+      btnRotateRight.addEventListener('click', () => rotatePages(90));
+    }
 
     // Back to Tabs
     backBtn.addEventListener('click', () => {

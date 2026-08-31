@@ -586,7 +586,6 @@
 
         const isPdf = serviceLower === 'pdf' || urlLower.includes('pdf_viewer.html');
         const pdfBadge = isPdf ? '<span style="font-size: 8.5px; font-weight: 800; color: #f43f5e; background: rgba(244,63,94,0.15); border: 1px solid rgba(244,63,94,0.3); padding: 1px 5px; border-radius: 4px; margin-right: 3px;">PDF</span>' : '';
-        const pdfIconSvg = isPdf ? '<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#f43f5e" stroke-width="2.2" style="margin-right: 2px;"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path><polyline points="14 2 14 8 20 8"></polyline></svg>' : '';
 
         const isSelected = selectedTabIds.has(tab.id);
         const selectedClass = isSelected ? 'selected' : '';
@@ -621,7 +620,7 @@
                 ${selectCheckbox}
                 ${favStarBadge}
                 ${pdfBadge}
-                ${iconB64 ? `<img src="${iconB64}" style="width: 16px; height: 16px; border-radius: 4px;" />` : pdfIconSvg}
+                ${(!isPdf && iconB64) ? `<img src="${iconB64}" style="width: 16px; height: 16px; border-radius: 4px;" />` : ''}
                 <span class="chrome-tab-title">${tab.title || 'Browser Tab'}</span>
               </div>
               <div style="display: flex; align-items: center; gap: 2px;">
