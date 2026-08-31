@@ -739,6 +739,11 @@ public class CaspianBridge {
     }
 
     @JavascriptInterface
+    public String getCaspianCasksJson() {
+        return getCaspianCasks();
+    }
+
+    @JavascriptInterface
     public boolean switchCaspianCask(String caskId) {
         if (activity == null || caskId == null) return false;
         try {

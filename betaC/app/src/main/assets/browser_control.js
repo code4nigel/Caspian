@@ -2893,6 +2893,8 @@
       playSFX('tb_modal');
       nicknameInput.blur();
       urlDisplay.blur();
+      const dropMenu = document.getElementById('tab-cask-dropdown-menu');
+      if (dropMenu) dropMenu.style.display = 'none';
       modal.style.display = 'none';
       if (typeof window.renderOpenTabs === 'function') {
         window.renderOpenTabs();
@@ -2907,38 +2909,106 @@
       }
     };
 
-    // Populate Caspian Casks in Tab Options
-    const caskSelect = document.getElementById('tab-cask-select');
-    if (caskSelect) {
-      let casksList = (controlCasksData && Array.isArray(controlCasksData.casks) && controlCasksData.casks.length > 0)
-        ? controlCasksData.casks
-        : null;
+    // Custom Caspian Cask Selector Dropdown in Tab Options
+    const caskTrigger = document.getElementById('tab-cask-custom-trigger');
+    const caskMenu = document.getElementById('tab-cask-dropdown-menu');
+    const caskHiddenInput = document.getElementById('tab-cask-selected-id');
+    const caskIconDisp = document.getElementById('tab-cask-icon-display');
+    const caskNameDisp = document.getElementById('tab-cask-name-display');
+    const caskTagDisp = document.getElementById('tab-cask-tag-display');
+    const caskChevron = document.getElementById('tab-cask-chevron');
 
-      if (!casksList && window.CaspianBridge && typeof window.CaspianBridge.getCaspianCasksJson === 'function') {
-        try {
-          const raw = window.CaspianBridge.getCaspianCasksJson();
-          if (raw) {
-            const parsed = JSON.parse(raw);
-            if (parsed && Array.isArray(parsed.casks)) {
-              casksList = parsed.casks;
-              controlCasksData = parsed;
-            }
+    // Retrieve casks list from bridge or cached data
+    let casksList = null;
+    if (window.CaspianBridge && typeof window.CaspianBridge.getCaspianCasks === 'function') {
+      try {
+        const raw = window.CaspianBridge.getCaspianCasks();
+        if (raw) {
+          const parsed = JSON.parse(raw);
+          if (parsed && Array.isArray(parsed.casks) && parsed.casks.length > 0) {
+            casksList = parsed.casks;
+            controlCasksData = parsed;
           }
-        } catch (e) {}
-      }
+        }
+      } catch (e) {}
+    }
+    if (!casksList && controlCasksData && Array.isArray(controlCasksData.casks) && controlCasksData.casks.length > 0) {
+      casksList = controlCasksData.casks;
+    }
+    if (!casksList || casksList.length === 0) {
+      casksList = [
+        { id: 'cask_caspian', name: 'Caspian Cask', icon: '🌊', color: '#1B4264', isDefault: true },
+        { id: 'cask_pacific', name: 'Pacific Cask', icon: '⚓', color: '#0284C7', isDefault: false }
+      ];
+    }
 
-      if (!casksList || casksList.length === 0) {
-        casksList = [
-          { id: 'cask_caspian', name: 'Caspian Cask', icon: '🌊', isDefault: true }
-        ];
-      }
+    const currentCaskId = tab.caskId || 'cask_caspian';
+    if (caskHiddenInput) caskHiddenInput.value = currentCaskId;
 
-      caskSelect.innerHTML = casksList.map(c => {
-        const isSelected = (c.id === (tab.caskId || 'cask_caspian'));
-        return `<option value="${c.id}" ${isSelected ? 'selected' : ''}>${c.icon || '🌊'} ${c.name}${c.isDefault ? ' (Default)' : ''}</option>`;
+    const initialCask = casksList.find(c => c.id === currentCaskId) || casksList[0];
+    if (caskIconDisp) caskIconDisp.textContent = initialCask.icon || '🌊';
+    if (caskNameDisp) caskNameDisp.textContent = initialCask.name || 'Caspian Cask';
+    if (caskTagDisp) caskTagDisp.textContent = initialCask.isDefault ? 'Default' : 'Vault';
+
+    if (caskMenu) {
+      caskMenu.style.display = 'none';
+      if (caskChevron) caskChevron.style.transform = 'rotate(0deg)';
+
+      caskMenu.innerHTML = casksList.map(c => {
+        const isSel = (c.id === currentCaskId);
+        return `
+          <div class="cask-dropdown-item" data-cask-id="${c.id}" style="display:flex; align-items:center; justify-content:space-between; padding:9px 10px; border-radius:10px; background:${isSel ? 'var(--accent-glow, rgba(0,229,255,0.1))' : 'transparent'}; border:1px solid ${isSel ? 'var(--accent, #00E5FF)' : 'transparent'}; cursor:pointer; transition:all 0.15s ease;">
+            <div style="display:flex; align-items:center; gap:10px;">
+              <div style="width:30px; height:30px; border-radius:8px; background:var(--input-bg, rgba(128,128,128,0.08)); border:1px solid ${c.color || 'var(--border-glass)'}; display:flex; align-items:center; justify-content:center; font-size:15px;">
+                ${c.icon || '🌊'}
+              </div>
+              <div>
+                <div style="font-size:12px; font-weight:700; color:var(--text-main);">${c.name}</div>
+                <div style="font-size:9.5px; color:var(--text-muted);">${c.isDefault ? 'Default Cask' : 'Custom Vault'}</div>
+              </div>
+            </div>
+            <div>
+              ${isSel ? '<span style="font-size:11px; color:#10b981; font-weight:800;">✓ Active</span>' : ''}
+            </div>
+          </div>
+        `;
       }).join('');
 
-      caskSelect.value = tab.caskId || 'cask_caspian';
+      if (caskTrigger) {
+        caskTrigger.onclick = (e) => {
+          e.stopPropagation();
+          playSFX('tb_clicks');
+          const isExpanded = caskMenu.style.display === 'flex';
+          caskMenu.style.display = isExpanded ? 'none' : 'flex';
+          if (caskChevron) caskChevron.style.transform = isExpanded ? 'rotate(0deg)' : 'rotate(180deg)';
+        };
+      }
+
+      caskMenu.querySelectorAll('.cask-dropdown-item').forEach(item => {
+        item.onclick = (e) => {
+          e.stopPropagation();
+          playSFX('tb_clicks');
+          const selId = item.getAttribute('data-cask-id');
+          if (caskHiddenInput) caskHiddenInput.value = selId;
+          const chosen = casksList.find(c => c.id === selId);
+          if (chosen) {
+            if (caskIconDisp) caskIconDisp.textContent = chosen.icon || '🌊';
+            if (caskNameDisp) caskNameDisp.textContent = chosen.name;
+            if (caskTagDisp) caskTagDisp.textContent = chosen.isDefault ? 'Default' : 'Vault';
+          }
+          caskMenu.querySelectorAll('.cask-dropdown-item').forEach(other => {
+            const isIt = (other.getAttribute('data-cask-id') === selId);
+            other.style.background = isIt ? 'var(--accent-glow, rgba(0,229,255,0.1))' : 'transparent';
+            other.style.borderColor = isIt ? 'var(--accent, #00E5FF)' : 'transparent';
+            const checkContainer = other.querySelector('div:last-child');
+            if (checkContainer) {
+              checkContainer.innerHTML = isIt ? '<span style="font-size:11px; color:#10b981; font-weight:800;">✓ Active</span>' : '';
+            }
+          });
+          caskMenu.style.display = 'none';
+          if (caskChevron) caskChevron.style.transform = 'rotate(0deg)';
+        };
+      });
     }
 
     const clearNicknameBtn = document.getElementById('modal-clear-nickname-btn');
@@ -2949,14 +3019,15 @@
         urlDisplay.blur();
         nicknameInput.value = '';
         const url = urlDisplay.value.trim();
-        const currentCaskId = caskSelect ? caskSelect.value : (tab.caskId || 'cask_caspian');
+        const currentCask = caskHiddenInput ? caskHiddenInput.value : (tab.caskId || 'cask_caspian');
         if (window.CaspianBridge && typeof window.CaspianBridge.updateTabDetails === 'function') {
           try {
-            window.CaspianBridge.updateTabDetails(tab.id, '', url, currentCaskId);
+            window.CaspianBridge.updateTabDetails(tab.id, '', url, currentCask);
           } catch (e) {
             window.CaspianBridge.updateTabDetails(tab.id, '', url);
           }
         }
+        if (caskMenu) caskMenu.style.display = 'none';
         modal.style.display = 'none';
         setTimeout(() => {
           if (typeof window.renderOpenTabs === 'function') {
@@ -2974,7 +3045,7 @@
         urlDisplay.blur();
         const nick = nicknameInput.value.trim();
         const url = urlDisplay.value.trim();
-        const newCaskId = caskSelect ? caskSelect.value : (tab.caskId || 'cask_caspian');
+        const newCaskId = caskHiddenInput ? caskHiddenInput.value : (tab.caskId || 'cask_caspian');
         const oldCaskId = tab.caskId || 'cask_caspian';
         const caskChanged = (newCaskId !== oldCaskId);
 
@@ -2991,6 +3062,7 @@
           window.CaspianBridge.changeTabCask(tab.id, newCaskId);
         }
 
+        if (caskMenu) caskMenu.style.display = 'none';
         modal.style.display = 'none';
         setTimeout(() => {
           if (typeof window.renderOpenTabs === 'function') {
@@ -4100,7 +4172,7 @@
     // Modal & Card Event Listeners with Dynamic Delegation
     document.addEventListener('click', (e) => {
       if (e.target.closest('#header-cask-pill')) {
-        try { playSFX('tb_clicks'); } catch (e) {}
+        e.stopPropagation();
         openControlCasksModal();
         return;
       } else if (e.target.closest('#menu-switch-cask-btn') || e.target.closest('#card-casks-manager')) {
