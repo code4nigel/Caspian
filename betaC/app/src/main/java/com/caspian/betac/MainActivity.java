@@ -722,8 +722,10 @@ public class MainActivity extends AppCompatActivity {
     public void onWhirlpoolDismissed() {
         currentWhirlpoolOverlay = null;
         if (floatingCaspianCard != null) {
-            float defaultElevation = TypedValue.applyDimension(TypedValue.COMPLEX_UNIT_DIP, 24, getResources().getDisplayMetrics());
-            floatingCaspianCard.setElevation(defaultElevation);
+            float highElevation = TypedValue.applyDimension(TypedValue.COMPLEX_UNIT_DIP, 200, getResources().getDisplayMetrics());
+            floatingCaspianCard.setElevation(highElevation);
+            floatingCaspianCard.setCardElevation(highElevation);
+            floatingCaspianCard.bringToFront();
         }
     }
 
@@ -832,8 +834,10 @@ public class MainActivity extends AppCompatActivity {
         }
 
         try {
-            int width = rootContainer != null ? rootContainer.getWidth() : 1080;
-            int height = rootContainer != null ? rootContainer.getHeight() : 1920;
+            int width = rootContainer != null ? rootContainer.getWidth() : 0;
+            int height = rootContainer != null ? rootContainer.getHeight() : 0;
+            if (width <= 0 && currentTab.webView != null) width = currentTab.webView.getWidth();
+            if (height <= 0 && currentTab.webView != null) height = currentTab.webView.getHeight();
             if (width <= 0) width = 1080;
             if (height <= 0) height = 1920;
 
@@ -844,23 +848,53 @@ public class MainActivity extends AppCompatActivity {
             if (floatingCaspianCard != null) floatingCaspianCard.setVisibility(View.INVISIBLE);
             if (cabRadialMenu != null) cabRadialMenu.setVisibility(View.INVISIBLE);
 
-            if (rootContainer != null) {
-                rootContainer.draw(canvas);
+            // Fill canvas with deep background color
+            canvas.drawColor(0xFF050811);
+
+            // 1. Draw omnibox header at top if visible
+            if (omniboxHeaderWrapper != null && omniboxHeaderWrapper.getVisibility() == View.VISIBLE) {
+                int[] hdrLoc = new int[2];
+                omniboxHeaderWrapper.getLocationInWindow(hdrLoc);
+                int[] rootLoc = new int[2];
+                if (rootContainer != null) rootContainer.getLocationInWindow(rootLoc);
+                int offX = Math.max(0, hdrLoc[0] - rootLoc[0]);
+                int offY = Math.max(0, hdrLoc[1] - rootLoc[1]);
+
+                canvas.save();
+                canvas.translate(offX, offY);
+                omniboxHeaderWrapper.draw(canvas);
+                canvas.restore();
             }
 
-            // Also draw all currently visible WebViews (e.g. main tab, split pane tabs, pdf viewer) at exact window offsets
-            for (TabItem tab : tabsList) {
-                if (tab != null && tab.webView != null && tab.webView.getVisibility() == View.VISIBLE) {
+            // 2. Draw active tab's webView directly at its exact window offset
+            if (currentTab.webView != null) {
+                int[] wvLoc = new int[2];
+                currentTab.webView.getLocationInWindow(wvLoc);
+                int[] rootLoc = new int[2];
+                if (rootContainer != null) rootContainer.getLocationInWindow(rootLoc);
+                int offX = Math.max(0, wvLoc[0] - rootLoc[0]);
+                int offY = Math.max(0, wvLoc[1] - rootLoc[1]);
+
+                canvas.save();
+                canvas.translate(offX, offY);
+                currentTab.webView.draw(canvas);
+                canvas.restore();
+            }
+
+            // 3. If split mode is active, draw secondary split tab's webView
+            if (splitModeState != 0 && secondarySplitTabId != 0) {
+                TabItem splitTab = getTabById(secondarySplitTabId);
+                if (splitTab != null && splitTab.webView != null && splitTab.webView.getParent() != null) {
                     int[] wvLoc = new int[2];
-                    tab.webView.getLocationInWindow(wvLoc);
+                    splitTab.webView.getLocationInWindow(wvLoc);
                     int[] rootLoc = new int[2];
                     if (rootContainer != null) rootContainer.getLocationInWindow(rootLoc);
-                    int offX = wvLoc[0] - rootLoc[0];
-                    int offY = wvLoc[1] - rootLoc[1];
+                    int offX = Math.max(0, wvLoc[0] - rootLoc[0]);
+                    int offY = Math.max(0, wvLoc[1] - rootLoc[1]);
 
                     canvas.save();
                     canvas.translate(offX, offY);
-                    tab.webView.draw(canvas);
+                    splitTab.webView.draw(canvas);
                     canvas.restore();
                 }
             }
@@ -881,7 +915,9 @@ public class MainActivity extends AppCompatActivity {
             // Elevate CAB so it stays on top of Whirlpool and single-tapping it cancels Whirlpool
             if (floatingCaspianCard != null) {
                 floatingCaspianCard.bringToFront();
-                floatingCaspianCard.setElevation(1000f);
+                float highElevation = TypedValue.applyDimension(TypedValue.COMPLEX_UNIT_DIP, 200, getResources().getDisplayMetrics());
+                floatingCaspianCard.setElevation(highElevation);
+                floatingCaspianCard.setCardElevation(highElevation);
             }
 
             Toast.makeText(this, "🌀 Caspian Whirlpool: Circle or drag to search", Toast.LENGTH_SHORT).show();
@@ -7239,6 +7275,9 @@ public class MainActivity extends AppCompatActivity {
 
         if (floatingCaspianCard != null) {
             floatingCaspianCard.setAlpha(1.0f);
+            float highElevation = TypedValue.applyDimension(TypedValue.COMPLEX_UNIT_DIP, 200, getResources().getDisplayMetrics());
+            floatingCaspianCard.setElevation(highElevation);
+            floatingCaspianCard.setCardElevation(highElevation);
             floatingCaspianCard.bringToFront();
         }
 
@@ -7318,6 +7357,9 @@ public class MainActivity extends AppCompatActivity {
         isSheetOpen = false;
         if (floatingCaspianCard != null) {
             floatingCaspianCard.setAlpha(1.0f);
+            float highElevation = TypedValue.applyDimension(TypedValue.COMPLEX_UNIT_DIP, 200, getResources().getDisplayMetrics());
+            floatingCaspianCard.setElevation(highElevation);
+            floatingCaspianCard.setCardElevation(highElevation);
             floatingCaspianCard.bringToFront();
         }
         if (ytFloatingRemoteContainer != null) ytFloatingRemoteContainer.setAlpha(1.0f);
