@@ -297,54 +297,95 @@
   // CONTEXTUAL "ASK CASPIAN AI" FLOATING LIQUID GLASS MENU
   // =========================================================
   function setupSelectionListener() {
-    const handleSelectionChange = () => {
-      const selection = window.getSelection();
-      const text = selection ? selection.toString().trim() : '';
+    let selectionDebounce = null;
 
-      if (text.length > 0) {
+    const processSelection = () => {
+      const selection = window.getSelection();
+      if (!selection || selection.isCollapsed) {
+        hideAiMenu();
+        return;
+      }
+
+      const text = selection.toString().trim();
+      if (text.length > 0 && selection.rangeCount > 0) {
         selectedTextCache = text;
         try {
           const range = selection.getRangeAt(0);
           const rect = range.getBoundingClientRect();
-
-          if (rect.width > 0 && rect.height > 0) {
+          if (rect && (rect.width > 0 || rect.height > 0)) {
             positionAiMenu(rect);
             return;
           }
         } catch (e) {}
       }
 
-      // Hide menu if no selection
       hideAiMenu();
     };
 
+    const handleSelectionChange = () => {
+      clearTimeout(selectionDebounce);
+      selectionDebounce = setTimeout(processSelection, 100);
+    };
+
     document.addEventListener('selectionchange', handleSelectionChange);
+
+    // Explicit touch / mouse release triggers prompt immediately
+    viewport.addEventListener('touchend', () => {
+      setTimeout(processSelection, 50);
+    }, { passive: true });
+    viewport.addEventListener('mouseup', () => {
+      setTimeout(processSelection, 50);
+    });
+
+    // Update position on scroll
     viewport.addEventListener('scroll', () => {
-      // Reposition or hide on fast scroll
       if (aiFloatingMenu.style.display === 'flex') {
-        handleSelectionChange();
+        const selection = window.getSelection();
+        if (selection && !selection.isCollapsed && selection.rangeCount > 0) {
+          try {
+            const rect = selection.getRangeAt(0).getBoundingClientRect();
+            positionAiMenu(rect);
+          } catch (e) {}
+        } else {
+          hideAiMenu();
+        }
       }
     }, { passive: true });
+
+    // Prevent floating menu clicks from stealing selection focus
+    aiFloatingMenu.addEventListener('mousedown', (e) => {
+      e.preventDefault();
+      e.stopPropagation();
+    });
   }
 
   function positionAiMenu(rect) {
     aiFloatingMenu.style.display = 'flex';
 
-    const menuWidth = aiFloatingMenu.offsetWidth || 340;
+    const menuWidth = aiFloatingMenu.offsetWidth || 310;
     const menuHeight = aiFloatingMenu.offsetHeight || 38;
 
-    // Calculate horizontal center
+    // Horizontal positioning: centered over selection, strictly bounded within viewport
     let left = rect.left + (rect.width / 2);
-    left = Math.max(menuWidth / 2 + 10, Math.min(window.innerWidth - (menuWidth / 2) - 10, left));
+    const halfWidth = menuWidth / 2;
+    left = Math.max(halfWidth + 10, Math.min(window.innerWidth - halfWidth - 10, left));
 
-    // Place above selection if space permits, otherwise below
-    let top = rect.top - menuHeight - 12;
-    if (top < 60) {
-      top = rect.bottom + 12;
+    // Vertical positioning:
+    // Prefer placing 14px above the selection
+    let top = rect.top - menuHeight - 14;
+
+    // If placing above would hit the top appbar (52px) or go offscreen, place BELOW the selection
+    if (top < 72) {
+      top = rect.bottom + 14;
     }
 
-    aiFloatingMenu.style.left = `${left}px`;
-    aiFloatingMenu.style.top = `${top}px`;
+    // Strict boundary clamping so the menu CANNOT go offscreen top or bottom!
+    const minTop = 64; // Safe buffer below appbar
+    const maxTop = window.innerHeight - menuHeight - 65; // Safe buffer above bottom zoom bar
+    top = Math.max(minTop, Math.min(maxTop, top));
+
+    aiFloatingMenu.style.left = `${Math.round(left)}px`;
+    aiFloatingMenu.style.top = `${Math.round(top)}px`;
   }
 
   function hideAiMenu() {

@@ -28,6 +28,15 @@ body {
   overflow: hidden;
   height: 100vh;
   width: 100vw;
+}
+
+/* Restrict unselectable state strictly to UI chrome, leaving document text fully selectable */
+.pdf-appbar,
+.pdf-search-bar,
+.pdf-bottom-dock,
+#pdf-ai-floating-menu,
+.pdf-outline-drawer,
+.pdf-modal-backdrop {
   user-select: none;
   -webkit-user-select: none;
 }
@@ -220,6 +229,7 @@ body {
   box-shadow: 0 4px 24px rgba(0, 0, 0, 0.45);
   margin: 0 auto;
   transition: filter 0.3s ease;
+  overflow: visible !important; /* Never clip selection handles */
 }
 
 /* Night Study Mode Canvas Inversion */
@@ -234,32 +244,51 @@ body.night-mode .pdf-page-container {
   width: 100%;
   height: auto;
   border-radius: 4px;
+  pointer-events: none; /* Let selection events pass directly into textLayer */
 }
 
 /* The Interactive Selectable Text Layer */
 .textLayer {
   position: absolute;
-  left: 0;
-  top: 0;
-  right: 0;
-  bottom: 0;
-  overflow: hidden;
+  inset: 0;
+  overflow: visible !important; /* CRITICAL: Allows both start and end selection handles to render */
   opacity: 1;
   line-height: 1.0;
   user-select: text !important;
   -webkit-user-select: text !important;
+  z-index: 2;
+  transform-origin: 0 0;
+  pointer-events: auto;
 }
 
 .textLayer > span {
-  color: transparent;
+  color: transparent !important;
   position: absolute;
   white-space: pre;
   cursor: text;
   transform-origin: 0% 0%;
 }
 
+/* CRITICAL FIX: Selection highlight is soft and uniform, and text MUST be transparent */
+/* This prevents overlapping green blocks and prevents blurry double-text rendering */
 .textLayer ::selection {
-  background: rgba(16, 185, 129, 0.38) !important;
+  background: rgba(16, 185, 129, 0.22) !important;
+  color: transparent !important;
+}
+
+.textLayer span::-moz-selection {
+  background: rgba(16, 185, 129, 0.22) !important;
+  color: transparent !important;
+}
+
+body.night-mode .textLayer ::selection {
+  background: rgba(56, 189, 248, 0.30) !important;
+  color: transparent !important;
+}
+
+body.night-mode .textLayer span::-moz-selection {
+  background: rgba(56, 189, 248, 0.30) !important;
+  color: transparent !important;
 }
 
 /* Search Highlight Layer */
@@ -279,23 +308,32 @@ body.night-mode .pdf-page-container {
   position: fixed;
   display: none;
   align-items: center;
-  gap: 4px;
-  background: rgba(10, 15, 30, 0.90);
+  gap: 3px;
+  background: rgba(10, 15, 30, 0.94);
   backdrop-filter: blur(24px) saturate(190%);
   -webkit-backdrop-filter: blur(24px) saturate(190%);
-  border: 1px solid rgba(255, 255, 255, 0.14);
+  border: 1px solid rgba(255, 255, 255, 0.16);
   border-radius: 14px;
-  padding: 4px;
-  box-shadow: 0 12px 36px rgba(0, 0, 0, 0.65), 0 0 0 1px rgba(255, 255, 255, 0.06) inset;
+  padding: 4px 6px;
+  box-shadow: 0 12px 36px rgba(0, 0, 0, 0.75), 0 0 0 1px rgba(255, 255, 255, 0.08) inset;
   z-index: 2000;
-  animation: floatMenuEnter 0.2s cubic-bezier(0.16, 1, 0.3, 1);
+  transform: translate(-50%, 0); /* Permanent horizontal center */
+  max-width: calc(100vw - 20px);
+  box-sizing: border-box;
+  overflow-x: auto;
+  scrollbar-width: none;
   white-space: nowrap;
+  animation: floatMenuEnter 0.18s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+#pdf-ai-floating-menu::-webkit-scrollbar {
+  display: none;
 }
 
 @keyframes floatMenuEnter {
   from {
     opacity: 0;
-    transform: translate(-50%, 8px) scale(0.95);
+    transform: translate(-50%, 6px) scale(0.96);
   }
   to {
     opacity: 1;
@@ -306,21 +344,23 @@ body.night-mode .pdf-page-container {
 .ai-menu-item {
   display: inline-flex;
   align-items: center;
-  gap: 5px;
-  padding: 6px 10px;
-  border-radius: 10px;
+  gap: 4px;
+  padding: 5px 8px;
+  border-radius: 8px;
   background: transparent;
   border: none;
   color: #f9fafb;
-  font-size: 11.5px;
+  font-size: 11px;
   font-weight: 600;
   cursor: pointer;
+  white-space: nowrap;
+  flex-shrink: 0;
   transition: all 0.18s ease;
 }
 
 .ai-menu-item svg {
-  width: 14px;
-  height: 14px;
+  width: 13px;
+  height: 13px;
   flex-shrink: 0;
 }
 
