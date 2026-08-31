@@ -4119,6 +4119,16 @@
       const btn = document.getElementById('btn-control-new-cask');
       if (form) form.style.display = 'flex';
       if (btn) btn.style.display = 'none';
+      selectedNewCaskEmoji = '🌊';
+      const emojiDisplayEl = document.getElementById('control-cask-emoji-display');
+      if (emojiDisplayEl) emojiDisplayEl.textContent = '🌊';
+      const presetSelectEl = document.getElementById('control-cask-preset-select');
+      if (presetSelectEl) presetSelectEl.selectedIndex = 0;
+      const nameInput = document.getElementById('control-new-cask-name');
+      if (nameInput) {
+        nameInput.value = '';
+        setTimeout(() => nameInput.focus(), 80);
+      }
     }
 
     function hideControlNewCaskForm() {
@@ -4128,22 +4138,22 @@
       if (btn) btn.style.display = 'flex';
       const nameInput = document.getElementById('control-new-cask-name');
       if (nameInput) nameInput.value = '';
-      const customEmoji = document.getElementById('control-new-cask-custom-emoji');
-      if (customEmoji) customEmoji.value = '';
+      selectedNewCaskEmoji = '🌊';
+      const emojiDisplayEl = document.getElementById('control-cask-emoji-display');
+      if (emojiDisplayEl) emojiDisplayEl.textContent = '🌊';
+      const presetSelectEl = document.getElementById('control-cask-preset-select');
+      if (presetSelectEl) presetSelectEl.selectedIndex = 0;
     }
 
     function confirmControlCreateCask() {
       try { playSFX('tb_clicks'); } catch (e) {}
       const nameInput = document.getElementById('control-new-cask-name');
-      const iconSelect = document.getElementById('control-new-cask-icon');
-      const customEmojiInput = document.getElementById('control-new-cask-custom-emoji');
       const name = nameInput ? nameInput.value.trim() : '';
-      const customEmoji = customEmojiInput ? customEmojiInput.value.trim() : '';
-      const icon = customEmoji || (iconSelect && iconSelect.value !== 'custom' ? iconSelect.value : '🌊');
+      const icon = selectedNewCaskEmoji || '🌊';
 
       if (!name) {
         if (window.CaspianBridge && typeof window.CaspianBridge.showToast === 'function') {
-          window.CaspianBridge.showToast('Please enter a Cask name');
+          window.CaspianBridge.showToast('Please enter a Cask name or pick a preset');
         }
         return;
       }
@@ -4201,12 +4211,51 @@
     window.openControlCasksModal = openControlCasksModal;
     window.closeControlCasksModal = closeControlCasksModal;
 
-    const iconSelectEl = document.getElementById('control-new-cask-icon');
-    if (iconSelectEl) {
-      iconSelectEl.addEventListener('change', () => {
-        const customEmojiInput = document.getElementById('control-new-cask-custom-emoji');
-        if (iconSelectEl.value !== 'custom' && customEmojiInput) {
-          customEmojiInput.value = iconSelectEl.value;
+    let selectedNewCaskEmoji = '🌊';
+    const emojiInputEl = document.getElementById('control-cask-emoji-input');
+    const emojiDisplayEl = document.getElementById('control-cask-emoji-display');
+    const emojiBtnEl = document.getElementById('control-cask-emoji-btn');
+    const presetSelectEl = document.getElementById('control-cask-preset-select');
+    const emojiRegex = /\p{Extended_Pictographic}/u;
+
+    if (emojiBtnEl && emojiInputEl) {
+      emojiBtnEl.addEventListener('click', () => {
+        try { playSFX('tb_clicks'); } catch (e) {}
+        emojiInputEl.focus();
+      });
+    }
+
+    if (emojiInputEl) {
+      emojiInputEl.addEventListener('input', () => {
+        const val = emojiInputEl.value.trim();
+        if (!val) return;
+        const match = val.match(emojiRegex);
+        if (match) {
+          selectedNewCaskEmoji = match[0];
+          if (emojiDisplayEl) emojiDisplayEl.textContent = selectedNewCaskEmoji;
+          try { playSFX('tb_clicks'); } catch (e) {}
+        } else {
+          // Reject normal text
+          if (window.CaspianBridge && typeof window.CaspianBridge.showToast === 'function') {
+            window.CaspianBridge.showToast('Please enter an emoji icon');
+          }
+        }
+        emojiInputEl.value = '';
+      });
+    }
+
+    if (presetSelectEl) {
+      presetSelectEl.addEventListener('change', () => {
+        const val = presetSelectEl.value;
+        if (!val) return;
+        const parts = val.split('|');
+        if (parts.length === 2) {
+          const [presetName, presetEmoji] = parts;
+          const nameInput = document.getElementById('control-new-cask-name');
+          if (nameInput) nameInput.value = presetName;
+          selectedNewCaskEmoji = presetEmoji;
+          if (emojiDisplayEl) emojiDisplayEl.textContent = presetEmoji;
+          try { playSFX('tb_clicks'); } catch (e) {}
         }
       });
     }

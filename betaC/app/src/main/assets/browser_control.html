@@ -1723,12 +1723,12 @@
         <div style="display: flex; justify-content: space-between; align-items: center;">
           <span style="color: var(--text-muted); font-weight: 600;">Installed Version</span>
           <span id="uptodate-current-ver"
-            style="font-weight: 700; color: #10b981; background: rgba(16,185,129,0.12); padding: 2px 8px; border-radius: 6px;">v1.1.45-BetaC</span>
+            style="font-weight: 700; color: #10b981; background: rgba(16,185,129,0.12); padding: 2px 8px; border-radius: 6px;">v1.1.46-BetaC</span>
         </div>
         <div style="display: flex; justify-content: space-between; align-items: center;">
           <span style="color: var(--text-muted); font-weight: 600;">Latest on GitHub</span>
           <span id="uptodate-github-tag"
-            style="font-weight: 600; color: var(--text-main); font-family: monospace;">v1.1.45-BetaC</span>
+            style="font-weight: 600; color: var(--text-main); font-family: monospace;">v1.1.46-BetaC</span>
         </div>
       </div>
       <button id="close-uptodate-modal-btn" class="oneui-pill-btn primary"
@@ -1742,7 +1742,7 @@
   <div id="control-casks-modal" class="modal-overlay"
     style="display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.65); backdrop-filter: blur(12px); -webkit-backdrop-filter: blur(12px); z-index: 10000000; justify-content: center; align-items: center; padding: 20px;">
     <div
-      style="width: 100%; max-width: 360px; background: var(--bg-card); border: 1px solid var(--border-glass); border-radius: 26px; padding: 22px; box-shadow: 0 20px 50px rgba(0,0,0,0.3); text-align: left; animation: caskModalIn 0.25s cubic-bezier(0.16, 1, 0.3, 1);">
+      style="width: 100%; max-width: 360px; box-sizing: border-box; background: var(--bg-card); border: 1px solid var(--border-glass); border-radius: 26px; padding: 22px; box-shadow: 0 20px 50px rgba(0,0,0,0.3); text-align: left; animation: caskModalIn 0.25s cubic-bezier(0.16, 1, 0.3, 1); overflow: hidden;">
       <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px;">
         <div
           style="font-size: 16px; font-weight: 800; color: var(--text-main); display: flex; align-items: center; gap: 8px;">
@@ -1758,45 +1758,60 @@
 
       <!-- Casks List -->
       <div id="control-casks-list"
-        style="display: flex; flex-direction: column; gap: 8px; max-height: 220px; overflow-y: auto; margin-bottom: 14px; padding-right: 2px;">
+        style="display: flex; flex-direction: column; gap: 8px; max-height: 220px; overflow-y: auto; margin-bottom: 14px; padding-right: 2px; box-sizing: border-box; width: 100%;">
         <!-- Rendered via JS -->
       </div>
 
       <!-- Create New Cask Button & Form -->
-      <div id="control-create-cask-sec" style="border-top: 1px dashed var(--border-glass); padding-top: 12px;">
+      <div id="control-create-cask-sec" style="border-top: 1px dashed var(--border-glass); padding-top: 12px; box-sizing: border-box; width: 100%;">
         <button id="btn-control-new-cask"
-          style="width: 100%; padding: 10px; border-radius: 14px; background: var(--input-bg, rgba(128,128,128,0.08)); border: 1px solid var(--border-glass); color: var(--text-main); font-size: 12px; font-weight: 700; cursor: pointer; display: flex; align-items: center; justify-content: center; gap: 6px;">
+          style="width: 100%; padding: 10px; border-radius: 14px; background: var(--input-bg, rgba(128,128,128,0.08)); border: 1px solid var(--border-glass); color: var(--text-main); font-size: 12px; font-weight: 700; cursor: pointer; display: flex; align-items: center; justify-content: center; gap: 6px; box-sizing: border-box;">
           <span>➕ New Caspian Cask</span>
         </button>
 
-        <div id="control-new-cask-form" style="display: none; margin-top: 10px; flex-direction: column; gap: 8px;">
-          <input id="control-new-cask-name" type="text" placeholder="Cask Name (e.g. Work Cask)"
-            style="padding: 10px 12px; border-radius: 10px; border: 1px solid var(--border-glass); background: var(--bg-deep); color: var(--text-main); font-size: 12px; outline: none;" />
-          <div style="display: flex; gap: 6px; align-items: center;">
-            <select id="control-new-cask-icon"
-              style="flex: 1.2; padding: 8px; border-radius: 10px; border: 1px solid var(--border-glass); background: var(--bg-deep); color: var(--text-main); font-size: 12px; outline: none;">
-              <option value="🌊">🌊 Wave</option>
-              <option value="⚓">⚓ Anchor</option>
-              <option value="🐬">🐬 Dolphin</option>
-              <option value="🧊">🧊 Iceberg</option>
-              <option value="🪸">🪸 Coral</option>
-              <option value="🔱">🔱 Trident</option>
-              <option value="⛵">⛵ Sailboat</option>
-              <option value="🏝️">🏝️ Island</option>
-              <option value="🐳">🐳 Whale</option>
-              <option value="🦈">🦈 Shark</option>
-              <option value="🐙">🐙 Octopus</option>
-              <option value="🚢">🚢 Ship</option>
-              <option value="custom">✏️ Custom Emoji...</option>
-            </select>
-            <input id="control-new-cask-custom-emoji" type="text" placeholder="Emoji" maxlength="4"
-              style="flex: 1; padding: 8px 10px; border-radius: 10px; border: 1px solid var(--border-glass); background: var(--bg-deep); color: var(--text-main); font-size: 12px; outline: none; text-align: center;" />
+        <div id="control-new-cask-form" style="display: none; margin-top: 10px; flex-direction: column; gap: 10px; width: 100%; box-sizing: border-box;">
+          <!-- Name Row with Emoji Icon Button on Left -->
+          <div style="display: flex; gap: 8px; align-items: center; width: 100%; box-sizing: border-box;">
+            <!-- Clickable Emoji Picker Button on Left -->
+            <div id="control-cask-emoji-btn" title="Tap to choose emoji"
+              style="width: 40px; height: 40px; min-width: 40px; border-radius: 12px; background: var(--bg-deep); border: 1.5px solid var(--border-glass); display: flex; align-items: center; justify-content: center; font-size: 19px; cursor: pointer; position: relative; box-sizing: border-box; flex-shrink: 0; transition: border-color 0.2s ease;">
+              <span id="control-cask-emoji-display">🌊</span>
+              <!-- Hidden transparent input strictly filtering for emoji input from keyboard -->
+              <input id="control-cask-emoji-input" type="text" maxlength="4"
+                style="position: absolute; inset: 0; width: 100%; height: 100%; opacity: 0; cursor: pointer; font-size: 16px; box-sizing: border-box;" />
+            </div>
+            <!-- Cask Name Input -->
+            <input id="control-new-cask-name" type="text" placeholder="Cask Name (e.g. Work Cask)"
+              style="flex: 1; min-width: 0; width: 100%; box-sizing: border-box; padding: 10px 12px; border-radius: 12px; border: 1px solid var(--border-glass); background: var(--bg-deep); color: var(--text-main); font-size: 12px; font-weight: 600; outline: none;" />
           </div>
-          <div style="display: flex; gap: 6px;">
-            <button id="btn-control-create-confirm"
-              style="flex: 1; padding: 9px 12px; border-radius: 10px; background: var(--accent-gradient, #00E5FF); border: none; color: #fff; font-size: 12px; font-weight: 700; cursor: pointer; box-shadow: 0 4px 12px var(--accent-glow);">Create</button>
-            <button id="btn-control-create-cancel"
-              style="padding: 9px 12px; border-radius: 10px; background: rgba(128,128,128,0.15); border: none; color: var(--text-muted); font-size: 12px; cursor: pointer;">Cancel</button>
+
+          <!-- Predefined Cask Presets Dropdown -->
+          <div style="width: 100%; box-sizing: border-box;">
+            <select id="control-cask-preset-select"
+              style="width: 100%; box-sizing: border-box; padding: 9px 10px; border-radius: 10px; border: 1px solid var(--border-glass); background: var(--bg-deep); color: var(--text-main); font-size: 11.5px; font-weight: 600; outline: none; cursor: pointer;">
+              <option value="" disabled selected>✨ Choose a Cask Preset (Optional)...</option>
+              <option value="Work Cask|💼">💼 Work Cask</option>
+              <option value="Personal Vault|🏠">🏠 Personal Vault</option>
+              <option value="Research & Study|🔬">🔬 Research & Study</option>
+              <option value="Coding & Dev|💻">💻 Coding & Dev</option>
+              <option value="Social & Media|🌐">🌐 Social & Media</option>
+              <option value="Entertainment & Video|🎬">🎬 Entertainment & Video</option>
+              <option value="Finance & Crypto|📈">📈 Finance & Crypto</option>
+              <option value="Pacific Cask|⚓">⚓ Pacific Cask</option>
+              <option value="Coral Reef|🪸">🪸 Coral Reef</option>
+              <option value="Iceberg Vault|🧊">🧊 Iceberg Vault</option>
+              <option value="Trident Vault|🔱">🔱 Trident Vault</option>
+              <option value="Deep Ocean|🌊">🌊 Deep Ocean</option>
+              <option value="Travel & Navigation|⛵">⛵ Travel & Navigation</option>
+            </select>
+          </div>
+
+          <!-- Action Buttons -->
+          <div style="display: flex; gap: 8px; width: 100%; box-sizing: border-box;">
+            <button id="btn-control-create-confirm" class="oneui-pill-btn primary"
+              style="flex: 1; min-width: 0; padding: 9px 12px; border-radius: 10px; font-size: 12px; font-weight: 700; cursor: pointer;">Create</button>
+            <button id="btn-control-create-cancel" class="oneui-pill-btn secondary"
+              style="padding: 9px 14px; border-radius: 10px; font-size: 12px; cursor: pointer;">Cancel</button>
           </div>
         </div>
       </div>
