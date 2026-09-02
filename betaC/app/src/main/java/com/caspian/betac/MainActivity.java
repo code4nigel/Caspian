@@ -402,6 +402,7 @@ public class MainActivity extends AppCompatActivity {
 
     private ValueCallback<Uri[]> uploadMessage;
     private final static int FILECHOOSER_RESULTCODE = 1;
+    private final static int REQUEST_CODE_PDF_PICKER = 9182;
     private Uri cameraCapturedUri = null;
     private PermissionRequest pendingWebPermissionRequest = null;
     private static final int WEBVIEW_PERMISSION_REQUEST_CODE = 9021;
@@ -485,23 +486,123 @@ public class MainActivity extends AppCompatActivity {
         }
     }
 
+    public void openPdfPicker() {
+        try {
+            Intent intent = new Intent(Intent.ACTION_OPEN_DOCUMENT);
+            intent.addCategory(Intent.CATEGORY_OPENABLE);
+            intent.setType("application/pdf");
+            intent.putExtra(Intent.EXTRA_ALLOW_MULTIPLE, true);
+            startActivityForResult(intent, REQUEST_CODE_PDF_PICKER);
+        } catch (Exception e) {
+            try {
+                Intent fallback = new Intent(Intent.ACTION_GET_CONTENT);
+                fallback.setType("application/pdf");
+                fallback.putExtra(Intent.EXTRA_ALLOW_MULTIPLE, true);
+                startActivityForResult(Intent.createChooser(fallback, "Select PDF(s)"), REQUEST_CODE_PDF_PICKER);
+            } catch (Exception ex) {
+                Toast.makeText(this, "No file picker available", Toast.LENGTH_SHORT).show();
+            }
+        }
+    }
+
+    @Override
+    protected void onActivityResult(int requestCode, int resultCode, Intent data) {
+        super.onActivityResult(requestCode, resultCode, data);
+
+        if (requestCode == REQUEST_CODE_PDF_PICKER && resultCode == RESULT_OK && data != null) {
+            List<Uri> selectedUris = new ArrayList<>();
+            if (data.getClipData() != null) {
+                ClipData clipData = data.getClipData();
+                for (int i = 0; i < clipData.getItemCount(); i++) {
+                    Uri uri = clipData.getItemAt(i).getUri();
+                    if (uri != null) selectedUris.add(uri);
+                }
+            } else if (data.getData() != null) {
+                selectedUris.add(data.getData());
+            }
+
+            for (Uri uri : selectedUris) {
+                openPdfFromUriInNewTab(uri);
+            }
+            return;
+        }
+
+        if (requestCode == FILECHOOSER_RESULTCODE) {
+            if (uploadMessage == null) return;
+            Uri[] results = null;
+            if (resultCode == RESULT_OK) {
+                if (data == null || (data.getData() == null && data.getClipData() == null)) {
+                    if (cameraCapturedUri != null) {
+                        results = new Uri[]{ cameraCapturedUri };
+                    }
+                } else {
+                    results = WebChromeClient.FileChooserParams.parseResult(resultCode, data);
+                    if (results == null && data.getData() != null) {
+                        results = new Uri[]{ data.getData() };
+                    }
+                }
+            }
+            uploadMessage.onReceiveValue(results);
+            uploadMessage = null;
+            cameraCapturedUri = null;
+            return;
+        }
+
+        if (requestCode == SAVE_LOG_REQUEST_CODE && resultCode == RESULT_OK && data != null && data.getData() != null) {
+            try {
+                Uri uri = data.getData();
+                OutputStream os = getContentResolver().openOutputStream(uri);
+                if (os != null) {
+                    os.write(pendingLogDataToSave.getBytes(StandardCharsets.UTF_8));
+                    os.close();
+                    Toast.makeText(this, "✅ Log successfully saved to chosen location!", Toast.LENGTH_LONG).show();
+                }
+            } catch (Exception e) {
+                Toast.makeText(this, "Error saving log file: " + e.getMessage(), Toast.LENGTH_SHORT).show();
+            }
+        }
+    }
+
     public void handleIncomingPdfIntent(Intent intent) {
         if (intent == null) return;
         String action = intent.getAction();
-        Uri pdfUri = null;
+        List<Uri> pdfUris = new ArrayList<>();
 
         if (Intent.ACTION_VIEW.equals(action)) {
-            pdfUri = intent.getData();
+            if (intent.getData() != null) {
+                pdfUris.add(intent.getData());
+            }
         } else if (Intent.ACTION_SEND.equals(action)) {
             if (intent.hasExtra(Intent.EXTRA_STREAM)) {
                 try {
-                    pdfUri = intent.getParcelableExtra(Intent.EXTRA_STREAM);
+                    Uri uri = intent.getParcelableExtra(Intent.EXTRA_STREAM);
+                    if (uri != null) pdfUris.add(uri);
+                } catch (Exception ignored) {}
+            }
+        } else if (Intent.ACTION_SEND_MULTIPLE.equals(action)) {
+            if (intent.hasExtra(Intent.EXTRA_STREAM)) {
+                try {
+                    ArrayList<Uri> uris = intent.getParcelableArrayListExtra(Intent.EXTRA_STREAM);
+                    if (uris != null) {
+                        pdfUris.addAll(uris);
+                    }
                 } catch (Exception ignored) {}
             }
         }
 
-        if (pdfUri != null) {
-            openPdfFromUriInNewTab(pdfUri);
+        // Also check ClipData (frequently used by newer Android file pickers/shares)
+        if (intent.getClipData() != null) {
+            ClipData clip = intent.getClipData();
+            for (int i = 0; i < clip.getItemCount(); i++) {
+                Uri u = clip.getItemAt(i).getUri();
+                if (u != null && !pdfUris.contains(u)) {
+                    pdfUris.add(u);
+                }
+            }
+        }
+
+        for (Uri uri : pdfUris) {
+            openPdfFromUriInNewTab(uri);
         }
     }
 
@@ -3966,6 +4067,7 @@ public class MainActivity extends AppCompatActivity {
         TabItem currentTab = getActiveOrDominantTab();
         List<CaspianMenuItem> menuItems = new ArrayList<>();
         menuItems.add(new CaspianMenuItem("➕ New Tab", () -> addNewTab("web", null)));
+        menuItems.add(new CaspianMenuItem("📄 Open PDF", this::openPdfPicker));
         menuItems.add(new CaspianMenuItem(
                 (currentTab != null && currentTab.isDesktop) ? "🖥️ Desktop site [ON]" : "🖥️ Desktop site [OFF]",
                 () -> { if (currentTab != null) toggleDesktopMode(currentTab.id); }
@@ -4631,9 +4733,14 @@ public class MainActivity extends AppCompatActivity {
     }
 
     private void injectAndSubmitAIPrompt(WebView webView, String prompt) {
+        injectAIPrompt(webView, prompt, true);
+    }
+
+    private void injectAIPrompt(WebView webView, String prompt, boolean autoSubmit) {
         if (webView == null || prompt == null || prompt.trim().isEmpty()) return;
         String js = "(function() {\n" +
                 "  var txt = " + JSONObject.quote(prompt) + ";\n" +
+                "  var autoSubmit = " + autoSubmit + ";\n" +
                 "  if (!txt) return;\n" +
                 "  var pollCount = 0;\n" +
                 "  var maxPolls = 60;\n" +
@@ -4722,9 +4829,7 @@ public class MainActivity extends AppCompatActivity {
                 "        btn.dispatchEvent(new MouseEvent('mousedown', { bubbles: true }));\n" +
                 "        btn.click();\n" +
                 "        btn.dispatchEvent(new MouseEvent('mouseup', { bubbles: true }));\n" +
-                "      } catch(e) {\n" +
-                "        try { btn.click(); } catch(e2) {}\n" +
-                "      }\n" +
+                "      } catch(e) {}\n" +
                 "    }\n" +
                 "    if (inputEl) {\n" +
                 "      try {\n" +
@@ -4745,6 +4850,15 @@ public class MainActivity extends AppCompatActivity {
                 "      return;\n" +
                 "    }\n" +
                 "    setElementText(input, txt);\n" +
+                "    try {\n" +
+                "      input.focus();\n" +
+                "      if (typeof window.getSelection === 'function') {\n" +
+                "        var sel = window.getSelection();\n" +
+                "        sel.selectAllChildren(input);\n" +
+                "        sel.collapseToEnd();\n" +
+                "      }\n" +
+                "    } catch(e) {}\n" +
+                "    if (!autoSubmit) return;\n" +
                 "    var submitTries = 0;\n" +
                 "    var submitted = false;\n" +
                 "    function trySend() {\n" +
@@ -6359,7 +6473,7 @@ public class MainActivity extends AppCompatActivity {
                 }
 
                 if (tabItem.pendingPrompt != null && !tabItem.pendingPrompt.isEmpty()) {
-                    injectAndSubmitAIPrompt(view, tabItem.pendingPrompt);
+                    injectAIPrompt(view, tabItem.pendingPrompt, false);
                     tabItem.pendingPrompt = null;
                 }
             }
@@ -7498,43 +7612,6 @@ public class MainActivity extends AppCompatActivity {
             return;
         }
         super.onRequestPermissionsResult(requestCode, permissions, grantResults);
-    }
-
-    @Override
-    protected void onActivityResult(int requestCode, int resultCode, Intent data) {
-        if (requestCode == FILECHOOSER_RESULTCODE) {
-            if (uploadMessage == null) return;
-            Uri[] results = null;
-            if (resultCode == RESULT_OK) {
-                if (data == null || (data.getData() == null && data.getClipData() == null)) {
-                    if (cameraCapturedUri != null) {
-                        results = new Uri[]{ cameraCapturedUri };
-                    }
-                } else {
-                    results = WebChromeClient.FileChooserParams.parseResult(resultCode, data);
-                    if (results == null && data.getData() != null) {
-                        results = new Uri[]{ data.getData() };
-                    }
-                }
-            }
-            uploadMessage.onReceiveValue(results);
-            uploadMessage = null;
-            cameraCapturedUri = null;
-        } else if (requestCode == SAVE_LOG_REQUEST_CODE && resultCode == RESULT_OK && data != null && data.getData() != null) {
-            try {
-                Uri uri = data.getData();
-                OutputStream os = getContentResolver().openOutputStream(uri);
-                if (os != null) {
-                    os.write(pendingLogDataToSave.getBytes(StandardCharsets.UTF_8));
-                    os.close();
-                    Toast.makeText(this, "✅ Log successfully saved to chosen location!", Toast.LENGTH_LONG).show();
-                }
-            } catch (Exception e) {
-                Toast.makeText(this, "Error saving log file: " + e.getMessage(), Toast.LENGTH_SHORT).show();
-            }
-        } else {
-            super.onActivityResult(requestCode, resultCode, data);
-        }
     }
 
     @Override

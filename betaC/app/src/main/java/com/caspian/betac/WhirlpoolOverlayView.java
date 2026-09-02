@@ -6,6 +6,7 @@ import android.annotation.SuppressLint;
 import android.content.ClipData;
 import android.content.ClipboardManager;
 import android.content.Context;
+import android.content.res.ColorStateList;
 import android.graphics.Bitmap;
 import android.graphics.Canvas;
 import android.graphics.Color;
@@ -15,13 +16,18 @@ import android.graphics.Path;
 import android.graphics.PointF;
 import android.graphics.Rect;
 import android.graphics.RectF;
+import android.graphics.Typeface;
 import android.graphics.drawable.GradientDrawable;
+import android.graphics.drawable.RippleDrawable;
+import android.graphics.drawable.StateListDrawable;
+import android.os.Build;
 import android.util.Log;
 import android.view.Gravity;
 import android.view.HapticFeedbackConstants;
 import android.view.MotionEvent;
 import android.view.View;
 import android.view.ViewGroup;
+import android.view.animation.OvershootInterpolator;
 import android.widget.Button;
 import android.widget.FrameLayout;
 import android.widget.HorizontalScrollView;
@@ -101,13 +107,16 @@ public class WhirlpoolOverlayView extends FrameLayout {
         menuContainer = new LinearLayout(activity);
         menuContainer.setOrientation(LinearLayout.HORIZONTAL);
         menuContainer.setGravity(Gravity.CENTER_VERTICAL);
-        menuContainer.setPadding((int) (6 * density), (int) (4 * density), (int) (6 * density), (int) (4 * density));
+        menuContainer.setPadding((int) (10 * density), (int) (8 * density), (int) (10 * density), (int) (8 * density));
 
         GradientDrawable menuBg = new GradientDrawable();
-        menuBg.setColor(Color.parseColor("#F5080E1C"));
-        menuBg.setCornerRadius(16 * density);
-        menuBg.setStroke((int) (1.2f * density), Color.parseColor("#33FFFFFF"));
+        menuBg.setColor(Color.parseColor("#EE0A111E")); // Deep rich liquid glass
+        menuBg.setCornerRadius(22 * density);
+        menuBg.setStroke((int) (1.5f * density), Color.parseColor("#385070"));
         menuContainer.setBackground(menuBg);
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.LOLLIPOP) {
+            menuContainer.setElevation(18 * density);
+        }
 
         setupActionButtons(density);
         menuScrollView.addView(menuContainer, new LayoutParams(LayoutParams.WRAP_CONTENT, LayoutParams.WRAP_CONTENT));
@@ -115,21 +124,33 @@ public class WhirlpoolOverlayView extends FrameLayout {
     }
 
     private void setupActionButtons(float density) {
-        // Drag handle for moving the menu anywhere
+        // Drag capsule handle on the left
+        FrameLayout dragCap = new FrameLayout(activity);
+        int capW = (int) (24 * density);
+        int capH = (int) (34 * density);
+        LinearLayout.LayoutParams dragLp = new LinearLayout.LayoutParams(capW, capH);
+        dragLp.setMargins(0, 0, (int) (6 * density), 0);
+        dragCap.setLayoutParams(dragLp);
+
+        GradientDrawable dragBg = new GradientDrawable();
+        dragBg.setColor(Color.parseColor("#22334A"));
+        dragBg.setCornerRadius(12 * density);
+        dragBg.setStroke((int) (1 * density), Color.parseColor("#3A506B"));
+        dragCap.setBackground(dragBg);
+
         TextView dragHandle = new TextView(activity);
         dragHandle.setText("⠿");
         dragHandle.setTextColor(Color.parseColor("#94A3B8"));
-        dragHandle.setTextSize(16f);
+        dragHandle.setTextSize(13f);
         dragHandle.setGravity(Gravity.CENTER);
-        dragHandle.setPadding((int) (8 * density), (int) (6 * density), (int) (4 * density), (int) (6 * density));
-        setupDragListener(dragHandle);
-        setupDragListener(menuContainer);
-        menuContainer.addView(dragHandle);
+        dragCap.addView(dragHandle, new FrameLayout.LayoutParams(LayoutParams.MATCH_PARENT, LayoutParams.MATCH_PARENT));
 
-        addDivider(density);
+        setupDragListener(dragCap);
+        setupDragListener(menuContainer);
+        menuContainer.addView(dragCap);
 
         // 1. Ask Google (Google Lens with Image)
-        Button btnGoogle = createActionButton("🔍 Ask Google", "#60A5FA", density);
+        Button btnGoogle = createActionButton("🔍 Ask Google", "#1E3A8A", "#172554", "#60A5FA", "#BFDBFE", density);
         btnGoogle.setOnClickListener(v -> {
             if (croppedBitmap != null) {
                 activity.launchGoogleLensWithBitmap(croppedBitmap);
@@ -140,10 +161,8 @@ public class WhirlpoolOverlayView extends FrameLayout {
         });
         menuContainer.addView(btnGoogle);
 
-        addDivider(density);
-
         // 2. Ask ChatGPT (OCR Text)
-        Button btnGpt = createActionButton("✳️ Ask ChatGPT", "#34D399", density);
+        Button btnGpt = createActionButton("✳️ Ask ChatGPT", "#064E3B", "#022C22", "#34D399", "#A7F3D0", density);
         btnGpt.setOnClickListener(v -> {
             String query = recognizedText.isEmpty() ? "Help me understand this content" : recognizedText;
             String prompt = "Explain this concept in simple terms:\n\n\"" + query + "\"";
@@ -153,7 +172,7 @@ public class WhirlpoolOverlayView extends FrameLayout {
         menuContainer.addView(btnGpt);
 
         // 3. Ask Gemini (OCR Text)
-        Button btnGemini = createActionButton("✦ Ask Gemini", "#A78BFA", density);
+        Button btnGemini = createActionButton("✦ Ask Gemini", "#4C1D95", "#2E1065", "#A78BFA", "#DDD6FE", density);
         btnGemini.setOnClickListener(v -> {
             String query = recognizedText.isEmpty() ? "Help me understand this content" : recognizedText;
             String prompt = "Explain this concept in simple terms:\n\n\"" + query + "\"";
@@ -162,10 +181,8 @@ public class WhirlpoolOverlayView extends FrameLayout {
         });
         menuContainer.addView(btnGemini);
 
-        addDivider(density);
-
         // 4. Split Arena (OCR Text)
-        Button btnSplit = createActionButton("◫ Split Arena", "#38BDF8", density);
+        Button btnSplit = createActionButton("◫ Split Arena", "#0C4A6E", "#082F49", "#38BDF8", "#BAE6FD", density);
         btnSplit.setOnClickListener(v -> {
             String query = recognizedText.isEmpty() ? "Help me understand this content" : recognizedText;
             activity.handleAskAiFromPdf(query, "split");
@@ -173,8 +190,8 @@ public class WhirlpoolOverlayView extends FrameLayout {
         });
         menuContainer.addView(btnSplit);
 
-        // 5. Copy Image Crop to Clipboard
-        Button btnCopy = createActionButton("📋 Copy", "#94A3B8", density);
+        // 5. Copy Image Crop or Recognized Text to Clipboard
+        Button btnCopy = createActionButton("📋 Copy", "#1E293B", "#0F172A", "#64748B", "#F1F5F9", density);
         btnCopy.setOnClickListener(v -> {
             if (croppedBitmap != null) {
                 activity.copyImageToClipboard(croppedBitmap);
@@ -191,10 +208,8 @@ public class WhirlpoolOverlayView extends FrameLayout {
         });
         menuContainer.addView(btnCopy);
 
-        addDivider(density);
-
         // 6. Close / Cancel
-        Button btnClose = createActionButton("✕", "#EF4444", density);
+        Button btnClose = createActionButton("✕", "#450A0A", "#2A0808", "#F87171", "#FECACA", density);
         btnClose.setOnClickListener(v -> dismiss());
         menuContainer.addView(btnClose);
     }
@@ -242,24 +257,51 @@ public class WhirlpoolOverlayView extends FrameLayout {
         });
     }
 
-    private Button createActionButton(String label, String textColor, float density) {
+    private Button createActionButton(String label, String bgStart, String bgEnd, String strokeColor, String textColor, float density) {
         Button btn = new Button(activity);
         btn.setText(label);
         btn.setTextColor(Color.parseColor(textColor));
-        btn.setTextSize(11.5f);
-        btn.setBackgroundColor(Color.TRANSPARENT);
-        btn.setPadding((int) (8 * density), (int) (6 * density), (int) (8 * density), (int) (6 * density));
+        btn.setTextSize(12.5f);
+        btn.setTypeface(Typeface.create("sans-serif-medium", Typeface.NORMAL));
+        btn.setGravity(Gravity.CENTER);
+        btn.setAllCaps(false);
         btn.setMinimumHeight(0);
         btn.setMinimumWidth(0);
-        return btn;
-    }
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.LOLLIPOP) {
+            btn.setLetterSpacing(0.015f);
+        }
 
-    private void addDivider(float density) {
-        View divider = new View(activity);
-        divider.setBackgroundColor(Color.parseColor("#22FFFFFF"));
-        LinearLayout.LayoutParams lp = new LinearLayout.LayoutParams((int) (1 * density), (int) (16 * density));
-        lp.setMargins((int) (4 * density), 0, (int) (4 * density), 0);
-        menuContainer.addView(divider, lp);
+        int padH = (int) (13 * density);
+        int padV = (int) (8 * density);
+        btn.setPadding(padH, padV, padH, padV);
+
+        LinearLayout.LayoutParams lp = new LinearLayout.LayoutParams(
+                LayoutParams.WRAP_CONTENT, LayoutParams.WRAP_CONTENT);
+        lp.setMargins((int) (3.5f * density), 0, (int) (3.5f * density), 0);
+        btn.setLayoutParams(lp);
+
+        int[] colors = new int[]{ Color.parseColor(bgStart), Color.parseColor(bgEnd) };
+        GradientDrawable normalBg = new GradientDrawable(GradientDrawable.Orientation.TOP_BOTTOM, colors);
+        normalBg.setCornerRadius(15 * density);
+        normalBg.setStroke((int) (1.2f * density), Color.parseColor(strokeColor));
+
+        int[] pressedColors = new int[]{ Color.parseColor("#55FFFFFF"), Color.parseColor("#33FFFFFF") };
+        GradientDrawable pressedBg = new GradientDrawable(GradientDrawable.Orientation.TOP_BOTTOM, pressedColors);
+        pressedBg.setCornerRadius(15 * density);
+        pressedBg.setStroke((int) (1.5f * density), Color.parseColor(strokeColor));
+
+        StateListDrawable sld = new StateListDrawable();
+        sld.addState(new int[]{android.R.attr.state_pressed}, pressedBg);
+        sld.addState(new int[]{}, normalBg);
+
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.LOLLIPOP) {
+            ColorStateList rippleColor = ColorStateList.valueOf(Color.parseColor("#44FFFFFF"));
+            btn.setBackground(new RippleDrawable(rippleColor, sld, null));
+        } else {
+            btn.setBackground(sld);
+        }
+
+        return btn;
     }
 
     public void dismiss() {
@@ -324,6 +366,9 @@ public class WhirlpoolOverlayView extends FrameLayout {
 
     private void positionMenu(Rect bounds) {
         menuScrollView.setVisibility(VISIBLE);
+        menuScrollView.setAlpha(0f);
+        menuScrollView.setScaleX(0.85f);
+        menuScrollView.setScaleY(0.85f);
         menuScrollView.post(() -> {
             int menuWidth = menuScrollView.getWidth();
             int menuHeight = menuScrollView.getHeight();
@@ -333,14 +378,22 @@ public class WhirlpoolOverlayView extends FrameLayout {
             int left = bounds.centerX() - (menuWidth / 2);
             left = Math.max(20, Math.min(screenWidth - menuWidth - 20, left));
 
-            int top = bounds.top - menuHeight - 20;
+            int top = bounds.top - menuHeight - 24;
             if (top < 120) {
-                top = bounds.bottom + 20;
+                top = bounds.bottom + 24;
             }
             top = Math.max(100, Math.min(screenHeight - menuHeight - 120, top));
 
             menuScrollView.setX(left);
             menuScrollView.setY(top);
+
+            menuScrollView.animate()
+                    .alpha(1f)
+                    .scaleX(1f)
+                    .scaleY(1f)
+                    .setDuration(220)
+                    .setInterpolator(new OvershootInterpolator(1.2f))
+                    .start();
         });
     }
 
