@@ -646,6 +646,26 @@ public class CaspianBridge {
     }
 
     @JavascriptInterface
+    public void setYtRemoteAutoCollapse(boolean enabled) {
+        if (activity != null) activity.runOnUiThread(() -> activity.setYtRemoteAutoCollapse(enabled));
+    }
+
+    @JavascriptInterface
+    public void setChatgptDockAutoCollapse(boolean enabled) {
+        if (activity != null) activity.runOnUiThread(() -> activity.setChatgptDockAutoCollapse(enabled));
+    }
+
+    @JavascriptInterface
+    public void setGeminiDockAutoCollapse(boolean enabled) {
+        if (activity != null) activity.runOnUiThread(() -> activity.setGeminiDockAutoCollapse(enabled));
+    }
+
+    @JavascriptInterface
+    public void toggleGeminiDock(boolean show) {
+        if (activity != null) activity.runOnUiThread(() -> activity.toggleGeminiDock(show));
+    }
+
+    @JavascriptInterface
     public void downloadFile(String fileName, String content, String mimeType) {
         if (activity != null) {
             activity.runOnUiThread(() -> activity.downloadFile(fileName, content, mimeType));

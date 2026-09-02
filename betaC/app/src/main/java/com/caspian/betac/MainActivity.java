@@ -325,6 +325,9 @@ public class MainActivity extends AppCompatActivity {
     private ImageButton navDockShrinkBtn;
     private boolean isSearchNavExplicitlyHidden = true;
     private boolean isGoogleDockAutoCollapse = true;
+    private boolean isYtRemoteAutoCollapse = false;
+    private boolean isChatgptDockAutoCollapse = false;
+    private boolean isGeminiDockAutoCollapse = false;
 
     private FrameLayout chatgptDockContainer;
     private HorizontalScrollView chatgptDockScroll;
@@ -442,6 +445,10 @@ public class MainActivity extends AppCompatActivity {
             isSearchNavExplicitlyHidden = !appPrefs.getBoolean("google_dock_enabled", false);
             isChatgptDockExplicitlyHidden = !appPrefs.getBoolean("chatgpt_dock_enabled", true);
             isGeminiDockExplicitlyHidden = !appPrefs.getBoolean("gemini_dock_enabled", true);
+            isGoogleDockAutoCollapse = appPrefs.getBoolean("google_dock_autocollapse", true);
+            isYtRemoteAutoCollapse = appPrefs.getBoolean("yt_pod_autocollapse", false);
+            isChatgptDockAutoCollapse = appPrefs.getBoolean("chatgpt_dock_autocollapse", false);
+            isGeminiDockAutoCollapse = appPrefs.getBoolean("gemini_dock_autocollapse", false);
             isDarkTheme = !"light".equalsIgnoreCase(appPrefs.getString("theme", "dark"));
         } catch (Throwable ignored) {}
 
@@ -2879,6 +2886,24 @@ public class MainActivity extends AppCompatActivity {
         this.isGoogleDockAutoCollapse = enabled;
         SharedPreferences prefs = getSharedPreferences(PREFS_NAME, MODE_PRIVATE);
         prefs.edit().putBoolean("google_dock_autocollapse", enabled).apply();
+    }
+
+    public void setYtRemoteAutoCollapse(boolean enabled) {
+        this.isYtRemoteAutoCollapse = enabled;
+        SharedPreferences prefs = getSharedPreferences(PREFS_NAME, MODE_PRIVATE);
+        prefs.edit().putBoolean("yt_pod_autocollapse", enabled).apply();
+    }
+
+    public void setChatgptDockAutoCollapse(boolean enabled) {
+        this.isChatgptDockAutoCollapse = enabled;
+        SharedPreferences prefs = getSharedPreferences(PREFS_NAME, MODE_PRIVATE);
+        prefs.edit().putBoolean("chatgpt_dock_autocollapse", enabled).apply();
+    }
+
+    public void setGeminiDockAutoCollapse(boolean enabled) {
+        this.isGeminiDockAutoCollapse = enabled;
+        SharedPreferences prefs = getSharedPreferences(PREFS_NAME, MODE_PRIVATE);
+        prefs.edit().putBoolean("gemini_dock_autocollapse", enabled).apply();
     }
 
     @SuppressLint("ClickableViewAccessibility")

@@ -110,15 +110,15 @@ public class WhirlpoolOverlayView extends FrameLayout {
         menuContainer = new LinearLayout(activity);
         menuContainer.setOrientation(LinearLayout.HORIZONTAL);
         menuContainer.setGravity(Gravity.CENTER_VERTICAL);
-        menuContainer.setPadding((int) (10 * density), (int) (8 * density), (int) (10 * density), (int) (8 * density));
+        menuContainer.setPadding((int) (8 * density), (int) (7 * density), (int) (8 * density), (int) (7 * density));
 
         GradientDrawable menuBg = new GradientDrawable();
-        menuBg.setColor(Color.parseColor("#EE0A111E")); // Deep rich liquid glass
-        menuBg.setCornerRadius(22 * density);
-        menuBg.setStroke((int) (1.5f * density), Color.parseColor("#385070"));
+        menuBg.setColor(Color.parseColor("#F2070D1E")); // Deep Obsidian Liquid Glass
+        menuBg.setCornerRadius(24 * density);
+        menuBg.setStroke((int) (1.5f * density), Color.parseColor("#3838BDF8")); // Radiant Caspian Cyan Glow
         menuContainer.setBackground(menuBg);
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.LOLLIPOP) {
-            menuContainer.setElevation(18 * density);
+            menuContainer.setElevation(24 * density);
         }
 
         setupActionButtons(density);
@@ -132,13 +132,13 @@ public class WhirlpoolOverlayView extends FrameLayout {
         int capW = (int) (24 * density);
         int capH = (int) (34 * density);
         LinearLayout.LayoutParams dragLp = new LinearLayout.LayoutParams(capW, capH);
-        dragLp.setMargins(0, 0, (int) (6 * density), 0);
+        dragLp.setMargins(0, 0, (int) (3 * density), 0);
         dragCap.setLayoutParams(dragLp);
 
         GradientDrawable dragBg = new GradientDrawable();
-        dragBg.setColor(Color.parseColor("#22334A"));
-        dragBg.setCornerRadius(12 * density);
-        dragBg.setStroke((int) (1 * density), Color.parseColor("#3A506B"));
+        dragBg.setColor(Color.parseColor("#201E293B"));
+        dragBg.setCornerRadius(999f);
+        dragBg.setStroke((int) (1.2f * density), Color.parseColor("#3538BDF8"));
         dragCap.setBackground(dragBg);
 
         TextView dragHandle = new TextView(activity);
@@ -152,9 +152,13 @@ public class WhirlpoolOverlayView extends FrameLayout {
         setupDragListener(menuContainer);
         menuContainer.addView(dragCap);
 
+        menuContainer.addView(createDivider(density));
+
         // 1. Ask Google (Google Lens with Image)
-        Button btnGoogle = createActionButton("🔍 Ask Google", "#1E3A8A", "#172554", "#60A5FA", "#BFDBFE", density);
+        Button btnGoogle = createActionButton("🔍 Ask Google", "#221E3A8A", "#403B82F6", "#5060A5FA", "#93C5FD", density);
         btnGoogle.setOnClickListener(v -> {
+            activity.playUiFeedbackSound("tap");
+            v.performHapticFeedback(HapticFeedbackConstants.KEYBOARD_TAP);
             if (croppedBitmap != null) {
                 activity.launchGoogleLensWithBitmap(croppedBitmap);
             } else if (!recognizedText.isEmpty()) {
@@ -165,8 +169,10 @@ public class WhirlpoolOverlayView extends FrameLayout {
         menuContainer.addView(btnGoogle);
 
         // 2. Ask ChatGPT (OCR Text)
-        Button btnGpt = createActionButton("✳️ Ask ChatGPT", "#064E3B", "#022C22", "#34D399", "#A7F3D0", density);
+        Button btnGpt = createActionButton("✳️ Ask ChatGPT", "#22064E3B", "#4010B981", "#5034D399", "#6EE7B7", density);
         btnGpt.setOnClickListener(v -> {
+            activity.playUiFeedbackSound("tap");
+            v.performHapticFeedback(HapticFeedbackConstants.KEYBOARD_TAP);
             dispatchAiAction(text -> {
                 String query = (text != null && !text.isEmpty()) ? text : "Help me understand this content";
                 String prompt = "Explain this concept in simple terms:\n\n\"" + query + "\"";
@@ -177,8 +183,10 @@ public class WhirlpoolOverlayView extends FrameLayout {
         menuContainer.addView(btnGpt);
 
         // 3. Ask Gemini (OCR Text)
-        Button btnGemini = createActionButton("✦ Ask Gemini", "#4C1D95", "#2E1065", "#A78BFA", "#DDD6FE", density);
+        Button btnGemini = createActionButton("✦ Ask Gemini", "#244C1D95", "#408B5CF6", "#50A78BFA", "#DDD6FE", density);
         btnGemini.setOnClickListener(v -> {
+            activity.playUiFeedbackSound("tap");
+            v.performHapticFeedback(HapticFeedbackConstants.KEYBOARD_TAP);
             dispatchAiAction(text -> {
                 String query = (text != null && !text.isEmpty()) ? text : "Help me understand this content";
                 String prompt = "Explain this concept in simple terms:\n\n\"" + query + "\"";
@@ -188,9 +196,13 @@ public class WhirlpoolOverlayView extends FrameLayout {
         });
         menuContainer.addView(btnGemini);
 
+        menuContainer.addView(createDivider(density));
+
         // 4. Split Arena (OCR Text)
-        Button btnSplit = createActionButton("◫ Split Arena", "#0C4A6E", "#082F49", "#38BDF8", "#BAE6FD", density);
+        Button btnSplit = createActionButton("◫ Split Arena", "#220C4A6E", "#400EA5E9", "#5038BDF8", "#7DD3FC", density);
         btnSplit.setOnClickListener(v -> {
+            activity.playUiFeedbackSound("tap");
+            v.performHapticFeedback(HapticFeedbackConstants.KEYBOARD_TAP);
             dispatchAiAction(text -> {
                 String query = (text != null && !text.isEmpty()) ? text : "Help me understand this content";
                 activity.handleAskAiFromPdf(query, "split");
@@ -199,9 +211,13 @@ public class WhirlpoolOverlayView extends FrameLayout {
         });
         menuContainer.addView(btnSplit);
 
+        menuContainer.addView(createDivider(density));
+
         // 5. Copy Image Crop or Recognized Text to Clipboard
-        Button btnCopy = createActionButton("📋 Copy", "#1E293B", "#0F172A", "#64748B", "#F1F5F9", density);
+        Button btnCopy = createActionButton("📋 Copy", "#20334155", "#35FFFFFF", "#3594A3B8", "#F1F5F9", density);
         btnCopy.setOnClickListener(v -> {
+            activity.playUiFeedbackSound("tap");
+            v.performHapticFeedback(HapticFeedbackConstants.KEYBOARD_TAP);
             dispatchAiAction(text -> {
                 if (croppedBitmap != null && (text == null || text.isEmpty())) {
                     activity.copyImageToClipboard(croppedBitmap);
@@ -220,9 +236,22 @@ public class WhirlpoolOverlayView extends FrameLayout {
         menuContainer.addView(btnCopy);
 
         // 6. Close / Cancel
-        Button btnClose = createActionButton("✕", "#450A0A", "#2A0808", "#F87171", "#FECACA", density);
-        btnClose.setOnClickListener(v -> dismiss());
+        Button btnClose = createActionButton("✕", "#25EF4444", "#45EF4444", "#50F87171", "#FECACA", density);
+        btnClose.setOnClickListener(v -> {
+            activity.playUiFeedbackSound("tap");
+            v.performHapticFeedback(HapticFeedbackConstants.KEYBOARD_TAP);
+            dismiss();
+        });
         menuContainer.addView(btnClose);
+    }
+
+    private View createDivider(float density) {
+        View div = new View(activity);
+        LinearLayout.LayoutParams lp = new LinearLayout.LayoutParams((int) (1 * density), (int) (20 * density));
+        lp.setMargins((int) (4 * density), 0, (int) (4 * density), 0);
+        div.setLayoutParams(lp);
+        div.setBackgroundColor(Color.parseColor("#25FFFFFF"));
+        return div;
     }
 
     @SuppressLint("ClickableViewAccessibility")
@@ -268,7 +297,7 @@ public class WhirlpoolOverlayView extends FrameLayout {
         });
     }
 
-    private Button createActionButton(String label, String bgStart, String bgEnd, String strokeColor, String textColor, float density) {
+    private Button createActionButton(String label, String bgColor, String pressedColor, String strokeColor, String textColor, float density) {
         Button btn = new Button(activity);
         btn.setText(label);
         btn.setTextColor(Color.parseColor(textColor));
@@ -278,27 +307,28 @@ public class WhirlpoolOverlayView extends FrameLayout {
         btn.setAllCaps(false);
         btn.setMinimumHeight(0);
         btn.setMinimumWidth(0);
+        btn.setIncludeFontPadding(false);
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.LOLLIPOP) {
-            btn.setLetterSpacing(0.015f);
+            btn.setLetterSpacing(0.02f);
         }
 
         int padH = (int) (13 * density);
-        int padV = (int) (8 * density);
+        int padV = (int) (7 * density);
         btn.setPadding(padH, padV, padH, padV);
 
         LinearLayout.LayoutParams lp = new LinearLayout.LayoutParams(
-                LayoutParams.WRAP_CONTENT, LayoutParams.WRAP_CONTENT);
-        lp.setMargins((int) (3.5f * density), 0, (int) (3.5f * density), 0);
+                LayoutParams.WRAP_CONTENT, (int) (34 * density));
+        lp.setMargins((int) (2.5f * density), 0, (int) (2.5f * density), 0);
         btn.setLayoutParams(lp);
 
-        int[] colors = new int[]{ Color.parseColor(bgStart), Color.parseColor(bgEnd) };
-        GradientDrawable normalBg = new GradientDrawable(GradientDrawable.Orientation.TOP_BOTTOM, colors);
-        normalBg.setCornerRadius(15 * density);
+        GradientDrawable normalBg = new GradientDrawable();
+        normalBg.setColor(Color.parseColor(bgColor));
+        normalBg.setCornerRadius(999f);
         normalBg.setStroke((int) (1.2f * density), Color.parseColor(strokeColor));
 
-        int[] pressedColors = new int[]{ Color.parseColor("#55FFFFFF"), Color.parseColor("#33FFFFFF") };
-        GradientDrawable pressedBg = new GradientDrawable(GradientDrawable.Orientation.TOP_BOTTOM, pressedColors);
-        pressedBg.setCornerRadius(15 * density);
+        GradientDrawable pressedBg = new GradientDrawable();
+        pressedBg.setColor(Color.parseColor(pressedColor));
+        pressedBg.setCornerRadius(999f);
         pressedBg.setStroke((int) (1.5f * density), Color.parseColor(strokeColor));
 
         StateListDrawable sld = new StateListDrawable();
@@ -306,8 +336,8 @@ public class WhirlpoolOverlayView extends FrameLayout {
         sld.addState(new int[]{}, normalBg);
 
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.LOLLIPOP) {
-            ColorStateList rippleColor = ColorStateList.valueOf(Color.parseColor("#44FFFFFF"));
-            btn.setBackground(new RippleDrawable(rippleColor, sld, null));
+            ColorStateList rippleColor = ColorStateList.valueOf(Color.parseColor("#33FFFFFF"));
+            btn.setBackground(new RippleDrawable(rippleColor, sld, pressedBg));
         } else {
             btn.setBackground(sld);
         }
