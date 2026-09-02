@@ -1,0 +1,355 @@
+<!DOCTYPE html>
+
+<html class="dark" lang="en"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>Caspian Tab Switcher</title>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&amp;family=JetBrains+Mono:wght@500&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<script id="tailwind-config">
+        tailwind.config = {
+          darkMode: "class",
+          theme: {
+            extend: {
+              "colors": {
+                      "on-primary-fixed": "#001f24",
+                      "background": "#0f131d",
+                      "on-secondary-container": "#00311f",
+                      "surface-container-low": "#181b25",
+                      "surface-container": "#1c1f29",
+                      "tertiary-fixed-dim": "#f3bf26",
+                      "on-tertiary": "#3e2e00",
+                      "secondary-container": "#00a572",
+                      "surface-container-lowest": "#0a0e17",
+                      "on-error-container": "#ffdad6",
+                      "on-surface": "#dfe2f0",
+                      "surface": "#0f131d",
+                      "secondary": "#4edea3",
+                      "on-surface-variant": "#bac9cc",
+                      "tertiary-container": "#fec931",
+                      "surface-dim": "#0f131d",
+                      "secondary-fixed-dim": "#4edea3",
+                      "inverse-surface": "#dfe2f0",
+                      "surface-container-highest": "#31353f",
+                      "surface-bright": "#353944",
+                      "inverse-primary": "#006875",
+                      "on-tertiary-fixed": "#251a00",
+                      "primary-fixed": "#9cf0ff",
+                      "tertiary": "#ffeac0",
+                      "error": "#ffb4ab",
+                      "surface-container-high": "#262a34",
+                      "error-container": "#93000a",
+                      "secondary-fixed": "#6ffbbe",
+                      "on-primary-fixed-variant": "#004f58",
+                      "on-secondary-fixed": "#002113",
+                      "on-tertiary-container": "#6f5500",
+                      "primary": "#c3f5ff",
+                      "on-primary-container": "#00626e",
+                      "on-error": "#690005",
+                      "on-background": "#dfe2f0",
+                      "on-tertiary-fixed-variant": "#594400",
+                      "outline-variant": "#3b494c",
+                      "outline": "#849396",
+                      "on-secondary-fixed-variant": "#005236",
+                      "on-secondary": "#003824",
+                      "primary-container": "#00e5ff",
+                      "inverse-on-surface": "#2d303b",
+                      "on-primary": "#00363d",
+                      "surface-variant": "#31353f",
+                      "tertiary-fixed": "#ffdf96",
+                      "primary-fixed-dim": "#00daf3",
+                      "surface-tint": "#00daf3"
+              },
+              "borderRadius": {
+                      "DEFAULT": "1rem",
+                      "lg": "2rem",
+                      "xl": "3rem",
+                      "full": "9999px"
+              },
+              "spacing": {
+                      "md": "16px",
+                      "base": "4px",
+                      "sm": "12px",
+                      "lg": "24px",
+                      "xl": "32px",
+                      "gutter": "12px",
+                      "container-margin": "20px",
+                      "xs": "8px"
+              },
+              "fontFamily": {
+                      "label-caps": [
+                              "JetBrains Mono"
+                      ],
+                      "headline-sm": [
+                              "Inter"
+                      ],
+                      "body-md": [
+                              "Inter"
+                      ],
+                      "headline-lg-mobile": [
+                              "Inter"
+                      ],
+                      "body-lg": [
+                              "Inter"
+                      ],
+                      "headline-md": [
+                              "Inter"
+                      ],
+                      "display-lg": [
+                              "Inter"
+                      ]
+              },
+              "fontSize": {
+                      "label-caps": [
+                              "12px",
+                              {
+                                      "lineHeight": "16px",
+                                      "letterSpacing": "0.05em",
+                                      "fontWeight": "500"
+                              }
+                      ],
+                      "headline-sm": [
+                              "20px",
+                              {
+                                      "lineHeight": "28px",
+                                      "fontWeight": "600"
+                              }
+                      ],
+                      "body-md": [
+                              "14px",
+                              {
+                                      "lineHeight": "20px",
+                                      "fontWeight": "400"
+                              }
+                      ],
+                      "headline-lg-mobile": [
+                              "28px",
+                              {
+                                      "lineHeight": "36px",
+                                      "fontWeight": "700"
+                              }
+                      ],
+                      "body-lg": [
+                              "16px",
+                              {
+                                      "lineHeight": "24px",
+                                      "fontWeight": "400"
+                              }
+                      ],
+                      "headline-md": [
+                              "24px",
+                              {
+                                      "lineHeight": "32px",
+                                      "letterSpacing": "-0.01em",
+                                      "fontWeight": "600"
+                              }
+                      ],
+                      "display-lg": [
+                              "32px",
+                              {
+                                      "lineHeight": "40px",
+                                      "letterSpacing": "-0.02em",
+                                      "fontWeight": "700"
+                              }
+                      ]
+              }
+            }
+          }
+        }
+    </script>
+<style>
+        .glass-panel {
+            background: rgba(28, 31, 41, 0.6);
+            backdrop-filter: blur(12px);
+            -webkit-backdrop-filter: blur(12px);
+            border: 1px solid rgba(255, 255, 255, 0.05);
+        }
+        .neon-border {
+            border: 1px solid rgba(0, 225, 255, 0.3);
+        }
+        .neon-glow {
+            box-shadow: 0 0 20px rgba(0, 225, 255, 0.05);
+        }
+        .hide-scrollbar::-webkit-scrollbar {
+            display: none;
+        }
+        .hide-scrollbar {
+            -ms-overflow-style: none;
+            scrollbar-width: none;
+        }
+    </style>
+</head>
+<body class="bg-background text-on-background font-body-md min-h-screen flex flex-col hide-scrollbar relative">
+<!-- Top Navigation (Shell suppressed for this focused modal view, but implementing a custom header) -->
+<header class="flex flex-col gap-sm p-container-margin pt-lg z-10 sticky top-0 bg-background/80 backdrop-blur-xl border-b border-outline-variant/30">
+<!-- Controls Row -->
+<div class="flex justify-center items-center w-full relative">
+<div class="flex items-center gap-base bg-surface-container-high rounded-full p-base border border-outline-variant/20">
+<button class="w-8 h-8 rounded-full flex items-center justify-center bg-primary-container/20 text-primary-fixed border border-primary/30">
+<span class="font-label-caps text-label-caps">5</span>
+</button>
+<div class="w-[1px] h-4 bg-outline-variant/50 mx-1"></div>
+<button class="w-8 h-8 rounded-full flex items-center justify-center text-on-surface-variant hover:text-primary transition-colors">
+<span class="material-symbols-outlined" style="font-variation-settings: 'FILL' 0;">shield</span>
+</button>
+<div class="w-[1px] h-4 bg-outline-variant/50 mx-1"></div>
+<button class="w-8 h-8 rounded-full flex items-center justify-center text-on-surface-variant hover:text-error transition-colors">
+<span class="material-symbols-outlined">close</span>
+</button>
+</div>
+</div>
+<!-- Search Omnibox -->
+<div class="w-full relative group">
+<span class="material-symbols-outlined absolute left-sm top-1/2 -translate-y-1/2 text-on-surface-variant group-focus-within:text-primary transition-colors">search</span>
+<input class="w-full bg-surface-container rounded-lg py-sm pl-[40px] pr-sm text-body-md font-body-md text-on-surface focus:outline-none focus:ring-0 glass-panel neon-border neon-glow transition-all duration-300 placeholder:text-on-surface-variant/50" placeholder="Search your tabs" type="text"/>
+</div>
+</header>
+<!-- Main Grid Content -->
+<main class="flex-1 overflow-y-auto px-container-margin pb-[120px] pt-sm">
+<!-- AI Research Tab Group -->
+<div class="mb-lg">
+<div class="flex items-center gap-sm mb-sm pl-base">
+<span class="w-2 h-2 rounded-full bg-secondary"></span>
+<h2 class="font-label-caps text-label-caps text-secondary tracking-widest uppercase">AI Research</h2>
+<span class="text-on-surface-variant text-label-caps ml-auto">2 TABS</span>
+</div>
+<div class="grid grid-cols-2 gap-sm">
+<!-- Card 1 -->
+<div class="glass-panel rounded-[24px] overflow-hidden flex flex-col h-[280px] group border-secondary/20 relative">
+<div class="absolute inset-0 bg-gradient-to-b from-transparent to-white/[0.02] pointer-events-none"></div>
+<!-- Card Header -->
+<div class="flex items-center justify-between p-sm bg-surface-container/50 border-b border-white/5 backdrop-blur-md z-10">
+<div class="flex items-center gap-2 truncate">
+<span class="material-symbols-outlined text-[16px] text-primary">language</span>
+<span class="font-label-caps text-label-caps text-on-surface truncate">google gemini ai - Googl...</span>
+</div>
+<button class="text-on-surface-variant hover:text-white transition-colors">
+<span class="material-symbols-outlined text-[18px]">close</span>
+</button>
+</div>
+<!-- Card Preview Image -->
+<div class="flex-1 relative bg-surface-container-lowest overflow-hidden">
+<img class="object-cover w-full h-full opacity-70 group-hover:opacity-100 transition-opacity" data-alt="A futuristic web browser preview showing a search results page for 'google gemini ai' in a dark mode aesthetic with deep blacks and subtle cyan text highlights. The layout is minimalist and structured." src="https://lh3.googleusercontent.com/aida-public/AB6AXuCm95UlG4GUxsFblo05Lor_cSVYmoQbjAkwomnBKOOacLJGEnZftWsd3Aie-PLw7o1__u8InZGccsa0HoVXj_2DGL1Zscdw-VgKcoN_rN2wscpMxkZhloLyaB1DFbXOfK1UyKeFqMPPq0BlTHt8An-TYaLhZhjxXB_Aq0DNpFl5M-XsAmNRC3JRmcujS-LNqHP0JxkuEZcH_Tf2Ad21_h_enoPcA5wVnEVZWGslWSF-ZuWz23xIpGvBdw"/>
+</div>
+</div>
+<!-- Card 2 -->
+<div class="glass-panel rounded-[24px] overflow-hidden flex flex-col h-[280px] group border-secondary/20 relative">
+<div class="absolute inset-0 bg-gradient-to-b from-transparent to-white/[0.02] pointer-events-none"></div>
+<!-- Card Header -->
+<div class="flex items-center justify-between p-sm bg-surface-container/50 border-b border-white/5 backdrop-blur-md z-10">
+<div class="flex items-center gap-2 truncate">
+<span class="material-symbols-outlined text-[16px] text-tertiary">school</span>
+<span class="font-label-caps text-label-caps text-on-surface truncate">Sem6 ~ CC UnitALL</span>
+</div>
+<button class="text-on-surface-variant hover:text-white transition-colors">
+<span class="material-symbols-outlined text-[18px]">close</span>
+</button>
+</div>
+<!-- Card Preview Image -->
+<div class="flex-1 relative bg-surface-container-lowest overflow-hidden p-4">
+<div class="text-on-surface font-headline-sm text-headline-sm mb-2">UNIT III - VIRTUALIZATION TECHNOLOGY</div>
+<div class="text-on-surface-variant font-body-md text-body-md">Hypervisor + HVM + LPAR</div>
+<div class="mt-4 border border-outline-variant/30 rounded p-2 text-[10px] font-mono text-outline">
+                             Physical Hardware<br/>↓<br/>Virtualization<br/>↓<br/>Multiple Virtual Machines
+                         </div>
+</div>
+</div>
+</div>
+</div>
+<!-- Ungrouped Tabs -->
+<div class="grid grid-cols-2 gap-sm">
+<!-- Card 3 -->
+<div class="glass-panel rounded-[24px] overflow-hidden flex flex-col h-[280px] group relative border-primary/50 neon-glow">
+<div class="absolute inset-0 bg-gradient-to-b from-transparent to-white/[0.02] pointer-events-none"></div>
+<!-- Card Header -->
+<div class="flex items-center justify-between p-sm bg-primary/10 border-b border-primary/20 backdrop-blur-md z-10">
+<div class="flex items-center gap-2 truncate">
+<span class="material-symbols-outlined text-[16px] text-primary">code</span>
+<span class="font-label-caps text-label-caps text-on-surface truncate">GitHub - code4nigel/Cisc...</span>
+</div>
+<button class="text-on-surface-variant hover:text-white transition-colors">
+<span class="material-symbols-outlined text-[18px]">close</span>
+</button>
+</div>
+<!-- Card Preview Image -->
+<div class="flex-1 relative bg-surface-container-lowest overflow-hidden">
+<img class="object-cover w-full h-full opacity-90" data-alt="A dark mode code repository interface showing file directories, commit history, and technical branch structures in a sleek, minimalist digital environment with subtle glowing cyan accents." src="https://lh3.googleusercontent.com/aida-public/AB6AXuCRCkN0yDdMGsCLNcKWRbJQwPgpC4gP6nafSnQcP79lM7ZFMw4A2qehNzxIhPL5rTp4oEbqVIjuKugrovN64Aj13yKmSuOjS35qAP3iudlPF5luGi2EdePEveC03EJ5jJTrBFuWXb6o3iJxADIDFoXdkR0A8vPppK3C7p1qzL7a3vF5NCDuDWgOK1gHTnvHYkyPkiyPWrAkR9nBbKcZsszQQit0og5SZHxG6IMnRZiSotnDEB0iC-s4SA"/>
+</div>
+</div>
+<!-- Card 4 -->
+<div class="glass-panel rounded-[24px] overflow-hidden flex flex-col h-[280px] group relative">
+<div class="absolute inset-0 bg-gradient-to-b from-transparent to-white/[0.02] pointer-events-none"></div>
+<!-- Card Header -->
+<div class="flex items-center justify-between p-sm bg-surface-container/50 border-b border-white/5 backdrop-blur-md z-10">
+<div class="flex items-center gap-2 truncate">
+<span class="material-symbols-outlined text-[16px] text-primary">language</span>
+<span class="font-label-caps text-label-caps text-on-surface truncate">Caspian Mobile Hub</span>
+</div>
+<button class="text-on-surface-variant hover:text-white transition-colors">
+<span class="material-symbols-outlined text-[18px]">close</span>
+</button>
+</div>
+<!-- Card Preview Image -->
+<div class="flex-1 relative bg-surface-container-lowest overflow-hidden flex items-center justify-center p-4">
+<div class="text-center">
+<div class="w-12 h-12 rounded-full bg-surface-variant mx-auto mb-2 flex items-center justify-center border border-outline-variant/30">
+<span class="material-symbols-outlined text-primary">waves</span>
+</div>
+<div class="font-headline-sm text-headline-sm text-on-surface">CASPIAN</div>
+<div class="font-label-caps text-label-caps text-on-surface-variant text-[10px]">SELECT PLATFORM</div>
+</div>
+</div>
+</div>
+<!-- Card 5 -->
+<div class="glass-panel rounded-[24px] overflow-hidden flex flex-col h-[280px] group relative ring-2 ring-tertiary/50 shadow-[0_0_15px_rgba(255,234,192,0.1)]">
+<div class="absolute inset-0 bg-gradient-to-b from-transparent to-white/[0.02] pointer-events-none"></div>
+<!-- Card Header -->
+<div class="flex items-center justify-between p-sm bg-surface-container/50 border-b border-white/5 backdrop-blur-md z-10">
+<div class="flex items-center gap-2 truncate">
+<span class="material-symbols-outlined text-[16px] text-tertiary">code</span>
+<span class="font-label-caps text-label-caps text-on-surface truncate">GitHub - code4nigel/Cisc...</span>
+</div>
+<button class="text-on-surface-variant hover:text-white transition-colors">
+<span class="material-symbols-outlined text-[18px]">close</span>
+</button>
+</div>
+<!-- Card Preview Image -->
+<div class="flex-1 relative bg-surface-container-lowest overflow-hidden">
+<img class="object-cover w-full h-full opacity-70 group-hover:opacity-100 transition-opacity" data-alt="Another view of a dark mode code repository interface showing file directories and technical structures in a sleek, minimalist digital environment, similar to a previous tab but slightly scrolled." src="https://lh3.googleusercontent.com/aida-public/AB6AXuBcwLQVtaAaUUar7S0sriq2HczOQiZyMShFoX0jLnG3iGei5bbnV_cPgZtVTEhU1Bgza-b9ek01qGumxxTxuA4olCDk62aGKY-5VRlEDv25d1I8xfts7A0HMOZq9ZS84-4-37iC0qViswu694j8hpGBqMYxg44h78-tzxotsCmnxznWz3jtjvYrdXFv2eu6jYP74tbCnd_AOUihjKm3bhMgkWYYrGXEy48nBIPu5L35seaMJvK2RhvxxQ"/>
+</div>
+</div>
+</div>
+</main>
+<!-- Floating Actions -->
+<div class="fixed bottom-[90px] right-container-margin flex flex-col gap-sm z-40">
+<button class="w-14 h-14 rounded-full bg-tertiary text-on-tertiary flex items-center justify-center shadow-lg hover:scale-105 transition-transform">
+<span class="material-symbols-outlined">waves</span>
+</button>
+<button class="w-14 h-14 rounded-full glass-panel text-on-surface flex items-center justify-center shadow-lg hover:scale-105 transition-transform border border-outline-variant/30">
+<span class="material-symbols-outlined text-[28px]">add</span>
+</button>
+</div>
+<!-- Bottom Actions Bar -->
+<div class="fixed bottom-0 left-0 w-full p-container-margin pb-xl bg-gradient-to-t from-background via-background/90 to-transparent z-30 flex justify-center gap-sm pointer-events-none">
+<div class="glass-panel rounded-full p-1 flex items-center pointer-events-auto shadow-2xl">
+<button class="px-6 py-3 rounded-full text-on-surface-variant font-label-caps text-label-caps hover:text-primary transition-colors hover:bg-surface-variant/30 flex items-center gap-2">
+<span class="material-symbols-outlined text-[18px]">splitscreen</span>
+                Split
+            </button>
+<div class="w-[1px] h-4 bg-outline-variant/50"></div>
+<button class="px-6 py-3 rounded-full text-on-surface-variant font-label-caps text-label-caps hover:text-secondary transition-colors hover:bg-surface-variant/30 flex items-center gap-2">
+<span class="material-symbols-outlined text-[18px]">folder</span>
+                Group
+            </button>
+<div class="w-[1px] h-4 bg-outline-variant/50"></div>
+<button class="px-6 py-3 rounded-full text-on-surface-variant font-label-caps text-label-caps hover:text-error transition-colors hover:bg-surface-variant/30 flex items-center gap-2">
+<span class="material-symbols-outlined text-[18px]">flashlight_off</span>
+                Close All
+            </button>
+</div>
+</div>
+<!-- JSON Components Data Binding logic (Simulated for Shared Components Rules) -->
+<!-- We are building a tab switcher, not a top-level destination, so standard NavDrawer and BottomNavBar are suppressed per 'Semantic Shell' mandate. -->
+</body></html>
