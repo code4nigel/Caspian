@@ -44,6 +44,7 @@ import com.google.mlkit.vision.text.latin.TextRecognizerOptions;
 
 import java.util.ArrayList;
 import java.util.List;
+import java.util.function.Consumer;
 
 /**
  * WhirlpoolOverlayView - Fullscreen interactive Circle-to-Search overlay view.
@@ -65,6 +66,8 @@ public class WhirlpoolOverlayView extends FrameLayout {
     private Bitmap croppedBitmap;
     private String recognizedText = "";
     private Rect selectionBounds;
+    private boolean isOcrRunning = false;
+    private Consumer<String> pendingAiAction = null;
 
     public WhirlpoolOverlayView(@NonNull MainActivity activity, Bitmap screenBitmap) {
         super(activity);
@@ -164,47 +167,55 @@ public class WhirlpoolOverlayView extends FrameLayout {
         // 2. Ask ChatGPT (OCR Text)
         Button btnGpt = createActionButton("✳️ Ask ChatGPT", "#064E3B", "#022C22", "#34D399", "#A7F3D0", density);
         btnGpt.setOnClickListener(v -> {
-            String query = recognizedText.isEmpty() ? "Help me understand this content" : recognizedText;
-            String prompt = "Explain this concept in simple terms:\n\n\"" + query + "\"";
-            activity.addNewTab("chatgpt", prompt, "https://chatgpt.com", false);
-            dismiss();
+            dispatchAiAction(text -> {
+                String query = (text != null && !text.isEmpty()) ? text : "Help me understand this content";
+                String prompt = "Explain this concept in simple terms:\n\n\"" + query + "\"";
+                activity.addNewTab("chatgpt", prompt, "https://chatgpt.com", false);
+                dismiss();
+            });
         });
         menuContainer.addView(btnGpt);
 
         // 3. Ask Gemini (OCR Text)
         Button btnGemini = createActionButton("✦ Ask Gemini", "#4C1D95", "#2E1065", "#A78BFA", "#DDD6FE", density);
         btnGemini.setOnClickListener(v -> {
-            String query = recognizedText.isEmpty() ? "Help me understand this content" : recognizedText;
-            String prompt = "Explain this concept in simple terms:\n\n\"" + query + "\"";
-            activity.addNewTab("gemini", prompt, "https://gemini.google.com/app", false);
-            dismiss();
+            dispatchAiAction(text -> {
+                String query = (text != null && !text.isEmpty()) ? text : "Help me understand this content";
+                String prompt = "Explain this concept in simple terms:\n\n\"" + query + "\"";
+                activity.addNewTab("gemini", prompt, "https://gemini.google.com/app", false);
+                dismiss();
+            });
         });
         menuContainer.addView(btnGemini);
 
         // 4. Split Arena (OCR Text)
         Button btnSplit = createActionButton("◫ Split Arena", "#0C4A6E", "#082F49", "#38BDF8", "#BAE6FD", density);
         btnSplit.setOnClickListener(v -> {
-            String query = recognizedText.isEmpty() ? "Help me understand this content" : recognizedText;
-            activity.handleAskAiFromPdf(query, "split");
-            dismiss();
+            dispatchAiAction(text -> {
+                String query = (text != null && !text.isEmpty()) ? text : "Help me understand this content";
+                activity.handleAskAiFromPdf(query, "split");
+                dismiss();
+            });
         });
         menuContainer.addView(btnSplit);
 
         // 5. Copy Image Crop or Recognized Text to Clipboard
         Button btnCopy = createActionButton("📋 Copy", "#1E293B", "#0F172A", "#64748B", "#F1F5F9", density);
         btnCopy.setOnClickListener(v -> {
-            if (croppedBitmap != null) {
-                activity.copyImageToClipboard(croppedBitmap);
-            } else if (!recognizedText.isEmpty()) {
-                ClipboardManager cm = (ClipboardManager) activity.getSystemService(Context.CLIPBOARD_SERVICE);
-                if (cm != null) {
-                    cm.setPrimaryClip(ClipData.newPlainText("Caspian Whirlpool", recognizedText));
-                    Toast.makeText(activity, "Copied recognized text to clipboard", Toast.LENGTH_SHORT).show();
+            dispatchAiAction(text -> {
+                if (croppedBitmap != null && (text == null || text.isEmpty())) {
+                    activity.copyImageToClipboard(croppedBitmap);
+                } else if (text != null && !text.isEmpty()) {
+                    ClipboardManager cm = (ClipboardManager) activity.getSystemService(Context.CLIPBOARD_SERVICE);
+                    if (cm != null) {
+                        cm.setPrimaryClip(ClipData.newPlainText("Caspian Whirlpool", text));
+                        Toast.makeText(activity, "Copied recognized text to clipboard", Toast.LENGTH_SHORT).show();
+                    }
+                } else {
+                    Toast.makeText(activity, "No selection found", Toast.LENGTH_SHORT).show();
                 }
-            } else {
-                Toast.makeText(activity, "No selection found", Toast.LENGTH_SHORT).show();
-            }
-            dismiss();
+                dismiss();
+            });
         });
         menuContainer.addView(btnCopy);
 
@@ -347,20 +358,51 @@ public class WhirlpoolOverlayView extends FrameLayout {
         positionMenu(bounds);
     }
 
+    private void dispatchAiAction(Consumer<String> action) {
+        if (isOcrRunning) {
+            Toast.makeText(activity, "⏳ Extracting text from outline...", Toast.LENGTH_SHORT).show();
+            pendingAiAction = action;
+        } else {
+            action.accept(recognizedText);
+        }
+    }
+
     private void runOcrOnCrop(Bitmap bitmap) {
         try {
+            isOcrRunning = true;
             InputImage image = InputImage.fromBitmap(bitmap, 0);
             TextRecognizer recognizer = TextRecognition.getClient(TextRecognizerOptions.DEFAULT_OPTIONS);
             recognizer.process(image)
                     .addOnSuccessListener(visionText -> {
+                        isOcrRunning = false;
                         recognizedText = visionText.getText().trim();
                         if (!recognizedText.isEmpty()) {
-                            Toast.makeText(activity, "⚡ Text Recognized!", Toast.LENGTH_SHORT).show();
+                            String preview = recognizedText.length() > 24 ? recognizedText.substring(0, 24) + "..." : recognizedText;
+                            Toast.makeText(activity, "⚡ Extracted: \"" + preview + "\"", Toast.LENGTH_SHORT).show();
+                        }
+                        if (pendingAiAction != null) {
+                            Consumer<String> action = pendingAiAction;
+                            pendingAiAction = null;
+                            action.accept(recognizedText);
                         }
                     })
-                    .addOnFailureListener(e -> Log.w(TAG, "OCR recognition error: " + e.getMessage()));
+                    .addOnFailureListener(e -> {
+                        isOcrRunning = false;
+                        Log.w(TAG, "OCR recognition error: " + e.getMessage());
+                        if (pendingAiAction != null) {
+                            Consumer<String> action = pendingAiAction;
+                            pendingAiAction = null;
+                            action.accept(recognizedText);
+                        }
+                    });
         } catch (Exception e) {
+            isOcrRunning = false;
             Log.e(TAG, "runOcrOnCrop exception: " + e.getMessage());
+            if (pendingAiAction != null) {
+                Consumer<String> action = pendingAiAction;
+                pendingAiAction = null;
+                action.accept(recognizedText);
+            }
         }
     }
 

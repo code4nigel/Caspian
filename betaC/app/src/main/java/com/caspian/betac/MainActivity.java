@@ -14,9 +14,13 @@ import android.graphics.Bitmap;
 import android.graphics.BitmapFactory;
 import android.graphics.Canvas;
 import android.graphics.Color;
+import android.graphics.Rect;
 import android.graphics.SurfaceTexture;
 import android.graphics.drawable.ColorDrawable;
 import android.graphics.drawable.GradientDrawable;
+import android.view.PixelCopy;
+import android.webkit.RenderProcessGoneDetail;
+import java.util.function.Consumer;
 import android.widget.PopupWindow;
 import android.media.AudioAttributes;
 import android.media.AudioFormat;
@@ -934,74 +938,19 @@ public class MainActivity extends AppCompatActivity {
             return;
         }
 
-        try {
-            int width = rootContainer != null ? rootContainer.getWidth() : 0;
-            int height = rootContainer != null ? rootContainer.getHeight() : 0;
-            if (width <= 0 && currentTab.webView != null) width = currentTab.webView.getWidth();
-            if (height <= 0 && currentTab.webView != null) height = currentTab.webView.getHeight();
-            if (width <= 0) width = 1080;
-            if (height <= 0) height = 1920;
+        // Hide CAB and radial dial during screen capture so they don't get stamped into the screenshot
+        if (floatingCaspianCard != null) floatingCaspianCard.setVisibility(View.INVISIBLE);
+        if (cabRadialMenu != null) cabRadialMenu.setVisibility(View.INVISIBLE);
 
-            Bitmap bitmap = Bitmap.createBitmap(width, height, Bitmap.Config.ARGB_8888);
-            Canvas canvas = new Canvas(bitmap);
-
-            // Hide CAB and radial dial during screen capture so they don't get stamped into the screenshot
-            if (floatingCaspianCard != null) floatingCaspianCard.setVisibility(View.INVISIBLE);
-            if (cabRadialMenu != null) cabRadialMenu.setVisibility(View.INVISIBLE);
-
-            // Fill canvas with deep background color
-            canvas.drawColor(0xFF050811);
-
-            // 1. Draw omnibox header at top if visible
-            if (omniboxHeaderWrapper != null && omniboxHeaderWrapper.getVisibility() == View.VISIBLE) {
-                int[] hdrLoc = new int[2];
-                omniboxHeaderWrapper.getLocationInWindow(hdrLoc);
-                int[] rootLoc = new int[2];
-                if (rootContainer != null) rootContainer.getLocationInWindow(rootLoc);
-                int offX = Math.max(0, hdrLoc[0] - rootLoc[0]);
-                int offY = Math.max(0, hdrLoc[1] - rootLoc[1]);
-
-                canvas.save();
-                canvas.translate(offX, offY);
-                omniboxHeaderWrapper.draw(canvas);
-                canvas.restore();
-            }
-
-            // 2. Draw active tab's webView directly at its exact window offset
-            if (currentTab.webView != null) {
-                int[] wvLoc = new int[2];
-                currentTab.webView.getLocationInWindow(wvLoc);
-                int[] rootLoc = new int[2];
-                if (rootContainer != null) rootContainer.getLocationInWindow(rootLoc);
-                int offX = Math.max(0, wvLoc[0] - rootLoc[0]);
-                int offY = Math.max(0, wvLoc[1] - rootLoc[1]);
-
-                canvas.save();
-                canvas.translate(offX, offY);
-                currentTab.webView.draw(canvas);
-                canvas.restore();
-            }
-
-            // 3. If split mode is active, draw secondary split tab's webView
-            if (splitModeState != 0 && secondarySplitTabId != 0) {
-                TabItem splitTab = getTabById(secondarySplitTabId);
-                if (splitTab != null && splitTab.webView != null && splitTab.webView.getParent() != null) {
-                    int[] wvLoc = new int[2];
-                    splitTab.webView.getLocationInWindow(wvLoc);
-                    int[] rootLoc = new int[2];
-                    if (rootContainer != null) rootContainer.getLocationInWindow(rootLoc);
-                    int offX = Math.max(0, wvLoc[0] - rootLoc[0]);
-                    int offY = Math.max(0, wvLoc[1] - rootLoc[1]);
-
-                    canvas.save();
-                    canvas.translate(offX, offY);
-                    splitTab.webView.draw(canvas);
-                    canvas.restore();
-                }
-            }
-
+        // Capture screen bitmap using PixelCopy for 100% hardware-accelerated GPU fidelity (PDF, Canvas, WebGL, Text)
+        captureWindowBitmapForWhirlpool(bitmap -> {
             if (floatingCaspianCard != null) {
                 floatingCaspianCard.setVisibility(View.VISIBLE);
+            }
+
+            if (bitmap == null) {
+                Toast.makeText(this, "Could not capture screen for Whirlpool", Toast.LENGTH_SHORT).show();
+                return;
             }
 
             WhirlpoolOverlayView overlay = new WhirlpoolOverlayView(this, bitmap);
@@ -1022,9 +971,94 @@ public class MainActivity extends AppCompatActivity {
             }
 
             Toast.makeText(this, "🌀 Caspian Whirlpool: Circle or drag to search", Toast.LENGTH_SHORT).show();
+        });
+    }
+
+    private void captureWindowBitmapForWhirlpool(Consumer<Bitmap> onCaptured) {
+        if (rootContainer == null) {
+            onCaptured.accept(null);
+            return;
+        }
+
+        int width = rootContainer.getWidth();
+        int height = rootContainer.getHeight();
+        if (width <= 0) width = 1080;
+        if (height <= 0) height = 1920;
+
+        // On Android 8.0+ (API 26+), PixelCopy copies the exact GPU surface buffer from Window/SurfaceFlinger
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O && getWindow() != null) {
+            try {
+                Bitmap destBitmap = Bitmap.createBitmap(width, height, Bitmap.Config.ARGB_8888);
+                int[] loc = new int[2];
+                rootContainer.getLocationInWindow(loc);
+                Rect srcRect = new Rect(loc[0], loc[1], loc[0] + width, loc[1] + height);
+
+                // Use post to ensure CAB hide layout pass is completed before capturing GPU front buffer
+                final int finalW = width;
+                final int finalH = height;
+                rootContainer.post(() -> {
+                    try {
+                        PixelCopy.request(getWindow(), srcRect, destBitmap, copyResult -> {
+                            if (copyResult == PixelCopy.SUCCESS) {
+                                onCaptured.accept(destBitmap);
+                            } else {
+                                Log.w(TAG, "PixelCopy returned code: " + copyResult + ", falling back to software capture");
+                                onCaptured.accept(fallbackSoftwareCapture(finalW, finalH));
+                            }
+                        }, new Handler(Looper.getMainLooper()));
+                    } catch (Exception e) {
+                        Log.e(TAG, "PixelCopy request failed: " + e.getMessage());
+                        onCaptured.accept(fallbackSoftwareCapture(finalW, finalH));
+                    }
+                });
+                return;
+            } catch (Exception e) {
+                Log.e(TAG, "PixelCopy setup failed: " + e.getMessage());
+            }
+        }
+
+        // Fallback for API < 26
+        onCaptured.accept(fallbackSoftwareCapture(width, height));
+    }
+
+    private Bitmap fallbackSoftwareCapture(int width, int height) {
+        try {
+            Bitmap bitmap = Bitmap.createBitmap(width, height, Bitmap.Config.ARGB_8888);
+            Canvas canvas = new Canvas(bitmap);
+            canvas.drawColor(0xFF050811);
+
+            TabItem currentTab = getTabById(activeTabId);
+            if (omniboxHeaderWrapper != null && omniboxHeaderWrapper.getVisibility() == View.VISIBLE) {
+                int[] hdrLoc = new int[2];
+                omniboxHeaderWrapper.getLocationInWindow(hdrLoc);
+                int[] rootLoc = new int[2];
+                if (rootContainer != null) rootContainer.getLocationInWindow(rootLoc);
+                int offX = Math.max(0, hdrLoc[0] - rootLoc[0]);
+                int offY = Math.max(0, hdrLoc[1] - rootLoc[1]);
+
+                canvas.save();
+                canvas.translate(offX, offY);
+                omniboxHeaderWrapper.draw(canvas);
+                canvas.restore();
+            }
+
+            if (currentTab != null && currentTab.webView != null) {
+                int[] wvLoc = new int[2];
+                currentTab.webView.getLocationInWindow(wvLoc);
+                int[] rootLoc = new int[2];
+                if (rootContainer != null) rootContainer.getLocationInWindow(rootLoc);
+                int offX = Math.max(0, wvLoc[0] - rootLoc[0]);
+                int offY = Math.max(0, wvLoc[1] - rootLoc[1]);
+
+                canvas.save();
+                canvas.translate(offX, offY);
+                currentTab.webView.draw(canvas);
+                canvas.restore();
+            }
+            return bitmap;
         } catch (Exception e) {
-            Log.e(TAG, "startCaspianWhirlpool error: " + e.getMessage());
-            Toast.makeText(this, "Could not capture screen: " + e.getMessage(), Toast.LENGTH_SHORT).show();
+            Log.e(TAG, "fallbackSoftwareCapture error: " + e.getMessage());
+            return null;
         }
     }
 
@@ -6476,6 +6510,18 @@ public class MainActivity extends AppCompatActivity {
                     injectAIPrompt(view, tabItem.pendingPrompt, false);
                     tabItem.pendingPrompt = null;
                 }
+            }
+
+            @Override
+            public boolean onRenderProcessGone(WebView view, RenderProcessGoneDetail detail) {
+                Log.e(TAG, "WebView render process gone. Crashed: " + (detail != null && detail.didCrash()));
+                try {
+                    if (view != null && view.getParent() instanceof ViewGroup) {
+                        ((ViewGroup) view.getParent()).removeView(view);
+                        view.destroy();
+                    }
+                } catch (Exception e) {}
+                return true;
             }
         });
 

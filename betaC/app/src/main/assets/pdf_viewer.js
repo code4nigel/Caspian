@@ -23,6 +23,8 @@
   let renderedPages = new Set();
   let searchMatches = [];
   let currentSearchIndex = -1;
+  const activeRenderTasks = new Map();
+  const pendingRenderQueue = new Set();
 
   // DOM Elements
   const viewport = document.getElementById('pdf-viewport');
@@ -179,23 +181,36 @@
   // =========================================================
   function createPagePlaceholders() {
     viewport.innerHTML = '';
+    const isLandscape = (currentRotation % 180 !== 0);
+    const defaultW = isLandscape ? 842 : 595;
+    const defaultH = isLandscape ? 595 : 842;
+    const expectedW = Math.round(defaultW * currentScale);
+    const expectedH = Math.round(defaultH * currentScale);
+
     for (let pageNum = 1; pageNum <= totalPages; pageNum++) {
       const container = document.createElement('div');
       container.className = 'pdf-page-container';
       container.id = `page-container-${pageNum}`;
       container.dataset.pageNumber = pageNum;
       container.style.width = '100%';
-      container.style.maxWidth = `${Math.round(595 * currentScale)}px`;
-      container.style.minHeight = `${Math.round(842 * currentScale)}px`;
+      container.style.maxWidth = `${expectedW}px`;
+      container.style.minHeight = `${expectedH}px`;
+      container.style.height = `${expectedH}px`;
 
       viewport.appendChild(container);
     }
   }
 
   async function renderPage(pageNum) {
-    if (renderedPages.has(pageNum) || !pdfDoc) return;
-    renderedPages.add(pageNum);
+    if (renderedPages.has(pageNum) || activeRenderTasks.has(pageNum) || !pdfDoc) return;
 
+    // Strict concurrency limit: at most 2 active render tasks to prevent OOM
+    if (activeRenderTasks.size >= 2) {
+      pendingRenderQueue.add(pageNum);
+      return;
+    }
+
+    pendingRenderQueue.delete(pageNum);
     const container = document.getElementById(`page-container-${pageNum}`);
     if (!container) return;
 
@@ -204,7 +219,7 @@
       const totalRotation = ((page.rotate || 0) + currentRotation) % 360;
       const viewportData = page.getViewport({ scale: currentScale, rotation: totalRotation });
 
-      // Update container dimensions
+      // Update container dimensions matching actual viewport data
       container.style.width = `${viewportData.width}px`;
       container.style.height = `${viewportData.height}px`;
       container.style.maxWidth = `${viewportData.width}px`;
@@ -231,7 +246,12 @@
         viewport: viewportData
       };
 
-      await page.render(renderContext).promise;
+      const renderTask = page.render(renderContext);
+      activeRenderTasks.set(pageNum, renderTask);
+
+      await renderTask.promise;
+      activeRenderTasks.delete(pageNum);
+      renderedPages.add(pageNum);
 
       // TextLayer for Native Text Selection & Copy
       let textLayerDiv = container.querySelector('.textLayer');
@@ -255,15 +275,43 @@
       });
 
     } catch (err) {
+      activeRenderTasks.delete(pageNum);
+      if (err && err.name === 'RenderingCancelledException') {
+        // Expected cancellation when rotating or scrolling quickly
+        return;
+      }
       console.error(`Error rendering page ${pageNum}:`, err);
       renderedPages.delete(pageNum);
+    } finally {
+      processNextPendingRender();
     }
+  }
+
+  function processNextPendingRender() {
+    if (activeRenderTasks.size < 2 && pendingRenderQueue.size > 0) {
+      const nextNum = pendingRenderQueue.values().next().value;
+      if (nextNum) {
+        pendingRenderQueue.delete(nextNum);
+        renderPage(nextNum);
+      }
+    }
+  }
+
+  function cancelAllRenderTasks() {
+    for (const [pageNum, task] of activeRenderTasks.entries()) {
+      try {
+        task.cancel();
+      } catch (e) {}
+    }
+    activeRenderTasks.clear();
+    pendingRenderQueue.clear();
   }
 
   function renderVisiblePages() {
     const viewTop = viewport.scrollTop;
     const viewBottom = viewTop + viewport.clientHeight;
     const buffer = viewport.clientHeight * 1.5; // pre-render buffer
+    const unloadBuffer = viewport.clientHeight * 3.5; // pages beyond this get recycled
 
     for (let pageNum = 1; pageNum <= totalPages; pageNum++) {
       const container = document.getElementById(`page-container-${pageNum}`);
@@ -272,9 +320,19 @@
       const top = container.offsetTop;
       const bottom = top + container.offsetHeight;
 
-      // Check visibility within viewport + buffer
-      if (bottom >= (viewTop - buffer) && top <= (viewBottom + buffer)) {
+      const isVisible = (bottom >= (viewTop - buffer) && top <= (viewBottom + buffer));
+      const isFarOffscreen = (bottom < (viewTop - unloadBuffer) || top > (viewBottom + unloadBuffer));
+
+      if (isVisible) {
         renderPage(pageNum);
+      } else if (isFarOffscreen && renderedPages.has(pageNum)) {
+        // Recycle canvas and textLayer to prevent memory spikes & OOM
+        if (activeRenderTasks.has(pageNum)) {
+          try { activeRenderTasks.get(pageNum).cancel(); } catch (e) {}
+          activeRenderTasks.delete(pageNum);
+        }
+        container.innerHTML = '';
+        renderedPages.delete(pageNum);
       }
 
       // Track active current page
@@ -288,15 +346,23 @@
   }
 
   function reRenderAllPages() {
+    cancelAllRenderTasks();
     renderedPages.clear();
+
+    const isLandscape = (currentRotation % 180 !== 0);
+    const defaultW = isLandscape ? 842 : 595;
+    const defaultH = isLandscape ? 595 : 842;
+    const expectedW = Math.round(defaultW * currentScale);
+    const expectedH = Math.round(defaultH * currentScale);
+
     for (let pageNum = 1; pageNum <= totalPages; pageNum++) {
       const container = document.getElementById(`page-container-${pageNum}`);
       if (container) {
         container.innerHTML = '';
-        container.style.width = '';
-        container.style.height = '';
-        container.style.maxWidth = '';
-        container.style.minHeight = '';
+        container.style.width = '100%';
+        container.style.maxWidth = `${expectedW}px`;
+        container.style.minHeight = `${expectedH}px`;
+        container.style.height = `${expectedH}px`;
       }
     }
     renderVisiblePages();
