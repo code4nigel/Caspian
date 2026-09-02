@@ -655,11 +655,34 @@ body {
   gap: 4px;
 }
 
+.scale-pill {
+  padding: 6px 5px;
+  border-radius: 11px;
+  font-size: 10px;
+  min-width: 34px;
+}
+
 .limit-pill.active, .cc-lang-pill.active, .cc-stt-pill.active, .pruner-mode-pill.active, .scale-pill.active {
   background: var(--accent-gradient);
   color: #ffffff;
   border: none;
   box-shadow: 0 3px 10px var(--accent-glow);
+}
+
+@media (max-width: 440px) {
+  .toolbar-size-row {
+    flex-direction: column !important;
+    align-items: flex-start !important;
+    gap: 6px !important;
+  }
+  .toolbar-size-row .pill-group {
+    width: 100% !important;
+    justify-content: space-between !important;
+  }
+  .toolbar-size-row .scale-pill {
+    flex: 1 !important;
+    padding: 6px 2px !important;
+  }
 }
 
 /* Export Dropdown Menu */

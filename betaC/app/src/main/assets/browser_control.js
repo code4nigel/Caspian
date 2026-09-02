@@ -1307,6 +1307,12 @@
           const googleScale = (prefs && prefs.google_dock_scale) || localStorage.getItem('google_dock_scale') || '1.0';
           document.querySelectorAll('.btn-google-dock-scale').forEach(b => b.classList.toggle('active', b.dataset.scale === googleScale));
 
+          const chatgptScale = (prefs && prefs.chatgpt_dock_scale) || localStorage.getItem('chatgpt_dock_scale') || '1.0';
+          document.querySelectorAll('.btn-chatgpt-dock-scale').forEach(b => b.classList.toggle('active', b.dataset.scale === chatgptScale));
+
+          const geminiScale = (prefs && prefs.gemini_dock_scale) || localStorage.getItem('gemini_dock_scale') || '1.0';
+          document.querySelectorAll('.btn-gemini-dock-scale').forEach(b => b.classList.toggle('active', b.dataset.scale === geminiScale));
+
           var animStyle = prefs.sheetAnimationStyle !== undefined ? prefs.sheetAnimationStyle : 'genie';
           var selectAnimStyle = document.getElementById('select-anim-style');
           if (selectAnimStyle) {
@@ -3737,57 +3743,31 @@
       updateEngineCardUI(cardGoogle, toggleGoogleDockBtn, googleDockBody, googleDockDot, 'google_dock_enabled');
     };
 
-    // 6. Widget Scale Controls (Action Button, YouTube Float Pod, Google Search Toolbar)
-    document.querySelectorAll('.btn-action-btn-scale').forEach(btn => {
-      btn.addEventListener('click', () => {
-        playSFX('tb_clicks');
-        const scale = btn.dataset.scale || '1.0';
-        document.querySelectorAll('.btn-action-btn-scale').forEach(b => b.classList.toggle('active', b === btn));
-        localStorage.setItem('action_button_scale', scale);
-        if (window.CaspianBridge) {
-          if (typeof window.CaspianBridge.setWidgetScale === 'function') {
-            window.CaspianBridge.setWidgetScale('action_button', parseFloat(scale));
+    // 6. Widget Scale Controls (Action Button, YouTube Float Pod, Google Search Toolbar, ChatGPT Toolbar, Gemini Toolbar)
+    function setupScaleButtonGroup(selector, widgetName, settingKey) {
+      document.querySelectorAll(selector).forEach(btn => {
+        btn.addEventListener('click', () => {
+          playSFX('tb_clicks');
+          const scale = btn.dataset.scale || '1.0';
+          document.querySelectorAll(selector).forEach(b => b.classList.toggle('active', b.dataset.scale === scale));
+          localStorage.setItem(settingKey, scale);
+          if (window.CaspianBridge) {
+            if (typeof window.CaspianBridge.setWidgetScale === 'function') {
+              window.CaspianBridge.setWidgetScale(widgetName, parseFloat(scale));
+            }
+            if (typeof window.CaspianBridge.saveSetting === 'function') {
+              window.CaspianBridge.saveSetting(settingKey, scale);
+            }
           }
-          if (typeof window.CaspianBridge.saveSetting === 'function') {
-            window.CaspianBridge.saveSetting('action_button_scale', scale);
-          }
-        }
+        });
       });
-    });
+    }
 
-    document.querySelectorAll('.btn-yt-pod-scale').forEach(btn => {
-      btn.addEventListener('click', () => {
-        playSFX('tb_clicks');
-        const scale = btn.dataset.scale || '1.0';
-        document.querySelectorAll('.btn-yt-pod-scale').forEach(b => b.classList.toggle('active', b === btn));
-        localStorage.setItem('yt_pod_scale', scale);
-        if (window.CaspianBridge) {
-          if (typeof window.CaspianBridge.setWidgetScale === 'function') {
-            window.CaspianBridge.setWidgetScale('yt_pod', parseFloat(scale));
-          }
-          if (typeof window.CaspianBridge.saveSetting === 'function') {
-            window.CaspianBridge.saveSetting('yt_pod_scale', scale);
-          }
-        }
-      });
-    });
-
-    document.querySelectorAll('.btn-google-dock-scale').forEach(btn => {
-      btn.addEventListener('click', () => {
-        playSFX('tb_clicks');
-        const scale = btn.dataset.scale || '1.0';
-        document.querySelectorAll('.btn-google-dock-scale').forEach(b => b.classList.toggle('active', b.dataset.scale === scale));
-        localStorage.setItem('google_dock_scale', scale);
-        if (window.CaspianBridge) {
-          if (typeof window.CaspianBridge.setWidgetScale === 'function') {
-            window.CaspianBridge.setWidgetScale('google_dock', parseFloat(scale));
-          }
-          if (typeof window.CaspianBridge.saveSetting === 'function') {
-            window.CaspianBridge.saveSetting('google_dock_scale', scale);
-          }
-        }
-      });
-    });
+    setupScaleButtonGroup('.btn-action-btn-scale', 'action_button', 'action_button_scale');
+    setupScaleButtonGroup('.btn-yt-pod-scale', 'yt_pod', 'yt_pod_scale');
+    setupScaleButtonGroup('.btn-google-dock-scale', 'google_dock', 'google_dock_scale');
+    setupScaleButtonGroup('.btn-chatgpt-dock-scale', 'chatgpt_dock', 'chatgpt_dock_scale');
+    setupScaleButtonGroup('.btn-gemini-dock-scale', 'gemini_dock', 'gemini_dock_scale');
 
     // 7. Developer & External Links Handler (Always open in Caspian Browser Tabs)
     document.querySelectorAll('a[href^="http"]').forEach(link => {

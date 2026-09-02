@@ -678,10 +678,12 @@ def build_html(version_name):
           <div style="font-size: 10px; color: var(--text-muted); margin-bottom: 8px; font-weight: 700; letter-spacing: 0.5px;">TOOLBAR SIZE</div>
           
           <!-- Caspian Action Button Scale -->
-          <div class="setting-row" style="margin-bottom: 10px;">
+          <div class="setting-row toolbar-size-row" style="margin-bottom: 10px;">
             <span class="setting-label">Caspian Action Button</span>
-            <div class="pill-group" style="display: flex; gap: 4px;">
+            <div class="pill-group" style="display: flex; gap: 3px;">
               <button class="scale-pill btn-action-btn-scale" data-scale="0.85">85%</button>
+              <button class="scale-pill btn-action-btn-scale" data-scale="0.9">90%</button>
+              <button class="scale-pill btn-action-btn-scale" data-scale="0.95">95%</button>
               <button class="scale-pill btn-action-btn-scale active" data-scale="1.0">100%</button>
               <button class="scale-pill btn-action-btn-scale" data-scale="1.15">115%</button>
               <button class="scale-pill btn-action-btn-scale" data-scale="1.3">130%</button>
@@ -689,10 +691,12 @@ def build_html(version_name):
           </div>
 
           <!-- YouTube Float Pod Scale -->
-          <div class="setting-row" style="margin-bottom: 10px;">
+          <div class="setting-row toolbar-size-row" style="margin-bottom: 10px;">
             <span class="setting-label">YouTube Float Pod</span>
-            <div class="pill-group" style="display: flex; gap: 4px;">
+            <div class="pill-group" style="display: flex; gap: 3px;">
               <button class="scale-pill btn-yt-pod-scale" data-scale="0.85">85%</button>
+              <button class="scale-pill btn-yt-pod-scale" data-scale="0.9">90%</button>
+              <button class="scale-pill btn-yt-pod-scale" data-scale="0.95">95%</button>
               <button class="scale-pill btn-yt-pod-scale active" data-scale="1.0">100%</button>
               <button class="scale-pill btn-yt-pod-scale" data-scale="1.15">115%</button>
               <button class="scale-pill btn-yt-pod-scale" data-scale="1.3">130%</button>
@@ -700,13 +704,41 @@ def build_html(version_name):
           </div>
 
           <!-- Google Search Toolbar Scale -->
-          <div class="setting-row">
+          <div class="setting-row toolbar-size-row" style="margin-bottom: 10px;">
             <span class="setting-label">Google Search Toolbar</span>
-            <div class="pill-group" style="display: flex; gap: 4px;">
+            <div class="pill-group" style="display: flex; gap: 3px;">
               <button class="scale-pill btn-google-dock-scale" data-scale="0.85">85%</button>
+              <button class="scale-pill btn-google-dock-scale" data-scale="0.9">90%</button>
+              <button class="scale-pill btn-google-dock-scale" data-scale="0.95">95%</button>
               <button class="scale-pill btn-google-dock-scale active" data-scale="1.0">100%</button>
               <button class="scale-pill btn-google-dock-scale" data-scale="1.15">115%</button>
               <button class="scale-pill btn-google-dock-scale" data-scale="1.3">130%</button>
+            </div>
+          </div>
+
+          <!-- ChatGPT Toolbar Scale -->
+          <div class="setting-row toolbar-size-row" style="margin-bottom: 10px;">
+            <span class="setting-label">ChatGPT Toolbar</span>
+            <div class="pill-group" style="display: flex; gap: 3px;">
+              <button class="scale-pill btn-chatgpt-dock-scale" data-scale="0.85">85%</button>
+              <button class="scale-pill btn-chatgpt-dock-scale" data-scale="0.9">90%</button>
+              <button class="scale-pill btn-chatgpt-dock-scale" data-scale="0.95">95%</button>
+              <button class="scale-pill btn-chatgpt-dock-scale active" data-scale="1.0">100%</button>
+              <button class="scale-pill btn-chatgpt-dock-scale" data-scale="1.15">115%</button>
+              <button class="scale-pill btn-chatgpt-dock-scale" data-scale="1.3">130%</button>
+            </div>
+          </div>
+
+          <!-- Gemini Toolbar Scale -->
+          <div class="setting-row toolbar-size-row">
+            <span class="setting-label">Gemini Toolbar</span>
+            <div class="pill-group" style="display: flex; gap: 3px;">
+              <button class="scale-pill btn-gemini-dock-scale" data-scale="0.85">85%</button>
+              <button class="scale-pill btn-gemini-dock-scale" data-scale="0.9">90%</button>
+              <button class="scale-pill btn-gemini-dock-scale" data-scale="0.95">95%</button>
+              <button class="scale-pill btn-gemini-dock-scale active" data-scale="1.0">100%</button>
+              <button class="scale-pill btn-gemini-dock-scale" data-scale="1.15">115%</button>
+              <button class="scale-pill btn-gemini-dock-scale" data-scale="1.3">130%</button>
             </div>
           </div>
         </div>
