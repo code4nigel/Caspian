@@ -3333,14 +3333,14 @@
     const cardCC = document.getElementById('card-caspian-current');
     const cardAB = document.getElementById('card-adblocker');
     const cardYT = document.getElementById('youtube-control-card');
-    const cardGoogle = document.getElementById('google-search-card');
+    const cardToolbars = document.getElementById('toolbars-control-card');
 
     const toggleTSBtn = document.getElementById('toggle-temp-saver-btn');
     const toggleCLBtn = document.getElementById('toggle-chat-limit-btn');
     const toggleCCBtn = document.getElementById('toggle-caspian-current-btn');
     const toggleAdblockBtn = document.getElementById('toggle-adblock-btn');
     const toggleYTBtn = document.getElementById('toggle-yt-engine-btn');
-    const toggleGoogleDockBtn = document.getElementById('toggle-google-dock-btn');
+    const toggleAllToolbarsBtn = document.getElementById('toggle-all-toolbars-btn');
 
     const chatLimitHeader = document.getElementById('chat-limit-header');
     const chatLimitBody = document.getElementById('chat-limit-body');
@@ -3351,10 +3351,30 @@
     const ytControlHeader = document.getElementById('yt-control-header');
     const ytControlBody = document.getElementById('yt-control-body');
     const ytStatusDot = document.getElementById('yt-live-status-dot');
-    const googleDockHeader = document.getElementById('google-dock-header');
-    const googleDockBody = document.getElementById('google-dock-body');
+
+    const toolbarsControlHeader = document.getElementById('toolbars-control-header');
+    const toolbarsControlBody = document.getElementById('toolbars-control-body');
+    const toolbarsMasterDot = document.getElementById('toolbars-master-dot');
+
     const googleDockDot = document.getElementById('google-dock-status-dot');
+    const toggleGoogleDockBtn = document.getElementById('toggle-google-dock-btn');
+    const googleDockTogglePopupBtn = document.getElementById('google-dock-toggle-popup-btn');
     const chkGoogleDockAutoCollapse = document.getElementById('chk-google-dock-autocollapse');
+
+    const ytDockDot = document.getElementById('yt-dock-status-dot');
+    const toggleYtDockBtn = document.getElementById('toggle-yt-dock-btn');
+    const ytToolbarLaunchBtn = document.getElementById('yt-toolbar-launch-btn');
+    const chkYtRemoteAutoCollapse = document.getElementById('chk-yt-remote-autocollapse');
+
+    const chatgptDockDot = document.getElementById('chatgpt-dock-status-dot');
+    const toggleChatgptDockBtn = document.getElementById('toggle-chatgpt-dock-btn');
+    const chatgptToolbarLaunchBtn = document.getElementById('chatgpt-toolbar-launch-btn');
+    const chkChatgptDockAutoCollapse = document.getElementById('chk-chatgpt-dock-autocollapse');
+
+    const geminiDockDot = document.getElementById('gemini-dock-status-dot');
+    const toggleGeminiDockBtn = document.getElementById('toggle-gemini-dock-btn');
+    const geminiToolbarLaunchBtn = document.getElementById('gemini-toolbar-launch-btn');
+    const chkGeminiDockAutoCollapse = document.getElementById('chk-gemini-dock-autocollapse');
 
     // Helper to update card states
     function updateEngineCardUI(card, toggleBtn, body, dotEl, key) {
@@ -3378,13 +3398,40 @@
       }
     }
 
+    function updateDockItemUI(dotEl, toggleBtn, isEnabled) {
+      if (dotEl) dotEl.classList.toggle('active', isEnabled);
+      if (toggleBtn) {
+        toggleBtn.textContent = isEnabled ? 'ON' : 'OFF';
+        toggleBtn.className = isEnabled ? 'oneui-pill-btn primary' : 'oneui-pill-btn secondary';
+      }
+    }
+
+    function updateToolbarsMasterUI() {
+      const isGoogle = localStorage.getItem('google_dock_enabled') === 'true';
+      const isYt = localStorage.getItem('yt_dock_enabled') !== 'false';
+      const isGpt = localStorage.getItem('chatgpt_dock_enabled') !== 'false';
+      const isGemini = localStorage.getItem('gemini_dock_enabled') !== 'false';
+
+      updateDockItemUI(googleDockDot, toggleGoogleDockBtn, isGoogle);
+      updateDockItemUI(ytDockDot, toggleYtDockBtn, isYt);
+      updateDockItemUI(chatgptDockDot, toggleChatgptDockBtn, isGpt);
+      updateDockItemUI(geminiDockDot, toggleGeminiDockBtn, isGemini);
+
+      const anyOn = isGoogle || isYt || isGpt || isGemini;
+      if (toolbarsMasterDot) toolbarsMasterDot.classList.toggle('active', anyOn);
+      if (toggleAllToolbarsBtn) {
+        toggleAllToolbarsBtn.textContent = anyOn ? 'ON' : 'OFF';
+        toggleAllToolbarsBtn.className = anyOn ? 'oneui-pill-btn primary' : 'oneui-pill-btn secondary';
+      }
+    }
+
     // Initial Sync
     updateEngineCardUI(cardTS, toggleTSBtn, null, document.getElementById('ts-status-dot'), 'temp_saver_enabled');
     updateEngineCardUI(cardCL, toggleCLBtn, chatLimitBody, document.getElementById('status-dot'), 'chat_limit_enabled');
     updateEngineCardUI(cardCC, toggleCCBtn, ccBody, document.getElementById('cc-status-dot'), 'caspian_current_enabled');
     updateEngineCardUI(cardAB, toggleAdblockBtn, adblockBody, document.getElementById('adblock-dot'), 'adblock_enabled');
     updateEngineCardUI(cardYT, toggleYTBtn, ytControlBody, ytStatusDot, 'yt_engine_enabled');
-    updateEngineCardUI(cardGoogle, toggleGoogleDockBtn, googleDockBody, googleDockDot, 'google_dock_enabled');
+    updateToolbarsMasterUI();
 
     // 1. Temporary Chat Saver Toggle
     if (toggleTSBtn) {
@@ -3670,16 +3717,59 @@
       });
     }
 
-    // 5.5 Google Search Dock Accordion & Toggle
-    const googleDockTogglePopupBtn = document.getElementById('google-dock-toggle-popup-btn');
-    if (googleDockHeader && googleDockBody) {
-      googleDockHeader.addEventListener('click', (e) => {
-        if (e.target === toggleGoogleDockBtn || (toggleGoogleDockBtn && toggleGoogleDockBtn.contains(e.target)) ||
-            (googleDockTogglePopupBtn && googleDockTogglePopupBtn.contains(e.target))) return;
-        const isOpen = googleDockBody.style.display !== 'none';
-        googleDockBody.style.display = isOpen ? 'none' : 'block';
+    // 5.5 Unified Floating Toolbars & Docks Accordion & Handlers
+    if (toolbarsControlHeader && toolbarsControlBody) {
+      toolbarsControlHeader.addEventListener('click', (e) => {
+        if (e.target === toggleAllToolbarsBtn || (toggleAllToolbarsBtn && toggleAllToolbarsBtn.contains(e.target))) return;
+        const isOpen = toolbarsControlBody.style.display !== 'none';
+        toolbarsControlBody.style.display = isOpen ? 'none' : 'block';
       });
     }
+
+    if (toggleAllToolbarsBtn) {
+      toggleAllToolbarsBtn.addEventListener('click', (e) => {
+        e.stopPropagation();
+        playSFX('tb_clicks');
+        const isGoogle = localStorage.getItem('google_dock_enabled') === 'true';
+        const isYt = localStorage.getItem('yt_dock_enabled') !== 'false';
+        const isGpt = localStorage.getItem('chatgpt_dock_enabled') !== 'false';
+        const isGemini = localStorage.getItem('gemini_dock_enabled') !== 'false';
+        const anyOn = isGoogle || isYt || isGpt || isGemini;
+        const nextState = !anyOn;
+
+        localStorage.setItem('google_dock_enabled', nextState ? 'true' : 'false');
+        localStorage.setItem('yt_dock_enabled', nextState ? 'true' : 'false');
+        localStorage.setItem('chatgpt_dock_enabled', nextState ? 'true' : 'false');
+        localStorage.setItem('gemini_dock_enabled', nextState ? 'true' : 'false');
+
+        if (window.CaspianBridge) {
+          if (typeof window.CaspianBridge.saveSetting === 'function') {
+            window.CaspianBridge.saveSetting('google_dock_enabled', nextState ? 'true' : 'false');
+            window.CaspianBridge.saveSetting('yt_dock_enabled', nextState ? 'true' : 'false');
+            window.CaspianBridge.saveSetting('chatgpt_dock_enabled', nextState ? 'true' : 'false');
+            window.CaspianBridge.saveSetting('gemini_dock_enabled', nextState ? 'true' : 'false');
+          }
+          if (typeof window.CaspianBridge.toggleGoogleSearchDock === 'function') {
+            window.CaspianBridge.toggleGoogleSearchDock(nextState);
+          }
+          if (typeof window.CaspianBridge.toggleFloatingYouTubeRemote === 'function') {
+            window.CaspianBridge.toggleFloatingYouTubeRemote(nextState);
+          }
+          if (typeof window.CaspianBridge.toggleChatGPTDock === 'function') {
+            window.CaspianBridge.toggleChatGPTDock(nextState);
+          }
+          if (typeof window.CaspianBridge.toggleGeminiDock === 'function') {
+            window.CaspianBridge.toggleGeminiDock(nextState);
+          }
+          if (typeof window.CaspianBridge.showToast === 'function') {
+            window.CaspianBridge.showToast(nextState ? "🚀 All Floating Toolbars Enabled" : "🔌 All Floating Toolbars Disabled");
+          }
+        }
+        updateToolbarsMasterUI();
+      });
+    }
+
+    // Google Dock handlers
     if (googleDockTogglePopupBtn) {
       googleDockTogglePopupBtn.addEventListener('click', (e) => {
         e.stopPropagation();
@@ -3688,13 +3778,13 @@
         if (window.CaspianBridge && typeof window.CaspianBridge.saveSetting === 'function') {
           window.CaspianBridge.saveSetting('google_dock_enabled', 'true');
         }
-        updateEngineCardUI(cardGoogle, toggleGoogleDockBtn, googleDockBody, googleDockDot, 'google_dock_enabled');
         if (window.CaspianBridge && typeof window.CaspianBridge.toggleGoogleSearchDock === 'function') {
           window.CaspianBridge.toggleGoogleSearchDock(true);
         }
         if (window.CaspianBridge && typeof window.CaspianBridge.showToast === 'function') {
           window.CaspianBridge.showToast("🚀 Google Toolbar Opened!");
         }
+        updateToolbarsMasterUI();
       });
     }
     if (toggleGoogleDockBtn) {
@@ -3708,13 +3798,13 @@
           if (typeof window.CaspianBridge.saveSetting === 'function') {
             window.CaspianBridge.saveSetting('google_dock_enabled', next ? 'true' : 'false');
           }
-          if (typeof window.CaspianBridge.toggleGoogleDock === 'function') {
-            window.CaspianBridge.toggleGoogleDock(next);
-          } else if (typeof window.CaspianBridge.toggleGoogleSearchDock === 'function') {
+          if (typeof window.CaspianBridge.toggleGoogleSearchDock === 'function') {
             window.CaspianBridge.toggleGoogleSearchDock(next);
+          } else if (typeof window.CaspianBridge.toggleGoogleDock === 'function') {
+            window.CaspianBridge.toggleGoogleDock(next);
           }
         }
-        updateEngineCardUI(cardGoogle, toggleGoogleDockBtn, googleDockBody, googleDockDot, 'google_dock_enabled');
+        updateToolbarsMasterUI();
       });
     }
     if (chkGoogleDockAutoCollapse) {
@@ -3732,7 +3822,178 @@
             window.CaspianBridge.setGoogleDockAutoCollapse(val);
           }
           if (typeof window.CaspianBridge.showToast === 'function') {
-            window.CaspianBridge.showToast(val ? "Auto-Collapse to Ball: ON" : "Auto-Collapse to Ball: OFF");
+            window.CaspianBridge.showToast(val ? "Google Dock Auto-Collapse: ON" : "Google Dock Auto-Collapse: OFF");
+          }
+        }
+      });
+    }
+
+    // YouTube Float Pod handlers
+    if (ytToolbarLaunchBtn) {
+      ytToolbarLaunchBtn.addEventListener('click', (e) => {
+        e.stopPropagation();
+        playSFX('tb_clicks');
+        localStorage.setItem('yt_dock_enabled', 'true');
+        if (window.CaspianBridge && typeof window.CaspianBridge.saveSetting === 'function') {
+          window.CaspianBridge.saveSetting('yt_dock_enabled', 'true');
+        }
+        if (window.CaspianBridge && typeof window.CaspianBridge.toggleFloatingYouTubeRemote === 'function') {
+          window.CaspianBridge.toggleFloatingYouTubeRemote(true);
+        }
+        if (window.CaspianBridge && typeof window.CaspianBridge.showToast === 'function') {
+          window.CaspianBridge.showToast("🚀 YouTube Float Pod Opened!");
+        }
+        updateToolbarsMasterUI();
+      });
+    }
+    if (toggleYtDockBtn) {
+      toggleYtDockBtn.addEventListener('click', (e) => {
+        e.stopPropagation();
+        playSFX('tb_clicks');
+        let current = localStorage.getItem('yt_dock_enabled') !== 'false';
+        let next = !current;
+        localStorage.setItem('yt_dock_enabled', next ? 'true' : 'false');
+        if (window.CaspianBridge) {
+          if (typeof window.CaspianBridge.saveSetting === 'function') {
+            window.CaspianBridge.saveSetting('yt_dock_enabled', next ? 'true' : 'false');
+          }
+          if (typeof window.CaspianBridge.toggleFloatingYouTubeRemote === 'function') {
+            window.CaspianBridge.toggleFloatingYouTubeRemote(next);
+          }
+        }
+        updateToolbarsMasterUI();
+      });
+    }
+    if (chkYtRemoteAutoCollapse) {
+      let isAuto = localStorage.getItem('yt_pod_autocollapse') === 'true';
+      chkYtRemoteAutoCollapse.checked = isAuto;
+      chkYtRemoteAutoCollapse.addEventListener('change', () => {
+        playSFX('tb_clicks');
+        let val = chkYtRemoteAutoCollapse.checked;
+        localStorage.setItem('yt_pod_autocollapse', val ? 'true' : 'false');
+        if (window.CaspianBridge) {
+          if (typeof window.CaspianBridge.saveSetting === 'function') {
+            window.CaspianBridge.saveSetting('yt_pod_autocollapse', val ? 'true' : 'false');
+          }
+          if (typeof window.CaspianBridge.setYtRemoteAutoCollapse === 'function') {
+            window.CaspianBridge.setYtRemoteAutoCollapse(val);
+          }
+          if (typeof window.CaspianBridge.showToast === 'function') {
+            window.CaspianBridge.showToast(val ? "YouTube Float Pod Auto-Collapse: ON" : "YouTube Float Pod Auto-Collapse: OFF");
+          }
+        }
+      });
+    }
+
+    // ChatGPT Toolbar handlers
+    if (chatgptToolbarLaunchBtn) {
+      chatgptToolbarLaunchBtn.addEventListener('click', (e) => {
+        e.stopPropagation();
+        playSFX('tb_clicks');
+        localStorage.setItem('chatgpt_dock_enabled', 'true');
+        if (window.CaspianBridge && typeof window.CaspianBridge.saveSetting === 'function') {
+          window.CaspianBridge.saveSetting('chatgpt_dock_enabled', 'true');
+        }
+        if (window.CaspianBridge && typeof window.CaspianBridge.toggleChatGPTDock === 'function') {
+          window.CaspianBridge.toggleChatGPTDock(true);
+        }
+        if (window.CaspianBridge && typeof window.CaspianBridge.showToast === 'function') {
+          window.CaspianBridge.showToast("🚀 ChatGPT Toolbar Opened!");
+        }
+        updateToolbarsMasterUI();
+      });
+    }
+    if (toggleChatgptDockBtn) {
+      toggleChatgptDockBtn.addEventListener('click', (e) => {
+        e.stopPropagation();
+        playSFX('tb_clicks');
+        let current = localStorage.getItem('chatgpt_dock_enabled') !== 'false';
+        let next = !current;
+        localStorage.setItem('chatgpt_dock_enabled', next ? 'true' : 'false');
+        if (window.CaspianBridge) {
+          if (typeof window.CaspianBridge.saveSetting === 'function') {
+            window.CaspianBridge.saveSetting('chatgpt_dock_enabled', next ? 'true' : 'false');
+          }
+          if (typeof window.CaspianBridge.toggleChatGPTDock === 'function') {
+            window.CaspianBridge.toggleChatGPTDock(next);
+          }
+        }
+        updateToolbarsMasterUI();
+      });
+    }
+    if (chkChatgptDockAutoCollapse) {
+      let isAuto = localStorage.getItem('chatgpt_dock_autocollapse') === 'true';
+      chkChatgptDockAutoCollapse.checked = isAuto;
+      chkChatgptDockAutoCollapse.addEventListener('change', () => {
+        playSFX('tb_clicks');
+        let val = chkChatgptDockAutoCollapse.checked;
+        localStorage.setItem('chatgpt_dock_autocollapse', val ? 'true' : 'false');
+        if (window.CaspianBridge) {
+          if (typeof window.CaspianBridge.saveSetting === 'function') {
+            window.CaspianBridge.saveSetting('chatgpt_dock_autocollapse', val ? 'true' : 'false');
+          }
+          if (typeof window.CaspianBridge.setChatgptDockAutoCollapse === 'function') {
+            window.CaspianBridge.setChatgptDockAutoCollapse(val);
+          }
+          if (typeof window.CaspianBridge.showToast === 'function') {
+            window.CaspianBridge.showToast(val ? "ChatGPT Toolbar Auto-Collapse: ON" : "ChatGPT Toolbar Auto-Collapse: OFF");
+          }
+        }
+      });
+    }
+
+    // Gemini Toolbar handlers
+    if (geminiToolbarLaunchBtn) {
+      geminiToolbarLaunchBtn.addEventListener('click', (e) => {
+        e.stopPropagation();
+        playSFX('tb_clicks');
+        localStorage.setItem('gemini_dock_enabled', 'true');
+        if (window.CaspianBridge && typeof window.CaspianBridge.saveSetting === 'function') {
+          window.CaspianBridge.saveSetting('gemini_dock_enabled', 'true');
+        }
+        if (window.CaspianBridge && typeof window.CaspianBridge.toggleGeminiDock === 'function') {
+          window.CaspianBridge.toggleGeminiDock(true);
+        }
+        if (window.CaspianBridge && typeof window.CaspianBridge.showToast === 'function') {
+          window.CaspianBridge.showToast("🚀 Gemini Toolbar Opened!");
+        }
+        updateToolbarsMasterUI();
+      });
+    }
+    if (toggleGeminiDockBtn) {
+      toggleGeminiDockBtn.addEventListener('click', (e) => {
+        e.stopPropagation();
+        playSFX('tb_clicks');
+        let current = localStorage.getItem('gemini_dock_enabled') !== 'false';
+        let next = !current;
+        localStorage.setItem('gemini_dock_enabled', next ? 'true' : 'false');
+        if (window.CaspianBridge) {
+          if (typeof window.CaspianBridge.saveSetting === 'function') {
+            window.CaspianBridge.saveSetting('gemini_dock_enabled', next ? 'true' : 'false');
+          }
+          if (typeof window.CaspianBridge.toggleGeminiDock === 'function') {
+            window.CaspianBridge.toggleGeminiDock(next);
+          }
+        }
+        updateToolbarsMasterUI();
+      });
+    }
+    if (chkGeminiDockAutoCollapse) {
+      let isAuto = localStorage.getItem('gemini_dock_autocollapse') === 'true';
+      chkGeminiDockAutoCollapse.checked = isAuto;
+      chkGeminiDockAutoCollapse.addEventListener('change', () => {
+        playSFX('tb_clicks');
+        let val = chkGeminiDockAutoCollapse.checked;
+        localStorage.setItem('gemini_dock_autocollapse', val ? 'true' : 'false');
+        if (window.CaspianBridge) {
+          if (typeof window.CaspianBridge.saveSetting === 'function') {
+            window.CaspianBridge.saveSetting('gemini_dock_autocollapse', val ? 'true' : 'false');
+          }
+          if (typeof window.CaspianBridge.setGeminiDockAutoCollapse === 'function') {
+            window.CaspianBridge.setGeminiDockAutoCollapse(val);
+          }
+          if (typeof window.CaspianBridge.showToast === 'function') {
+            window.CaspianBridge.showToast(val ? "Gemini Toolbar Auto-Collapse: ON" : "Gemini Toolbar Auto-Collapse: OFF");
           }
         }
       });
@@ -3740,11 +4001,14 @@
 
     window.syncGoogleDockState = function(enabled) {
       localStorage.setItem('google_dock_enabled', enabled ? 'true' : 'false');
-      updateEngineCardUI(cardGoogle, toggleGoogleDockBtn, googleDockBody, googleDockDot, 'google_dock_enabled');
+      updateToolbarsMasterUI();
     };
 
     // 6. Widget Scale Controls (Action Button, YouTube Float Pod, Google Search Toolbar, ChatGPT Toolbar, Gemini Toolbar)
     function setupScaleButtonGroup(selector, widgetName, settingKey) {
+      const savedScale = localStorage.getItem(settingKey) || '1.0';
+      document.querySelectorAll(selector).forEach(b => b.classList.toggle('active', (b.dataset.scale || '1.0') === savedScale));
+
       document.querySelectorAll(selector).forEach(btn => {
         btn.addEventListener('click', () => {
           playSFX('tb_clicks');
@@ -3795,10 +4059,13 @@
           localStorage.getItem('caspian_current_enabled') !== 'false' ||
           localStorage.getItem('adblock_enabled') !== 'false' ||
           localStorage.getItem('yt_engine_enabled') !== 'false' ||
-          localStorage.getItem('google_dock_enabled') !== 'false');
+          localStorage.getItem('google_dock_enabled') === 'true' ||
+          localStorage.getItem('yt_dock_enabled') !== 'false' ||
+          localStorage.getItem('chatgpt_dock_enabled') !== 'false' ||
+          localStorage.getItem('gemini_dock_enabled') !== 'false');
         let targetState = !anyOn;
 
-        ['temp_saver_enabled', 'chat_limit_enabled', 'caspian_current_enabled', 'adblock_enabled', 'yt_engine_enabled', 'google_dock_enabled'].forEach(key => {
+        ['temp_saver_enabled', 'chat_limit_enabled', 'caspian_current_enabled', 'adblock_enabled', 'yt_engine_enabled', 'google_dock_enabled', 'yt_dock_enabled', 'chatgpt_dock_enabled', 'gemini_dock_enabled'].forEach(key => {
           localStorage.setItem(key, targetState ? 'true' : 'false');
           if (window.CaspianBridge && typeof window.CaspianBridge.saveSetting === 'function') {
             window.CaspianBridge.saveSetting(key, targetState ? 'true' : 'false');
@@ -3810,10 +4077,16 @@
         updateEngineCardUI(cardCC, toggleCCBtn, ccBody, document.getElementById('cc-status-dot'), 'caspian_current_enabled');
         updateEngineCardUI(cardAB, toggleAdblockBtn, adblockBody, document.getElementById('adblock-dot'), 'adblock_enabled');
         updateEngineCardUI(cardYT, toggleYTBtn, ytControlBody, ytStatusDot, 'yt_engine_enabled');
-        updateEngineCardUI(cardGoogle, toggleGoogleDockBtn, googleDockBody, googleDockDot, 'google_dock_enabled');
+        updateToolbarsMasterUI();
 
-        if (window.CaspianBridge && typeof window.CaspianBridge.showToast === 'function') {
-          window.CaspianBridge.showToast(targetState ? '⚡ All Caspian Engines Activated!' : '🔌 All Engines Disabled');
+        if (window.CaspianBridge) {
+          if (typeof window.CaspianBridge.toggleGoogleSearchDock === 'function') window.CaspianBridge.toggleGoogleSearchDock(targetState);
+          if (typeof window.CaspianBridge.toggleFloatingYouTubeRemote === 'function') window.CaspianBridge.toggleFloatingYouTubeRemote(targetState);
+          if (typeof window.CaspianBridge.toggleChatGPTDock === 'function') window.CaspianBridge.toggleChatGPTDock(targetState);
+          if (typeof window.CaspianBridge.toggleGeminiDock === 'function') window.CaspianBridge.toggleGeminiDock(targetState);
+          if (typeof window.CaspianBridge.showToast === 'function') {
+            window.CaspianBridge.showToast(targetState ? '⚡ All Caspian Engines Activated!' : '🔌 All Engines Disabled');
+          }
         }
       });
     }
