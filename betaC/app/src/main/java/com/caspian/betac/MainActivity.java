@@ -2474,6 +2474,30 @@ public class MainActivity extends AppCompatActivity {
     public void applyWidgetScale(String type, float scale) {
         if ("action_button".equalsIgnoreCase(type) || "pod".equalsIgnoreCase(type)) {
             setPodScale(scale);
+        } else if ("yt_pod".equalsIgnoreCase(type) || "yt_remote".equalsIgnoreCase(type)) {
+            if (ytFloatingRemoteContainer != null) {
+                ytFloatingRemoteContainer.setScaleX(scale);
+                ytFloatingRemoteContainer.setScaleY(scale);
+            }
+            getSharedPreferences(PREFS_NAME, MODE_PRIVATE).edit().putString("yt_pod_scale", String.valueOf(scale)).apply();
+        } else if ("google_dock".equalsIgnoreCase(type) || "google_search".equalsIgnoreCase(type)) {
+            if (searchNavContainer != null) {
+                searchNavContainer.setScaleX(scale);
+                searchNavContainer.setScaleY(scale);
+            }
+            getSharedPreferences(PREFS_NAME, MODE_PRIVATE).edit().putString("google_dock_scale", String.valueOf(scale)).apply();
+        } else if ("chatgpt_dock".equalsIgnoreCase(type)) {
+            if (chatgptDockContainer != null) {
+                chatgptDockContainer.setScaleX(scale);
+                chatgptDockContainer.setScaleY(scale);
+            }
+            getSharedPreferences(PREFS_NAME, MODE_PRIVATE).edit().putString("chatgpt_dock_scale", String.valueOf(scale)).apply();
+        } else if ("gemini_dock".equalsIgnoreCase(type)) {
+            if (geminiDockContainer != null) {
+                geminiDockContainer.setScaleX(scale);
+                geminiDockContainer.setScaleY(scale);
+            }
+            getSharedPreferences(PREFS_NAME, MODE_PRIVATE).edit().putString("gemini_dock_scale", String.valueOf(scale)).apply();
         }
     }
 
@@ -3073,6 +3097,12 @@ public class MainActivity extends AppCompatActivity {
             updateChatgptDockButtons();
             chatgptDockScroll.setVisibility(View.GONE);
             chatgptDockBall.setVisibility(View.VISIBLE);
+            try {
+                SharedPreferences p = getSharedPreferences(PREFS_NAME, MODE_PRIVATE);
+                float sc = Float.parseFloat(p.getString("chatgpt_dock_scale", "1.0"));
+                chatgptDockContainer.setScaleX(sc);
+                chatgptDockContainer.setScaleY(sc);
+            } catch (Exception ignored) {}
         } catch (Exception e) {
             Log.e(TAG, "setupLiquidGlassChatGPTDock error: " + e.getMessage());
         }
@@ -3308,6 +3338,12 @@ public class MainActivity extends AppCompatActivity {
             updateGeminiDockButtons();
             geminiDockScroll.setVisibility(View.GONE);
             geminiDockBall.setVisibility(View.VISIBLE);
+            try {
+                SharedPreferences p = getSharedPreferences(PREFS_NAME, MODE_PRIVATE);
+                float sc = Float.parseFloat(p.getString("gemini_dock_scale", "1.0"));
+                geminiDockContainer.setScaleX(sc);
+                geminiDockContainer.setScaleY(sc);
+            } catch (Exception ignored) {}
         } catch (Exception e) {
             Log.e(TAG, "setupLiquidGlassGeminiDock error: " + e.getMessage());
         }
@@ -3492,6 +3528,12 @@ public class MainActivity extends AppCompatActivity {
             ytFloatingRemoteScroll.setOnTouchListener(remoteMover);
             ytFloatingRemoteScroll.setVisibility(View.GONE);
             ytFloatingRemoteBall.setVisibility(View.VISIBLE);
+            try {
+                SharedPreferences p = getSharedPreferences(PREFS_NAME, MODE_PRIVATE);
+                float sc = Float.parseFloat(p.getString("yt_pod_scale", "1.0"));
+                ytFloatingRemoteContainer.setScaleX(sc);
+                ytFloatingRemoteContainer.setScaleY(sc);
+            } catch (Exception ignored) {}
         } catch (Exception e) {
             Log.e(TAG, "setupLiquidGlassYouTubeRemote error: " + e.getMessage());
         }
