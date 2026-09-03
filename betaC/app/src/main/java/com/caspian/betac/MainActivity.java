@@ -142,6 +142,7 @@ public class MainActivity extends AppCompatActivity {
         public boolean isDesktop = false;
         public boolean isReaderMode = false;
         public boolean isMuted = false;
+        public boolean isPlayingAudio = false;
         public boolean isFavorite = false;
         public boolean isIncognito = false;
         public String pendingPrompt = null;
@@ -302,6 +303,7 @@ public class MainActivity extends AppCompatActivity {
     private ImageButton ytRemoteFullscreen;
     private ImageButton ytRemoteTimeline;
     private ImageButton ytRemoteLock;
+    private ImageButton ytRemoteSettings;
     private TextView ytRemoteVolumeBtn;
     private LinearLayout ytFloatingTimelineBar;
     private TextView ytTimelineCurrentTime;
@@ -310,7 +312,7 @@ public class MainActivity extends AppCompatActivity {
     private boolean isUserScrubbingTimeline = false;
     private double currentVideoDuration = 0;
     private View videoTouchLockOverlay;
-    private boolean isScreenTouchLocked = true;
+    private boolean isScreenTouchLocked = false;
     private PopupWindow volumePopupWindow;
     private ImageButton ytRemotePrevVideo;
     private ImageButton ytRemoteSeekBack;
@@ -1557,6 +1559,7 @@ public class MainActivity extends AppCompatActivity {
             ytRemoteClose = findViewById(R.id.yt_remote_close);
             ytRemoteReload = findViewById(R.id.yt_remote_reload);
             ytRemoteFullscreen = findViewById(R.id.yt_remote_fullscreen);
+            ytRemoteSettings = findViewById(R.id.yt_remote_settings);
             ytRemoteTimeline = findViewById(R.id.yt_remote_timeline);
             ytRemoteLock = findViewById(R.id.yt_remote_lock);
             ytRemoteVolumeBtn = findViewById(R.id.yt_remote_volume_btn);
@@ -2422,13 +2425,39 @@ public class MainActivity extends AppCompatActivity {
     }
 
     public void updateYouTubeLiveState(boolean isPlaying, boolean isMuted) {
-        if (ytRemotePlayPause != null) {
-            ytRemotePlayPause.setImageResource(isPlaying ? R.drawable.ic_pod_pause : R.drawable.ic_pod_play);
+        updateYouTubeLiveState(isPlaying, isMuted, null);
+    }
+
+    public void updateYouTubeLiveState(boolean isPlaying, boolean isMuted, Integer tabId) {
+        if (tabId != null) {
+            TabItem tab = getTabById(tabId);
+            if (tab != null) {
+                tab.isPlayingAudio = isPlaying;
+                tab.isMuted = isMuted;
+            }
+        } else {
+            TabItem cur = getTabById(activeTabId);
+            if (cur != null) {
+                cur.isPlayingAudio = isPlaying;
+                cur.isMuted = isMuted;
+            }
         }
-        if (ytRemoteMute != null) {
-            ytRemoteMute.setImageResource(isMuted ? R.drawable.ic_pod_mute : R.drawable.ic_pod_unmute);
+        if (tabId == null || tabId == activeTabId) {
+            if (ytRemotePlayPause != null) {
+                ytRemotePlayPause.setImageResource(isPlaying ? R.drawable.ic_pod_pause : R.drawable.ic_pod_play);
+            }
+            if (ytRemoteMute != null) {
+                ytRemoteMute.setImageResource(isMuted ? R.drawable.ic_pod_mute : R.drawable.ic_pod_unmute);
+            }
         }
-        manageYouTubeWakeLock(isPlaying);
+        boolean anyPlaying = false;
+        for (TabItem t : tabsList) {
+            if (t.isPlayingAudio) {
+                anyPlaying = true;
+                break;
+            }
+        }
+        manageYouTubeWakeLock(anyPlaying || isPlaying);
     }
 
     private void manageYouTubeWakeLock(boolean acquire) {
@@ -3149,6 +3178,106 @@ public class MainActivity extends AppCompatActivity {
         volumePopupWindow.showAtLocation(anchor, Gravity.NO_GRAVITY, posX, posY);
     }
 
+    public void showYouTubeFeaturesPopup(View anchor) {
+        playUiFeedbackSound("tap");
+        View popupView = getLayoutInflater().inflate(R.layout.popup_youtube_features, null);
+        PopupWindow popup = new PopupWindow(
+                popupView,
+                dpToPx(210),
+                ViewGroup.LayoutParams.WRAP_CONTENT,
+                true
+        );
+        popup.setBackgroundDrawable(new ColorDrawable(Color.TRANSPARENT));
+        popup.setElevation(dpToPx(30));
+        popup.setOutsideTouchable(true);
+
+        TabItem currentTab = getTabById(activeTabId);
+
+        // 1. Captions (CC)
+        LinearLayout btnCaptions = popupView.findViewById(R.id.yt_feature_captions);
+        if (btnCaptions != null) {
+            btnCaptions.setOnClickListener(v -> {
+                playUiFeedbackSound("tap");
+                if (currentTab != null && currentTab.webView != null) {
+                    currentTab.webView.evaluateJavascript("if (window.__CaspianYouTube) window.__CaspianYouTube.toggleCaptions();", null);
+                }
+                popup.dismiss();
+            });
+        }
+
+        // 2. Loop Video
+        LinearLayout btnLoop = popupView.findViewById(R.id.yt_feature_loop);
+        if (btnLoop != null) {
+            btnLoop.setOnClickListener(v -> {
+                playUiFeedbackSound("tap");
+                if (currentTab != null && currentTab.webView != null) {
+                    currentTab.webView.evaluateJavascript("if (window.__CaspianYouTube) window.__CaspianYouTube.toggleLoop();", res -> {
+                        boolean looping = "true".equalsIgnoreCase(res);
+                        Toast.makeText(this, looping ? "🔁 Video Looping: ON" : "🔁 Video Looping: OFF", Toast.LENGTH_SHORT).show();
+                    });
+                }
+                popup.dismiss();
+            });
+        }
+
+        // 3. Ambient / Cinema Mode
+        LinearLayout btnAmbient = popupView.findViewById(R.id.yt_feature_ambient);
+        if (btnAmbient != null) {
+            btnAmbient.setOnClickListener(v -> {
+                playUiFeedbackSound("tap");
+                if (currentTab != null && currentTab.webView != null) {
+                    currentTab.webView.evaluateJavascript("if (window.__CaspianYouTube) window.__CaspianYouTube.toggleAmbient();", null);
+                }
+                popup.dismiss();
+            });
+        }
+
+        // 4. Autoplay Next
+        LinearLayout btnAutoplay = popupView.findViewById(R.id.yt_feature_autoplay);
+        if (btnAutoplay != null) {
+            btnAutoplay.setOnClickListener(v -> {
+                playUiFeedbackSound("tap");
+                if (currentTab != null && currentTab.webView != null) {
+                    currentTab.webView.evaluateJavascript("if (window.__CaspianYouTube) window.__CaspianYouTube.toggleAutoplay();", null);
+                }
+                popup.dismiss();
+            });
+        }
+
+        // 5. Picture-in-Picture
+        LinearLayout btnPip = popupView.findViewById(R.id.yt_feature_pip);
+        if (btnPip != null) {
+            btnPip.setOnClickListener(v -> {
+                playUiFeedbackSound("tap");
+                if (currentTab != null && currentTab.webView != null) {
+                    currentTab.webView.evaluateJavascript("if (window.__CaspianYouTube) window.__CaspianYouTube.togglePip();", null);
+                }
+                popup.dismiss();
+            });
+        }
+
+        popupView.measure(View.MeasureSpec.UNSPECIFIED, View.MeasureSpec.UNSPECIFIED);
+        int targetW = dpToPx(210);
+        int targetH = popupView.getMeasuredHeight();
+
+        int[] anchorLoc = new int[2];
+        anchor.getLocationOnScreen(anchorLoc);
+        int anchorX = anchorLoc[0];
+        int anchorY = anchorLoc[1];
+
+        DisplayMetrics dm = getResources().getDisplayMetrics();
+        int screenW = dm.widthPixels;
+
+        int posX = anchorX + (anchor.getWidth() - targetW) / 2;
+        if (posX + targetW > screenW - dpToPx(8)) posX = screenW - targetW - dpToPx(8);
+        if (posX < dpToPx(8)) posX = dpToPx(8);
+
+        int posY = anchorY - targetH - dpToPx(8);
+        if (posY < dpToPx(8)) posY = anchorY + anchor.getHeight() + dpToPx(8);
+
+        popup.showAtLocation(anchor, Gravity.NO_GRAVITY, posX, posY);
+    }
+
     public void showYouTubeQualityPopup(View anchor) {
         playUiFeedbackSound("tap");
         List<CaspianMenuItem> qualityItems = new ArrayList<>();
@@ -3864,6 +3993,10 @@ public class MainActivity extends AppCompatActivity {
                 reloadActiveTab();
             });
 
+            if (ytRemoteSettings != null) {
+                ytRemoteSettings.setOnClickListener(this::showYouTubeFeaturesPopup);
+            }
+
             ytRemoteFullscreen.setOnClickListener(v -> {
                 playUiFeedbackSound("tap");
                 toggleFullscreenYouTube();
@@ -3918,7 +4051,7 @@ public class MainActivity extends AppCompatActivity {
             }
 
             if (ytRemoteLock != null) {
-                applyScreenTouchLockState(true);
+                applyScreenTouchLockState(false);
                 ytRemoteLock.setOnClickListener(v -> toggleScreenTouchLock());
             }
 
@@ -6972,7 +7105,7 @@ public class MainActivity extends AppCompatActivity {
             settings.setCacheMode(WebSettings.LOAD_NO_CACHE);
         }
 
-        webView.addJavascriptInterface(new CaspianBridge(this), "CaspianBridge");
+        webView.addJavascriptInterface(new CaspianBridge(this, id), "CaspianBridge");
         applyWebViewTheme(webView, isDarkTheme);
 
         webView.setLayerType(View.LAYER_TYPE_HARDWARE, null);
@@ -7939,7 +8072,7 @@ public class MainActivity extends AppCompatActivity {
                 obj.put("isActive", tab.id == activeTabId);
                 obj.put("isDesktop", tab.isDesktop);
                 obj.put("isIncognito", tab.isIncognito);
-                obj.put("isPlayingAudio", false);
+                obj.put("isPlayingAudio", tab.isPlayingAudio);
                 obj.put("isMuted", tab.isMuted);
                 obj.put("isFavorite", tab.isFavorite);
                 obj.put("caskId", tab.caskId != null ? tab.caskId : CaskManager.DEFAULT_CASK_ID);

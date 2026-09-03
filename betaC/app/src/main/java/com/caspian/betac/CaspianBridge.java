@@ -33,10 +33,16 @@ public class CaspianBridge {
 
     private static final ExecutorService bgExecutor = Executors.newFixedThreadPool(2);
     private final MainActivity activity;
+    private Integer boundTabId = null;
     private Toast mToast = null;
 
     public CaspianBridge(MainActivity activity) {
         this.activity = activity;
+    }
+
+    public CaspianBridge(MainActivity activity, int tabId) {
+        this.activity = activity;
+        this.boundTabId = tabId;
     }
 
     @JavascriptInterface
@@ -596,7 +602,7 @@ public class CaspianBridge {
     @JavascriptInterface
     public void updateYouTubeState(boolean isPlaying, boolean isMuted) {
         if (activity != null) {
-            activity.runOnUiThread(() -> activity.updateYouTubeLiveState(isPlaying, isMuted));
+            activity.runOnUiThread(() -> activity.updateYouTubeLiveState(isPlaying, isMuted, boundTabId));
         }
     }
 

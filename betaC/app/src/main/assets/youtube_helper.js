@@ -250,6 +250,77 @@
           fsBtn.click();
         }
       } catch (e) { }
+    },
+    toggleCaptions: function () {
+      try {
+        const ccBtn = document.querySelector('.ytp-subtitles-button, button.ytp-subtitles-button, button[aria-label*="Subtitles"], button[aria-label*="Captions"], [aria-label*="subtitles"], [aria-label*="captions"]');
+        if (ccBtn) {
+          ccBtn.click();
+          return true;
+        }
+        const v = this.getVideo();
+        if (v && v.textTracks && v.textTracks.length > 0) {
+          let showing = false;
+          for (let i = 0; i < v.textTracks.length; i++) {
+            if (v.textTracks[i].mode === 'showing') showing = true;
+          }
+          for (let i = 0; i < v.textTracks.length; i++) {
+            v.textTracks[i].mode = showing ? 'hidden' : 'showing';
+          }
+          return !showing;
+        }
+      } catch(e){}
+      return false;
+    },
+    toggleLoop: function () {
+      try {
+        const v = this.getVideo();
+        if (v) {
+          v.loop = !v.loop;
+          return v.loop;
+        }
+      } catch(e){}
+      return false;
+    },
+    isLooping: function () {
+      try {
+        const v = this.getVideo();
+        return !!(v && v.loop);
+      } catch(e){ return false; }
+    },
+    toggleAmbient: function () {
+      try {
+        const sizeBtn = document.querySelector('.ytp-size-button');
+        if (sizeBtn) sizeBtn.click();
+        const app = document.querySelector('ytm-app, ytd-app, body');
+        if (app) {
+          app.classList.toggle('caspian-ambient-mode');
+          return app.classList.contains('caspian-ambient-mode');
+        }
+      } catch(e){}
+      return false;
+    },
+    toggleAutoplay: function () {
+      try {
+        const apBtn = document.querySelector('.ytp-autonav-toggle-button, [aria-label*="Autoplay"], button[data-tooltip-target-id*="autoplay"]');
+        if (apBtn) {
+          apBtn.click();
+          return true;
+        }
+      } catch(e){}
+      return false;
+    },
+    togglePip: function () {
+      try {
+        const v = this.getVideo();
+        if (v) {
+          if (document.pictureInPictureElement) {
+            document.exitPictureInPicture().catch(()=>{});
+          } else if (v.requestPictureInPicture) {
+            v.requestPictureInPicture().catch(()=>{});
+          }
+        }
+      } catch(e){}
     }
   };
 

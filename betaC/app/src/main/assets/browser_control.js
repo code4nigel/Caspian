@@ -634,15 +634,28 @@
         const splitBadge = tab.isSplit ? `<span style="font-size: 9px; font-weight: 800; color: #00E5FF; background: rgba(0,229,255,0.18); border: 1px solid rgba(0,229,255,0.4); padding: 2px 6px; border-radius: 6px; margin-right: 4px;">🔀 SPLIT ${tab.splitRole === 'primary' ? 'PANE 1' : 'PANE 2'}</span>` : '';
         const selectCheckbox = isMultiSelectMode ? `<span style="font-size: 14px; margin-right: 4px;">${isSelected ? '☑️' : '⏹️'}</span>` : '';
 
-        const shouldShowAudio = (tab.isPlayingAudio === true || tab.isMuted === true);
-        const muteIcon = tab.isMuted ? '🔇' : '🔊';
-        const muteText = tab.isMuted ? 'Muted' : 'Playing';
-        const audioBadge = shouldShowAudio ? `
-          <button class="chrome-tab-mute-btn ${tab.isMuted ? 'muted' : 'playing'}" data-muteid="${tab.id}" title="Toggle Tab Audio Mute" style="display: flex; align-items: center; gap: 4px; font-size: 9px; font-weight: 700; color: ${tab.isMuted ? '#f43f5e' : '#3b82f6'}; background: ${tab.isMuted ? 'rgba(244,63,94,0.15)' : 'rgba(59,130,246,0.15)'}; border: 1px solid ${tab.isMuted ? 'rgba(244,63,94,0.3)' : 'rgba(59,130,246,0.3)'}; border-radius: 6px; padding: 2px 6px; cursor: pointer;">
-            <span>${muteIcon}</span>
-            <span>${muteText}</span>
-          </button>
-        ` : '';
+        const isYoutubeTab = serviceLower === 'youtube' || urlLower.includes('youtube.com') || urlLower.includes('youtu.be');
+        const isBgAudio = tab.isPlayingAudio && !tab.active;
+        const isAudioActive = tab.isPlayingAudio === true;
+
+        let audioBadge = '';
+        if (isAudioActive) {
+          audioBadge = `
+            <button class="chrome-tab-mute-btn ${tab.isMuted ? 'muted' : 'playing'}" data-muteid="${tab.id}" title="${isBgAudio ? 'Playing Audio in Background - Tap to mute' : 'Playing Audio - Tap to mute'}" style="display: flex; align-items: center; gap: 4px; font-size: 9px; font-weight: 800; color: ${tab.isMuted ? '#f43f5e' : '#00E5FF'}; background: ${tab.isMuted ? 'rgba(244,63,94,0.15)' : 'rgba(0,229,255,0.18)'}; border: 1px solid ${tab.isMuted ? 'rgba(244,63,94,0.4)' : 'rgba(0,229,255,0.4)'}; border-radius: 6px; padding: 2px 7px; cursor: pointer;">
+              <span>${tab.isMuted ? '🔇' : (isYoutubeTab ? '🎙️' : '🔊')}</span>
+              <span>${tab.isMuted ? 'Muted' : (isBgAudio ? 'BG Audio' : 'Playing')}</span>
+            </button>
+          `;
+        } else if (tab.isMuted === true) {
+          audioBadge = `
+            <button class="chrome-tab-mute-btn muted" data-muteid="${tab.id}" title="Unmute Tab" style="display: flex; align-items: center; gap: 4px; font-size: 9px; font-weight: 700; color: #f43f5e; background: rgba(244,63,94,0.15); border: 1px solid rgba(244,63,94,0.3); border-radius: 6px; padding: 2px 6px; cursor: pointer;">
+              <span>🔇</span>
+              <span>Muted</span>
+            </button>
+          `;
+        }
+
+        const ytMicBadge = (isYoutubeTab && tab.isPlayingAudio) ? `<span style="font-size: 11px; margin-right: 2px;" title="${isBgAudio ? 'YouTube Audio Playing in Background' : 'YouTube Audio Playing'}">🎙️</span>` : '';
 
         const isDefaultCask = !tab.caskId || tab.caskId === 'cask_caspian' || (tab.caskName && (tab.caskName.toLowerCase().includes('caspian') || tab.caskName.toLowerCase().includes('default')));
         const caskBadge = (!isDefaultCask && tab.caskIcon) ? `<span style="font-size: 9.5px; font-weight: 600; color: var(--text-muted); background: var(--input-bg, rgba(128,128,128,0.1)); border: none; padding: 2px 7px; border-radius: 6px; display: inline-flex; align-items: center; gap: 3px;" title="Container Vault: ${tab.caskName || 'Cask'}"><span>${tab.caskIcon}</span><span>${tab.caskName ? tab.caskName.split(' ')[0] : 'Cask'}</span></span>` : '';
@@ -657,6 +670,7 @@
             <div class="chrome-tab-header">
               <div style="display: flex; align-items: center; gap: 6px; overflow: hidden;">
                 ${selectCheckbox}
+                ${ytMicBadge}
                 ${favStarBadge}
                 ${pdfBadge}
                 ${(!isPdf && iconB64) ? `<img src="${iconB64}" style="width: 16px; height: 16px; border-radius: 4px;" />` : ''}

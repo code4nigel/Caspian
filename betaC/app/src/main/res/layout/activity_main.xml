@@ -1215,6 +1215,16 @@
                         android:contentDescription="Reload YouTube Tab" />
 
                     <ImageButton
+                        android:id="@+id/yt_remote_settings"
+                        android:layout_width="26dp"
+                        android:layout_height="26dp"
+                        android:layout_marginStart="2dp"
+                        android:background="?attr/selectableItemBackgroundBorderless"
+                        android:src="@drawable/ic_pod_settings"
+                        android:tint="#FFFFFF"
+                        android:contentDescription="YouTube Features &amp; Settings" />
+
+                    <ImageButton
                         android:id="@+id/yt_remote_fullscreen"
                         android:layout_width="26dp"
                         android:layout_height="26dp"
