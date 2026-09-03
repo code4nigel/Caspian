@@ -139,36 +139,18 @@
     },
     showPlayerControls: function () {
       try {
-        const v = this.getVideo();
-        if (v) {
-          v.controls = false;
-          v.offsetHeight;
-          v.controls = true;
-
-          try {
-            const rect = v.getBoundingClientRect();
-            const cx = rect.left + rect.width / 2;
-            const cy = rect.top + rect.height - 30;
-            ['pointerdown', 'pointermove', 'pointerup', 'touchstart', 'touchend', 'mousemove'].forEach(type => {
-              try {
-                v.dispatchEvent(new MouseEvent(type, {
-                  bubbles: true,
-                  cancelable: true,
-                  view: window,
-                  clientX: cx,
-                  clientY: cy
-                }));
-              } catch(e) {}
-            });
-          } catch(e) {}
-
-          const player = document.getElementById('movie_player') || document.querySelector('.html5-video-player') || document.querySelector('.player-container');
-          if (player) {
-            player.classList.remove('ytp-autohide');
-            ['mousemove', 'pointermove', 'touchstart'].forEach(type => {
-              try { player.dispatchEvent(new Event(type, { bubbles: true })); } catch(e){}
-            });
-          }
+        const player = document.getElementById('movie_player') || document.querySelector('.html5-video-player') || document.querySelector('.player-container') || document.querySelector('ytm-media-item');
+        if (player) {
+          player.classList.remove('ytp-autohide');
+          player.setAttribute('aria-hidden', 'false');
+          ['mousemove', 'pointermove', 'touchstart', 'touchend'].forEach(type => {
+            try { player.dispatchEvent(new Event(type, { bubbles: true })); } catch(e){}
+          });
+        }
+        const overlay = document.querySelector('.player-control-overlay, .ytm-custom-control, .ytp-chrome-bottom, ytm-player-control-overlay');
+        if (overlay) {
+          overlay.style.display = '';
+          overlay.style.opacity = '1';
         }
       } catch (e) { }
     },
@@ -187,7 +169,6 @@
         const v = this.getVideo();
         if (v) {
           if (v.paused) v.play().catch(() => {});
-          v.controls = true;
           if (typeof v.webkitEnterFullscreen === 'function') {
             v.webkitEnterFullscreen();
             return;
@@ -225,12 +206,6 @@
       const v = window.__CaspianYouTube ? window.__CaspianYouTube.getVideo() : document.querySelector('video');
       if (v && !v.__caspian_attached) {
         v.__caspian_attached = true;
-        v.addEventListener('webkitbeginfullscreen', () => {
-          v.controls = true;
-        });
-        v.addEventListener('webkitendfullscreen', () => {
-          v.controls = false;
-        });
         ['play', 'playing', 'pause', 'ended', 'volumechange', 'ratechange'].forEach(evt => {
           v.addEventListener(evt, () => {
             if (window.__CaspianYouTube) window.__CaspianYouTube.notifyState();
@@ -256,18 +231,6 @@
   attachVideoListeners();
   setInterval(attachVideoListeners, 1000);
 
-  function syncFullscreenTimeline() {
-    try {
-      const isFs = !!(document.fullscreenElement || document.webkitFullscreenElement);
-      const v = window.__CaspianYouTube ? window.__CaspianYouTube.getVideo() : document.querySelector('video');
-      if (v) {
-        v.controls = isFs;
-      }
-    } catch (e) { }
-  }
-  document.addEventListener('fullscreenchange', syncFullscreenTimeline);
-  document.addEventListener('webkitfullscreenchange', syncFullscreenTimeline);
-
   // 1.6 Intercept in-page YouTube Fullscreen button to trigger native WebView full-screen
   try {
     document.addEventListener('click', function (e) {
@@ -283,23 +246,43 @@
               e.preventDefault();
               e.stopPropagation();
               if (v.paused) v.play().catch(() => {});
-              v.controls = true;
               v.webkitEnterFullscreen();
+              return;
+            }
+          }
+
+          // 1.7 Intercept Settings (Gear) button to show Caspian's high-elevation settings popup in fullscreen
+          const settingsBtn = target.closest(
+            '.ytp-settings-button, button[aria-label*="Settings"], button[aria-label*="settings"], .yt-spec-button-shape-next[aria-label*="Settings"], button.icon-button[aria-label*="Settings"], button[title*="Settings"]'
+          );
+          if (settingsBtn) {
+            const isFs = !!(document.fullscreenElement || document.webkitFullscreenElement);
+            if (isFs && window.CaspianBridge && typeof window.CaspianBridge.showYouTubeSettingsMenu === 'function') {
+              e.preventDefault();
+              e.stopPropagation();
+              window.CaspianBridge.showYouTubeSettingsMenu();
+              return;
             }
           }
         }
       } catch (err) { }
     }, true);
 
-    // 1.7 Wake up player timeline and controls whenever user taps screen in fullscreen
+    // 1.8 Support for GSI ROMs / AOSP WebViews: if tap on video occurs while controls are hidden, reveal controls instead of pausing
     document.addEventListener('click', function (e) {
       try {
         const isFs = !!(document.fullscreenElement || document.webkitFullscreenElement);
-        if (isFs && window.__CaspianYouTube && typeof window.__CaspianYouTube.showPlayerControls === 'function') {
-          window.__CaspianYouTube.showPlayerControls();
+        if (isFs && e.target && (e.target.tagName === 'VIDEO' || e.target.closest('.html5-main-video'))) {
+          const player = document.getElementById('movie_player') || document.querySelector('.html5-video-player') || document.querySelector('.player-container');
+          const isHidden = player && (player.classList.contains('ytp-autohide') || player.getAttribute('aria-hidden') === 'true');
+          if (isHidden) {
+            e.preventDefault();
+            e.stopPropagation();
+            if (window.__CaspianYouTube) window.__CaspianYouTube.showPlayerControls();
+          }
         }
       } catch (err) { }
-    }, false);
+    }, true);
   } catch (e) { }
 
   // -------------------------------------------------------------

@@ -2832,10 +2832,75 @@ public class MainActivity extends AppCompatActivity {
                 ytFloatingRemoteContainer.setElevation(dpToPx(250));
                 ytFloatingRemoteContainer.setTranslationZ(0f);
             }
+            if (floatingCaspianCard != null) {
+                floatingCaspianCard.setVisibility(View.VISIBLE);
+            }
             if (ytRemoteFullscreen != null) {
                 ytRemoteFullscreen.setImageResource(R.drawable.ic_pod_fullscreen);
                 ytRemoteFullscreen.setContentDescription("Fullscreen Toggle");
             }
+        });
+    }
+
+    public void showYouTubeQualityPopup(View anchor) {
+        playUiFeedbackSound("tap");
+        List<CaspianMenuItem> qualityItems = new ArrayList<>();
+        qualityItems.add(new CaspianMenuItem("🎬 Auto Quality", () -> setYouTubeQuality("auto")));
+        qualityItems.add(new CaspianMenuItem("✨ 1080p (HD)", () -> setYouTubeQuality("hd1080")));
+        qualityItems.add(new CaspianMenuItem("✨ 720p (HD)", () -> setYouTubeQuality("hd720")));
+        qualityItems.add(new CaspianMenuItem("📺 480p", () -> setYouTubeQuality("large")));
+        qualityItems.add(new CaspianMenuItem("📱 360p", () -> setYouTubeQuality("medium")));
+        qualityItems.add(new CaspianMenuItem("📶 240p", () -> setYouTubeQuality("small")));
+        qualityItems.add(new CaspianMenuItem("⚡ 144p (Data Saver)", () -> setYouTubeQuality("tiny")));
+        showCaspianCustomPopup(anchor, qualityItems);
+    }
+
+    public void showYouTubeSpeedPopup(View anchor) {
+        playUiFeedbackSound("tap");
+        List<CaspianMenuItem> speedItems = new ArrayList<>();
+        speedItems.add(new CaspianMenuItem("0.25x", () -> setYouTubeSpeed(0.25)));
+        speedItems.add(new CaspianMenuItem("0.5x", () -> setYouTubeSpeed(0.5)));
+        speedItems.add(new CaspianMenuItem("0.75x", () -> setYouTubeSpeed(0.75)));
+        speedItems.add(new CaspianMenuItem("1.0x (Normal)", () -> setYouTubeSpeed(1.0)));
+        speedItems.add(new CaspianMenuItem("1.25x", () -> setYouTubeSpeed(1.25)));
+        speedItems.add(new CaspianMenuItem("1.5x", () -> setYouTubeSpeed(1.5)));
+        speedItems.add(new CaspianMenuItem("1.75x", () -> setYouTubeSpeed(1.75)));
+        speedItems.add(new CaspianMenuItem("2.0x", () -> setYouTubeSpeed(2.0)));
+        showCaspianCustomPopup(anchor, speedItems);
+    }
+
+    public void showYouTubeSettingsMenu() {
+        runOnUiThread(() -> {
+            playUiFeedbackSound("tap");
+            View anchor = (ytRemoteQualityBtn != null && ytRemoteQualityBtn.getVisibility() == View.VISIBLE)
+                    ? ytRemoteQualityBtn
+                    : ((ytFloatingRemoteContainer != null && ytFloatingRemoteContainer.getVisibility() == View.VISIBLE)
+                        ? ytFloatingRemoteContainer
+                        : fullscreenContainer);
+            if (anchor == null) return;
+
+            List<CaspianMenuItem> menuItems = new ArrayList<>();
+            menuItems.add(new CaspianMenuItem("🎬 Quality Options", () -> showYouTubeQualityPopup(anchor)));
+            menuItems.add(new CaspianMenuItem("⚡ Playback Speed", () -> showYouTubeSpeedPopup(anchor)));
+            menuItems.add(new CaspianMenuItem("💬 Toggle Captions (CC)", () -> {
+                TabItem currentTab = getTabById(activeTabId);
+                if (currentTab != null && currentTab.webView != null) {
+                    currentTab.webView.evaluateJavascript(
+                            "(function(){ var cc = document.querySelector('.ytp-subtitles-button, button.ytp-subtitles-button, button[aria-label*=\"Captions\"], button[aria-label*=\"captions\"]'); if (cc) cc.click(); })()", null
+                    );
+                }
+            }));
+            menuItems.add(new CaspianMenuItem("🔁 Toggle Loop", () -> {
+                TabItem currentTab = getTabById(activeTabId);
+                if (currentTab != null && currentTab.webView != null) {
+                    currentTab.webView.evaluateJavascript(
+                            "(function(){ var v = document.querySelector('video'); if (v) { v.loop = !v.loop; } })()", null
+                    );
+                }
+            }));
+            menuItems.add(new CaspianMenuItem("🔊 Mute / Unmute", this::toggleMuteYouTube));
+
+            showCaspianCustomPopup(anchor, menuItems);
         });
     }
 
@@ -3540,32 +3605,8 @@ public class MainActivity extends AppCompatActivity {
                 toggleMuteYouTube();
             });
 
-            ytRemoteSpeedBtn.setOnClickListener(v -> {
-                playUiFeedbackSound("tap");
-                List<CaspianMenuItem> speedItems = new ArrayList<>();
-                speedItems.add(new CaspianMenuItem("0.25x", () -> setYouTubeSpeed(0.25)));
-                speedItems.add(new CaspianMenuItem("0.5x", () -> setYouTubeSpeed(0.5)));
-                speedItems.add(new CaspianMenuItem("0.75x", () -> setYouTubeSpeed(0.75)));
-                speedItems.add(new CaspianMenuItem("1.0x (Normal)", () -> setYouTubeSpeed(1.0)));
-                speedItems.add(new CaspianMenuItem("1.25x", () -> setYouTubeSpeed(1.25)));
-                speedItems.add(new CaspianMenuItem("1.5x", () -> setYouTubeSpeed(1.5)));
-                speedItems.add(new CaspianMenuItem("1.75x", () -> setYouTubeSpeed(1.75)));
-                speedItems.add(new CaspianMenuItem("2.0x", () -> setYouTubeSpeed(2.0)));
-                showCaspianCustomPopup(v, speedItems);
-            });
-
-            ytRemoteQualityBtn.setOnClickListener(v -> {
-                playUiFeedbackSound("tap");
-                List<CaspianMenuItem> qualityItems = new ArrayList<>();
-                qualityItems.add(new CaspianMenuItem("🎯 Auto Quality", () -> setYouTubeQuality("auto")));
-                qualityItems.add(new CaspianMenuItem("💎 1080p (HD)", () -> setYouTubeQuality("hd1080")));
-                qualityItems.add(new CaspianMenuItem("📺 720p (HD)", () -> setYouTubeQuality("hd720")));
-                qualityItems.add(new CaspianMenuItem("⚡ 480p", () -> setYouTubeQuality("large")));
-                qualityItems.add(new CaspianMenuItem("📱 360p", () -> setYouTubeQuality("medium")));
-                qualityItems.add(new CaspianMenuItem("🔋 240p", () -> setYouTubeQuality("small")));
-                qualityItems.add(new CaspianMenuItem("🍃 144p (Data Saver)", () -> setYouTubeQuality("tiny")));
-                showCaspianCustomPopup(v, qualityItems);
-            });
+            ytRemoteSpeedBtn.setOnClickListener(this::showYouTubeSpeedPopup);
+            ytRemoteQualityBtn.setOnClickListener(this::showYouTubeQualityPopup);
 
             ytRemoteShrinkBtn.setOnClickListener(v -> {
                 playUiFeedbackSound("tap");
@@ -6848,13 +6889,18 @@ public class MainActivity extends AppCompatActivity {
                         }
                     }
                 }
-                if (ytFloatingRemoteBall != null) {
-                    ytFloatingRemoteBall.bringToFront();
-                    ytFloatingRemoteBall.setElevation(dpToPx(310));
+                if (floatingCaspianCard != null) {
+                    floatingCaspianCard.setVisibility(View.GONE);
                 }
-                if (ytFloatingRemoteScroll != null) {
+                if (ytFloatingRemoteScroll != null && ytFloatingRemoteScroll.getVisibility() == View.VISIBLE) {
+                    if (ytFloatingRemoteBall != null) ytFloatingRemoteBall.setVisibility(View.GONE);
                     ytFloatingRemoteScroll.bringToFront();
                     ytFloatingRemoteScroll.setElevation(dpToPx(310));
+                } else if (ytFloatingRemoteBall != null) {
+                    if (ytFloatingRemoteScroll != null) ytFloatingRemoteScroll.setVisibility(View.GONE);
+                    ytFloatingRemoteBall.setVisibility(View.VISIBLE);
+                    ytFloatingRemoteBall.bringToFront();
+                    ytFloatingRemoteBall.setElevation(dpToPx(310));
                 }
                 if (ytRemoteFullscreen != null) {
                     ytRemoteFullscreen.setImageResource(R.drawable.ic_pod_fullscreen_exit);
@@ -7748,19 +7794,20 @@ public class MainActivity extends AppCompatActivity {
     public void openControlSheet() {
         isSheetOpen = true;
         sheetOverlayContainer.setVisibility(View.VISIBLE);
+        sheetOverlayContainer.setElevation(dpToPx(400));
         sheetOverlayContainer.bringToFront();
 
         if (floatingCaspianCard != null) {
             floatingCaspianCard.setAlpha(1.0f);
-            float highElevation = TypedValue.applyDimension(TypedValue.COMPLEX_UNIT_DIP, 200, getResources().getDisplayMetrics());
+            float highElevation = TypedValue.applyDimension(TypedValue.COMPLEX_UNIT_DIP, 410, getResources().getDisplayMetrics());
             floatingCaspianCard.setElevation(highElevation);
             floatingCaspianCard.setCardElevation(highElevation);
             floatingCaspianCard.bringToFront();
         }
 
-        if (ytFloatingRemoteContainer != null) ytFloatingRemoteContainer.setAlpha(0.2f);
-        if (searchNavContainer != null) searchNavContainer.setAlpha(0.2f);
-        if (chatgptDockContainer != null) chatgptDockContainer.setAlpha(0.2f);
+        if (ytFloatingRemoteContainer != null) ytFloatingRemoteContainer.setVisibility(View.GONE);
+        if (searchNavContainer != null) searchNavContainer.setVisibility(View.GONE);
+        if (chatgptDockContainer != null) chatgptDockContainer.setVisibility(View.GONE);
 
         SharedPreferences prefs = getSharedPreferences(PREFS_NAME, MODE_PRIVATE);
         int openDuration = 180;
@@ -7834,14 +7881,29 @@ public class MainActivity extends AppCompatActivity {
         isSheetOpen = false;
         if (floatingCaspianCard != null) {
             floatingCaspianCard.setAlpha(1.0f);
-            float highElevation = TypedValue.applyDimension(TypedValue.COMPLEX_UNIT_DIP, 200, getResources().getDisplayMetrics());
-            floatingCaspianCard.setElevation(highElevation);
-            floatingCaspianCard.setCardElevation(highElevation);
+            float normalElevation = TypedValue.applyDimension(TypedValue.COMPLEX_UNIT_DIP, 24, getResources().getDisplayMetrics());
+            floatingCaspianCard.setElevation(normalElevation);
+            floatingCaspianCard.setCardElevation(normalElevation);
             floatingCaspianCard.bringToFront();
         }
-        if (ytFloatingRemoteContainer != null) ytFloatingRemoteContainer.setAlpha(1.0f);
-        if (searchNavContainer != null) searchNavContainer.setAlpha(1.0f);
-        if (chatgptDockContainer != null) chatgptDockContainer.setAlpha(1.0f);
+        TabItem curTab = getActiveOrDominantTab();
+        String curUrl = (curTab != null && curTab.url != null) ? curTab.url.toLowerCase() : "";
+        boolean isYt = curTab != null && (curUrl.contains("youtube.com") || "youtube".equalsIgnoreCase(curTab.service));
+        if (ytFloatingRemoteContainer != null) {
+            ytFloatingRemoteContainer.setAlpha(1.0f);
+            if (isYt && !isYtRemoteExplicitlyHidden) {
+                ytFloatingRemoteContainer.setVisibility(View.VISIBLE);
+            }
+        }
+        if (searchNavContainer != null) {
+            searchNavContainer.setAlpha(1.0f);
+            if (!isSearchNavExplicitlyHidden) searchNavContainer.setVisibility(View.VISIBLE);
+        }
+        if (chatgptDockContainer != null) {
+            chatgptDockContainer.setAlpha(1.0f);
+            boolean isGpt = curTab != null && (curUrl.contains("chatgpt.com") || "chatgpt".equalsIgnoreCase(curTab.service));
+            if (isGpt && !isChatgptDockExplicitlyHidden) chatgptDockContainer.setVisibility(View.VISIBLE);
+        }
 
         SharedPreferences prefs = getSharedPreferences(PREFS_NAME, MODE_PRIVATE);
         int closeDuration = 160;

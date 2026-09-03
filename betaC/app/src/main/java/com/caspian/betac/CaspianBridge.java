@@ -616,6 +616,11 @@ public class CaspianBridge {
     }
 
     @JavascriptInterface
+    public void showYouTubeSettingsMenu() {
+        if (activity != null) activity.runOnUiThread(activity::showYouTubeSettingsMenu);
+    }
+
+    @JavascriptInterface
     public void toggleMuteYouTube() {
         if (activity != null) activity.runOnUiThread(activity::toggleMuteYouTube);
     }
