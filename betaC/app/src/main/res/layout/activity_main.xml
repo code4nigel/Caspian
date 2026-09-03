@@ -1059,7 +1059,7 @@
         android:layout_width="match_parent"
         android:layout_height="match_parent"
         android:visibility="invisible"
-        android:elevation="500dp">
+        android:elevation="400dp">
 
         <View
             android:id="@+id/sheet_backdrop"
@@ -1074,7 +1074,7 @@
             android:background="@android:color/transparent" />
     </FrameLayout>
 
-    <!-- 4. Floating Action Pod 2.0 (Elevation 400dp, always on top) -->
+    <!-- 4. Floating Action Pod 2.0 (Elevation 450dp, permanently on top) -->
     <androidx.cardview.widget.CardView
         android:id="@+id/floating_caspian_card"
         android:layout_width="52dp"
@@ -1082,10 +1082,10 @@
         android:layout_gravity="bottom|end"
         android:layout_marginBottom="80dp"
         android:layout_marginEnd="20dp"
-        android:elevation="400dp"
+        android:elevation="450dp"
         app:cardCornerRadius="26dp"
         app:cardBackgroundColor="#00E5FF"
-        app:cardElevation="400dp"
+        app:cardElevation="450dp"
         android:clickable="true"
         android:focusable="true">
 

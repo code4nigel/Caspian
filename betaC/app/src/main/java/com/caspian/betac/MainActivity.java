@@ -8553,19 +8553,16 @@ public class MainActivity extends AppCompatActivity {
                         SharedPreferences appPrefs = getSharedPreferences(PREFS_NAME, MODE_PRIVATE);
                         appPrefs.edit().putInt("action_btn_click_count", actionButtonClickCount).apply();
 
-                        floatingCaspianCard.animate().cancel();
-                        floatingCaspianCard.setScaleX(1.0f);
-                        floatingCaspianCard.setScaleY(1.0f);
                         floatingCaspianCard.animate()
-                                .scaleX(0.86f)
-                                .scaleY(0.86f)
-                                .setDuration(70)
+                                .scaleX(0.88f)
+                                .scaleY(0.88f)
+                                .setDuration(100)
                                 .withEndAction(() -> {
                                     floatingCaspianCard.animate()
                                             .scaleX(1.0f)
                                             .scaleY(1.0f)
-                                            .setDuration(110)
-                                            .setInterpolator(new OvershootInterpolator(1.4f))
+                                            .setDuration(100)
+                                            .setInterpolator(new OvershootInterpolator(1.2f))
                                             .start();
                                 })
                                 .start();
@@ -8675,45 +8672,36 @@ public class MainActivity extends AppCompatActivity {
     public void openControlSheet() {
         isSheetOpen = true;
         sheetOverlayContainer.setVisibility(View.VISIBLE);
-        sheetOverlayContainer.setElevation(dpToPx(400));
-        sheetOverlayContainer.bringToFront();
-
-        if (floatingCaspianCard != null) {
-            floatingCaspianCard.setAlpha(1.0f);
-            float highElevation = TypedValue.applyDimension(TypedValue.COMPLEX_UNIT_DIP, 410, getResources().getDisplayMetrics());
-            floatingCaspianCard.setElevation(highElevation);
-            floatingCaspianCard.setCardElevation(highElevation);
-            floatingCaspianCard.bringToFront();
-        }
+        sheetOverlayContainer.setClickable(true);
+        sheetOverlayContainer.setFocusable(true);
 
         if (ytFloatingRemoteContainer != null) ytFloatingRemoteContainer.setVisibility(View.GONE);
         if (searchNavContainer != null) searchNavContainer.setVisibility(View.GONE);
         if (chatgptDockContainer != null) chatgptDockContainer.setVisibility(View.GONE);
 
         SharedPreferences prefs = getSharedPreferences(PREFS_NAME, MODE_PRIVATE);
-        int baseOpenDuration = 180;
+        int openDuration = 180;
         try {
             String openDurStr = prefs.getString("sheetOpenDuration", "180");
-            baseOpenDuration = Integer.parseInt(openDurStr);
+            openDuration = Integer.parseInt(openDurStr);
         } catch (Exception ignored) {}
         String animStyle = prefs.getString("sheetAnimationStyle", "genie");
 
-        // Cancel running animations immediately mid-flight
+        // 1. Smooth In-Place Backdrop Fade
         sheetBackdrop.animate().cancel();
-        controlWebView.animate().cancel();
-
-        float curBackdropAlpha = sheetBackdrop.getAlpha();
-        long backdropDuration = Math.max(50, (long) (baseOpenDuration * Math.max(0.15f, 1.0f - curBackdropAlpha)));
         sheetBackdrop.animate()
                 .alpha(1f)
-                .setDuration(backdropDuration)
+                .setDuration(openDuration)
                 .start();
 
         Runnable onOpenComplete = () -> {
             controlWebView.evaluateJavascript("if (typeof renderOpenTabs === 'function') renderOpenTabs(); if (typeof syncAppVersion === 'function') syncAppVersion(); if (typeof restoreSavedSettings === 'function') restoreSavedSettings(); if (typeof updateDevHudCounters === 'function') updateDevHudCounters();", null);
         };
 
-        if ("none".equalsIgnoreCase(animStyle) || baseOpenDuration <= 0) {
+        // 2. Animate Control WebView independently
+        controlWebView.animate().cancel();
+        if ("none".equalsIgnoreCase(animStyle) || openDuration <= 0) {
+            sheetBackdrop.setAlpha(1f);
             controlWebView.setScaleX(1f);
             controlWebView.setScaleY(1f);
             controlWebView.setAlpha(1f);
@@ -8726,25 +8714,19 @@ public class MainActivity extends AppCompatActivity {
             controlWebView.setPivotX(buttonCenterX);
             controlWebView.setPivotY(buttonCenterY);
 
-            float currentScale = controlWebView.getScaleX();
-            // If it was completely closed, start from 0.05f
-            if (currentScale < 0.06f || controlWebView.getAlpha() <= 0.01f) {
+            // Only initialize to tiny scale if starting from fully closed state
+            if (controlWebView.getScaleX() <= 0.06f || controlWebView.getAlpha() <= 0.05f) {
                 controlWebView.setScaleX(0.05f);
                 controlWebView.setScaleY(0.05f);
                 controlWebView.setAlpha(0f);
-                currentScale = 0.05f;
             }
             controlWebView.setTranslationY(0f);
-
-            // Dynamically scale duration based on remaining distance
-            float remainingFrac = Math.max(0.15f, Math.min(1.0f, (1.0f - currentScale) / 0.95f));
-            long dynamicDuration = Math.max(50, (long) (baseOpenDuration * remainingFrac));
 
             controlWebView.animate()
                     .scaleX(1f)
                     .scaleY(1f)
                     .alpha(1f)
-                    .setDuration(dynamicDuration)
+                    .setDuration(openDuration)
                     .setInterpolator(new DecelerateInterpolator(1.8f))
                     .withEndAction(onOpenComplete)
                     .start();
@@ -8752,21 +8734,16 @@ public class MainActivity extends AppCompatActivity {
             int height = sheetOverlayContainer.getHeight();
             if (height <= 0) height = getResources().getDisplayMetrics().heightPixels;
 
-            float curTransY = controlWebView.getTranslationY();
-            if (curTransY <= 0 || curTransY > height) {
-                curTransY = height;
-                controlWebView.setTranslationY(curTransY);
+            if (controlWebView.getTranslationY() <= 0f || controlWebView.getTranslationY() >= height) {
+                controlWebView.setTranslationY(height);
             }
             controlWebView.setScaleX(1f);
             controlWebView.setScaleY(1f);
             controlWebView.setAlpha(1f);
 
-            float remainingFrac = Math.max(0.15f, Math.min(1.0f, curTransY / (float) height));
-            long dynamicDuration = Math.max(50, (long) (baseOpenDuration * remainingFrac));
-
             controlWebView.animate()
                     .translationY(0)
-                    .setDuration(dynamicDuration)
+                    .setDuration(openDuration)
                     .setInterpolator(new PathInterpolator(0.2f, 0f, 0f, 1f))
                     .withEndAction(onOpenComplete)
                     .start();
@@ -8781,13 +8758,77 @@ public class MainActivity extends AppCompatActivity {
 
     public void hideControlSheet(boolean playSound) {
         isSheetOpen = false;
-        if (floatingCaspianCard != null) {
-            floatingCaspianCard.setAlpha(1.0f);
-            float normalElevation = TypedValue.applyDimension(TypedValue.COMPLEX_UNIT_DIP, 24, getResources().getDisplayMetrics());
-            floatingCaspianCard.setElevation(normalElevation);
-            floatingCaspianCard.setCardElevation(normalElevation);
-            floatingCaspianCard.bringToFront();
+
+        SharedPreferences prefs = getSharedPreferences(PREFS_NAME, MODE_PRIVATE);
+        int closeDuration = 160;
+        try {
+            String closeDurStr = prefs.getString("sheetCloseDuration", "160");
+            closeDuration = Integer.parseInt(closeDurStr);
+        } catch (Exception ignored) {}
+        String animStyle = prefs.getString("sheetAnimationStyle", "genie");
+
+        // 1. Smooth In-Place Backdrop Fade Out
+        sheetBackdrop.animate().cancel();
+        sheetBackdrop.animate()
+                .alpha(0f)
+                .setDuration(closeDuration)
+                .start();
+
+        // 2. Animate Control WebView independently
+        controlWebView.animate().cancel();
+        if ("none".equalsIgnoreCase(animStyle) || closeDuration <= 0) {
+            sheetBackdrop.setAlpha(0f);
+            sheetOverlayContainer.setVisibility(View.INVISIBLE);
+            sheetOverlayContainer.setClickable(false);
+            sheetOverlayContainer.setFocusable(false);
+            restoreFloatingWidgetsOnClose();
+        } else if ("genie".equalsIgnoreCase(animStyle)) {
+            float buttonCenterX = floatingCaspianCard.getX() + floatingCaspianCard.getWidth() / 2f;
+            float buttonCenterY = floatingCaspianCard.getY() + floatingCaspianCard.getHeight() / 2f;
+
+            controlWebView.setPivotX(buttonCenterX);
+            controlWebView.setPivotY(buttonCenterY);
+
+            controlWebView.animate()
+                    .scaleX(0.05f)
+                    .scaleY(0.05f)
+                    .alpha(0f)
+                    .setDuration(closeDuration)
+                    .setInterpolator(new PathInterpolator(0.3f, 0f, 0.8f, 0.15f))
+                    .withEndAction(() -> {
+                        if (!isSheetOpen) {
+                            sheetOverlayContainer.setVisibility(View.INVISIBLE);
+                            sheetOverlayContainer.setClickable(false);
+                            sheetOverlayContainer.setFocusable(false);
+                            restoreFloatingWidgetsOnClose();
+                        }
+                    })
+                    .start();
+        } else {
+            int height = sheetOverlayContainer.getHeight();
+            if (height <= 0) height = getResources().getDisplayMetrics().heightPixels;
+
+            controlWebView.animate()
+                    .translationY(height)
+                    .setDuration(closeDuration)
+                    .setInterpolator(new PathInterpolator(0.3f, 0f, 0.8f, 0.15f))
+                    .withEndAction(() -> {
+                        if (!isSheetOpen) {
+                            sheetOverlayContainer.setVisibility(View.INVISIBLE);
+                            sheetOverlayContainer.setClickable(false);
+                            sheetOverlayContainer.setFocusable(false);
+                            restoreFloatingWidgetsOnClose();
+                        }
+                    })
+                    .start();
         }
+
+        if (playSound) {
+            playUiFeedbackSound("ta");
+        }
+    }
+
+    private void restoreFloatingWidgetsOnClose() {
         TabItem curTab = getActiveOrDominantTab();
         String curUrl = (curTab != null && curTab.url != null) ? curTab.url.toLowerCase() : "";
         boolean isYt = curTab != null && (curUrl.contains("youtube.com") || "youtube".equalsIgnoreCase(curTab.service));
@@ -8805,70 +8846,6 @@ public class MainActivity extends AppCompatActivity {
             chatgptDockContainer.setAlpha(1.0f);
             boolean isGpt = curTab != null && (curUrl.contains("chatgpt.com") || "chatgpt".equalsIgnoreCase(curTab.service));
             if (isGpt && !isChatgptDockExplicitlyHidden) chatgptDockContainer.setVisibility(View.VISIBLE);
-        }
-
-        SharedPreferences prefs = getSharedPreferences(PREFS_NAME, MODE_PRIVATE);
-        int baseCloseDuration = 160;
-        try {
-            String closeDurStr = prefs.getString("sheetCloseDuration", "160");
-            baseCloseDuration = Integer.parseInt(closeDurStr);
-        } catch (Exception ignored) {}
-        String animStyle = prefs.getString("sheetAnimationStyle", "genie");
-
-        // Cancel running animations immediately mid-flight
-        sheetBackdrop.animate().cancel();
-        controlWebView.animate().cancel();
-
-        float curBackdropAlpha = sheetBackdrop.getAlpha();
-        long backdropDuration = Math.max(50, (long) (baseCloseDuration * Math.max(0.15f, curBackdropAlpha)));
-        sheetBackdrop.animate()
-                .alpha(0f)
-                .setDuration(backdropDuration)
-                .start();
-
-        if ("none".equalsIgnoreCase(animStyle) || baseCloseDuration <= 0) {
-            sheetOverlayContainer.setVisibility(View.INVISIBLE);
-        } else if ("genie".equalsIgnoreCase(animStyle)) {
-            float buttonCenterX = floatingCaspianCard.getX() + floatingCaspianCard.getWidth() / 2f;
-            float buttonCenterY = floatingCaspianCard.getY() + floatingCaspianCard.getHeight() / 2f;
-
-            controlWebView.setPivotX(buttonCenterX);
-            controlWebView.setPivotY(buttonCenterY);
-
-            float currentScale = controlWebView.getScaleX();
-            float remainingFrac = Math.max(0.15f, Math.min(1.0f, (currentScale - 0.05f) / 0.95f));
-            long dynamicDuration = Math.max(50, (long) (baseCloseDuration * remainingFrac));
-
-            controlWebView.animate()
-                    .scaleX(0.05f)
-                    .scaleY(0.05f)
-                    .alpha(0f)
-                    .setDuration(dynamicDuration)
-                    .setInterpolator(new PathInterpolator(0.3f, 0f, 0.8f, 0.15f))
-                    .withEndAction(() -> {
-                        if (!isSheetOpen) sheetOverlayContainer.setVisibility(View.INVISIBLE);
-                    })
-                    .start();
-        } else {
-            int height = sheetOverlayContainer.getHeight();
-            if (height <= 0) height = getResources().getDisplayMetrics().heightPixels;
-
-            float curTransY = controlWebView.getTranslationY();
-            float remainingFrac = Math.max(0.15f, Math.min(1.0f, (height - curTransY) / (float) height));
-            long dynamicDuration = Math.max(50, (long) (baseCloseDuration * remainingFrac));
-
-            controlWebView.animate()
-                    .translationY(height)
-                    .setDuration(dynamicDuration)
-                    .setInterpolator(new PathInterpolator(0.3f, 0f, 0.8f, 0.15f))
-                    .withEndAction(() -> {
-                        if (!isSheetOpen) sheetOverlayContainer.setVisibility(View.INVISIBLE);
-                    })
-                    .start();
-        }
-
-        if (playSound) {
-            playUiFeedbackSound("ta");
         }
     }
 
