@@ -67,32 +67,39 @@
     _lastPlaying: null,
     _lastMuted: null,
     getVideo: function () {
-      // 1. Prioritize the main player video element
-      const mainVid = document.querySelector('#movie_player video.html5-main-video, .html5-video-player video.html5-main-video, #player video.html5-main-video, ytm-watch video, video.html5-main-video');
+      // 1. Primary: watch player video element on m.youtube.com and youtube.com
+      const mainVid = document.querySelector(
+        '#movie_player video, .html5-video-player video, #player video, #player-container-id video, .player-container video, ytm-watch video, video.html5-main-video, video[src*="blob:"]'
+      );
       if (mainVid) return mainVid;
-      // 2. Strictly filter out thumbnail preview / feed preview videos
+
+      // 2. Filter out feed preview overlays only
       const allVideos = Array.from(document.querySelectorAll('video')).filter(v => {
-        return !v.closest('ytm-thumbnail-overlay-preview-video-renderer, ytd-thumbnail-overlay-preview-video-renderer, .ytp-inline-preview-ui, #inline-preview-player, .inline-preview-player, ytd-video-preview, ytm-inline-player, .ytd-thumbnail, ytm-media-item, ytd-rich-item-renderer, ytm-rich-item-renderer, .rich-item-renderer');
+        return !v.closest('ytm-thumbnail-overlay-preview-video-renderer, ytd-thumbnail-overlay-preview-video-renderer, .ytp-inline-preview-ui, #inline-preview-player, .inline-preview-player');
       });
       if (allVideos.length > 0) {
         return allVideos.find(v => !v.paused && v.currentTime > 0) || allVideos[0];
       }
-      return null;
+
+      // 3. Fallback to any video element on page
+      return document.querySelector('video');
     },
-    notifyState: function () {
+    notifyState: function (force) {
       try {
         const v = this.getVideo();
         if (v) {
           const isPlaying = !v.paused && !v.ended;
           const isMuted = !!v.muted;
           const tabId = window.__caspian_tab_id || 0;
-          if (this._lastPlaying !== isPlaying || this._lastMuted !== isMuted) {
+          if (force || this._lastPlaying !== isPlaying || this._lastMuted !== isMuted) {
             this._lastPlaying = isPlaying;
             this._lastMuted = isMuted;
-            if (window.CaspianBridge && typeof window.CaspianBridge.updateTabYouTubeState === 'function') {
-              window.CaspianBridge.updateTabYouTubeState(tabId, isPlaying, isMuted);
-            } else if (window.CaspianBridge && typeof window.CaspianBridge.updateYouTubeState === 'function') {
-              window.CaspianBridge.updateYouTubeState(isPlaying, isMuted);
+            if (window.CaspianBridge) {
+              if (typeof window.CaspianBridge.updateTabYouTubeState === 'function') {
+                window.CaspianBridge.updateTabYouTubeState(tabId, isPlaying, isMuted);
+              } else if (typeof window.CaspianBridge.updateYouTubeState === 'function') {
+                window.CaspianBridge.updateYouTubeState(isPlaying, isMuted);
+              }
             }
           }
         }
@@ -120,19 +127,24 @@
       const v = this.getVideo();
       if (v) {
         if (v.paused) {
-          v.play();
+          v.play().then(() => {
+            this.notifyState(true);
+          }).catch(() => {});
         } else {
           window.__caspian_explicit_pause = true;
           v.pause();
+          this.notifyState(true);
         }
-        this.notifyState();
+        this.notifyState(true);
+        setTimeout(() => this.notifyState(true), 150);
       }
     },
     toggleMute: function () {
       const v = this.getVideo();
       if (v) {
         v.muted = !v.muted;
-        this.notifyState();
+        this.notifyState(true);
+        setTimeout(() => this.notifyState(true), 100);
       }
     },
     seekBy: function (seconds) {
@@ -914,12 +926,20 @@
   setInterval(function () {
     try {
       const v = window.__CaspianYouTube ? window.__CaspianYouTube.getVideo() : document.querySelector('video');
-      const isPlaying = !!(v && !v.paused && v.currentTime > 0 && !v.ended && v.readyState > 2);
+      const isPlaying = !!(v && !v.paused && v.currentTime > 0 && !v.ended && v.readyState > 1);
+      const isMuted = !!(v && v.muted);
       const tabId = window.__caspian_tab_id || 0;
-      if (window.CaspianBridge && typeof window.CaspianBridge.updateTabMediaPlaybackState === 'function') {
-        window.CaspianBridge.updateTabMediaPlaybackState(tabId, isPlaying);
-      } else if (window.CaspianBridge && typeof window.CaspianBridge.updateMediaPlaybackState === 'function') {
-        window.CaspianBridge.updateMediaPlaybackState(isPlaying);
+
+      if (window.__CaspianYouTube) {
+        window.__CaspianYouTube.notifyState();
+      }
+
+      if (window.CaspianBridge) {
+        if (typeof window.CaspianBridge.updateTabYouTubeState === 'function') {
+          window.CaspianBridge.updateTabYouTubeState(tabId, isPlaying, isMuted);
+        } else if (typeof window.CaspianBridge.updateYouTubeState === 'function') {
+          window.CaspianBridge.updateYouTubeState(isPlaying, isMuted);
+        }
       }
 
       if (isPlaying) {

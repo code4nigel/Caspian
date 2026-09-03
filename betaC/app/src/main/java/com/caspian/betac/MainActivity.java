@@ -9138,10 +9138,13 @@ public class MainActivity extends AppCompatActivity {
             }
 
             android.app.Notification builtNotif = notif.build();
+            try {
+                NotificationManagerCompat.from(this).notify(NOTIFICATION_ID_MEDIA, builtNotif);
+            } catch (Exception ignored) {}
+
             if (isPlaying) {
                 CaspianMediaService.startMediaForeground(this, builtNotif);
             } else {
-                NotificationManagerCompat.from(this).notify(NOTIFICATION_ID_MEDIA, builtNotif);
                 CaspianMediaService.stopMediaForeground(this);
             }
         } catch (Exception e) {

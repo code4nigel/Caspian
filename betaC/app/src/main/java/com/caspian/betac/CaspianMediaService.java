@@ -51,7 +51,12 @@ public class CaspianMediaService extends Service {
         if (intent != null) {
             String action = intent.getAction();
             if (ACTION_START_FOREGROUND.equals(action)) {
-                Notification notification = intent.getParcelableExtra(EXTRA_NOTIFICATION);
+                Notification notification;
+                if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+                    notification = intent.getParcelableExtra(EXTRA_NOTIFICATION, Notification.class);
+                } else {
+                    notification = intent.getParcelableExtra(EXTRA_NOTIFICATION);
+                }
                 if (notification != null) {
                     try {
                         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
