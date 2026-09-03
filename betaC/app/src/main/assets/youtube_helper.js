@@ -44,7 +44,7 @@
     } catch(e){}
   } catch (e) { }
 
-  // Block automatic pausing triggered by backgrounding, blur, or entering PiP
+  // Block automatic pausing triggered by backgrounding
   const originalPause = HTMLVideoElement.prototype.pause;
   HTMLVideoElement.prototype.pause = function () {
     if (window.__caspian_explicit_pause) {
@@ -53,8 +53,8 @@
     }
     const err = new Error();
     const stack = (err.stack || '').toLowerCase();
-    // If pause is triggered by visibilitychange, blur, focus change, pagehide, freeze, or PiP active: ignore it!
-    if (window.__caspian_pip_active || stack.includes('visibility') || stack.includes('blur') || stack.includes('pagehide') || stack.includes('hidden') || stack.includes('freeze') || stack.includes('focus')) {
+    // Only intercept genuine backgrounding event triggers (visibilitychange, pagehide)
+    if (stack.includes('visibilitychange') || stack.includes('pagehide')) {
       return;
     }
     return originalPause.apply(this, arguments);

@@ -2483,7 +2483,7 @@ public class MainActivity extends AppCompatActivity {
     }
 
     public void updateYouTubeLiveState(boolean isPlaying, boolean isMuted, Integer tabId) {
-        if (tabId != null) {
+        if (tabId != null && tabId > 0) {
             TabItem tab = getTabById(tabId);
             if (tab != null) {
                 tab.isPlayingAudio = isPlaying;
@@ -2496,7 +2496,7 @@ public class MainActivity extends AppCompatActivity {
                 cur.isMuted = isMuted;
             }
         }
-        if (tabId == null || tabId == activeTabId) {
+        if (tabId == null || tabId <= 0 || tabId == activeTabId) {
             if (ytRemotePlayPause != null) {
                 ytRemotePlayPause.setImageResource(isPlaying ? R.drawable.ic_pod_pause : R.drawable.ic_pod_play);
             }
@@ -3098,8 +3098,8 @@ public class MainActivity extends AppCompatActivity {
         syncTimelineBarWidth();
     }
 
-    public void updateYouTubeTimeLive(int tabId, double currentTime, double duration) {
-        if (tabId != activeTabId) {
+    public void updateYouTubeTimeLive(Integer tabId, double currentTime, double duration) {
+        if (tabId != null && tabId > 0 && tabId != activeTabId) {
             return;
         }
         updateYouTubeTimeLive(currentTime, duration);
@@ -7564,7 +7564,7 @@ public class MainActivity extends AppCompatActivity {
                 if (pageUrl != null && pageUrl.toLowerCase().contains("youtube.com")) {
                     String ytHelperJs = readAssetScript("youtube_helper.js");
                     if (!ytHelperJs.isEmpty()) {
-                        view.evaluateJavascript(ytHelperJs, null);
+                        view.evaluateJavascript("window.__caspian_tab_id = " + id + ";\n" + ytHelperJs, null);
                     }
                 }
 
@@ -9045,8 +9045,8 @@ public class MainActivity extends AppCompatActivity {
         return null;
     }
 
-    public void updateMediaMetadata(int tabId, String title, String thumbUrl) {
-        if (tabId != activeTabId) return;
+    public void updateMediaMetadata(Integer tabId, String title, String thumbUrl) {
+        if (tabId != null && tabId > 0 && tabId != activeTabId) return;
         updateMediaMetadata(title, thumbUrl);
     }
 

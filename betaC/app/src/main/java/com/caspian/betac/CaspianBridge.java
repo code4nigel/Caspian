@@ -254,14 +254,15 @@ public class CaspianBridge {
     @JavascriptInterface
     public void updateMediaMetadata(String title, String thumbnailUrl) {
         if (activity != null && title != null) {
-            activity.runOnUiThread(() -> activity.updateMediaMetadata(title, thumbnailUrl));
+            activity.runOnUiThread(() -> activity.updateMediaMetadata(boundTabId, title, thumbnailUrl));
         }
     }
 
     @JavascriptInterface
     public void updateTabMediaMetadata(int tabId, String title, String thumbnailUrl) {
         if (activity != null && title != null) {
-            activity.runOnUiThread(() -> activity.updateMediaMetadata(tabId, title, thumbnailUrl));
+            Integer effectiveId = (tabId > 0) ? tabId : boundTabId;
+            activity.runOnUiThread(() -> activity.updateMediaMetadata(effectiveId, title, thumbnailUrl));
         }
     }
 
@@ -650,21 +651,23 @@ public class CaspianBridge {
     @JavascriptInterface
     public void updateYouTubeTime(double currentTime, double duration) {
         if (activity != null) {
-            activity.runOnUiThread(() -> activity.updateYouTubeTimeLive(currentTime, duration));
+            activity.runOnUiThread(() -> activity.updateYouTubeTimeLive(boundTabId, currentTime, duration));
         }
     }
 
     @JavascriptInterface
     public void updateTabYouTubeTime(int tabId, double currentTime, double duration) {
         if (activity != null) {
-            activity.runOnUiThread(() -> activity.updateYouTubeTimeLive(tabId, currentTime, duration));
+            Integer effectiveId = (tabId > 0) ? tabId : boundTabId;
+            activity.runOnUiThread(() -> activity.updateYouTubeTimeLive(effectiveId, currentTime, duration));
         }
     }
 
     @JavascriptInterface
     public void updateTabYouTubeState(int tabId, boolean isPlaying, boolean isMuted) {
         if (activity != null) {
-            activity.runOnUiThread(() -> activity.updateYouTubeLiveState(isPlaying, isMuted, tabId));
+            Integer effectiveId = (tabId > 0) ? tabId : boundTabId;
+            activity.runOnUiThread(() -> activity.updateYouTubeLiveState(isPlaying, isMuted, effectiveId));
         }
     }
 
