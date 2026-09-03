@@ -36,6 +36,7 @@ import android.os.Bundle;
 import android.os.Environment;
 import android.os.Handler;
 import android.os.Looper;
+import android.os.SystemClock;
 import android.print.PrintAttributes;
 import android.print.PrintDocumentAdapter;
 import android.print.PrintManager;
@@ -2795,22 +2796,39 @@ public class MainActivity extends AppCompatActivity {
         }
         TabItem currentTab = getTabById(activeTabId);
         if (currentTab != null && currentTab.webView != null) {
-            currentTab.webView.evaluateJavascript(
-                    "(function(){ " +
-                    "  if (window.__CaspianYouTube && typeof window.__CaspianYouTube.toggleFullscreen === 'function') { " +
-                    "    window.__CaspianYouTube.toggleFullscreen(); " +
-                    "  } else { " +
-                    "    var fs = document.querySelector('.ytp-fullscreen-button, button.ytp-fullscreen-button, .fullscreen-icon, ytm-fullscreen-button, button[aria-label*=\"Fullscreen\"], button[aria-label*=\"fullscreen\"]'); " +
-                    "    if (fs) { try { fs.click(); } catch(e){} } " +
-                    "    var v = document.querySelector('video'); " +
-                    "    if (v) { " +
-                    "      if (v.paused) v.play().catch(()=>{}); " +
-                    "      if (typeof v.webkitEnterFullscreen === 'function') { try { v.webkitEnterFullscreen(); } catch(e){} } " +
-                    "      else if (typeof v.requestFullscreen === 'function') { v.requestFullscreen().catch(()=>{}); } " +
-                    "    } " +
-                    "  } " +
-                    "})()", null
-            );
+            final WebView wv = currentTab.webView;
+            int w = wv.getWidth();
+            int h = wv.getHeight();
+            float cx = (w > 0) ? (w / 2f) : 300f;
+            float cy = (h > 0) ? Math.min(h * 0.25f, (float) dpToPx(140)) : 300f;
+
+            long now = SystemClock.uptimeMillis();
+            MotionEvent evDown = MotionEvent.obtain(now, now, MotionEvent.ACTION_DOWN, cx, cy, 0);
+            MotionEvent evUp = MotionEvent.obtain(now, now + 30, MotionEvent.ACTION_UP, cx, cy, 0);
+            wv.dispatchTouchEvent(evDown);
+            wv.dispatchTouchEvent(evUp);
+            evDown.recycle();
+            evUp.recycle();
+
+            wv.postDelayed(() -> {
+                wv.evaluateJavascript(
+                        "(function(){ " +
+                        "  if (window.__CaspianYouTube && typeof window.__CaspianYouTube.toggleFullscreen === 'function') { " +
+                        "    window.__CaspianYouTube.toggleFullscreen(); " +
+                        "  } else { " +
+                        "    var fs = document.querySelector('.ytp-fullscreen-button, button.ytp-fullscreen-button, .fullscreen-icon, ytm-fullscreen-button, button[aria-label*=\"Fullscreen\"], button[aria-label*=\"fullscreen\"]'); " +
+                        "    if (fs && (fs.offsetWidth > 0 || fs.offsetHeight > 0)) { fs.click(); return; } " +
+                        "    var v = document.querySelector('video'); " +
+                        "    if (v) { " +
+                        "      if (v.paused) v.play().catch(()=>{}); " +
+                        "      if (typeof v.webkitEnterFullscreen === 'function') { try { v.webkitEnterFullscreen(); return; } catch(e){} } " +
+                        "      else if (typeof v.requestFullscreen === 'function') { try { v.requestFullscreen().catch(()=>{}); return; } catch(e){} } " +
+                        "    } " +
+                        "    if (fs) { fs.click(); } " +
+                        "  } " +
+                        "})()", null
+                );
+            }, 80);
         }
     }
 
@@ -2953,10 +2971,17 @@ public class MainActivity extends AppCompatActivity {
 
     public void applyScreenTouchLockState(boolean locked) {
         isScreenTouchLocked = locked;
+        TabItem currentTab = getActiveOrDominantTab();
+        boolean isYt = currentTab != null && (
+                "youtube".equalsIgnoreCase(currentTab.service) ||
+                (currentTab.url != null && currentTab.url.toLowerCase().contains("youtube.com")) ||
+                (currentTab.webView != null && currentTab.webView.getUrl() != null && currentTab.webView.getUrl().toLowerCase().contains("youtube.com"))
+        );
+        boolean shouldLock = isScreenTouchLocked && isYt;
         if (videoTouchLockOverlay != null) {
-            videoTouchLockOverlay.setVisibility(isScreenTouchLocked ? View.VISIBLE : View.GONE);
-            if (isScreenTouchLocked) {
-                // Completely silent touch blocker - no annoying toast on touch
+            videoTouchLockOverlay.setVisibility(shouldLock ? View.VISIBLE : View.GONE);
+            if (shouldLock) {
+                // Completely silent touch blocker - only locks YouTube tab touch input
                 videoTouchLockOverlay.setOnTouchListener((v, event) -> true);
             }
         }
@@ -7727,6 +7752,7 @@ public class MainActivity extends AppCompatActivity {
                     ytFloatingRemoteContainer.setVisibility(View.GONE);
                 }
             }
+            applyScreenTouchLockState(isScreenTouchLocked);
 
             boolean isGoogleTab = (url.toLowerCase().contains("google.com/search") || url.toLowerCase().contains("google.com/url") || (url.toLowerCase().contains("google.com") && !url.toLowerCase().contains("gemini.google.com"))) || "google".equalsIgnoreCase(currentTab.service);
             if (searchNavContainer != null) {

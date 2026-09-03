@@ -187,40 +187,46 @@
           v.play().catch(() => {});
         }
 
-        // 1. First trigger YouTube's official fullscreen UI button if present
+        // 1. First prioritize YouTube's official player button if visible
         const fsBtn = document.querySelector(
           '.ytp-fullscreen-button, button.ytp-fullscreen-button, .fullscreen-icon, ytm-fullscreen-button, button[aria-label*="Fullscreen"], button[aria-label*="fullscreen"], button[title*="Full screen"], [aria-label*="full screen"]'
         );
-        if (fsBtn) {
-          try { fsBtn.click(); } catch(e){}
+        if (fsBtn && (fsBtn.offsetWidth > 0 || fsBtn.offsetHeight > 0 || fsBtn.getClientRects().length > 0)) {
+          fsBtn.click();
+          return;
         }
 
-        // 2. Wake up YouTube player container if dormant
-        const player = document.getElementById('movie_player') || document.querySelector('.html5-video-player') || document.querySelector('ytm-media-item') || document.querySelector('.player-container');
-        if (player) {
-          try {
-            ['pointerdown', 'pointerup', 'click'].forEach(evt => {
-              player.dispatchEvent(new MouseEvent(evt, { bubbles: true, cancelable: true }));
-            });
-          } catch(e) {}
-        }
-
-        // 3. Direct native HTML5 video fullscreen (triggers Android WebChromeClient onShowCustomView & auto-landscape)
+        // 2. Direct native HTML5 video fullscreen (triggers Android WebChromeClient onShowCustomView)
         if (v) {
           if (typeof v.webkitEnterFullscreen === 'function') {
-            try { v.webkitEnterFullscreen(); } catch (e) {}
-          } else if (typeof v.requestFullscreen === 'function') {
-            v.requestFullscreen().catch(() => {});
+            try {
+              v.webkitEnterFullscreen();
+              return;
+            } catch (e) {}
+          }
+          if (typeof v.requestFullscreen === 'function') {
+            try {
+              v.requestFullscreen().catch(() => {});
+              return;
+            } catch (e) {}
           }
         }
 
-        // 4. Fallback to container requestFullscreen
+        // 3. Fallback to player container requestFullscreen
+        const player = document.getElementById('movie_player') || document.querySelector('.html5-video-player') || document.querySelector('ytm-media-item') || document.querySelector('.player-container');
         if (player) {
           if (player.requestFullscreen) {
             player.requestFullscreen().catch(() => {});
+            return;
           } else if (player.webkitRequestFullscreen) {
             player.webkitRequestFullscreen();
+            return;
           }
+        }
+
+        // 4. Final fallback: click button if present
+        if (fsBtn) {
+          fsBtn.click();
         }
       } catch (e) { }
     }

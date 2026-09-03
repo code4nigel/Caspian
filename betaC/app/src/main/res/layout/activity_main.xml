@@ -23,7 +23,7 @@
             android:paddingTop="6dp"
             android:paddingBottom="6dp"
             android:background="#0D1524"
-            android:elevation="6dp">
+            android:elevation="350dp">
 
             <!-- Liquid Glass Capsule Bar -->
             <LinearLayout
@@ -1053,13 +1053,13 @@
         </FrameLayout>
     </FrameLayout>
 
-    <!-- 3. Overlay Control Sheet Container (Elevation 80dp) -->
+    <!-- 3. Overlay Control Sheet Container (Elevation 500dp) -->
     <FrameLayout
         android:id="@+id/sheet_overlay_container"
         android:layout_width="match_parent"
         android:layout_height="match_parent"
         android:visibility="invisible"
-        android:elevation="350dp">
+        android:elevation="500dp">
 
         <View
             android:id="@+id/sheet_backdrop"
@@ -1074,7 +1074,7 @@
             android:background="@android:color/transparent" />
     </FrameLayout>
 
-    <!-- 4. Floating Action Pod 2.0 (Elevation 100dp, always on top) -->
+    <!-- 4. Floating Action Pod 2.0 (Elevation 400dp, always on top) -->
     <androidx.cardview.widget.CardView
         android:id="@+id/floating_caspian_card"
         android:layout_width="52dp"
@@ -1082,10 +1082,10 @@
         android:layout_gravity="bottom|end"
         android:layout_marginBottom="80dp"
         android:layout_marginEnd="20dp"
-        android:elevation="100dp"
+        android:elevation="400dp"
         app:cardCornerRadius="26dp"
         app:cardBackgroundColor="#00E5FF"
-        app:cardElevation="100dp"
+        app:cardElevation="400dp"
         android:clickable="true"
         android:focusable="true">
 
@@ -1106,10 +1106,11 @@
         android:layout_height="wrap_content"
         android:layout_gravity="bottom|end"
         android:layout_marginBottom="205dp"
+        android:layout_marginStart="8dp"
         android:layout_marginEnd="8dp"
         android:clickable="true"
         android:focusable="true"
-        android:elevation="250dp"
+        android:elevation="360dp"
         android:visibility="gone">
 
         <LinearLayout
