@@ -341,6 +341,8 @@ public class MainActivity extends AppCompatActivity {
     private ImageButton ytRemoteSettings;
     private TextView ytRemoteVolumeBtn;
     private LinearLayout ytFloatingTimelineBar;
+    private FrameLayout ytTimelineScrubBubbleContainer;
+    private TextView ytTimelineScrubBubble;
     private ImageButton ytTimelinePlayPause;
     private TextView ytTimelineCurrentTime;
     private SeekBar ytTimelineSeekbar;
@@ -348,7 +350,9 @@ public class MainActivity extends AppCompatActivity {
     private ImageButton ytTimelineCollapse;
     private boolean isTimelineUserEnabled = false;
     private boolean isUserScrubbingTimeline = false;
+    private double currentVideoTime = 0;
     private double currentVideoDuration = 0;
+    private long lastMediaSessionTimeUpdateMs = 0;
     private View videoTouchLockOverlay;
     private boolean isScreenTouchLocked = false;
     private PopupWindow volumePopupWindow;
@@ -1610,6 +1614,8 @@ public class MainActivity extends AppCompatActivity {
             ytRemoteLock = findViewById(R.id.yt_remote_lock);
             ytRemoteVolumeBtn = findViewById(R.id.yt_remote_volume_btn);
             ytFloatingTimelineBar = findViewById(R.id.yt_floating_timeline_bar);
+            ytTimelineScrubBubbleContainer = findViewById(R.id.yt_timeline_scrub_bubble_container);
+            ytTimelineScrubBubble = findViewById(R.id.yt_timeline_scrub_bubble);
             ytTimelinePlayPause = findViewById(R.id.yt_timeline_play_pause);
             ytTimelineCurrentTime = findViewById(R.id.yt_timeline_current_time);
             ytTimelineSeekbar = findViewById(R.id.yt_timeline_seekbar);
@@ -3092,8 +3098,16 @@ public class MainActivity extends AppCompatActivity {
         syncTimelineBarWidth();
     }
 
+    public void updateYouTubeTimeLive(int tabId, double currentTime, double duration) {
+        if (tabId != activeTabId) {
+            return;
+        }
+        updateYouTubeTimeLive(currentTime, duration);
+    }
+
     public void updateYouTubeTimeLive(double currentTime, double duration) {
         if (isUserScrubbingTimeline) return;
+        currentVideoTime = currentTime;
         currentVideoDuration = duration;
         if (ytTimelineCurrentTime != null) {
             ytTimelineCurrentTime.setText(formatTime(currentTime));
@@ -3104,6 +3118,21 @@ public class MainActivity extends AppCompatActivity {
         if (ytTimelineSeekbar != null && duration > 0) {
             int progress = (int) Math.min(1000, Math.max(0, (currentTime / duration) * 1000));
             ytTimelineSeekbar.setProgress(progress);
+        }
+
+        long now = android.os.SystemClock.elapsedRealtime();
+        if (mediaSession != null && (now - lastMediaSessionTimeUpdateMs > 1000)) {
+            lastMediaSessionTimeUpdateMs = now;
+            TabItem cur = getTabById(activeTabId);
+            boolean isPlaying = cur != null && cur.isPlayingAudio;
+            int state = isPlaying ? PlaybackStateCompat.STATE_PLAYING : PlaybackStateCompat.STATE_PAUSED;
+            long posMs = (long)(currentTime * 1000);
+            PlaybackStateCompat.Builder stateBuilder = new PlaybackStateCompat.Builder()
+                    .setActions(PlaybackStateCompat.ACTION_PLAY | PlaybackStateCompat.ACTION_PAUSE
+                            | PlaybackStateCompat.ACTION_PLAY_PAUSE | PlaybackStateCompat.ACTION_SKIP_TO_PREVIOUS
+                            | PlaybackStateCompat.ACTION_SKIP_TO_NEXT | PlaybackStateCompat.ACTION_SEEK_TO)
+                    .setState(state, posMs, isPlaying ? ytCurrentSpeed : 0.0f, android.os.SystemClock.elapsedRealtime());
+            mediaSession.setPlaybackState(stateBuilder.build());
         }
     }
 
@@ -4220,8 +4249,32 @@ public class MainActivity extends AppCompatActivity {
                     public void onProgressChanged(SeekBar seekBar, int progress, boolean fromUser) {
                         if (fromUser && currentVideoDuration > 0) {
                             double targetSec = (progress / 1000.0) * currentVideoDuration;
+                            String timeStr = formatTime(targetSec);
                             if (ytTimelineCurrentTime != null) {
-                                ytTimelineCurrentTime.setText(formatTime(targetSec));
+                                ytTimelineCurrentTime.setText(timeStr);
+                            }
+                            if (ytTimelineScrubBubble != null && ytTimelineScrubBubbleContainer != null) {
+                                ytTimelineScrubBubble.setText(timeStr + " / " + formatTime(currentVideoDuration));
+                                int paddingLeft = seekBar.getPaddingLeft();
+                                int paddingRight = seekBar.getPaddingRight();
+                                int availableWidth = seekBar.getWidth() - paddingLeft - paddingRight;
+                                float thumbFraction = (float) progress / (float) seekBar.getMax();
+                                float thumbCenterX = seekBar.getLeft() + paddingLeft + (availableWidth * thumbFraction);
+                                int bubbleWidth = ytTimelineScrubBubble.getWidth();
+                                if (bubbleWidth == 0) {
+                                    ytTimelineScrubBubble.measure(View.MeasureSpec.UNSPECIFIED, View.MeasureSpec.UNSPECIFIED);
+                                    bubbleWidth = ytTimelineScrubBubble.getMeasuredWidth();
+                                }
+                                float targetX = thumbCenterX - (bubbleWidth / 2f);
+                                int maxTargetX = ytTimelineScrubBubbleContainer.getWidth() - bubbleWidth;
+                                if (maxTargetX > 0) {
+                                    targetX = Math.max(0, Math.min(maxTargetX, targetX));
+                                }
+                                ytTimelineScrubBubble.setX(targetX);
+                                if (ytTimelineScrubBubbleContainer.getVisibility() != View.VISIBLE) {
+                                    ytTimelineScrubBubbleContainer.setVisibility(View.VISIBLE);
+                                    ytTimelineScrubBubbleContainer.setAlpha(1.0f);
+                                }
                             }
                         }
                     }
@@ -4229,6 +4282,11 @@ public class MainActivity extends AppCompatActivity {
                     @Override
                     public void onStartTrackingTouch(SeekBar seekBar) {
                         isUserScrubbingTimeline = true;
+                        if (ytTimelineScrubBubbleContainer != null) {
+                            ytTimelineScrubBubbleContainer.animate().cancel();
+                            ytTimelineScrubBubbleContainer.setVisibility(View.VISIBLE);
+                            ytTimelineScrubBubbleContainer.setAlpha(1.0f);
+                        }
                     }
 
                     @Override
@@ -4238,6 +4296,17 @@ public class MainActivity extends AppCompatActivity {
                             seekYouTubeTo(targetSec);
                         }
                         isUserScrubbingTimeline = false;
+                        if (ytTimelineScrubBubbleContainer != null) {
+                            ytTimelineScrubBubbleContainer.animate()
+                                    .alpha(0.0f)
+                                    .setDuration(250)
+                                    .withEndAction(() -> {
+                                        if (ytTimelineScrubBubbleContainer != null) {
+                                            ytTimelineScrubBubbleContainer.setVisibility(View.GONE);
+                                        }
+                                    })
+                                    .start();
+                        }
                     }
                 });
             }
@@ -8976,6 +9045,11 @@ public class MainActivity extends AppCompatActivity {
         return null;
     }
 
+    public void updateMediaMetadata(int tabId, String title, String thumbUrl) {
+        if (tabId != activeTabId) return;
+        updateMediaMetadata(title, thumbUrl);
+    }
+
     public void updateMediaMetadata(String title, String thumbUrl) {
         if (title != null && !title.trim().isEmpty()) {
             this.currentMediaTitle = title.trim();
@@ -9010,11 +9084,13 @@ public class MainActivity extends AppCompatActivity {
         try {
             if (mediaSession != null) {
                 int state = isPlaying ? PlaybackStateCompat.STATE_PLAYING : PlaybackStateCompat.STATE_PAUSED;
+                long posMs = (long)(currentVideoTime * 1000);
+                float speed = isPlaying ? ytCurrentSpeed : 0.0f;
                 PlaybackStateCompat.Builder stateBuilder = new PlaybackStateCompat.Builder()
                         .setActions(PlaybackStateCompat.ACTION_PLAY | PlaybackStateCompat.ACTION_PAUSE
                                 | PlaybackStateCompat.ACTION_PLAY_PAUSE | PlaybackStateCompat.ACTION_SKIP_TO_PREVIOUS
                                 | PlaybackStateCompat.ACTION_SKIP_TO_NEXT | PlaybackStateCompat.ACTION_SEEK_TO)
-                        .setState(state, 0L, 1.0f);
+                        .setState(state, posMs, speed, android.os.SystemClock.elapsedRealtime());
                 mediaSession.setPlaybackState(stateBuilder.build());
 
                 MediaMetadataCompat.Builder metaBuilder = new MediaMetadataCompat.Builder()
@@ -9061,7 +9137,13 @@ public class MainActivity extends AppCompatActivity {
                 notif.setLargeIcon(currentMediaThumbBitmap);
             }
 
-            NotificationManagerCompat.from(this).notify(NOTIFICATION_ID_MEDIA, notif.build());
+            android.app.Notification builtNotif = notif.build();
+            if (isPlaying) {
+                CaspianMediaService.startMediaForeground(this, builtNotif);
+            } else {
+                NotificationManagerCompat.from(this).notify(NOTIFICATION_ID_MEDIA, builtNotif);
+                CaspianMediaService.stopMediaForeground(this);
+            }
         } catch (Exception e) {
             Log.e(TAG, "updateMediaPlaybackNotification error", e);
         }
@@ -9069,6 +9151,7 @@ public class MainActivity extends AppCompatActivity {
 
     public void dismissMediaNotification() {
         try {
+            CaspianMediaService.stopMediaForeground(this);
             NotificationManagerCompat.from(this).cancel(NOTIFICATION_ID_MEDIA);
             if (mediaSession != null) {
                 PlaybackStateCompat.Builder stateBuilder = new PlaybackStateCompat.Builder()
@@ -9170,9 +9253,49 @@ public class MainActivity extends AppCompatActivity {
         }
         try {
             TabItem tab = getTabById(activeTabId);
+            if (tab != null && tab.webView != null) {
+                tab.webView.evaluateJavascript(
+                        "(function(){ " +
+                        "  var v = (window.__CaspianYouTube ? window.__CaspianYouTube.getVideo() : null) || document.querySelector('video'); " +
+                        "  if (v && v.videoWidth > 0 && v.videoHeight > 0) return v.videoWidth + 'x' + v.videoHeight; " +
+                        "  return '16x9'; " +
+                        "})()",
+                        dim -> runOnUiThread(() -> executeEnterPiPWithAspectRatio(dim))
+                );
+            } else {
+                executeEnterPiPWithAspectRatio("16x9");
+            }
+        } catch (Exception e) {
+            Log.e(TAG, "Failed to enter PiP mode", e);
+            Toast.makeText(this, "Failed to enter PiP", Toast.LENGTH_SHORT).show();
+        }
+    }
+
+    private void executeEnterPiPWithAspectRatio(String rawDim) {
+        if (Build.VERSION.SDK_INT < Build.VERSION_CODES.O) return;
+        try {
+            TabItem tab = getTabById(activeTabId);
             boolean isPlaying = tab != null && tab.isPlayingAudio;
             PictureInPictureParams.Builder pipBuilder = new PictureInPictureParams.Builder();
-            pipBuilder.setAspectRatio(new Rational(16, 9));
+
+            Rational aspect = new Rational(16, 9);
+            if (rawDim != null) {
+                String clean = rawDim.replace("\"", "").trim();
+                String[] parts = clean.split("x");
+                if (parts.length == 2) {
+                    try {
+                        float w = Float.parseFloat(parts[0]);
+                        float h = Float.parseFloat(parts[1]);
+                        if (w > 0 && h > 0) {
+                            float ratio = w / h;
+                            // Clamp within Android OS allowed range [0.418410, 2.390000]
+                            ratio = Math.max(0.418410f, Math.min(2.390000f, ratio));
+                            aspect = new Rational((int)(ratio * 1000), 1000);
+                        }
+                    } catch (Exception ignored) {}
+                }
+            }
+            pipBuilder.setAspectRatio(aspect);
             pipBuilder.setActions(buildPiPRemoteActions(isPlaying));
 
             Rect sourceRect = new Rect();
@@ -9193,7 +9316,7 @@ public class MainActivity extends AppCompatActivity {
             }
             enterPictureInPictureMode(pipBuilder.build());
         } catch (Exception e) {
-            Log.e(TAG, "Failed to enter PiP mode", e);
+            Log.e(TAG, "Failed executeEnterPiPWithAspectRatio", e);
             Toast.makeText(this, "Failed to enter PiP", Toast.LENGTH_SHORT).show();
         }
     }

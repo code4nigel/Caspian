@@ -1120,6 +1120,35 @@
             android:orientation="vertical"
             android:gravity="end">
 
+            <!-- Scrubbing Floating Timestamp Tooltip Badge -->
+            <FrameLayout
+                android:id="@+id/yt_timeline_scrub_bubble_container"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginBottom="4dp"
+                android:elevation="40dp"
+                android:clipChildren="false"
+                android:visibility="gone">
+
+                <TextView
+                    android:id="@+id/yt_timeline_scrub_bubble"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:background="@drawable/bg_liquid_glass_pill"
+                    android:paddingStart="14dp"
+                    android:paddingEnd="14dp"
+                    android:paddingTop="6dp"
+                    android:paddingBottom="6dp"
+                    android:textColor="#FFFFFF"
+                    android:textSize="17sp"
+                    android:textStyle="bold"
+                    android:fontFamily="monospace"
+                    android:elevation="8dp"
+                    android:shadowColor="#000000"
+                    android:shadowRadius="8"
+                    android:text="00:00" />
+            </FrameLayout>
+
             <!-- Floating Overlayed Timeline Bar -->
             <LinearLayout
                 android:id="@+id/yt_floating_timeline_bar"

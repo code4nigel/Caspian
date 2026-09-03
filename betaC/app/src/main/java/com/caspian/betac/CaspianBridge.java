@@ -259,6 +259,13 @@ public class CaspianBridge {
     }
 
     @JavascriptInterface
+    public void updateTabMediaMetadata(int tabId, String title, String thumbnailUrl) {
+        if (activity != null && title != null) {
+            activity.runOnUiThread(() -> activity.updateMediaMetadata(tabId, title, thumbnailUrl));
+        }
+    }
+
+    @JavascriptInterface
     public void openInOtherSplit(String url) {
         if (activity != null) {
             activity.runOnUiThread(() -> activity.openInOtherSplitPane(url));
@@ -644,6 +651,20 @@ public class CaspianBridge {
     public void updateYouTubeTime(double currentTime, double duration) {
         if (activity != null) {
             activity.runOnUiThread(() -> activity.updateYouTubeTimeLive(currentTime, duration));
+        }
+    }
+
+    @JavascriptInterface
+    public void updateTabYouTubeTime(int tabId, double currentTime, double duration) {
+        if (activity != null) {
+            activity.runOnUiThread(() -> activity.updateYouTubeTimeLive(tabId, currentTime, duration));
+        }
+    }
+
+    @JavascriptInterface
+    public void updateTabYouTubeState(int tabId, boolean isPlaying, boolean isMuted) {
+        if (activity != null) {
+            activity.runOnUiThread(() -> activity.updateYouTubeLiveState(isPlaying, isMuted, tabId));
         }
     }
 

@@ -68,27 +68,32 @@
     _lastMuted: null,
     getVideo: function () {
       // 1. Prioritize the main player video element
-      const mainVid = document.querySelector('#movie_player video.html5-main-video, .html5-video-player video.html5-main-video, .html5-main-video, #player video, ytm-custom-control video');
+      const mainVid = document.querySelector('#movie_player video.html5-main-video, .html5-video-player video.html5-main-video, #player video.html5-main-video, ytm-watch video, video.html5-main-video');
       if (mainVid) return mainVid;
-      // 2. Filter out thumbnail preview / feed preview videos
+      // 2. Strictly filter out thumbnail preview / feed preview videos
       const allVideos = Array.from(document.querySelectorAll('video')).filter(v => {
-        return !v.closest('ytm-thumbnail-overlay-preview-video-renderer, ytd-thumbnail-overlay-preview-video-renderer, .ytp-inline-preview-ui');
+        return !v.closest('ytm-thumbnail-overlay-preview-video-renderer, ytd-thumbnail-overlay-preview-video-renderer, .ytp-inline-preview-ui, #inline-preview-player, .inline-preview-player, ytd-video-preview, ytm-inline-player, .ytd-thumbnail, ytm-media-item, ytd-rich-item-renderer, ytm-rich-item-renderer, .rich-item-renderer');
       });
       if (allVideos.length > 0) {
         return allVideos.find(v => !v.paused && v.currentTime > 0) || allVideos[0];
       }
-      return document.querySelector('video');
+      return null;
     },
     notifyState: function () {
       try {
         const v = this.getVideo();
-        if (v && window.CaspianBridge && typeof window.CaspianBridge.updateYouTubeState === 'function') {
+        if (v) {
           const isPlaying = !v.paused && !v.ended;
           const isMuted = !!v.muted;
+          const tabId = window.__caspian_tab_id || 0;
           if (this._lastPlaying !== isPlaying || this._lastMuted !== isMuted) {
             this._lastPlaying = isPlaying;
             this._lastMuted = isMuted;
-            window.CaspianBridge.updateYouTubeState(isPlaying, isMuted);
+            if (window.CaspianBridge && typeof window.CaspianBridge.updateTabYouTubeState === 'function') {
+              window.CaspianBridge.updateTabYouTubeState(tabId, isPlaying, isMuted);
+            } else if (window.CaspianBridge && typeof window.CaspianBridge.updateYouTubeState === 'function') {
+              window.CaspianBridge.updateYouTubeState(isPlaying, isMuted);
+            }
           }
         }
       } catch (e) { }
@@ -411,7 +416,10 @@
           });
         });
         v.addEventListener('timeupdate', () => {
-          if (window.CaspianBridge && typeof window.CaspianBridge.updateYouTubeTime === 'function') {
+          const tabId = window.__caspian_tab_id || 0;
+          if (window.CaspianBridge && typeof window.CaspianBridge.updateTabYouTubeTime === 'function') {
+            window.CaspianBridge.updateTabYouTubeTime(tabId, v.currentTime || 0, v.duration || 0);
+          } else if (window.CaspianBridge && typeof window.CaspianBridge.updateYouTubeTime === 'function') {
             window.CaspianBridge.updateYouTubeTime(v.currentTime || 0, v.duration || 0);
           }
         });
@@ -855,7 +863,7 @@
       max-width: 100vw !important;
       max-height: 100vh !important;
       z-index: 2147483647 !important;
-      object-fit: contain !important;
+      object-fit: cover !important;
       background: #000 !important;
     }
     html.caspian-pip-active ytm-mobile-topbar-renderer,
@@ -925,7 +933,7 @@
   // -------------------------------------------------------------
   setInterval(function () {
     try {
-      const v = document.querySelector('video');
+      const v = window.__CaspianYouTube ? window.__CaspianYouTube.getVideo() : document.querySelector('video');
       const isPlaying = !!(v && !v.paused && v.currentTime > 0 && !v.ended && v.readyState > 2);
       const tabId = window.__caspian_tab_id || 0;
       if (window.CaspianBridge && typeof window.CaspianBridge.updateTabMediaPlaybackState === 'function') {
@@ -954,8 +962,12 @@
           var ogImage = document.querySelector('meta[property="og:image"]');
           if (ogImage) thumbUrl = ogImage.getAttribute('content') || '';
         }
-        if (title && window.CaspianBridge && typeof window.CaspianBridge.updateMediaMetadata === 'function') {
-          window.CaspianBridge.updateMediaMetadata(title, thumbUrl);
+        if (title && window.CaspianBridge) {
+          if (typeof window.CaspianBridge.updateTabMediaMetadata === 'function') {
+            window.CaspianBridge.updateTabMediaMetadata(tabId, title, thumbUrl);
+          } else if (typeof window.CaspianBridge.updateMediaMetadata === 'function') {
+            window.CaspianBridge.updateMediaMetadata(title, thumbUrl);
+          }
         }
       }
     } catch (e) { }

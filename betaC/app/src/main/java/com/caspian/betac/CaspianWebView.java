@@ -34,12 +34,36 @@ public class CaspianWebView extends WebView {
 
     @Override
     protected void onWindowVisibilityChanged(int visibility) {
-        // When app is minimized or window visibility changes to GONE/INVISIBLE,
-        // intercept and pass View.VISIBLE so Chromium's native media engine keeps playing!
         if (isBackgroundPlaybackEnabled && (visibility == View.GONE || visibility == View.INVISIBLE)) {
             super.onWindowVisibilityChanged(View.VISIBLE);
             return;
         }
         super.onWindowVisibilityChanged(visibility);
+    }
+
+    @Override
+    public void dispatchWindowVisibilityChanged(int visibility) {
+        if (isBackgroundPlaybackEnabled && (visibility == View.GONE || visibility == View.INVISIBLE)) {
+            super.dispatchWindowVisibilityChanged(View.VISIBLE);
+            return;
+        }
+        super.dispatchWindowVisibilityChanged(visibility);
+    }
+
+    @Override
+    protected void onVisibilityChanged(View changedView, int visibility) {
+        if (isBackgroundPlaybackEnabled && (visibility == View.GONE || visibility == View.INVISIBLE)) {
+            super.onVisibilityChanged(changedView, View.VISIBLE);
+            return;
+        }
+        super.onVisibilityChanged(changedView, visibility);
+    }
+
+    @Override
+    public int getWindowVisibility() {
+        if (isBackgroundPlaybackEnabled) {
+            return View.VISIBLE;
+        }
+        return super.getWindowVisibility();
     }
 }
