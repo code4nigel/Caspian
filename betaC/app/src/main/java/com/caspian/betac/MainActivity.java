@@ -294,6 +294,7 @@ public class MainActivity extends AppCompatActivity {
     private ImageButton ytRemoteClose;
     private ImageButton ytRemoteReload;
     private ImageButton ytRemoteFullscreen;
+    private ImageButton ytRemoteTimeline;
     private ImageButton ytRemotePrevVideo;
     private ImageButton ytRemoteSeekBack;
     private ImageButton ytRemotePlayPause;
@@ -1538,6 +1539,7 @@ public class MainActivity extends AppCompatActivity {
             ytRemoteClose = findViewById(R.id.yt_remote_close);
             ytRemoteReload = findViewById(R.id.yt_remote_reload);
             ytRemoteFullscreen = findViewById(R.id.yt_remote_fullscreen);
+            ytRemoteTimeline = findViewById(R.id.yt_remote_timeline);
             ytRemotePrevVideo = findViewById(R.id.yt_remote_prev_video);
             ytRemoteSeekBack = findViewById(R.id.yt_remote_seek_back);
             ytRemotePlayPause = findViewById(R.id.yt_remote_play_pause);
@@ -2778,6 +2780,20 @@ public class MainActivity extends AppCompatActivity {
         }
     }
 
+    public void showYouTubePlayerControls() {
+        TabItem currentTab = getTabById(activeTabId);
+        if (currentTab != null && currentTab.webView != null) {
+            currentTab.webView.evaluateJavascript(
+                    "if (window.__CaspianYouTube && typeof window.__CaspianYouTube.showPlayerControls === 'function') { " +
+                    "  window.__CaspianYouTube.showPlayerControls(); " +
+                    "} else { " +
+                    "  var v = document.querySelector('video'); " +
+                    "  if (v) { v.controls = false; v.offsetHeight; v.controls = true; } " +
+                    "}", null
+            );
+        }
+    }
+
     public void exitFullscreenCustomView() {
         runOnUiThread(() -> {
             TabItem currentTab = getTabById(activeTabId);
@@ -3480,6 +3496,13 @@ public class MainActivity extends AppCompatActivity {
                 playUiFeedbackSound("tap");
                 toggleFullscreenYouTube();
             });
+
+            if (ytRemoteTimeline != null) {
+                ytRemoteTimeline.setOnClickListener(v -> {
+                    playUiFeedbackSound("tap");
+                    showYouTubePlayerControls();
+                });
+            }
 
             ytRemotePrevVideo.setOnClickListener(v -> {
                 playUiFeedbackSound("tap");

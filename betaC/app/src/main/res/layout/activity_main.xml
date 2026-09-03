@@ -1168,6 +1168,16 @@
                     android:contentDescription="Fullscreen Toggle" />
 
                 <ImageButton
+                    android:id="@+id/yt_remote_timeline"
+                    android:layout_width="26dp"
+                    android:layout_height="26dp"
+                    android:layout_marginStart="2dp"
+                    android:background="?attr/selectableItemBackgroundBorderless"
+                    android:src="@drawable/ic_pod_timeline"
+                    android:tint="#FFFFFF"
+                    android:contentDescription="Show Player Controls &amp; Timeline" />
+
+                <ImageButton
                     android:id="@+id/yt_remote_prev_video"
                     android:layout_width="26dp"
                     android:layout_height="26dp"

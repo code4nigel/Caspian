@@ -137,6 +137,41 @@
         }
       } catch (e) { }
     },
+    showPlayerControls: function () {
+      try {
+        const v = this.getVideo();
+        if (v) {
+          v.controls = false;
+          v.offsetHeight;
+          v.controls = true;
+
+          try {
+            const rect = v.getBoundingClientRect();
+            const cx = rect.left + rect.width / 2;
+            const cy = rect.top + rect.height - 30;
+            ['pointerdown', 'pointermove', 'pointerup', 'touchstart', 'touchend', 'mousemove'].forEach(type => {
+              try {
+                v.dispatchEvent(new MouseEvent(type, {
+                  bubbles: true,
+                  cancelable: true,
+                  view: window,
+                  clientX: cx,
+                  clientY: cy
+                }));
+              } catch(e) {}
+            });
+          } catch(e) {}
+
+          const player = document.getElementById('movie_player') || document.querySelector('.html5-video-player') || document.querySelector('.player-container');
+          if (player) {
+            player.classList.remove('ytp-autohide');
+            ['mousemove', 'pointermove', 'touchstart'].forEach(type => {
+              try { player.dispatchEvent(new Event(type, { bubbles: true })); } catch(e){}
+            });
+          }
+        }
+      } catch (e) { }
+    },
     toggleFullscreen: function () {
       try {
         if (document.fullscreenElement || document.webkitFullscreenElement) {
@@ -255,6 +290,16 @@
         }
       } catch (err) { }
     }, true);
+
+    // 1.7 Wake up player timeline and controls whenever user taps screen in fullscreen
+    document.addEventListener('click', function (e) {
+      try {
+        const isFs = !!(document.fullscreenElement || document.webkitFullscreenElement);
+        if (isFs && window.__CaspianYouTube && typeof window.__CaspianYouTube.showPlayerControls === 'function') {
+          window.__CaspianYouTube.showPlayerControls();
+        }
+      } catch (err) { }
+    }, false);
   } catch (e) { }
 
   // -------------------------------------------------------------
