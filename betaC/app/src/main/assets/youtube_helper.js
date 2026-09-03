@@ -152,6 +152,7 @@
         const v = this.getVideo();
         if (v) {
           if (v.paused) v.play().catch(() => {});
+          v.controls = true;
           if (typeof v.webkitEnterFullscreen === 'function') {
             v.webkitEnterFullscreen();
             return;
@@ -189,6 +190,12 @@
       const v = window.__CaspianYouTube ? window.__CaspianYouTube.getVideo() : document.querySelector('video');
       if (v && !v.__caspian_attached) {
         v.__caspian_attached = true;
+        v.addEventListener('webkitbeginfullscreen', () => {
+          v.controls = true;
+        });
+        v.addEventListener('webkitendfullscreen', () => {
+          v.controls = false;
+        });
         ['play', 'playing', 'pause', 'ended', 'volumechange', 'ratechange'].forEach(evt => {
           v.addEventListener(evt, () => {
             if (window.__CaspianYouTube) window.__CaspianYouTube.notifyState();
@@ -214,6 +221,18 @@
   attachVideoListeners();
   setInterval(attachVideoListeners, 1000);
 
+  function syncFullscreenTimeline() {
+    try {
+      const isFs = !!(document.fullscreenElement || document.webkitFullscreenElement);
+      const v = window.__CaspianYouTube ? window.__CaspianYouTube.getVideo() : document.querySelector('video');
+      if (v) {
+        v.controls = isFs;
+      }
+    } catch (e) { }
+  }
+  document.addEventListener('fullscreenchange', syncFullscreenTimeline);
+  document.addEventListener('webkitfullscreenchange', syncFullscreenTimeline);
+
   // 1.6 Intercept in-page YouTube Fullscreen button to trigger native WebView full-screen
   try {
     document.addEventListener('click', function (e) {
@@ -229,6 +248,7 @@
               e.preventDefault();
               e.stopPropagation();
               if (v.paused) v.play().catch(() => {});
+              v.controls = true;
               v.webkitEnterFullscreen();
             }
           }

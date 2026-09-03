@@ -43,6 +43,7 @@ import android.speech.RecognizerIntent;
 import android.speech.SpeechRecognizer;
 import android.text.Editable;
 import android.text.TextWatcher;
+import android.util.DisplayMetrics;
 import android.util.Log;
 import android.util.TypedValue;
 import android.view.DragEvent;
@@ -2782,6 +2783,7 @@ public class MainActivity extends AppCompatActivity {
             TabItem currentTab = getTabById(activeTabId);
             if (currentTab != null && currentTab.webView != null) {
                 currentTab.webView.evaluateJavascript(
+                        "try { var v = document.querySelector('video'); if (v) v.controls = false; } catch(e){}" +
                         "if (document.fullscreenElement || document.webkitFullscreenElement) { " +
                         "  if (document.exitFullscreen) document.exitFullscreen().catch(()=>{}); " +
                         "  else if (document.webkitExitFullscreen) document.webkitExitFullscreen(); " +
@@ -4122,12 +4124,15 @@ public class MainActivity extends AppCompatActivity {
     }
 
     private void showCaspianCustomPopup(View anchor, List<CaspianMenuItem> items) {
+        if (anchor == null || items == null || items.isEmpty()) return;
+
         View popupView = getLayoutInflater().inflate(R.layout.popup_caspian_menu, null);
         LinearLayout itemsContainer = popupView.findViewById(R.id.menu_items_container);
 
+        int targetWidth = dpToPx(230);
         PopupWindow popupWindow = new PopupWindow(
                 popupView,
-                dpToPx(230),
+                targetWidth,
                 ViewGroup.LayoutParams.WRAP_CONTENT,
                 true
         );
@@ -4164,7 +4169,72 @@ public class MainActivity extends AppCompatActivity {
             itemsContainer.addView(row);
         }
 
-        popupWindow.showAsDropDown(anchor, 0, dpToPx(4));
+        // Measure popup to calculate actual height
+        popupView.measure(
+                View.MeasureSpec.makeMeasureSpec(targetWidth, View.MeasureSpec.EXACTLY),
+                View.MeasureSpec.makeMeasureSpec(0, View.MeasureSpec.UNSPECIFIED)
+        );
+        int measuredHeight = popupView.getMeasuredHeight();
+
+        int[] anchorLoc = new int[2];
+        anchor.getLocationOnScreen(anchorLoc);
+        int anchorX = anchorLoc[0];
+        int anchorY = anchorLoc[1];
+        int anchorH = anchor.getHeight();
+
+        DisplayMetrics dm = getResources().getDisplayMetrics();
+        int screenH = dm.heightPixels;
+        int screenW = dm.widthPixels;
+
+        int spaceBelow = screenH - (anchorY + anchorH);
+        int spaceAbove = anchorY;
+
+        boolean showAbove = false;
+        int maxAvailableH;
+
+        if (spaceBelow >= measuredHeight + dpToPx(8)) {
+            // Comfortably fits below
+            showAbove = false;
+            maxAvailableH = spaceBelow - dpToPx(16);
+        } else if (spaceAbove > spaceBelow) {
+            // Insufficient space below, more space above!
+            showAbove = true;
+            maxAvailableH = spaceAbove - dpToPx(16);
+        } else {
+            showAbove = false;
+            maxAvailableH = spaceBelow - dpToPx(16);
+        }
+
+        int finalHeight = measuredHeight;
+        if (measuredHeight > maxAvailableH && maxAvailableH > dpToPx(100)) {
+            finalHeight = maxAvailableH;
+            popupWindow.setHeight(finalHeight);
+        }
+
+        // Horizontal positioning: align with anchor but prevent overflow off screen sides
+        int posX = anchorX;
+        if (posX + targetWidth > screenW - dpToPx(8)) {
+            posX = screenW - targetWidth - dpToPx(8);
+        }
+        if (posX < dpToPx(8)) {
+            posX = dpToPx(8);
+        }
+
+        // Vertical positioning: place above or below anchor
+        int posY;
+        if (showAbove) {
+            posY = anchorY - finalHeight - dpToPx(6);
+        } else {
+            posY = anchorY + anchorH + dpToPx(6);
+        }
+
+        // Safety clamp within screen bounds
+        if (posY < dpToPx(8)) posY = dpToPx(8);
+        if (posY + finalHeight > screenH - dpToPx(8)) {
+            posY = screenH - finalHeight - dpToPx(8);
+        }
+
+        popupWindow.showAtLocation(anchor, Gravity.NO_GRAVITY, posX, posY);
     }
 
     private void showQuickToolbarsPopup(View anchor) {
