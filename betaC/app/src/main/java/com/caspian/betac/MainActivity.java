@@ -306,6 +306,7 @@ public class MainActivity extends AppCompatActivity {
     private ImageButton ytRemoteSettings;
     private TextView ytRemoteVolumeBtn;
     private LinearLayout ytFloatingTimelineBar;
+    private ImageButton ytTimelinePlayPause;
     private TextView ytTimelineCurrentTime;
     private SeekBar ytTimelineSeekbar;
     private TextView ytTimelineTotalTime;
@@ -1564,6 +1565,7 @@ public class MainActivity extends AppCompatActivity {
             ytRemoteLock = findViewById(R.id.yt_remote_lock);
             ytRemoteVolumeBtn = findViewById(R.id.yt_remote_volume_btn);
             ytFloatingTimelineBar = findViewById(R.id.yt_floating_timeline_bar);
+            ytTimelinePlayPause = findViewById(R.id.yt_timeline_play_pause);
             ytTimelineCurrentTime = findViewById(R.id.yt_timeline_current_time);
             ytTimelineSeekbar = findViewById(R.id.yt_timeline_seekbar);
             ytTimelineTotalTime = findViewById(R.id.yt_timeline_total_time);
@@ -2446,6 +2448,9 @@ public class MainActivity extends AppCompatActivity {
             if (ytRemotePlayPause != null) {
                 ytRemotePlayPause.setImageResource(isPlaying ? R.drawable.ic_pod_pause : R.drawable.ic_pod_play);
             }
+            if (ytTimelinePlayPause != null) {
+                ytTimelinePlayPause.setImageResource(isPlaying ? R.drawable.ic_pod_pause : R.drawable.ic_pod_play);
+            }
             if (ytRemoteMute != null) {
                 ytRemoteMute.setImageResource(isMuted ? R.drawable.ic_pod_mute : R.drawable.ic_pod_unmute);
             }
@@ -2642,6 +2647,9 @@ public class MainActivity extends AppCompatActivity {
 
             if (ytTimelineCurrentTime != null) {
                 ytTimelineCurrentTime.setTextColor(startC);
+            }
+            if (ytTimelinePlayPause != null) {
+                ytTimelinePlayPause.setColorFilter(startC);
             }
             if (ytTimelineSeekbar != null) {
                 ytTimelineSeekbar.setThumbTintList(ColorStateList.valueOf(startC));
@@ -3024,12 +3032,16 @@ public class MainActivity extends AppCompatActivity {
         ViewGroup.MarginLayoutParams lp = (ViewGroup.MarginLayoutParams) ytFloatingTimelineBar.getLayoutParams();
         if (lp != null) {
             if (isCollapsed) {
-                // When collapsed to circular ball (44dp), set rightMargin to 50dp so the timeline
-                // ends cleanly before the ball icon, making the total duration clearly visible!
+                // Ball is 44dp high, timeline is 38dp high.
+                // (44 - 38) / 2 = 3dp top and 3dp bottom margin to align optical centers with exact precision!
                 lp.rightMargin = dpToPx(50);
-                lp.width = Math.min(dpToPx(340), screenW - dpToPx(72));
+                lp.topMargin = dpToPx(3);
+                lp.bottomMargin = dpToPx(3);
+                lp.width = Math.min(dpToPx(360), screenW - dpToPx(72));
             } else {
                 lp.rightMargin = 0;
+                lp.topMargin = 0;
+                lp.bottomMargin = dpToPx(6);
                 int scrollW = 0;
                 if (ytFloatingRemoteScroll != null) {
                     scrollW = ytFloatingRemoteScroll.getWidth();
@@ -4062,6 +4074,13 @@ public class MainActivity extends AppCompatActivity {
                     currentTab.webView.evaluateJavascript("if (window.__CaspianYouTube) window.__CaspianYouTube.previousVideo();", null);
                 }
             });
+
+            if (ytTimelinePlayPause != null) {
+                ytTimelinePlayPause.setOnClickListener(v -> {
+                    playUiFeedbackSound("tap");
+                    togglePlayYouTube();
+                });
+            }
 
             ytRemoteSeekBack.setOnClickListener(v -> {
                 playUiFeedbackSound("tap");

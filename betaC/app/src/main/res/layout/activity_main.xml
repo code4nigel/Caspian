@@ -1130,10 +1130,20 @@
                 android:background="@drawable/bg_liquid_glass"
                 android:orientation="horizontal"
                 android:gravity="center_vertical"
-                android:paddingStart="12dp"
+                android:paddingStart="8dp"
                 android:paddingEnd="12dp"
                 android:elevation="30dp"
                 android:visibility="gone">
+
+                <ImageButton
+                    android:id="@+id/yt_timeline_play_pause"
+                    android:layout_width="24dp"
+                    android:layout_height="24dp"
+                    android:layout_marginEnd="4dp"
+                    android:background="?attr/selectableItemBackgroundBorderless"
+                    android:src="@drawable/ic_pod_play"
+                    android:tint="#FFFFFF"
+                    android:contentDescription="Play or Pause Video" />
 
                 <TextView
                     android:id="@+id/yt_timeline_current_time"
