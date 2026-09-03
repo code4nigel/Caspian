@@ -142,6 +142,47 @@
         v.playbackRate = parseFloat(rate);
       }
     },
+    getAvailableQualities: function () {
+      try {
+        const player = document.getElementById('movie_player') || document.querySelector('.html5-video-player');
+        if (player) {
+          if (typeof player.getAvailableQualityData === 'function') {
+            const data = player.getAvailableQualityData();
+            if (Array.isArray(data) && data.length > 0) {
+              return JSON.stringify(data.map(function (d) {
+                return {
+                  code: d.quality || d.formatId || '',
+                  label: d.qualityLabel || d.label || d.quality || ''
+                };
+              }));
+            }
+          }
+          if (typeof player.getAvailableQualityLevels === 'function') {
+            const levels = player.getAvailableQualityLevels();
+            if (Array.isArray(levels) && levels.length > 0) {
+              const qualityMap = {
+                'hd2160': '2160p (4K)',
+                'hd1440': '1440p (2K)',
+                'hd1080': '1080p (HD)',
+                'hd720': '720p (HD)',
+                'large': '480p',
+                'medium': '360p',
+                'small': '240p',
+                'tiny': '144p',
+                'auto': 'Auto'
+              };
+              return JSON.stringify(levels.map(function (q) {
+                return {
+                  code: q,
+                  label: qualityMap[q] || q.toUpperCase()
+                };
+              }));
+            }
+          }
+        }
+      } catch (e) { }
+      return "";
+    },
     setQuality: function (qualityStr) {
       try {
         const player = document.getElementById('movie_player') || document.querySelector('.html5-video-player');
@@ -154,6 +195,8 @@
           }
         }
         const qualityMap = {
+          'hd2160': '2160p',
+          'hd1440': '1440p',
           'hd1080': '1080p',
           'hd720': '720p',
           'large': '480p',
@@ -897,13 +940,19 @@
         if (titleEl) title = titleEl.textContent || titleEl.getAttribute('content') || '';
         if (!title) title = (document.title || '').replace(' - YouTube', '').trim();
         var thumbUrl = '';
-        var ogImage = document.querySelector('meta[property="og:image"]');
-        if (ogImage) thumbUrl = ogImage.getAttribute('content') || '';
-        if (!thumbUrl) {
-          var match = location.search.match(/[?&]v=([^&]+)/);
-          if (match && match[1]) {
-            thumbUrl = 'https://img.youtube.com/vi/' + match[1] + '/mqdefault.jpg';
-          }
+        var videoId = '';
+        var vMatch = location.search.match(/[?&]v=([^&]+)/);
+        if (vMatch && vMatch[1]) {
+          videoId = vMatch[1];
+        } else {
+          var pMatch = location.pathname.match(/\/(?:shorts|embed|v)\/([^/?]+)/);
+          if (pMatch && pMatch[1]) videoId = pMatch[1];
+        }
+        if (videoId) {
+          thumbUrl = 'https://i.ytimg.com/vi/' + videoId + '/maxresdefault.jpg';
+        } else {
+          var ogImage = document.querySelector('meta[property="og:image"]');
+          if (ogImage) thumbUrl = ogImage.getAttribute('content') || '';
         }
         if (title && window.CaspianBridge && typeof window.CaspianBridge.updateMediaMetadata === 'function') {
           window.CaspianBridge.updateMediaMetadata(title, thumbUrl);

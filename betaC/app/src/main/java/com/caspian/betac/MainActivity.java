@@ -3399,14 +3399,77 @@ public class MainActivity extends AppCompatActivity {
 
     public void showYouTubeQualityPopup(View anchor) {
         playUiFeedbackSound("tap");
+        TabItem currentTab = getTabById(activeTabId);
+        if (currentTab != null && currentTab.webView != null) {
+            currentTab.webView.evaluateJavascript(
+                    "(function(){ if (window.__CaspianYouTube) return window.__CaspianYouTube.getAvailableQualities(); return ''; })()",
+                    value -> runOnUiThread(() -> renderDynamicQualityPopup(anchor, value))
+            );
+        } else {
+            renderDynamicQualityPopup(anchor, null);
+        }
+    }
+
+    private void renderDynamicQualityPopup(View anchor, String rawJson) {
         List<CaspianMenuItem> qualityItems = new ArrayList<>();
-        qualityItems.add(new CaspianMenuItem("🎬 Auto Quality", () -> setYouTubeQuality("auto")));
-        qualityItems.add(new CaspianMenuItem("✨ 1080p (HD)", () -> setYouTubeQuality("hd1080")));
-        qualityItems.add(new CaspianMenuItem("✨ 720p (HD)", () -> setYouTubeQuality("hd720")));
-        qualityItems.add(new CaspianMenuItem("📺 480p", () -> setYouTubeQuality("large")));
-        qualityItems.add(new CaspianMenuItem("📱 360p", () -> setYouTubeQuality("medium")));
-        qualityItems.add(new CaspianMenuItem("📶 240p", () -> setYouTubeQuality("small")));
-        qualityItems.add(new CaspianMenuItem("⚡ 144p (Data Saver)", () -> setYouTubeQuality("tiny")));
+        boolean parsedSuccessfully = false;
+
+        if (rawJson != null && !rawJson.isEmpty() && !"null".equalsIgnoreCase(rawJson) && !"\"\"".equals(rawJson)) {
+            try {
+                String cleanJson = rawJson;
+                if (cleanJson.startsWith("\"") && cleanJson.endsWith("\"")) {
+                    cleanJson = new org.json.JSONTokener(cleanJson).nextValue().toString();
+                }
+                org.json.JSONArray arr = new org.json.JSONArray(cleanJson);
+                if (arr.length() > 0) {
+                    for (int i = 0; i < arr.length(); i++) {
+                        org.json.JSONObject obj = arr.getJSONObject(i);
+                        final String code = obj.optString("code", "");
+                        String label = obj.optString("label", code);
+                        if (code.isEmpty()) continue;
+
+                        if ("auto".equalsIgnoreCase(code)) {
+                            qualityItems.add(new CaspianMenuItem("⚡ " + label, () -> setYouTubeQuality("auto")));
+                        } else if (label.contains("2160") || label.contains("4K") || "hd2160".equalsIgnoreCase(code)) {
+                            qualityItems.add(new CaspianMenuItem("💎 " + label, () -> setYouTubeQuality(code)));
+                        } else if (label.contains("1440") || label.contains("2K") || "hd1440".equalsIgnoreCase(code)) {
+                            qualityItems.add(new CaspianMenuItem("🌟 " + label, () -> setYouTubeQuality(code)));
+                        } else if (label.contains("1080") || "hd1080".equalsIgnoreCase(code)) {
+                            qualityItems.add(new CaspianMenuItem("✨ " + label, () -> setYouTubeQuality(code)));
+                        } else if (label.contains("720") || "hd720".equalsIgnoreCase(code)) {
+                            qualityItems.add(new CaspianMenuItem("✨ " + label, () -> setYouTubeQuality(code)));
+                        } else if (label.contains("480") || "large".equalsIgnoreCase(code)) {
+                            qualityItems.add(new CaspianMenuItem("📺 " + label, () -> setYouTubeQuality(code)));
+                        } else if (label.contains("360") || "medium".equalsIgnoreCase(code)) {
+                            qualityItems.add(new CaspianMenuItem("📱 " + label, () -> setYouTubeQuality(code)));
+                        } else if (label.contains("240") || "small".equalsIgnoreCase(code)) {
+                            qualityItems.add(new CaspianMenuItem("📶 " + label, () -> setYouTubeQuality(code)));
+                        } else if (label.contains("144") || "tiny".equalsIgnoreCase(code)) {
+                            qualityItems.add(new CaspianMenuItem("💾 " + label, () -> setYouTubeQuality(code)));
+                        } else {
+                            qualityItems.add(new CaspianMenuItem("▶ " + label, () -> setYouTubeQuality(code)));
+                        }
+                    }
+                    parsedSuccessfully = true;
+                }
+            } catch (Exception e) {
+                Log.w(TAG, "Failed parsing dynamic qualities: " + e.getMessage());
+            }
+        }
+
+        if (!parsedSuccessfully || qualityItems.isEmpty()) {
+            qualityItems.clear();
+            qualityItems.add(new CaspianMenuItem("⚡ Auto Quality", () -> setYouTubeQuality("auto")));
+            qualityItems.add(new CaspianMenuItem("💎 2160p (4K)", () -> setYouTubeQuality("hd2160")));
+            qualityItems.add(new CaspianMenuItem("🌟 1440p (2K)", () -> setYouTubeQuality("hd1440")));
+            qualityItems.add(new CaspianMenuItem("✨ 1080p (HD)", () -> setYouTubeQuality("hd1080")));
+            qualityItems.add(new CaspianMenuItem("✨ 720p (HD)", () -> setYouTubeQuality("hd720")));
+            qualityItems.add(new CaspianMenuItem("📺 480p", () -> setYouTubeQuality("large")));
+            qualityItems.add(new CaspianMenuItem("📱 360p", () -> setYouTubeQuality("medium")));
+            qualityItems.add(new CaspianMenuItem("📶 240p", () -> setYouTubeQuality("small")));
+            qualityItems.add(new CaspianMenuItem("💾 144p (Data Saver)", () -> setYouTubeQuality("tiny")));
+        }
+
         showCaspianCustomPopup(anchor, qualityItems);
     }
 
@@ -3510,12 +3573,14 @@ public class MainActivity extends AppCompatActivity {
         if (ytRemoteQualityBtn != null) {
             String label = "HD";
             if ("auto".equalsIgnoreCase(quality)) label = "Auto";
-            else if ("hd1080".equalsIgnoreCase(quality)) label = "1080p";
-            else if ("hd720".equalsIgnoreCase(quality)) label = "720p";
-            else if ("large".equalsIgnoreCase(quality)) label = "480p";
-            else if ("medium".equalsIgnoreCase(quality)) label = "360p";
-            else if ("small".equalsIgnoreCase(quality)) label = "240p";
-            else if ("tiny".equalsIgnoreCase(quality)) label = "144p";
+            else if ("hd2160".equalsIgnoreCase(quality) || quality.contains("2160")) label = "4K";
+            else if ("hd1440".equalsIgnoreCase(quality) || quality.contains("1440")) label = "1440p";
+            else if ("hd1080".equalsIgnoreCase(quality) || quality.contains("1080")) label = "1080p";
+            else if ("hd720".equalsIgnoreCase(quality) || quality.contains("720")) label = "720p";
+            else if ("large".equalsIgnoreCase(quality) || quality.contains("480")) label = "480p";
+            else if ("medium".equalsIgnoreCase(quality) || quality.contains("360")) label = "360p";
+            else if ("small".equalsIgnoreCase(quality) || quality.contains("240")) label = "240p";
+            else if ("tiny".equalsIgnoreCase(quality) || quality.contains("144")) label = "144p";
             ytRemoteQualityBtn.setText(label);
         }
     }
@@ -8884,6 +8949,33 @@ public class MainActivity extends AppCompatActivity {
         }
     }
 
+    private Bitmap downloadHighQualityThumbnail(String urlStr) {
+        if (urlStr == null || urlStr.trim().isEmpty()) return null;
+        try {
+            java.net.HttpURLConnection conn = (java.net.HttpURLConnection) new java.net.URL(urlStr).openConnection();
+            conn.setConnectTimeout(4000);
+            conn.setReadTimeout(4000);
+            conn.connect();
+            if (conn.getResponseCode() == 200) {
+                return BitmapFactory.decodeStream(conn.getInputStream());
+            }
+        } catch (Exception ignored) {}
+
+        if (urlStr.contains("maxresdefault.jpg")) {
+            try {
+                String hqUrl = urlStr.replace("maxresdefault.jpg", "hqdefault.jpg");
+                java.net.HttpURLConnection conn = (java.net.HttpURLConnection) new java.net.URL(hqUrl).openConnection();
+                conn.setConnectTimeout(4000);
+                conn.setReadTimeout(4000);
+                conn.connect();
+                if (conn.getResponseCode() == 200) {
+                    return BitmapFactory.decodeStream(conn.getInputStream());
+                }
+            } catch (Exception ignored) {}
+        }
+        return null;
+    }
+
     public void updateMediaMetadata(String title, String thumbUrl) {
         if (title != null && !title.trim().isEmpty()) {
             this.currentMediaTitle = title.trim();
@@ -8891,16 +8983,15 @@ public class MainActivity extends AppCompatActivity {
         if (thumbUrl != null && !thumbUrl.trim().isEmpty() && !thumbUrl.equals(currentMediaThumbUrl)) {
             this.currentMediaThumbUrl = thumbUrl.trim();
             new Thread(() -> {
-                try {
-                    java.io.InputStream in = new java.net.URL(currentMediaThumbUrl).openStream();
-                    Bitmap bmp = BitmapFactory.decodeStream(in);
+                Bitmap bmp = downloadHighQualityThumbnail(currentMediaThumbUrl);
+                if (bmp != null) {
                     runOnUiThread(() -> {
                         currentMediaThumbBitmap = bmp;
                         TabItem cur = getTabById(activeTabId);
                         boolean isPlaying = cur != null && cur.isPlayingAudio;
                         updateMediaPlaybackNotification(isPlaying);
                     });
-                } catch (Exception ignored) {}
+                }
             }).start();
         }
         TabItem cur = getTabById(activeTabId);
