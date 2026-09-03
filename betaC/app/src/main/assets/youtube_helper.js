@@ -99,6 +99,22 @@
             player.setPlaybackQuality(qualityStr);
           }
         }
+        const qualityMap = {
+          'hd1080': '1080p',
+          'hd720': '720p',
+          'large': '480p',
+          'medium': '360p',
+          'small': '240p',
+          'tiny': '144p',
+          'auto': 'Auto'
+        };
+        const targetLabel = qualityMap[qualityStr] || qualityStr;
+        const items = document.querySelectorAll('.ytp-menuitem, .ytm-menu-item, ytm-menu-item');
+        items.forEach(el => {
+          if (el.textContent && el.textContent.toLowerCase().includes(targetLabel.toLowerCase())) {
+            el.click();
+          }
+        });
       } catch (e) { }
     },
     previousVideo: function () {
@@ -123,21 +139,44 @@
     },
     toggleFullscreen: function () {
       try {
+        if (document.fullscreenElement || document.webkitFullscreenElement) {
+          if (document.exitFullscreen) {
+            document.exitFullscreen().catch(() => {});
+          } else if (document.webkitExitFullscreen) {
+            document.webkitExitFullscreen();
+          }
+          return;
+        }
+
+        // 1. Direct native HTML5 video fullscreen (triggers Android WebChromeClient onShowCustomView & auto-landscape)
         const v = this.getVideo();
         if (v) {
-          if (v.paused) {
-            v.play().catch(() => {});
-          }
-          if (v.webkitEnterFullscreen) {
+          if (v.paused) v.play().catch(() => {});
+          if (typeof v.webkitEnterFullscreen === 'function') {
             v.webkitEnterFullscreen();
             return;
-          }
-          if (v.requestFullscreen) {
+          } else if (typeof v.requestFullscreen === 'function') {
             v.requestFullscreen().catch(() => {});
             return;
           }
         }
-        const fsBtn = document.querySelector('.ytp-fullscreen-button, button.ytp-fullscreen-button, .fullscreen-icon, ytm-fullscreen-button, button[aria-label*="Fullscreen"], button[aria-label*="fullscreen"]');
+
+        // 2. Container requestFullscreen
+        const player = document.getElementById('movie_player') || document.querySelector('.html5-video-player') || document.querySelector('ytm-media-item') || document.querySelector('.player-container');
+        if (player) {
+          if (player.requestFullscreen) {
+            player.requestFullscreen().catch(() => {});
+            return;
+          } else if (player.webkitRequestFullscreen) {
+            player.webkitRequestFullscreen();
+            return;
+          }
+        }
+
+        // 3. Fallback to UI fullscreen button
+        const fsBtn = document.querySelector(
+          '.ytp-fullscreen-button, button.ytp-fullscreen-button, .fullscreen-icon, ytm-fullscreen-button, button[aria-label*="Fullscreen"], button[aria-label*="fullscreen"], button[title*="Full screen"]'
+        );
         if (fsBtn) {
           fsBtn.click();
         }
@@ -174,6 +213,29 @@
   } catch (e) { }
   attachVideoListeners();
   setInterval(attachVideoListeners, 1000);
+
+  // 1.6 Intercept in-page YouTube Fullscreen button to trigger native WebView full-screen
+  try {
+    document.addEventListener('click', function (e) {
+      try {
+        const target = e.target;
+        if (target && target.closest) {
+          const fs = target.closest(
+            '.ytp-fullscreen-button, button.ytp-fullscreen-button, .fullscreen-icon, ytm-fullscreen-button, button[aria-label*="Fullscreen"], button[aria-label*="fullscreen"], button[title*="Full screen"]'
+          );
+          if (fs) {
+            const v = window.__CaspianYouTube ? window.__CaspianYouTube.getVideo() : document.querySelector('video');
+            if (v && typeof v.webkitEnterFullscreen === 'function') {
+              e.preventDefault();
+              e.stopPropagation();
+              if (v.paused) v.play().catch(() => {});
+              v.webkitEnterFullscreen();
+            }
+          }
+        }
+      } catch (err) { }
+    }, true);
+  } catch (e) { }
 
   // -------------------------------------------------------------
   // 2. Data Cleaning Utility (uBlock Origin JSON Prune)
@@ -327,7 +389,7 @@
   } catch (e) { }
 
   // -------------------------------------------------------------
-  // 6. Visual Element Ad Suppression
+  // 6. Visual Element Ad Suppression & Player Control Fixes
   // -------------------------------------------------------------
   const style = document.createElement('style');
   style.id = 'caspian-yt-ublock-rules';
@@ -342,12 +404,95 @@
       height: 0 !important;
       pointer-events: none !important;
     }
-    .ytp-settings-menu, .ytp-popup, .ytp-panel {
+    /* Ensure settings gear button and menus are interactive in fullscreen landscape (Fix for Chromium #57449) */
+    button[aria-label*="Settings" i],
+    button[aria-label*="More options" i],
+    button[aria-label*="Playback settings" i],
+    button[aria-label*="Quality" i],
+    button[aria-label*="Speed" i],
+    button[title*="Settings" i],
+    button[title*="More" i],
+    .ytp-settings-button,
+    .ytp-menu-button,
+    .ytm-settings-button,
+    button.icon-button[aria-label*="Settings" i],
+    button.icon-button[aria-label*="More options" i] {
       z-index: 2147483647 !important;
       pointer-events: auto !important;
+      visibility: visible !important;
+      opacity: 1 !important;
+    }
+    .ytp-settings-menu,
+    .ytp-popup,
+    .ytp-panel,
+    ytm-menu-renderer,
+    ytm-bottom-sheet-renderer,
+    ytm-settings-dialog,
+    ytm-popup-container,
+    .ytm-sheet,
+    dialog.ytm-dialog,
+    div.dialog-container,
+    .bottom-sheet-container {
+      position: fixed !important;
+      bottom: 0 !important;
+      left: 0 !important;
+      width: 100% !important;
+      max-height: 85vh !important;
+      overflow-y: auto !important;
+      z-index: 2147483647 !important;
+      pointer-events: auto !important;
+      visibility: visible !important;
     }
   `;
   (document.head || document.documentElement).appendChild(style);
+
+  // -------------------------------------------------------------
+  // 6.5 YouTube Fullscreen Settings Gear & Menu Bug Fix
+  // -------------------------------------------------------------
+  function reparentFsMenus() {
+    const fsElem = document.fullscreenElement || document.webkitFullscreenElement;
+    if (!fsElem) return;
+    const menus = document.querySelectorAll(
+      'body > ytm-menu-renderer, body > .ytm-bottom-sheet-renderer, body > ytm-settings-dialog, body > dialog, body > .dialog-container, body > .bottom-sheet-container, body > ytm-popup-container, ' +
+      'ytm-app > ytm-menu-renderer, ytm-app > .ytm-bottom-sheet-renderer, ytm-app > ytm-settings-dialog, ytm-app > dialog, ytm-app > .dialog-container, ytm-app > .bottom-sheet-container, ytm-app > ytm-popup-container'
+    );
+    menus.forEach(menu => {
+      if (menu && menu.parentNode && menu.parentNode !== fsElem) {
+        fsElem.appendChild(menu);
+      }
+    });
+  }
+
+  function handleSettingsInteraction(e) {
+    const target = e.target;
+    if (!target) return;
+    const btn = target.closest(
+      'button[aria-label*="Settings" i], button[aria-label*="More options" i], button[aria-label*="Playback settings" i], .ytp-settings-button, .ytm-settings-button, .ytp-menu-button'
+    );
+    if (btn) {
+      setTimeout(reparentFsMenus, 20);
+      setTimeout(reparentFsMenus, 80);
+      setTimeout(reparentFsMenus, 200);
+      setTimeout(reparentFsMenus, 500);
+    }
+  }
+  document.addEventListener('touchstart', handleSettingsInteraction, true);
+  document.addEventListener('click', handleSettingsInteraction, true);
+
+  // In HTML5 fullscreen, any element appended to document.body is hidden behind the fullscreen top-layer
+  // Reparent YouTube bottom sheets / menus into document.fullscreenElement so they display properly
+  try {
+    const fsMenuObserver = new MutationObserver(() => {
+      reparentFsMenus();
+    });
+    if (document.body) {
+      fsMenuObserver.observe(document.body, { childList: true, subtree: true });
+    } else {
+      document.addEventListener('DOMContentLoaded', () => {
+        if (document.body) fsMenuObserver.observe(document.body, { childList: true, subtree: true });
+      });
+    }
+  } catch (e) { }
 
   // -------------------------------------------------------------
   // 7. Playback State Synchronization with Caspian Android

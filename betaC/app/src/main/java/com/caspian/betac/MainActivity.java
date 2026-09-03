@@ -14,6 +14,7 @@ import android.graphics.Bitmap;
 import android.graphics.BitmapFactory;
 import android.graphics.Canvas;
 import android.graphics.Color;
+import android.content.pm.ActivityInfo;
 import android.graphics.Rect;
 import android.graphics.SurfaceTexture;
 import android.graphics.drawable.ColorDrawable;
@@ -50,6 +51,7 @@ import android.view.HapticFeedbackConstants;
 import android.view.KeyEvent;
 import android.view.MotionEvent;
 import android.view.Surface;
+import android.view.SurfaceView;
 import android.view.TextureView;
 import android.view.View;
 import android.view.ViewGroup;
@@ -2763,11 +2765,73 @@ public class MainActivity extends AppCompatActivity {
     }
 
     public void toggleFullscreenYouTube() {
+        if (customView != null) {
+            exitFullscreenCustomView();
+            return;
+        }
         TabItem currentTab = getTabById(activeTabId);
         if (currentTab != null && currentTab.webView != null) {
             currentTab.webView.evaluateJavascript(
-                    "if (window.__CaspianYouTube) window.__CaspianYouTube.toggleFullscreen(); else { var v = document.querySelector('video'); if (v) { if (v.paused) v.play().catch(()=>{}); if (v.webkitEnterFullscreen) v.webkitEnterFullscreen(); else if (v.requestFullscreen) v.requestFullscreen(); } }", null
+                    "if (window.__CaspianYouTube) window.__CaspianYouTube.toggleFullscreen(); else { var v = document.querySelector('video'); if (v) { if (v.paused) v.play().catch(()=>{}); if (typeof v.webkitEnterFullscreen === 'function') v.webkitEnterFullscreen(); else if (typeof v.requestFullscreen === 'function') v.requestFullscreen(); } }", null
             );
+        }
+    }
+
+    public void exitFullscreenCustomView() {
+        runOnUiThread(() -> {
+            TabItem currentTab = getTabById(activeTabId);
+            if (currentTab != null && currentTab.webView != null) {
+                currentTab.webView.evaluateJavascript(
+                        "if (document.fullscreenElement || document.webkitFullscreenElement) { " +
+                        "  if (document.exitFullscreen) document.exitFullscreen().catch(()=>{}); " +
+                        "  else if (document.webkitExitFullscreen) document.webkitExitFullscreen(); " +
+                        "}", null
+                );
+            }
+            if (customView != null) {
+                fullscreenContainer.removeView(customView);
+                customView = null;
+                fullscreenContainer.setVisibility(View.GONE);
+                if (customViewCallback != null) {
+                    try {
+                        customViewCallback.onCustomViewHidden();
+                    } catch (Exception ignored) {}
+                    customViewCallback = null;
+                }
+            }
+            try {
+                setRequestedOrientation(ActivityInfo.SCREEN_ORIENTATION_UNSPECIFIED);
+                getWindow().getDecorView().setSystemUiVisibility(View.SYSTEM_UI_FLAG_VISIBLE);
+            } catch (Exception ignored) {}
+
+            if (ytFloatingRemoteContainer != null) {
+                if (ytFloatingRemoteContainer.getLayoutParams() instanceof ViewGroup.MarginLayoutParams) {
+                    ViewGroup.MarginLayoutParams lp = (ViewGroup.MarginLayoutParams) ytFloatingRemoteContainer.getLayoutParams();
+                    lp.bottomMargin = dpToPx(205);
+                    lp.rightMargin = dpToPx(8);
+                    ytFloatingRemoteContainer.setLayoutParams(lp);
+                }
+                ytFloatingRemoteContainer.setElevation(dpToPx(250));
+                ytFloatingRemoteContainer.setTranslationZ(0f);
+            }
+            if (ytRemoteFullscreen != null) {
+                ytRemoteFullscreen.setImageResource(R.drawable.ic_pod_fullscreen);
+                ytRemoteFullscreen.setContentDescription("Fullscreen Toggle");
+            }
+        });
+    }
+
+    private void findAndConfigureSurfaceViews(View v) {
+        if (v == null) return;
+        if (v instanceof SurfaceView) {
+            try {
+                ((SurfaceView) v).setZOrderMediaOverlay(false);
+            } catch (Exception ignored) {}
+        } else if (v instanceof ViewGroup) {
+            ViewGroup vg = (ViewGroup) v;
+            for (int i = 0; i < vg.getChildCount(); i++) {
+                findAndConfigureSurfaceViews(vg.getChildAt(i));
+            }
         }
     }
 
@@ -6404,6 +6468,7 @@ public class MainActivity extends AppCompatActivity {
         settings.setBuiltInZoomControls(true);
         settings.setDisplayZoomControls(false);
         settings.setUserAgentString(MOBILE_UA);
+        settings.setMediaPlaybackRequiresUserGesture(false);
 
         if (!isIncognito) {
             CaskManager.applyProfileToWebView(webView, finalCaskId);
@@ -6615,17 +6680,98 @@ public class MainActivity extends AppCompatActivity {
                 }
                 customView = view;
                 customViewCallback = callback;
-                fullscreenContainer.addView(customView);
+                findAndConfigureSurfaceViews(customView);
+                fullscreenContainer.addView(customView, new FrameLayout.LayoutParams(
+                        ViewGroup.LayoutParams.MATCH_PARENT,
+                        ViewGroup.LayoutParams.MATCH_PARENT,
+                        Gravity.CENTER
+                ));
                 fullscreenContainer.setVisibility(View.VISIBLE);
+
+                try {
+                    // Auto-rotate to landscape like native YouTube app
+                    setRequestedOrientation(ActivityInfo.SCREEN_ORIENTATION_SENSOR_LANDSCAPE);
+
+                    // Immersive sticky fullscreen
+                    getWindow().getDecorView().setSystemUiVisibility(
+                            View.SYSTEM_UI_FLAG_LAYOUT_STABLE
+                            | View.SYSTEM_UI_FLAG_LAYOUT_HIDE_NAVIGATION
+                            | View.SYSTEM_UI_FLAG_LAYOUT_FULLSCREEN
+                            | View.SYSTEM_UI_FLAG_HIDE_NAVIGATION
+                            | View.SYSTEM_UI_FLAG_FULLSCREEN
+                            | View.SYSTEM_UI_FLAG_IMMERSIVE_STICKY
+                    );
+
+                    // If vertical video (Shorts), detect and switch back to portrait
+                    if (tabItem.webView != null) {
+                        tabItem.webView.evaluateJavascript(
+                                "(function(){ " +
+                                "  try { " +
+                                "    if (window.location.href.indexOf('/shorts/') !== -1) return true; " +
+                                "    var v = document.querySelector('video'); " +
+                                "    return !!(v && v.videoHeight > 0 && v.videoWidth > 0 && (v.videoHeight > v.videoWidth)); " +
+                                "  } catch(e) { return false; } " +
+                                "})()",
+                                isPortrait -> {
+                                    if (isPortrait != null && isPortrait.contains("true")) {
+                                        try {
+                                            setRequestedOrientation(ActivityInfo.SCREEN_ORIENTATION_SENSOR_PORTRAIT);
+                                        } catch (Exception ignored) {}
+                                    }
+                                }
+                        );
+                    }
+                } catch (Exception ignored) {}
+
+                // Keep Float Pod visible and elevated above fullscreen container
+                if (ytFloatingRemoteContainer != null) {
+                    ytFloatingRemoteContainer.setTranslationX(0f);
+                    ytFloatingRemoteContainer.setTranslationY(0f);
+                    if (ytFloatingRemoteContainer.getLayoutParams() instanceof ViewGroup.MarginLayoutParams) {
+                        ViewGroup.MarginLayoutParams lp = (ViewGroup.MarginLayoutParams) ytFloatingRemoteContainer.getLayoutParams();
+                        lp.bottomMargin = dpToPx(16);
+                        lp.rightMargin = dpToPx(24);
+                        ytFloatingRemoteContainer.setLayoutParams(lp);
+                    }
+                    ytFloatingRemoteContainer.bringToFront();
+                    ytFloatingRemoteContainer.setElevation(dpToPx(300));
+                    if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.LOLLIPOP) {
+                        ytFloatingRemoteContainer.setTranslationZ(dpToPx(100));
+                    }
+                    if (ytFloatingRemoteContainer.getParent() instanceof ViewGroup) {
+                        ((ViewGroup) ytFloatingRemoteContainer.getParent()).requestLayout();
+                        ((ViewGroup) ytFloatingRemoteContainer.getParent()).invalidate();
+                    }
+                    String curUrl = (tabItem.webView != null && tabItem.webView.getUrl() != null)
+                            ? tabItem.webView.getUrl()
+                            : (tabItem.url != null ? tabItem.url : "");
+                    boolean isYt = curUrl.toLowerCase().contains("youtube.com") || "youtube".equalsIgnoreCase(tabItem.service);
+                    if (isYt && !isYtRemoteExplicitlyHidden) {
+                        ytFloatingRemoteContainer.setVisibility(View.VISIBLE);
+                        if (ytFloatingRemoteScroll != null && ytFloatingRemoteBall != null) {
+                            if (ytFloatingRemoteScroll.getVisibility() != View.VISIBLE && ytFloatingRemoteBall.getVisibility() != View.VISIBLE) {
+                                ytFloatingRemoteBall.setVisibility(View.VISIBLE);
+                            }
+                        }
+                    }
+                }
+                if (ytFloatingRemoteBall != null) {
+                    ytFloatingRemoteBall.bringToFront();
+                    ytFloatingRemoteBall.setElevation(dpToPx(310));
+                }
+                if (ytFloatingRemoteScroll != null) {
+                    ytFloatingRemoteScroll.bringToFront();
+                    ytFloatingRemoteScroll.setElevation(dpToPx(310));
+                }
+                if (ytRemoteFullscreen != null) {
+                    ytRemoteFullscreen.setImageResource(R.drawable.ic_pod_fullscreen_exit);
+                    ytRemoteFullscreen.setContentDescription("Exit Fullscreen");
+                }
             }
 
             @Override
             public void onHideCustomView() {
-                if (customView == null) return;
-                fullscreenContainer.removeView(customView);
-                customView = null;
-                fullscreenContainer.setVisibility(View.GONE);
-                if (customViewCallback != null) customViewCallback.onCustomViewHidden();
+                exitFullscreenCustomView();
             }
 
             @Override
@@ -6817,6 +6963,9 @@ public class MainActivity extends AppCompatActivity {
     }
 
     public void switchToTab(int tabId) {
+        if (customView != null && tabId != activeTabId) {
+            exitFullscreenCustomView();
+        }
         TabItem previousTab = getTabById(activeTabId);
         if (previousTab != null) captureTabSnapshot(previousTab);
 
@@ -6852,6 +7001,10 @@ public class MainActivity extends AppCompatActivity {
         if (toRemove != null && toRemove.isFavorite) {
             Toast.makeText(this, "⭐ Favorited tabs are locked. Unfavorite first to close.", Toast.LENGTH_SHORT).show();
             return;
+        }
+
+        if (customView != null && activeTabId == tabId) {
+            exitFullscreenCustomView();
         }
 
         if (tabsList.size() <= 1) {
@@ -7674,8 +7827,7 @@ public class MainActivity extends AppCompatActivity {
             return;
         }
         if (customView != null) {
-            WebChromeClient client = getTabById(activeTabId) != null ? getTabById(activeTabId).webView.getWebChromeClient() : null;
-            if (client != null) client.onHideCustomView();
+            exitFullscreenCustomView();
             return;
         }
         if (isSheetOpen) {

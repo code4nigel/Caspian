@@ -1109,7 +1109,7 @@
         android:layout_marginEnd="8dp"
         android:clickable="true"
         android:focusable="true"
-        android:elevation="45dp"
+        android:elevation="250dp"
         android:visibility="gone">
 
         <!-- Expanded Full Remote Dock -->
@@ -1293,7 +1293,7 @@
             android:background="@drawable/bg_liquid_glass_ball"
             android:clickable="true"
             android:focusable="true"
-            android:elevation="46dp"
+            android:elevation="145dp"
             android:visibility="gone">
 
             <TextView
