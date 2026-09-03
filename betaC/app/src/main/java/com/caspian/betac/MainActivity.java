@@ -2969,11 +2969,29 @@ public class MainActivity extends AppCompatActivity {
                 floatingCaspianCard.setVisibility(View.VISIBLE);
             }
             applyScreenTouchLockState(false);
-            if (ytFloatingTimelineBar != null) {
-                ytFloatingTimelineBar.setVisibility(View.GONE);
-            }
-            if (ytRemoteTimeline != null) {
-                ytRemoteTimeline.setColorFilter(0xFFFFFFFF);
+            String behavior = getYtTimelineDefaultBehavior();
+            boolean keepInVertical = "vertical_only".equals(behavior) || "both".equals(behavior);
+            if (keepInVertical) {
+                isTimelineUserEnabled = true;
+                if (ytFloatingTimelineBar != null) {
+                    syncTimelineBarWidth();
+                    ytFloatingTimelineBar.setVisibility(View.VISIBLE);
+                    if (ytRemoteTimeline != null) {
+                        try {
+                            ytRemoteTimeline.setColorFilter(Color.parseColor(podStartColor));
+                        } catch (Exception e) {
+                            ytRemoteTimeline.setColorFilter(0xFF00E5FF);
+                        }
+                    }
+                }
+            } else {
+                isTimelineUserEnabled = false;
+                if (ytFloatingTimelineBar != null) {
+                    ytFloatingTimelineBar.setVisibility(View.GONE);
+                }
+                if (ytRemoteTimeline != null) {
+                    ytRemoteTimeline.setColorFilter(0xFFFFFFFF);
+                }
             }
             if (volumePopupWindow != null && volumePopupWindow.isShowing()) {
                 volumePopupWindow.dismiss();
@@ -2983,6 +3001,39 @@ public class MainActivity extends AppCompatActivity {
                 ytRemoteFullscreen.setContentDescription("Fullscreen Toggle");
             }
         });
+    }
+
+    public String getYtTimelineDefaultBehavior() {
+        try {
+            SharedPreferences prefs = getSharedPreferences("CaspianFlowPrefs", Context.MODE_PRIVATE);
+            return prefs.getString("yt_timeline_default_behavior", "fullscreen_only");
+        } catch (Exception e) {
+            return "fullscreen_only";
+        }
+    }
+
+    public void applyTimelineDefaultBehavior(String behavior) {
+        boolean isFs = customView != null;
+        boolean shouldShow = (isFs && ("fullscreen_only".equals(behavior) || "both".equals(behavior)))
+                || (!isFs && ("vertical_only".equals(behavior) || "both".equals(behavior)));
+        if (ytFloatingTimelineBar != null) {
+            if (shouldShow) {
+                isTimelineUserEnabled = true;
+                syncTimelineBarWidth();
+                ytFloatingTimelineBar.setVisibility(View.VISIBLE);
+                if (ytRemoteTimeline != null) {
+                    try {
+                        ytRemoteTimeline.setColorFilter(Color.parseColor(podStartColor));
+                    } catch (Exception e) {
+                        ytRemoteTimeline.setColorFilter(0xFF00E5FF);
+                    }
+                }
+            } else {
+                isTimelineUserEnabled = false;
+                ytFloatingTimelineBar.setVisibility(View.GONE);
+                if (ytRemoteTimeline != null) ytRemoteTimeline.setColorFilter(0xFFFFFFFF);
+            }
+        }
     }
 
     @Override
@@ -7460,6 +7511,20 @@ public class MainActivity extends AppCompatActivity {
                     ytRemoteFullscreen.setContentDescription("Exit Fullscreen");
                 }
                 applyScreenTouchLockState(true);
+                String behavior = getYtTimelineDefaultBehavior();
+                if ("fullscreen_only".equals(behavior) || "both".equals(behavior)) {
+                    isTimelineUserEnabled = true;
+                    if (ytFloatingTimelineBar != null) {
+                        ytFloatingTimelineBar.setVisibility(View.VISIBLE);
+                        if (ytRemoteTimeline != null) {
+                            try {
+                                ytRemoteTimeline.setColorFilter(Color.parseColor(podStartColor));
+                            } catch (Exception e) {
+                                ytRemoteTimeline.setColorFilter(0xFF00E5FF);
+                            }
+                        }
+                    }
+                }
                 syncTimelineBarWidth();
             }
 
@@ -8037,8 +8102,26 @@ public class MainActivity extends AppCompatActivity {
                         ytFloatingRemoteBall.setVisibility(View.VISIBLE);
                     }
                     ytFloatingRemoteContainer.setVisibility(View.VISIBLE);
+                    if (customView == null) {
+                        String behavior = getYtTimelineDefaultBehavior();
+                        if ("both".equals(behavior) || "vertical_only".equals(behavior)) {
+                            isTimelineUserEnabled = true;
+                            if (ytFloatingTimelineBar != null) {
+                                syncTimelineBarWidth();
+                                ytFloatingTimelineBar.setVisibility(View.VISIBLE);
+                                if (ytRemoteTimeline != null) {
+                                    try {
+                                        ytRemoteTimeline.setColorFilter(Color.parseColor(podStartColor));
+                                    } catch (Exception e) {
+                                        ytRemoteTimeline.setColorFilter(0xFF00E5FF);
+                                    }
+                                }
+                            }
+                        }
+                    }
                 } else {
                     ytFloatingRemoteContainer.setVisibility(View.GONE);
+                    if (ytFloatingTimelineBar != null) ytFloatingTimelineBar.setVisibility(View.GONE);
                 }
             }
             applyScreenTouchLockState(isScreenTouchLocked);

@@ -1245,26 +1245,6 @@
                         android:contentDescription="YouTube Features &amp; Settings" />
 
                     <ImageButton
-                        android:id="@+id/yt_remote_fullscreen"
-                        android:layout_width="26dp"
-                        android:layout_height="26dp"
-                        android:layout_marginStart="2dp"
-                        android:background="?attr/selectableItemBackgroundBorderless"
-                        android:src="@drawable/ic_pod_fullscreen"
-                        android:tint="#FFFFFF"
-                        android:contentDescription="Fullscreen Toggle" />
-
-                    <ImageButton
-                        android:id="@+id/yt_remote_timeline"
-                        android:layout_width="26dp"
-                        android:layout_height="26dp"
-                        android:layout_marginStart="2dp"
-                        android:background="?attr/selectableItemBackgroundBorderless"
-                        android:src="@drawable/ic_pod_timeline"
-                        android:tint="#FFFFFF"
-                        android:contentDescription="Show Player Controls &amp; Timeline" />
-
-                    <ImageButton
                         android:id="@+id/yt_remote_lock"
                         android:layout_width="26dp"
                         android:layout_height="26dp"
@@ -1377,6 +1357,26 @@
                         android:textColor="#FFFFFF"
                         android:textSize="11sp"
                         android:textStyle="bold" />
+
+                    <ImageButton
+                        android:id="@+id/yt_remote_fullscreen"
+                        android:layout_width="26dp"
+                        android:layout_height="26dp"
+                        android:layout_marginStart="4dp"
+                        android:background="?attr/selectableItemBackgroundBorderless"
+                        android:src="@drawable/ic_pod_fullscreen"
+                        android:tint="#FFFFFF"
+                        android:contentDescription="Fullscreen Toggle" />
+
+                    <ImageButton
+                        android:id="@+id/yt_remote_timeline"
+                        android:layout_width="26dp"
+                        android:layout_height="26dp"
+                        android:layout_marginStart="2dp"
+                        android:background="?attr/selectableItemBackgroundBorderless"
+                        android:src="@drawable/ic_pod_timeline"
+                        android:tint="#FFFFFF"
+                        android:contentDescription="Show Player Controls &amp; Timeline" />
 
                     <View
                         android:layout_width="1dp"

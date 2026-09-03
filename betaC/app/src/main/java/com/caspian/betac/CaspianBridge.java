@@ -90,6 +90,13 @@ public class CaspianBridge {
     }
 
     @JavascriptInterface
+    public void applyTimelineDefaultBehavior(String behavior) {
+        if (activity != null && behavior != null) {
+            activity.runOnUiThread(() -> activity.applyTimelineDefaultBehavior(behavior));
+        }
+    }
+
+    @JavascriptInterface
     public String getSettings() {
         if (activity == null) return "{}";
         try {

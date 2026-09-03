@@ -1357,6 +1357,23 @@
           const ytScale = (prefs && prefs.yt_pod_scale) || localStorage.getItem('yt_pod_scale') || '1.0';
           document.querySelectorAll('.btn-yt-pod-scale').forEach(b => b.classList.toggle('active', b.dataset.scale === ytScale));
 
+          const ytTimelineBehavior = (prefs && prefs.yt_timeline_default_behavior) || localStorage.getItem('yt_timeline_default_behavior') || 'fullscreen_only';
+          document.querySelectorAll('.yt-timeline-mode-pill').forEach(b => {
+            const isActive = b.dataset.behavior === ytTimelineBehavior;
+            b.classList.toggle('active', isActive);
+            b.classList.toggle('secondary', !isActive);
+          });
+          const ytTimelineBehaviorLabel = document.getElementById('yt-timeline-behavior-label');
+          if (ytTimelineBehaviorLabel) {
+            const ytTimelineLabelMap = {
+              'fullscreen_only': 'Fullscreen Only',
+              'both': 'Both Layouts',
+              'vertical_only': 'Vertical Only',
+              'manual_only': 'Off (Manual)'
+            };
+            ytTimelineBehaviorLabel.textContent = ytTimelineLabelMap[ytTimelineBehavior] || 'Fullscreen Only';
+          }
+
           const googleScale = (prefs && prefs.google_dock_scale) || localStorage.getItem('google_dock_scale') || '1.0';
           document.querySelectorAll('.btn-google-dock-scale').forEach(b => b.classList.toggle('active', b.dataset.scale === googleScale));
 
@@ -3937,6 +3954,51 @@
         }
       });
     }
+
+    // YouTube Float Pod - Timeline Default Behavior Selector
+    const ytTimelineModePills = document.querySelectorAll('.yt-timeline-mode-pill');
+    const ytTimelineBehaviorLabel = document.getElementById('yt-timeline-behavior-label');
+    const ytTimelineLabelMap = {
+      'fullscreen_only': 'Fullscreen Only',
+      'both': 'Both Layouts',
+      'vertical_only': 'Vertical Only',
+      'manual_only': 'Off (Manual)'
+    };
+    let currentYtTimelineBehavior = localStorage.getItem('yt_timeline_default_behavior') || 'fullscreen_only';
+
+    function updateYtTimelinePillsUI(behavior) {
+      ytTimelineModePills.forEach(pill => {
+        const isActive = pill.dataset.behavior === behavior;
+        pill.classList.toggle('active', isActive);
+        pill.classList.toggle('secondary', !isActive);
+      });
+      if (ytTimelineBehaviorLabel) {
+        ytTimelineBehaviorLabel.textContent = ytTimelineLabelMap[behavior] || 'Fullscreen Only';
+      }
+    }
+    updateYtTimelinePillsUI(currentYtTimelineBehavior);
+
+    ytTimelineModePills.forEach(pill => {
+      pill.addEventListener('click', (e) => {
+        e.stopPropagation();
+        playSFX('tb_clicks');
+        const behavior = pill.dataset.behavior;
+        currentYtTimelineBehavior = behavior;
+        localStorage.setItem('yt_timeline_default_behavior', behavior);
+        updateYtTimelinePillsUI(behavior);
+        if (window.CaspianBridge) {
+          if (typeof window.CaspianBridge.saveSetting === 'function') {
+            window.CaspianBridge.saveSetting('yt_timeline_default_behavior', behavior);
+          }
+          if (typeof window.CaspianBridge.applyTimelineDefaultBehavior === 'function') {
+            window.CaspianBridge.applyTimelineDefaultBehavior(behavior);
+          }
+          if (typeof window.CaspianBridge.showToast === 'function') {
+            window.CaspianBridge.showToast(`Timeline Default: ${ytTimelineLabelMap[behavior] || behavior}`);
+          }
+        }
+      });
+    });
 
     // ChatGPT Toolbar handlers
     if (chatgptToolbarLaunchBtn) {
