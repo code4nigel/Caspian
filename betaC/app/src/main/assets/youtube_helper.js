@@ -801,44 +801,24 @@
       height: 0 !important;
       pointer-events: none !important;
     }
-    /* Ensure settings gear button and menus are interactive in fullscreen landscape (Fix for Chromium #57449) */
-    button[aria-label*="Settings" i],
-    button[aria-label*="More options" i],
-    button[aria-label*="Playback settings" i],
-    button[aria-label*="Quality" i],
-    button[aria-label*="Speed" i],
-    button[title*="Settings" i],
-    button[title*="More" i],
-    .ytp-settings-button,
-    .ytp-menu-button,
-    .ytm-settings-button,
-    button.icon-button[aria-label*="Settings" i],
-    button.icon-button[aria-label*="More options" i] {
+    /* Only scope settings gear button and menus inside fullscreen */
+    :fullscreen .ytp-settings-button,
+    :fullscreen .ytp-menu-button,
+    :fullscreen .ytm-settings-button,
+    :fullscreen .ytp-settings-menu,
+    :fullscreen .ytp-popup,
+    :fullscreen .ytp-panel {
       z-index: 2147483647 !important;
+      pointer-events: auto !important;
+    }
+    /* Guarantee YouTube mobile bottom navigation bar (Home, Shorts, Subscriptions, You) is always on top and interactive */
+    ytm-pivot-bar-renderer,
+    .pivot-bar,
+    #pivot-bar {
+      z-index: 99999 !important;
       pointer-events: auto !important;
       visibility: visible !important;
       opacity: 1 !important;
-    }
-    .ytp-settings-menu,
-    .ytp-popup,
-    .ytp-panel,
-    ytm-menu-renderer,
-    ytm-bottom-sheet-renderer,
-    ytm-settings-dialog,
-    ytm-popup-container,
-    .ytm-sheet,
-    dialog.ytm-dialog,
-    div.dialog-container,
-    .bottom-sheet-container {
-      position: fixed !important;
-      bottom: 0 !important;
-      left: 0 !important;
-      width: 100% !important;
-      max-height: 85vh !important;
-      overflow-y: auto !important;
-      z-index: 2147483647 !important;
-      pointer-events: auto !important;
-      visibility: visible !important;
     }
     /* Caspian PiP Active: forces video element to occupy 100vw/100vh and hides everything else */
     html.caspian-pip-active, body.caspian-pip-active {
