@@ -310,6 +310,8 @@ public class MainActivity extends AppCompatActivity {
     private TextView ytTimelineCurrentTime;
     private SeekBar ytTimelineSeekbar;
     private TextView ytTimelineTotalTime;
+    private ImageButton ytTimelineCollapse;
+    private boolean isTimelineUserEnabled = false;
     private boolean isUserScrubbingTimeline = false;
     private double currentVideoDuration = 0;
     private View videoTouchLockOverlay;
@@ -1569,6 +1571,7 @@ public class MainActivity extends AppCompatActivity {
             ytTimelineCurrentTime = findViewById(R.id.yt_timeline_current_time);
             ytTimelineSeekbar = findViewById(R.id.yt_timeline_seekbar);
             ytTimelineTotalTime = findViewById(R.id.yt_timeline_total_time);
+            ytTimelineCollapse = findViewById(R.id.yt_timeline_collapse);
             videoTouchLockOverlay = findViewById(R.id.video_touch_lock_overlay);
             ytRemotePrevVideo = findViewById(R.id.yt_remote_prev_video);
             ytRemoteSeekBack = findViewById(R.id.yt_remote_seek_back);
@@ -2650,6 +2653,9 @@ public class MainActivity extends AppCompatActivity {
             }
             if (ytTimelinePlayPause != null) {
                 ytTimelinePlayPause.setColorFilter(startC);
+            }
+            if (ytTimelineCollapse != null) {
+                ytTimelineCollapse.setColorFilter(startC);
             }
             if (ytTimelineSeekbar != null) {
                 ytTimelineSeekbar.setThumbTintList(ColorStateList.valueOf(startC));
@@ -4019,6 +4025,7 @@ public class MainActivity extends AppCompatActivity {
                     playUiFeedbackSound("tap");
                     if (ytFloatingTimelineBar != null) {
                         boolean isShown = ytFloatingTimelineBar.getVisibility() == View.VISIBLE;
+                        isTimelineUserEnabled = !isShown;
                         if (!isShown) syncTimelineBarWidth();
                         ytFloatingTimelineBar.setVisibility(isShown ? View.GONE : View.VISIBLE);
                         ytRemoteTimeline.setColorFilter(isShown ? 0xFFFFFFFF : 0xFF00E5FF);
@@ -4079,6 +4086,25 @@ public class MainActivity extends AppCompatActivity {
                 ytTimelinePlayPause.setOnClickListener(v -> {
                     playUiFeedbackSound("tap");
                     togglePlayYouTube();
+                });
+            }
+
+            if (ytTimelineCollapse != null) {
+                ytTimelineCollapse.setOnClickListener(v -> {
+                    playUiFeedbackSound("tap");
+                    if (ytFloatingTimelineBar != null && ytFloatingTimelineBar.getVisibility() == View.VISIBLE) {
+                        isTimelineUserEnabled = true;
+                        ytFloatingTimelineBar.animate()
+                                .alpha(0f)
+                                .translationX(dpToPx(35))
+                                .setDuration(200)
+                                .withEndAction(() -> {
+                                    ytFloatingTimelineBar.setVisibility(View.GONE);
+                                    ytFloatingTimelineBar.setAlpha(1f);
+                                    ytFloatingTimelineBar.setTranslationX(0f);
+                                })
+                                .start();
+                    }
                 });
             }
 
@@ -4158,7 +4184,22 @@ public class MainActivity extends AppCompatActivity {
                                 playUiFeedbackSound("tap");
                                 ytFloatingRemoteBall.setVisibility(View.GONE);
                                 ytFloatingRemoteScroll.setVisibility(View.VISIBLE);
-                                syncTimelineBarWidth();
+                                if (isTimelineUserEnabled && ytFloatingTimelineBar != null) {
+                                    syncTimelineBarWidth();
+                                    ytFloatingTimelineBar.setVisibility(View.VISIBLE);
+                                    ytFloatingTimelineBar.setAlpha(0f);
+                                    ytFloatingTimelineBar.setTranslationX(dpToPx(35));
+                                    ytFloatingTimelineBar.animate()
+                                            .alpha(1f)
+                                            .translationX(0f)
+                                            .setDuration(220)
+                                            .start();
+                                    if (ytRemoteTimeline != null) {
+                                        ytRemoteTimeline.setColorFilter(0xFF00E5FF);
+                                    }
+                                } else {
+                                    syncTimelineBarWidth();
+                                }
                             }
                             return true;
                     }

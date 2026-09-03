@@ -1177,6 +1177,16 @@
                     android:textColor="#DFE2F0"
                     android:textSize="11sp"
                     android:fontFamily="monospace" />
+
+                <ImageButton
+                    android:id="@+id/yt_timeline_collapse"
+                    android:layout_width="24dp"
+                    android:layout_height="24dp"
+                    android:layout_marginStart="4dp"
+                    android:background="?attr/selectableItemBackgroundBorderless"
+                    android:src="@drawable/ic_pod_timeline_collapse"
+                    android:tint="#A0FFFFFF"
+                    android:contentDescription="Collapse Timeline" />
             </LinearLayout>
 
             <!-- Expanded Full Remote Dock -->
