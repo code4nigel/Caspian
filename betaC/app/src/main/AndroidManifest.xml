@@ -25,7 +25,8 @@
 
         <activity
             android:name=".MainActivity"
-            android:configChanges="orientation|screenSize|keyboardHidden"
+            android:configChanges="orientation|screenSize|keyboardHidden|smallestScreenSize|screenLayout"
+            android:supportsPictureInPicture="true"
             android:launchMode="singleTask"
             android:windowSoftInputMode="adjustResize"
             android:icon="@mipmap/ic_launcher"

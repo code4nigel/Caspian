@@ -1378,6 +1378,16 @@
                         android:tint="#FFFFFF"
                         android:contentDescription="Show Player Controls &amp; Timeline" />
 
+                    <ImageButton
+                        android:id="@+id/yt_remote_pip"
+                        android:layout_width="26dp"
+                        android:layout_height="26dp"
+                        android:layout_marginStart="2dp"
+                        android:background="?attr/selectableItemBackgroundBorderless"
+                        android:src="@drawable/ic_pod_pip"
+                        android:tint="#FFFFFF"
+                        android:contentDescription="Picture in Picture Mode" />
+
                     <View
                         android:layout_width="1dp"
                         android:layout_height="16dp"

@@ -3,6 +3,13 @@ package com.caspian.betac;
 import android.Manifest;
 import android.annotation.SuppressLint;
 import android.app.DownloadManager;
+import android.app.PictureInPictureParams;
+import android.app.RemoteAction;
+import android.app.PendingIntent;
+import android.content.BroadcastReceiver;
+import android.content.IntentFilter;
+import android.graphics.drawable.Icon;
+import android.util.Rational;
 import android.content.ClipData;
 import android.content.ClipboardManager;
 import android.content.Context;
@@ -302,6 +309,11 @@ public class MainActivity extends AppCompatActivity {
     private ImageButton ytRemoteReload;
     private ImageButton ytRemoteFullscreen;
     private ImageButton ytRemoteTimeline;
+    private ImageButton ytRemotePip;
+    public static final String ACTION_PIP_PLAY_PAUSE = "com.caspian.betac.ACTION_PIP_PLAY_PAUSE";
+    public static final String ACTION_PIP_REWIND = "com.caspian.betac.ACTION_PIP_REWIND";
+    public static final String ACTION_PIP_FORWARD = "com.caspian.betac.ACTION_PIP_FORWARD";
+    private BroadcastReceiver pipActionReceiver;
     private ImageButton ytRemoteLock;
     private ImageButton ytRemoteSettings;
     private TextView ytRemoteVolumeBtn;
@@ -486,6 +498,7 @@ public class MainActivity extends AppCompatActivity {
         try { setupVoiceVisualizer(); } catch (Throwable ignored) {}
         try { setupLiquidGlassYouTubeRemote(); } catch (Throwable ignored) {}
         try { setupLiquidGlassGoogleDock(); } catch (Throwable ignored) {}
+        try { setupPiPActionsReceiver(); } catch (Throwable ignored) {}
         try { setupLiquidGlassChatGPTDock(); } catch (Throwable ignored) {}
         try { setupLiquidGlassGeminiDock(); } catch (Throwable ignored) {}
         try { setupSplitFloatingControls(); } catch (Throwable ignored) {}
@@ -1564,6 +1577,7 @@ public class MainActivity extends AppCompatActivity {
             ytRemoteFullscreen = findViewById(R.id.yt_remote_fullscreen);
             ytRemoteSettings = findViewById(R.id.yt_remote_settings);
             ytRemoteTimeline = findViewById(R.id.yt_remote_timeline);
+            ytRemotePip = findViewById(R.id.yt_remote_pip);
             ytRemoteLock = findViewById(R.id.yt_remote_lock);
             ytRemoteVolumeBtn = findViewById(R.id.yt_remote_volume_btn);
             ytFloatingTimelineBar = findViewById(R.id.yt_floating_timeline_bar);
@@ -2457,6 +2471,9 @@ public class MainActivity extends AppCompatActivity {
             if (ytRemoteMute != null) {
                 ytRemoteMute.setImageResource(isMuted ? R.drawable.ic_pod_mute : R.drawable.ic_pod_unmute);
             }
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O && isInPictureInPictureMode()) {
+                updatePiPActions();
+            }
         }
         boolean anyPlaying = false;
         for (TabItem t : tabsList) {
@@ -2666,6 +2683,9 @@ public class MainActivity extends AppCompatActivity {
             }
             if (ytRemoteTimeline != null && ytFloatingTimelineBar != null && ytFloatingTimelineBar.getVisibility() == View.VISIBLE) {
                 ytRemoteTimeline.setColorFilter(startC);
+            }
+            if (ytRemotePip != null) {
+                ytRemotePip.setColorFilter(0xFFFFFFFF);
             }
         } catch (Exception e) {
             floatingCaspianCard.setCardBackgroundColor(0xFF00C4FF);
@@ -4089,6 +4109,13 @@ public class MainActivity extends AppCompatActivity {
                             }
                         }
                     }
+                });
+            }
+
+            if (ytRemotePip != null) {
+                ytRemotePip.setOnClickListener(v -> {
+                    playUiFeedbackSound("tap");
+                    enterYouTubePiP();
                 });
             }
 
@@ -7190,7 +7217,7 @@ public class MainActivity extends AppCompatActivity {
         String finalCaskId = (targetCaskId != null && !targetCaskId.trim().isEmpty()) ? targetCaskId : cm.getActiveCaskId();
         CaskManager.CaskItem cask = cm.getCaskById(finalCaskId);
 
-        WebView webView = new WebView(this);
+        CaspianWebView webView = new CaspianWebView(this);
         webView.setLayoutParams(new ViewGroup.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.MATCH_PARENT));
 
         WebSettings settings = webView.getSettings();
@@ -8719,9 +8746,145 @@ public class MainActivity extends AppCompatActivity {
         saveOpenTabsState();
     }
 
+    private void setupPiPActionsReceiver() {
+        pipActionReceiver = new BroadcastReceiver() {
+            @Override
+            public void onReceive(Context context, Intent intent) {
+                if (intent == null || intent.getAction() == null) return;
+                String action = intent.getAction();
+                if (ACTION_PIP_PLAY_PAUSE.equals(action)) {
+                    togglePlayYouTube();
+                    updatePiPActions();
+                } else if (ACTION_PIP_REWIND.equals(action)) {
+                    seekYouTube(-10);
+                } else if (ACTION_PIP_FORWARD.equals(action)) {
+                    seekYouTube(10);
+                }
+            }
+        };
+        IntentFilter pipFilter = new IntentFilter();
+        pipFilter.addAction(ACTION_PIP_PLAY_PAUSE);
+        pipFilter.addAction(ACTION_PIP_REWIND);
+        pipFilter.addAction(ACTION_PIP_FORWARD);
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+            registerReceiver(pipActionReceiver, pipFilter, Context.RECEIVER_NOT_EXPORTED);
+        } else {
+            registerReceiver(pipActionReceiver, pipFilter);
+        }
+    }
+
+    private List<RemoteAction> buildPiPRemoteActions(boolean isPlaying) {
+        List<RemoteAction> actions = new ArrayList<>();
+        if (Build.VERSION.SDK_INT < Build.VERSION_CODES.O) return actions;
+
+        try {
+            // 1. Rewind 10s
+            Intent rewindIntent = new Intent(ACTION_PIP_REWIND).setPackage(getPackageName());
+            PendingIntent rewindPendingIntent = PendingIntent.getBroadcast(
+                    this, 101, rewindIntent, PendingIntent.FLAG_UPDATE_CURRENT | PendingIntent.FLAG_IMMUTABLE
+            );
+            Icon rewindIcon = Icon.createWithResource(this, R.drawable.ic_pod_rewind);
+            actions.add(new RemoteAction(rewindIcon, "Rewind 10s", "Rewind 10s", rewindPendingIntent));
+
+            // 2. Play / Pause
+            Intent playPauseIntent = new Intent(ACTION_PIP_PLAY_PAUSE).setPackage(getPackageName());
+            PendingIntent playPausePendingIntent = PendingIntent.getBroadcast(
+                    this, 102, playPauseIntent, PendingIntent.FLAG_UPDATE_CURRENT | PendingIntent.FLAG_IMMUTABLE
+            );
+            Icon playPauseIcon = Icon.createWithResource(this, isPlaying ? R.drawable.ic_pod_pause : R.drawable.ic_pod_play);
+            actions.add(new RemoteAction(playPauseIcon, isPlaying ? "Pause" : "Play", isPlaying ? "Pause" : "Play", playPausePendingIntent));
+
+            // 3. Fast forward 10s
+            Intent fwdIntent = new Intent(ACTION_PIP_FORWARD).setPackage(getPackageName());
+            PendingIntent fwdPendingIntent = PendingIntent.getBroadcast(
+                    this, 103, fwdIntent, PendingIntent.FLAG_UPDATE_CURRENT | PendingIntent.FLAG_IMMUTABLE
+            );
+            Icon fwdIcon = Icon.createWithResource(this, R.drawable.ic_pod_fastfwd);
+            actions.add(new RemoteAction(fwdIcon, "Forward 10s", "Forward 10s", fwdPendingIntent));
+        } catch (Exception ignored) {}
+
+        return actions;
+    }
+
+    public void updatePiPActions() {
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+            try {
+                if (isInPictureInPictureMode()) {
+                    TabItem tab = getTabById(activeTabId);
+                    boolean isPlaying = tab != null && tab.isPlayingAudio;
+                    PictureInPictureParams.Builder builder = new PictureInPictureParams.Builder();
+                    builder.setAspectRatio(new Rational(16, 9));
+                    builder.setActions(buildPiPRemoteActions(isPlaying));
+                    setPictureInPictureParams(builder.build());
+                }
+            } catch (Exception ignored) {}
+        }
+    }
+
+    public void enterYouTubePiP() {
+        if (Build.VERSION.SDK_INT < Build.VERSION_CODES.O) {
+            Toast.makeText(this, "Picture-in-Picture requires Android 8.0+", Toast.LENGTH_SHORT).show();
+            return;
+        }
+        if (!getPackageManager().hasSystemFeature(PackageManager.FEATURE_PICTURE_IN_PICTURE)) {
+            Toast.makeText(this, "PiP mode is not supported on this device", Toast.LENGTH_SHORT).show();
+            return;
+        }
+        try {
+            TabItem tab = getTabById(activeTabId);
+            boolean isPlaying = tab != null && tab.isPlayingAudio;
+            PictureInPictureParams.Builder pipBuilder = new PictureInPictureParams.Builder();
+            pipBuilder.setAspectRatio(new Rational(16, 9));
+            pipBuilder.setActions(buildPiPRemoteActions(isPlaying));
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
+                pipBuilder.setAutoEnterEnabled(true);
+                pipBuilder.setSeamlessResizeEnabled(true);
+            }
+            enterPictureInPictureMode(pipBuilder.build());
+        } catch (Exception e) {
+            Log.e(TAG, "Failed to enter PiP mode", e);
+            Toast.makeText(this, "Failed to enter PiP", Toast.LENGTH_SHORT).show();
+        }
+    }
+
+    @Override
+    public void onPictureInPictureModeChanged(boolean isInPictureInPictureMode, Configuration newConfig) {
+        super.onPictureInPictureModeChanged(isInPictureInPictureMode, newConfig);
+        if (isInPictureInPictureMode) {
+            if (omniboxHeader != null) omniboxHeader.setVisibility(View.GONE);
+            if (floatingCaspianCard != null) floatingCaspianCard.setVisibility(View.GONE);
+            if (ytFloatingRemoteContainer != null) ytFloatingRemoteContainer.setVisibility(View.GONE);
+            if (ytFloatingTimelineBar != null) ytFloatingTimelineBar.setVisibility(View.GONE);
+            if (searchNavContainer != null) searchNavContainer.setVisibility(View.GONE);
+            if (browserProgressBar != null) browserProgressBar.setVisibility(View.GONE);
+            if (videoTouchLockOverlay != null) videoTouchLockOverlay.setVisibility(View.GONE);
+        } else {
+            if (omniboxHeader != null) omniboxHeader.setVisibility(View.VISIBLE);
+            TabItem tab = getTabById(activeTabId);
+            if (tab != null) updateOmniboxState();
+            syncTimelineBarWidth();
+        }
+    }
+
+    @Override
+    protected void onUserLeaveHint() {
+        super.onUserLeaveHint();
+        TabItem tab = getTabById(activeTabId);
+        if (tab != null && tab.url != null && tab.url.toLowerCase().contains("youtube.com")) {
+            if (tab.isPlayingAudio) {
+                enterYouTubePiP();
+            }
+        }
+    }
+
     @Override
     protected void onDestroy() {
         super.onDestroy();
+        if (pipActionReceiver != null) {
+            try {
+                unregisterReceiver(pipActionReceiver);
+            } catch (Exception ignored) {}
+        }
         try {
             if (youtubeWakeLock != null && youtubeWakeLock.isHeld()) {
                 youtubeWakeLock.release();
