@@ -7219,7 +7219,7 @@ public class MainActivity extends AppCompatActivity {
                     }
                 }
                 if (adBlockShield != null && adBlockShield.isBlocked(request.getUrl().toString())) {
-                    return new WebResourceResponse("text/plain", "UTF-8", new ByteArrayInputStream("".getBytes()));
+                    return adBlockShield.getBlockedResponse(request.getUrl().toString());
                 }
                 return super.shouldInterceptRequest(view, request);
             }
@@ -7912,12 +7912,38 @@ public class MainActivity extends AppCompatActivity {
 
     public void reloadTab(int tabId) {
         TabItem tab = getTabById(tabId);
-        if (tab != null && tab.webView != null) tab.webView.reload();
+        if (tab != null && tab.webView != null) {
+            try {
+                tab.webView.stopLoading();
+                String url = tab.webView.getUrl();
+                if (url == null || url.isEmpty()) url = tab.url;
+                if (url != null && !url.isEmpty()) {
+                    tab.webView.loadUrl(url);
+                } else {
+                    tab.webView.reload();
+                }
+            } catch (Exception e) {
+                tab.webView.reload();
+            }
+        }
     }
 
     public void reloadActiveTab() {
         TabItem tab = getActiveOrDominantTab();
-        if (tab != null && tab.webView != null) tab.webView.reload();
+        if (tab != null && tab.webView != null) {
+            try {
+                tab.webView.stopLoading();
+                String url = tab.webView.getUrl();
+                if (url == null || url.isEmpty()) url = tab.url;
+                if (url != null && !url.isEmpty()) {
+                    tab.webView.loadUrl(url);
+                } else {
+                    tab.webView.reload();
+                }
+            } catch (Exception e) {
+                tab.webView.reload();
+            }
+        }
     }
 
     public void toggleDesktopMode(int tabId) {

@@ -134,6 +134,24 @@ public class AdBlockShield {
         return false;
     }
 
+    public android.webkit.WebResourceResponse getBlockedResponse(String urlString) {
+        if (urlString != null) {
+            String lower = urlString.toLowerCase();
+            if (lower.contains("/pagead/") || lower.contains("doubleclick") || lower.contains("ad_type") || lower.contains("vast")) {
+                // Return valid empty VAST XML so YouTube's player cleanly processes 0 ads and immediately transitions to video
+                String emptyVast = "<?xml version=\"1.0\" encoding=\"UTF-8\"?><VAST version=\"2.0\"></VAST>";
+                return new android.webkit.WebResourceResponse("application/xml", "UTF-8", 200, "OK", null,
+                        new java.io.ByteArrayInputStream(emptyVast.getBytes(java.nio.charset.StandardCharsets.UTF_8)));
+            } else if (lower.contains("/youtubei/v1/player/ad_break") || lower.contains("/ad_break") || lower.contains(".json")) {
+                // Return valid empty JSON
+                return new android.webkit.WebResourceResponse("application/json", "UTF-8", 200, "OK", null,
+                        new java.io.ByteArrayInputStream("{}".getBytes(java.nio.charset.StandardCharsets.UTF_8)));
+            }
+        }
+        return new android.webkit.WebResourceResponse("text/plain", "UTF-8", 200, "OK", null,
+                new java.io.ByteArrayInputStream("".getBytes(java.nio.charset.StandardCharsets.UTF_8)));
+    }
+
     /**
      * Strips UTM and tracking query parameters from URL
      */

@@ -504,24 +504,161 @@
   };
 
   // -------------------------------------------------------------
-  // 5. Accurate 0ms Auto-Skip & Fast-Forward Fallback Engine
+  // 4.5 Per-Tab YouTube Home Feed & Recommendation State Preservation
   // -------------------------------------------------------------
+  // Memory-only state scoped strictly to this specific tab's window
+  // When this tab is closed, this WebView window is destroyed and this RAM is immediately freed.
+  window.__caspian_yt_home_state = {
+    browseResponse: null,
+    scrollY: 0,
+    isReturningHome: false,
+    hasLeftHome: false
+  };
+
+  // Track user scrolling on the home page
+  window.addEventListener('scroll', () => {
+    try {
+      const path = window.location.pathname;
+      if (path === '/' || path === '') {
+        window.__caspian_yt_home_state.scrollY = window.scrollY || window.pageYOffset || 0;
+      }
+    } catch (e) { }
+  }, { passive: true });
+
+  // Listen to navigation changes (popstate)
+  window.addEventListener('popstate', () => {
+    try {
+      const path = window.location.pathname;
+      if ((path === '/' || path === '') && window.__caspian_yt_home_state.hasLeftHome && window.__caspian_yt_home_state.browseResponse) {
+        window.__caspian_yt_home_state.isReturningHome = true;
+      }
+    } catch (e) { }
+  });
+
+  // Observe route changes between home and watch
+  let _lastYtPath = window.location.pathname;
+  setInterval(() => {
+    try {
+      const curPath = window.location.pathname;
+      if (curPath !== _lastYtPath) {
+        if (_lastYtPath === '/' && curPath.includes('/watch')) {
+          window.__caspian_yt_home_state.hasLeftHome = true;
+        } else if ((curPath === '/' || curPath === '') && _lastYtPath.includes('/watch')) {
+          if (window.__caspian_yt_home_state.browseResponse) {
+            window.__caspian_yt_home_state.isReturningHome = true;
+          }
+        }
+        _lastYtPath = curPath;
+      }
+    } catch (e) { }
+  }, 150);
+
+  // Hook window.fetch for /youtubei/v1/browse
+  if (window.fetch) {
+    const origFetch = window.fetch;
+    window.fetch = async function (resource, init) {
+      const url = typeof resource === 'string' ? resource : (resource && resource.url ? resource.url : '');
+      if (url.includes('/youtubei/v1/browse')) {
+        // If returning home via back navigation, serve our in-memory cached browse response!
+        if (window.__caspian_yt_home_state.isReturningHome && window.__caspian_yt_home_state.browseResponse) {
+          window.__caspian_yt_home_state.isReturningHome = false;
+          window.__caspian_yt_home_state.hasLeftHome = false;
+          const cachedJson = window.__caspian_yt_home_state.browseResponse;
+
+          // Restore scroll position after YouTube mounts the home feed
+          setTimeout(() => {
+            try {
+              if (window.__caspian_yt_home_state.scrollY > 0) {
+                window.scrollTo({ top: window.__caspian_yt_home_state.scrollY, behavior: 'instant' });
+              }
+            } catch (e) { }
+          }, 80);
+          setTimeout(() => {
+            try {
+              if (window.__caspian_yt_home_state.scrollY > 0) {
+                window.scrollTo({ top: window.__caspian_yt_home_state.scrollY, behavior: 'instant' });
+              }
+            } catch (e) { }
+          }, 300);
+
+          return new Response(JSON.stringify(cachedJson), {
+            status: 200,
+            statusText: 'OK',
+            headers: { 'Content-Type': 'application/json' }
+          });
+        }
+
+        // Live fetch for home feed: cache the initial recommendation payload in memory
+        const response = await origFetch.apply(this, arguments);
+        try {
+          // Only cache initial feed, not infinite scroll continuations
+          let isContinuation = false;
+          if (init && init.body && typeof init.body === 'string' && init.body.includes('continuation')) {
+            isContinuation = true;
+          }
+          if (!isContinuation && (window.location.pathname === '/' || window.location.pathname === '')) {
+            const clone = response.clone();
+            clone.json().then(data => {
+              if (data && !data.error) {
+                window.__caspian_yt_home_state.browseResponse = data;
+              }
+            }).catch(() => {});
+          }
+        } catch (e) { }
+        return response;
+      }
+      return origFetch.apply(this, arguments);
+    };
+  }
+
+  // -------------------------------------------------------------
+  // 5. Accurate 0ms Auto-Skip & GSI Codec-Safe Fallback Engine
+  // -------------------------------------------------------------
+  let _adHangStartTime = null;
+
   function executeFastForwardSkip() {
     try {
       const player = document.getElementById('movie_player') || document.querySelector('.html5-video-player');
       const isAdActive = !!(player && (player.classList.contains('ad-showing') || player.classList.contains('ad-interrupting')));
       const adText = document.querySelector('.ytp-ad-text, .ytp-ad-preview-text, .ytp-ad-duration-remaining');
-
       const video = document.querySelector('video');
 
-      // ONLY fast-forward if an actual ad is confirmed active (never on real video)
+      // Native YouTube Player API skip (cleanest and doesn't rely on brute-force seeking)
+      if (player && typeof player.skipAd === 'function') {
+        try { player.skipAd(); } catch (e) { }
+      }
+
+      // Safe fast-forward: ONLY if video media is ready and buffered (readyState >= 2)
+      // Never set 16x or seek on unbuffered video as it crashes generic AOSP MediaCodec on GSI ROMs!
       if ((isAdActive || adText) && video) {
         video.muted = true;
-        video.playbackRate = 16.0;
-        // Most video ads are short (< 120s). Fast-forward to end of ad stream
-        if (isFinite(video.duration) && video.duration > 0 && video.duration < 120) {
-          video.currentTime = video.duration;
+        if (video.readyState >= 2) {
+          try {
+            if (video.playbackRate < 8.0) video.playbackRate = 8.0;
+          } catch (e) { }
+          if (isFinite(video.duration) && video.duration > 0 && video.duration < 120 && video.currentTime < video.duration - 0.5) {
+            try { video.currentTime = video.duration - 0.1; } catch (e) { }
+          }
         }
+
+        // Ad Freeze / Hang Watchdog for GSI ROMs:
+        // If an ad is stalled for > 1.5 seconds without advancing, force clear ad state
+        if (!_adHangStartTime) {
+          _adHangStartTime = Date.now();
+        } else if (Date.now() - _adHangStartTime > 1500) {
+          if (player) {
+            try { if (typeof player.skipAd === 'function') player.skipAd(); } catch (e) { }
+            player.classList.remove('ad-showing', 'ad-interrupting');
+          }
+          if (video) {
+            video.muted = false;
+            video.playbackRate = 1.0;
+            video.play().catch(() => {});
+          }
+          _adHangStartTime = null;
+        }
+      } else {
+        _adHangStartTime = null;
       }
 
       // Click any skip button instantly
