@@ -204,6 +204,45 @@
     } catch (e) { }
   }
 
+  function formatMarkdown(text) {
+    if (!text) return '';
+    let html = text
+      // Escape basic HTML
+      .replace(/&/g, '&amp;')
+      .replace(/</g, '&lt;')
+      .replace(/>/g, '&gt;');
+
+    // Headers
+    html = html.replace(/^###\s+(.*$)/gim, '<div style="font-weight: 700; font-size: 12px; color: #00E5FF; margin: 8px 0 3px 0;">$1</div>');
+    html = html.replace(/^##\s+(.*$)/gim, '<div style="font-weight: 800; font-size: 13px; color: #10B981; margin: 10px 0 4px 0;">$1</div>');
+    html = html.replace(/^#\s+(.*$)/gim, '<div style="font-weight: 900; font-size: 14px; color: #FFFFFF; margin: 12px 0 6px 0;">$1</div>');
+
+    // Bold & Italics
+    html = html.replace(/\*\*\*(.*?)\*\*\*/gim, '<strong><em>$1</em></strong>');
+    html = html.replace(/\*\*(.*?)\*\*/gim, '<strong style="color: #FFFFFF;">$1</strong>');
+    html = html.replace(/\*(.*?)\*/gim, '<em style="color: #DFE2F0;">$1</em>');
+    html = html.replace(/__(.*?)__/gim, '<strong style="color: #FFFFFF;">$1</strong>');
+    html = html.replace(/_(.*?)_/gim, '<em style="color: #DFE2F0;">$1</em>');
+
+    // Inline code
+    html = html.replace(/`([^`]+)`/gim, '<code style="background: rgba(255,255,255,0.12); color: #00E5FF; padding: 2px 5px; border-radius: 4px; font-family: monospace; font-size: 10px;">$1</code>');
+
+    // Unordered lists (- item or * item)
+    html = html.replace(/^\s*[\-\*]\s+(.*$)/gim, '<div style="display: flex; gap: 6px; margin: 3px 0 3px 4px;"><span style="color: #00E5FF;">•</span><span>$1</span></div>');
+
+    // Numbered lists (1. item)
+    html = html.replace(/^\s*(\d+)\.\s+(.*$)/gim, '<div style="display: flex; gap: 6px; margin: 3px 0 3px 4px;"><span style="color: #10B981; font-weight: bold;">$1.</span><span>$2</span></div>');
+
+    // Horizontal rules
+    html = html.replace(/^---$/gim, '<hr style="border: none; border-top: 1px solid rgba(255,255,255,0.12); margin: 8px 0;">');
+
+    // Paragraphs / line breaks
+    html = html.replace(/\n\n/g, '<div style="height: 6px;"></div>');
+    html = html.replace(/\n/g, '<br>');
+
+    return html;
+  }
+
   let latestUpdateInfo = null;
 
   function showUpdateModal(info) {
@@ -221,7 +260,7 @@
 
     const changelogEl = document.getElementById('update-modal-changelog');
     if (changelogEl) {
-      changelogEl.textContent = info.changelogBody || 'No release notes provided.';
+      changelogEl.innerHTML = formatMarkdown(info.changelogBody || 'No release notes provided.');
     }
 
     const progressContainer = document.getElementById('update-progress-container');

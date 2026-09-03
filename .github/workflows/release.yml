@@ -196,6 +196,18 @@ jobs:
                 continue;
               }
 
+              // Extract the latest commit message to use as the dynamic changelog
+              let commitMessage = '';
+              try {
+                const { execSync } = require('child_process');
+                commitMessage = execSync('git log -1 --pretty=%B').toString().trim();
+              } catch (e) {
+                console.log('Error reading commit message:', e);
+              }
+
+              const releaseNotes = (config.id === 'flow' && commitMessage) ? commitMessage : config.desc;
+              const releaseBody = `### 📱 ${config.productName}\n\n${releaseNotes}\n\n- **Version Tag**: \`${config.tag}\`\n- **Artifact**: \`${matched.name}\`\n\nDownload the asset below to install or use.`;
+
               matchedLatestFiles.push({ config, asset: matched });
               console.log(`\n========================================`);
               console.log(`Publishing: ${config.title}`);
@@ -210,7 +222,7 @@ jobs:
                   repo,
                   release_id: release.id,
                   name: config.title,
-                  body: `### 📱 ${config.productName}\n\n${config.desc}\n\n- **Version Tag**: \`${config.tag}\`\n- **Artifact**: \`${matched.name}\`\n\nDownload the asset below to install or use.`,
+                  body: releaseBody,
                   prerelease: config.isPrerelease,
                   make_latest: "false"
                 });
@@ -221,7 +233,7 @@ jobs:
                   repo,
                   tag_name: config.tag,
                   name: config.title,
-                  body: `### 📱 ${config.productName}\n\n${config.desc}\n\n- **Version Tag**: \`${config.tag}\`\n- **Artifact**: \`${matched.name}\`\n\nDownload the asset below to install or use.`,
+                  body: releaseBody,
                   draft: false,
                   prerelease: config.isPrerelease,
                   make_latest: "false"

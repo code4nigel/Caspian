@@ -22,6 +22,7 @@ import android.graphics.drawable.GradientDrawable;
 import android.view.PixelCopy;
 import android.webkit.RenderProcessGoneDetail;
 import java.util.function.Consumer;
+import android.content.res.Configuration;
 import android.widget.PopupWindow;
 import android.media.AudioAttributes;
 import android.media.AudioFormat;
@@ -306,7 +307,7 @@ public class MainActivity extends AppCompatActivity {
     private boolean isUserScrubbingTimeline = false;
     private double currentVideoDuration = 0;
     private View videoTouchLockOverlay;
-    private boolean isScreenTouchLocked = false;
+    private boolean isScreenTouchLocked = true;
     private PopupWindow volumePopupWindow;
     private ImageButton ytRemotePrevVideo;
     private ImageButton ytRemoteSeekBack;
@@ -2795,7 +2796,20 @@ public class MainActivity extends AppCompatActivity {
         TabItem currentTab = getTabById(activeTabId);
         if (currentTab != null && currentTab.webView != null) {
             currentTab.webView.evaluateJavascript(
-                    "if (window.__CaspianYouTube) window.__CaspianYouTube.toggleFullscreen(); else { var v = document.querySelector('video'); if (v) { if (v.paused) v.play().catch(()=>{}); if (typeof v.webkitEnterFullscreen === 'function') v.webkitEnterFullscreen(); else if (typeof v.requestFullscreen === 'function') v.requestFullscreen(); } }", null
+                    "(function(){ " +
+                    "  if (window.__CaspianYouTube && typeof window.__CaspianYouTube.toggleFullscreen === 'function') { " +
+                    "    window.__CaspianYouTube.toggleFullscreen(); " +
+                    "  } else { " +
+                    "    var fs = document.querySelector('.ytp-fullscreen-button, button.ytp-fullscreen-button, .fullscreen-icon, ytm-fullscreen-button, button[aria-label*=\"Fullscreen\"], button[aria-label*=\"fullscreen\"]'); " +
+                    "    if (fs) { try { fs.click(); } catch(e){} } " +
+                    "    var v = document.querySelector('video'); " +
+                    "    if (v) { " +
+                    "      if (v.paused) v.play().catch(()=>{}); " +
+                    "      if (typeof v.webkitEnterFullscreen === 'function') { try { v.webkitEnterFullscreen(); } catch(e){} } " +
+                    "      else if (typeof v.requestFullscreen === 'function') { v.requestFullscreen().catch(()=>{}); } " +
+                    "    } " +
+                    "  } " +
+                    "})()", null
             );
         }
     }
@@ -2855,9 +2869,7 @@ public class MainActivity extends AppCompatActivity {
             if (floatingCaspianCard != null) {
                 floatingCaspianCard.setVisibility(View.VISIBLE);
             }
-            if (isScreenTouchLocked) {
-                toggleScreenTouchLock();
-            }
+            applyScreenTouchLockState(false);
             if (ytFloatingTimelineBar != null) {
                 ytFloatingTimelineBar.setVisibility(View.GONE);
             }
@@ -2872,6 +2884,12 @@ public class MainActivity extends AppCompatActivity {
                 ytRemoteFullscreen.setContentDescription("Fullscreen Toggle");
             }
         });
+    }
+
+    @Override
+    public void onConfigurationChanged(Configuration newConfig) {
+        super.onConfigurationChanged(newConfig);
+        syncTimelineBarWidth();
     }
 
     public void updateYouTubeTimeLive(double currentTime, double duration) {
@@ -2912,25 +2930,46 @@ public class MainActivity extends AppCompatActivity {
         }
     }
 
-    public void toggleScreenTouchLock() {
-        playUiFeedbackSound("tap");
-        isScreenTouchLocked = !isScreenTouchLocked;
+    public void syncTimelineBarWidth() {
+        if (ytFloatingTimelineBar == null) return;
+        DisplayMetrics dm = getResources().getDisplayMetrics();
+        int screenW = dm.widthPixels;
+        int targetW = ViewGroup.LayoutParams.MATCH_PARENT;
+        if (ytFloatingRemoteScroll != null) {
+            int scrollW = ytFloatingRemoteScroll.getWidth();
+            if (scrollW <= 0) scrollW = ytFloatingRemoteScroll.getMeasuredWidth();
+            if (scrollW > 0) {
+                targetW = Math.min(scrollW, screenW - dpToPx(16));
+            }
+        }
+        if (targetW > 0) {
+            ViewGroup.LayoutParams lp = ytFloatingTimelineBar.getLayoutParams();
+            if (lp != null) {
+                lp.width = targetW;
+                ytFloatingTimelineBar.setLayoutParams(lp);
+            }
+        }
+    }
+
+    public void applyScreenTouchLockState(boolean locked) {
+        isScreenTouchLocked = locked;
         if (videoTouchLockOverlay != null) {
             videoTouchLockOverlay.setVisibility(isScreenTouchLocked ? View.VISIBLE : View.GONE);
             if (isScreenTouchLocked) {
-                videoTouchLockOverlay.setOnTouchListener((v, event) -> {
-                    if (event.getAction() == MotionEvent.ACTION_DOWN) {
-                        Toast.makeText(this, "🔒 Screen Locked • Tap Lock on Float Pod to unlock", Toast.LENGTH_SHORT).show();
-                    }
-                    return true;
-                });
+                // Completely silent touch blocker - no annoying toast on touch
+                videoTouchLockOverlay.setOnTouchListener((v, event) -> true);
             }
         }
         if (ytRemoteLock != null) {
             ytRemoteLock.setImageResource(isScreenTouchLocked ? R.drawable.ic_pod_lock : R.drawable.ic_pod_unlock);
             ytRemoteLock.setColorFilter(isScreenTouchLocked ? 0xFFFF5252 : 0xFFFFFFFF);
         }
-        Toast.makeText(this, isScreenTouchLocked ? "🔒 Screen Locked (Float Pod active)" : "🔓 Screen Unlocked", Toast.LENGTH_SHORT).show();
+    }
+
+    public void toggleScreenTouchLock() {
+        playUiFeedbackSound("tap");
+        applyScreenTouchLockState(!isScreenTouchLocked);
+        Toast.makeText(this, isScreenTouchLocked ? "🔒 Screen Locked" : "🔓 Screen Unlocked", Toast.LENGTH_SHORT).show();
     }
 
     public void updateVolumeButtonDisplay() {
@@ -3756,6 +3795,7 @@ public class MainActivity extends AppCompatActivity {
                     playUiFeedbackSound("tap");
                     if (ytFloatingTimelineBar != null) {
                         boolean isShown = ytFloatingTimelineBar.getVisibility() == View.VISIBLE;
+                        if (!isShown) syncTimelineBarWidth();
                         ytFloatingTimelineBar.setVisibility(isShown ? View.GONE : View.VISIBLE);
                         ytRemoteTimeline.setColorFilter(isShown ? 0xFFFFFFFF : 0xFF00E5FF);
                         if (!isShown) {
@@ -3799,6 +3839,7 @@ public class MainActivity extends AppCompatActivity {
             }
 
             if (ytRemoteLock != null) {
+                applyScreenTouchLockState(true);
                 ytRemoteLock.setOnClickListener(v -> toggleScreenTouchLock());
             }
 
@@ -7144,6 +7185,8 @@ public class MainActivity extends AppCompatActivity {
                     ytRemoteFullscreen.setImageResource(R.drawable.ic_pod_fullscreen_exit);
                     ytRemoteFullscreen.setContentDescription("Exit Fullscreen");
                 }
+                applyScreenTouchLockState(true);
+                syncTimelineBarWidth();
             }
 
             @Override

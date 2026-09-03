@@ -182,37 +182,45 @@
           return;
         }
 
-        // 1. Direct native HTML5 video fullscreen (triggers Android WebChromeClient onShowCustomView & auto-landscape)
         const v = this.getVideo();
+        if (v && v.paused) {
+          v.play().catch(() => {});
+        }
+
+        // 1. First trigger YouTube's official fullscreen UI button if present
+        const fsBtn = document.querySelector(
+          '.ytp-fullscreen-button, button.ytp-fullscreen-button, .fullscreen-icon, ytm-fullscreen-button, button[aria-label*="Fullscreen"], button[aria-label*="fullscreen"], button[title*="Full screen"], [aria-label*="full screen"]'
+        );
+        if (fsBtn) {
+          try { fsBtn.click(); } catch(e){}
+        }
+
+        // 2. Wake up YouTube player container if dormant
+        const player = document.getElementById('movie_player') || document.querySelector('.html5-video-player') || document.querySelector('ytm-media-item') || document.querySelector('.player-container');
+        if (player) {
+          try {
+            ['pointerdown', 'pointerup', 'click'].forEach(evt => {
+              player.dispatchEvent(new MouseEvent(evt, { bubbles: true, cancelable: true }));
+            });
+          } catch(e) {}
+        }
+
+        // 3. Direct native HTML5 video fullscreen (triggers Android WebChromeClient onShowCustomView & auto-landscape)
         if (v) {
-          if (v.paused) v.play().catch(() => {});
           if (typeof v.webkitEnterFullscreen === 'function') {
-            v.webkitEnterFullscreen();
-            return;
+            try { v.webkitEnterFullscreen(); } catch (e) {}
           } else if (typeof v.requestFullscreen === 'function') {
             v.requestFullscreen().catch(() => {});
-            return;
           }
         }
 
-        // 2. Container requestFullscreen
-        const player = document.getElementById('movie_player') || document.querySelector('.html5-video-player') || document.querySelector('ytm-media-item') || document.querySelector('.player-container');
+        // 4. Fallback to container requestFullscreen
         if (player) {
           if (player.requestFullscreen) {
             player.requestFullscreen().catch(() => {});
-            return;
           } else if (player.webkitRequestFullscreen) {
             player.webkitRequestFullscreen();
-            return;
           }
-        }
-
-        // 3. Fallback to UI fullscreen button
-        const fsBtn = document.querySelector(
-          '.ytp-fullscreen-button, button.ytp-fullscreen-button, .fullscreen-icon, ytm-fullscreen-button, button[aria-label*="Fullscreen"], button[aria-label*="fullscreen"], button[title*="Full screen"]'
-        );
-        if (fsBtn) {
-          fsBtn.click();
         }
       } catch (e) { }
     }
