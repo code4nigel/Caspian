@@ -22,6 +22,7 @@ import android.graphics.drawable.GradientDrawable;
 import android.view.PixelCopy;
 import android.webkit.RenderProcessGoneDetail;
 import java.util.function.Consumer;
+import android.content.res.ColorStateList;
 import android.content.res.Configuration;
 import android.widget.PopupWindow;
 import android.media.AudioAttributes;
@@ -36,6 +37,7 @@ import android.os.Bundle;
 import android.os.Environment;
 import android.os.Handler;
 import android.os.Looper;
+import android.os.PowerManager;
 import android.os.SystemClock;
 import android.print.PrintAttributes;
 import android.print.PrintDocumentAdapter;
@@ -322,6 +324,7 @@ public class MainActivity extends AppCompatActivity {
     private ImageButton ytRemoteShrinkBtn;
     private float ytCurrentSpeed = 1.0f;
     private boolean isYtRemoteExplicitlyHidden = false;
+    private PowerManager.WakeLock youtubeWakeLock;
 
     private FrameLayout searchNavContainer;
     private HorizontalScrollView searchDockScroll;
@@ -2425,6 +2428,27 @@ public class MainActivity extends AppCompatActivity {
         if (ytRemoteMute != null) {
             ytRemoteMute.setImageResource(isMuted ? R.drawable.ic_pod_mute : R.drawable.ic_pod_unmute);
         }
+        manageYouTubeWakeLock(isPlaying);
+    }
+
+    private void manageYouTubeWakeLock(boolean acquire) {
+        try {
+            if (acquire) {
+                if (youtubeWakeLock == null) {
+                    PowerManager pm = (PowerManager) getSystemService(Context.POWER_SERVICE);
+                    if (pm != null) {
+                        youtubeWakeLock = pm.newWakeLock(PowerManager.PARTIAL_WAKE_LOCK, "Caspian:YouTubePlayback");
+                    }
+                }
+                if (youtubeWakeLock != null && !youtubeWakeLock.isHeld()) {
+                    youtubeWakeLock.acquire(4 * 60 * 60 * 1000L); // 4-hour max safety timeout
+                }
+            } else {
+                if (youtubeWakeLock != null && youtubeWakeLock.isHeld()) {
+                    youtubeWakeLock.release();
+                }
+            }
+        } catch (Exception ignored) {}
     }
 
     public void applyPruningSettings(int limit, String mode, boolean enabled) {
@@ -2585,6 +2609,20 @@ public class MainActivity extends AppCompatActivity {
 
             if (speechWaveformView != null) {
                 speechWaveformView.setWaveColors(startC, endC);
+            }
+
+            if (ytTimelineCurrentTime != null) {
+                ytTimelineCurrentTime.setTextColor(startC);
+            }
+            if (ytTimelineSeekbar != null) {
+                ytTimelineSeekbar.setThumbTintList(ColorStateList.valueOf(startC));
+                ytTimelineSeekbar.setProgressTintList(ColorStateList.valueOf(startC));
+            }
+            if (ytRemoteVolumeBtn != null) {
+                ytRemoteVolumeBtn.setTextColor(startC);
+            }
+            if (ytRemoteTimeline != null && ytFloatingTimelineBar != null && ytFloatingTimelineBar.getVisibility() == View.VISIBLE) {
+                ytRemoteTimeline.setColorFilter(startC);
             }
         } catch (Exception e) {
             floatingCaspianCard.setCardBackgroundColor(0xFF00C4FF);
@@ -2952,20 +2990,29 @@ public class MainActivity extends AppCompatActivity {
         if (ytFloatingTimelineBar == null) return;
         DisplayMetrics dm = getResources().getDisplayMetrics();
         int screenW = dm.widthPixels;
-        int targetW = ViewGroup.LayoutParams.MATCH_PARENT;
-        if (ytFloatingRemoteScroll != null) {
-            int scrollW = ytFloatingRemoteScroll.getWidth();
-            if (scrollW <= 0) scrollW = ytFloatingRemoteScroll.getMeasuredWidth();
-            if (scrollW > 0) {
-                targetW = Math.min(scrollW, screenW - dpToPx(16));
+        boolean isCollapsed = ytFloatingRemoteBall != null && ytFloatingRemoteBall.getVisibility() == View.VISIBLE;
+
+        ViewGroup.MarginLayoutParams lp = (ViewGroup.MarginLayoutParams) ytFloatingTimelineBar.getLayoutParams();
+        if (lp != null) {
+            if (isCollapsed) {
+                // When collapsed to circular ball (44dp), set rightMargin to 50dp so the timeline
+                // ends cleanly before the ball icon, making the total duration clearly visible!
+                lp.rightMargin = dpToPx(50);
+                lp.width = Math.min(dpToPx(340), screenW - dpToPx(72));
+            } else {
+                lp.rightMargin = 0;
+                int scrollW = 0;
+                if (ytFloatingRemoteScroll != null) {
+                    scrollW = ytFloatingRemoteScroll.getWidth();
+                    if (scrollW <= 0) scrollW = ytFloatingRemoteScroll.getMeasuredWidth();
+                }
+                if (scrollW > 0) {
+                    lp.width = Math.min(scrollW, screenW - dpToPx(16));
+                } else {
+                    lp.width = ViewGroup.LayoutParams.MATCH_PARENT;
+                }
             }
-        }
-        if (targetW > 0) {
-            ViewGroup.LayoutParams lp = ytFloatingTimelineBar.getLayoutParams();
-            if (lp != null) {
-                lp.width = targetW;
-                ytFloatingTimelineBar.setLayoutParams(lp);
-            }
+            ytFloatingTimelineBar.setLayoutParams(lp);
         }
     }
 
@@ -3030,6 +3077,13 @@ public class MainActivity extends AppCompatActivity {
 
         percentTv.setText(currentPct + "%");
         volumeSeekBar.setProgress(currentPct);
+        try {
+            int accentColor = Color.parseColor(podStartColor);
+            percentTv.setTextColor(accentColor);
+            volumeSeekBar.setThumbTintList(ColorStateList.valueOf(accentColor));
+            volumeSeekBar.setProgressTintList(ColorStateList.valueOf(accentColor));
+        } catch (Exception ignored) {}
+
         if (volumeIcon != null) {
             volumeIcon.setImageResource(currentPct == 0 ? R.drawable.ic_pod_mute : R.drawable.ic_pod_sound);
         }
@@ -3916,6 +3970,7 @@ public class MainActivity extends AppCompatActivity {
                 playUiFeedbackSound("tap");
                 ytFloatingRemoteScroll.setVisibility(View.GONE);
                 ytFloatingRemoteBall.setVisibility(View.VISIBLE);
+                syncTimelineBarWidth();
             });
 
             ytFloatingRemoteBall.setOnTouchListener(new View.OnTouchListener() {
@@ -3951,6 +4006,7 @@ public class MainActivity extends AppCompatActivity {
                                 playUiFeedbackSound("tap");
                                 ytFloatingRemoteBall.setVisibility(View.GONE);
                                 ytFloatingRemoteScroll.setVisibility(View.VISIBLE);
+                                syncTimelineBarWidth();
                             }
                             return true;
                     }
@@ -7427,11 +7483,25 @@ public class MainActivity extends AppCompatActivity {
 
         activeTabId = tabId;
         if (splitModeState == 0) {
-            webViewContainer.removeAllViews();
-            if (tab.webView.getParent() != null) {
-                ((ViewGroup) tab.webView.getParent()).removeView(tab.webView);
+            for (TabItem t : tabsList) {
+                if (t.webView != null) {
+                    if (t.id == tabId) {
+                        if (t.webView.getParent() != webViewContainer) {
+                            if (t.webView.getParent() != null) {
+                                ((ViewGroup) t.webView.getParent()).removeView(t.webView);
+                            }
+                            webViewContainer.addView(t.webView);
+                        }
+                        t.webView.setVisibility(View.VISIBLE);
+                        t.webView.bringToFront();
+                    } else {
+                        // Keep background tab WebViews attached to container as INVISIBLE so background media playback continues uninterrupted
+                        if (t.webView.getParent() == webViewContainer) {
+                            t.webView.setVisibility(View.INVISIBLE);
+                        }
+                    }
+                }
             }
-            webViewContainer.addView(tab.webView);
         } else {
             applySplitViewLayout();
         }
@@ -8345,5 +8415,15 @@ public class MainActivity extends AppCompatActivity {
     protected void onPause() {
         super.onPause();
         saveOpenTabsState();
+    }
+
+    @Override
+    protected void onDestroy() {
+        super.onDestroy();
+        try {
+            if (youtubeWakeLock != null && youtubeWakeLock.isHeld()) {
+                youtubeWakeLock.release();
+            }
+        } catch (Exception ignored) {}
     }
 }

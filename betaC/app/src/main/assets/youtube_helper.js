@@ -6,20 +6,41 @@
   window.__CASPIAN_YT_DEFUSER_INITIALIZED__ = true;
 
   // -------------------------------------------------------------
-  // 1. Page Visibility API Override (Prevents YouTube background pause)
+  // 1. Comprehensive Page Visibility & Background Play Engine
   // -------------------------------------------------------------
   try {
     Object.defineProperty(document, 'hidden', { get: () => false, configurable: true });
     Object.defineProperty(document, 'visibilityState', { get: () => 'visible', configurable: true });
+    Object.defineProperty(document, 'webkitVisibilityState', { get: () => 'visible', configurable: true });
+    Document.prototype.hasFocus = () => true;
   } catch (e) { }
 
-  window.addEventListener('visibilitychange', function (e) {
-    e.stopImmediatePropagation();
-  }, true);
+  // Intercept and drop visibility change listeners that YouTube uses to pause videos
+  try {
+    const origDocAddEventListener = document.addEventListener;
+    document.addEventListener = function (type, listener, options) {
+      if (type === 'visibilitychange' || type === 'webkitvisibilitychange') {
+        return;
+      }
+      return origDocAddEventListener.apply(this, arguments);
+    };
 
+    const origWinAddEventListener = window.addEventListener;
+    window.addEventListener = function (type, listener, options) {
+      if (type === 'visibilitychange' || type === 'webkitvisibilitychange' || type === 'pagehide') {
+        return;
+      }
+      return origWinAddEventListener.apply(this, arguments);
+    };
+  } catch (e) { }
+
+  // Block automatic pausing triggered by backgrounding or tab switching
   const originalPause = HTMLVideoElement.prototype.pause;
   HTMLVideoElement.prototype.pause = function () {
-    if (document.hidden || document.visibilityState === 'hidden') {
+    const err = new Error();
+    const stack = (err.stack || '').toLowerCase();
+    // If pause is triggered by visibilitychange, blur, focus change, or pagehide, ignore it!
+    if (stack.includes('visibility') || stack.includes('blur') || stack.includes('pagehide') || stack.includes('hidden')) {
       return;
     }
     return originalPause.apply(this, arguments);
