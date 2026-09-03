@@ -8,18 +8,22 @@
   // -------------------------------------------------------------
   // 1. Comprehensive Page Visibility & Background Play Engine
   // -------------------------------------------------------------
+  window.__caspian_explicit_pause = false;
+  window.__caspian_pip_active = false;
+
   try {
     Object.defineProperty(document, 'hidden', { get: () => false, configurable: true });
     Object.defineProperty(document, 'visibilityState', { get: () => 'visible', configurable: true });
     Object.defineProperty(document, 'webkitVisibilityState', { get: () => 'visible', configurable: true });
-    Document.prototype.hasFocus = () => true;
+    document.hasFocus = () => true;
+    window.hasFocus = () => true;
   } catch (e) { }
 
-  // Intercept and drop visibility change listeners that YouTube uses to pause videos
+  // Intercept and drop listeners that YouTube uses to pause videos (visibility, blur, freeze, pagehide)
   try {
     const origDocAddEventListener = document.addEventListener;
     document.addEventListener = function (type, listener, options) {
-      if (type === 'visibilitychange' || type === 'webkitvisibilitychange') {
+      if (type === 'visibilitychange' || type === 'webkitvisibilitychange' || type === 'blur' || type === 'focusout' || type === 'pagehide' || type === 'freeze') {
         return;
       }
       return origDocAddEventListener.apply(this, arguments);
@@ -27,20 +31,30 @@
 
     const origWinAddEventListener = window.addEventListener;
     window.addEventListener = function (type, listener, options) {
-      if (type === 'visibilitychange' || type === 'webkitvisibilitychange' || type === 'pagehide') {
+      if (type === 'visibilitychange' || type === 'webkitvisibilitychange' || type === 'pagehide' || type === 'blur' || type === 'focusout' || type === 'freeze') {
         return;
       }
       return origWinAddEventListener.apply(this, arguments);
     };
+
+    try {
+      window.onblur = null;
+      document.onblur = null;
+      window.onpagehide = null;
+    } catch(e){}
   } catch (e) { }
 
-  // Block automatic pausing triggered by backgrounding or tab switching
+  // Block automatic pausing triggered by backgrounding, blur, or entering PiP
   const originalPause = HTMLVideoElement.prototype.pause;
   HTMLVideoElement.prototype.pause = function () {
+    if (window.__caspian_explicit_pause) {
+      window.__caspian_explicit_pause = false;
+      return originalPause.apply(this, arguments);
+    }
     const err = new Error();
     const stack = (err.stack || '').toLowerCase();
-    // If pause is triggered by visibilitychange, blur, focus change, or pagehide, ignore it!
-    if (stack.includes('visibility') || stack.includes('blur') || stack.includes('pagehide') || stack.includes('hidden')) {
+    // If pause is triggered by visibilitychange, blur, focus change, pagehide, freeze, or PiP active: ignore it!
+    if (window.__caspian_pip_active || stack.includes('visibility') || stack.includes('blur') || stack.includes('pagehide') || stack.includes('hidden') || stack.includes('freeze') || stack.includes('focus')) {
       return;
     }
     return originalPause.apply(this, arguments);
@@ -79,12 +93,31 @@
         }
       } catch (e) { }
     },
+    enterPipMode: function () {
+      window.__caspian_pip_active = true;
+      try {
+        document.documentElement.classList.add('caspian-pip-active');
+        document.body.classList.add('caspian-pip-active');
+      } catch(e){}
+      const v = this.getVideo();
+      if (v && v.paused) {
+        v.play().catch(() => {});
+      }
+    },
+    exitPipMode: function () {
+      window.__caspian_pip_active = false;
+      try {
+        document.documentElement.classList.remove('caspian-pip-active');
+        document.body.classList.remove('caspian-pip-active');
+      } catch(e){}
+    },
     togglePlay: function () {
       const v = this.getVideo();
       if (v) {
         if (v.paused) {
           v.play();
         } else {
+          window.__caspian_explicit_pause = true;
           v.pause();
         }
         this.notifyState();
@@ -756,6 +789,43 @@
       pointer-events: auto !important;
       visibility: visible !important;
     }
+    /* Caspian PiP Active: forces video element to occupy 100vw/100vh and hides everything else */
+    html.caspian-pip-active, body.caspian-pip-active {
+      overflow: hidden !important;
+      background: #000 !important;
+      width: 100vw !important;
+      height: 100vh !important;
+      margin: 0 !important;
+      padding: 0 !important;
+    }
+    html.caspian-pip-active #player,
+    html.caspian-pip-active #player-container-id,
+    html.caspian-pip-active .player-container,
+    html.caspian-pip-active .html5-video-player,
+    html.caspian-pip-active video.html5-main-video,
+    html.caspian-pip-active video {
+      position: fixed !important;
+      top: 0 !important;
+      left: 0 !important;
+      width: 100vw !important;
+      height: 100vh !important;
+      max-width: 100vw !important;
+      max-height: 100vh !important;
+      z-index: 2147483647 !important;
+      object-fit: contain !important;
+      background: #000 !important;
+    }
+    html.caspian-pip-active ytm-mobile-topbar-renderer,
+    html.caspian-pip-active header,
+    html.caspian-pip-active .header-bar,
+    html.caspian-pip-active ytm-pivot-bar-renderer,
+    html.caspian-pip-active #page-manager,
+    html.caspian-pip-active ytm-single-column-watch-next-results-renderer-header-view-model,
+    html.caspian-pip-active .related-items,
+    html.caspian-pip-active ytm-item-section-renderer,
+    html.caspian-pip-active ytm-comments-entry-point-header-renderer {
+      display: none !important;
+    }
   `;
   (document.head || document.documentElement).appendChild(style);
 
@@ -819,6 +889,25 @@
         window.CaspianBridge.updateTabMediaPlaybackState(tabId, isPlaying);
       } else if (window.CaspianBridge && typeof window.CaspianBridge.updateMediaPlaybackState === 'function') {
         window.CaspianBridge.updateMediaPlaybackState(isPlaying);
+      }
+
+      if (isPlaying) {
+        var title = '';
+        var titleEl = document.querySelector('h1.title, .slim-video-metadata-title, ytm-slim-video-metadata-renderer .title, meta[name="title"]');
+        if (titleEl) title = titleEl.textContent || titleEl.getAttribute('content') || '';
+        if (!title) title = (document.title || '').replace(' - YouTube', '').trim();
+        var thumbUrl = '';
+        var ogImage = document.querySelector('meta[property="og:image"]');
+        if (ogImage) thumbUrl = ogImage.getAttribute('content') || '';
+        if (!thumbUrl) {
+          var match = location.search.match(/[?&]v=([^&]+)/);
+          if (match && match[1]) {
+            thumbUrl = 'https://img.youtube.com/vi/' + match[1] + '/mqdefault.jpg';
+          }
+        }
+        if (title && window.CaspianBridge && typeof window.CaspianBridge.updateMediaMetadata === 'function') {
+          window.CaspianBridge.updateMediaMetadata(title, thumbUrl);
+        }
       }
     } catch (e) { }
   }, 1000);

@@ -3,6 +3,8 @@ package com.caspian.betac;
 import android.Manifest;
 import android.annotation.SuppressLint;
 import android.app.DownloadManager;
+import android.app.NotificationChannel;
+import android.app.NotificationManager;
 import android.app.PictureInPictureParams;
 import android.app.RemoteAction;
 import android.app.PendingIntent;
@@ -10,6 +12,11 @@ import android.content.BroadcastReceiver;
 import android.content.IntentFilter;
 import android.graphics.drawable.Icon;
 import android.util.Rational;
+import android.support.v4.media.MediaMetadataCompat;
+import android.support.v4.media.session.MediaSessionCompat;
+import android.support.v4.media.session.PlaybackStateCompat;
+import androidx.core.app.NotificationCompat;
+import androidx.core.app.NotificationManagerCompat;
 import android.content.ClipData;
 import android.content.ClipboardManager;
 import android.content.Context;
@@ -313,6 +320,22 @@ public class MainActivity extends AppCompatActivity {
     public static final String ACTION_PIP_PLAY_PAUSE = "com.caspian.betac.ACTION_PIP_PLAY_PAUSE";
     public static final String ACTION_PIP_REWIND = "com.caspian.betac.ACTION_PIP_REWIND";
     public static final String ACTION_PIP_FORWARD = "com.caspian.betac.ACTION_PIP_FORWARD";
+    public static final String ACTION_MEDIA_PLAY_PAUSE = "com.caspian.betac.MEDIA_PLAY_PAUSE";
+    public static final String ACTION_MEDIA_REWIND = "com.caspian.betac.MEDIA_REWIND";
+    public static final String ACTION_MEDIA_FORWARD = "com.caspian.betac.MEDIA_FORWARD";
+    public static final String ACTION_LOG_PAUSE_RESUME = "com.caspian.betac.LOG_PAUSE_RESUME";
+    public static final String ACTION_LOG_STOP_SAVE = "com.caspian.betac.LOG_STOP_SAVE";
+
+    private static final String CHANNEL_MEDIA_ID = "caspian_media_playback";
+    private static final int NOTIFICATION_ID_MEDIA = 7001;
+    private static final String CHANNEL_LOGGER_ID = "caspian_system_logger";
+    private static final int NOTIFICATION_ID_LOGGER = 9002;
+
+    private MediaSessionCompat mediaSession;
+    private String currentMediaTitle = "YouTube";
+    private String currentMediaThumbUrl = "";
+    private Bitmap currentMediaThumbBitmap = null;
+    private boolean isDebugRecordingPaused = false;
     private BroadcastReceiver pipActionReceiver;
     private ImageButton ytRemoteLock;
     private ImageButton ytRemoteSettings;
@@ -499,6 +522,12 @@ public class MainActivity extends AppCompatActivity {
         try { setupLiquidGlassYouTubeRemote(); } catch (Throwable ignored) {}
         try { setupLiquidGlassGoogleDock(); } catch (Throwable ignored) {}
         try { setupPiPActionsReceiver(); } catch (Throwable ignored) {}
+        try { setupMediaSession(); } catch (Throwable ignored) {}
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+            if (checkSelfPermission(Manifest.permission.POST_NOTIFICATIONS) != PackageManager.PERMISSION_GRANTED) {
+                requestPermissions(new String[]{Manifest.permission.POST_NOTIFICATIONS}, 1004);
+            }
+        }
         try { setupLiquidGlassChatGPTDock(); } catch (Throwable ignored) {}
         try { setupLiquidGlassGeminiDock(); } catch (Throwable ignored) {}
         try { setupSplitFloatingControls(); } catch (Throwable ignored) {}
@@ -2474,6 +2503,7 @@ public class MainActivity extends AppCompatActivity {
             if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O && isInPictureInPictureMode()) {
                 updatePiPActions();
             }
+            updateMediaPlaybackNotification(isPlaying);
         }
         boolean anyPlaying = false;
         for (TabItem t : tabsList) {
@@ -5264,10 +5294,12 @@ public class MainActivity extends AppCompatActivity {
 
     public void startDebugRecording() {
         isDebugRecording = true;
+        isDebugRecordingPaused = false;
         debugLogBuffer.setLength(0);
         debugLogBuffer.append("=== CASPIAN FLOW DIAGNOSTIC LOG ===\n");
         debugLogBuffer.append("Started: ").append(new Date().toString()).append("\n\n");
         Toast.makeText(this, "🔴 Diagnostic Recording Started", Toast.LENGTH_SHORT).show();
+        updateLoggerNotification();
     }
 
     private final static int SAVE_LOG_REQUEST_CODE = 1003;
@@ -5276,6 +5308,9 @@ public class MainActivity extends AppCompatActivity {
     public void stopAndSaveDebugLog() {
         if (!isDebugRecording) return;
         isDebugRecording = false;
+        try {
+            NotificationManagerCompat.from(this).cancel(NOTIFICATION_ID_LOGGER);
+        } catch (Exception ignored) {}
         debugLogBuffer.append("\n=== END OF DIAGNOSTIC LOG ===\n");
         debugLogBuffer.append("Stopped: ").append(new Date().toString()).append("\n\n");
         debugLogBuffer.append("=== LOGCAT CAPTURE ===\n");
@@ -7557,6 +7592,9 @@ public class MainActivity extends AppCompatActivity {
 
             @Override
             public void onHideCustomView() {
+                if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O && isInPictureInPictureMode()) {
+                    return;
+                }
                 exitFullscreenCustomView();
             }
 
@@ -8752,24 +8790,236 @@ public class MainActivity extends AppCompatActivity {
             public void onReceive(Context context, Intent intent) {
                 if (intent == null || intent.getAction() == null) return;
                 String action = intent.getAction();
-                if (ACTION_PIP_PLAY_PAUSE.equals(action)) {
+                if (ACTION_PIP_PLAY_PAUSE.equals(action) || ACTION_MEDIA_PLAY_PAUSE.equals(action)) {
                     togglePlayYouTube();
                     updatePiPActions();
-                } else if (ACTION_PIP_REWIND.equals(action)) {
+                } else if (ACTION_PIP_REWIND.equals(action) || ACTION_MEDIA_REWIND.equals(action)) {
                     seekYouTube(-10);
-                } else if (ACTION_PIP_FORWARD.equals(action)) {
+                } else if (ACTION_PIP_FORWARD.equals(action) || ACTION_MEDIA_FORWARD.equals(action)) {
                     seekYouTube(10);
+                } else if (ACTION_LOG_PAUSE_RESUME.equals(action)) {
+                    isDebugRecordingPaused = !isDebugRecordingPaused;
+                    Toast.makeText(MainActivity.this, isDebugRecordingPaused ? "Logger Paused" : "Logger Resumed", Toast.LENGTH_SHORT).show();
+                    updateLoggerNotification();
+                } else if (ACTION_LOG_STOP_SAVE.equals(action)) {
+                    stopAndSaveDebugLog();
                 }
             }
         };
-        IntentFilter pipFilter = new IntentFilter();
-        pipFilter.addAction(ACTION_PIP_PLAY_PAUSE);
-        pipFilter.addAction(ACTION_PIP_REWIND);
-        pipFilter.addAction(ACTION_PIP_FORWARD);
+        IntentFilter filter = new IntentFilter();
+        filter.addAction(ACTION_PIP_PLAY_PAUSE);
+        filter.addAction(ACTION_PIP_REWIND);
+        filter.addAction(ACTION_PIP_FORWARD);
+        filter.addAction(ACTION_MEDIA_PLAY_PAUSE);
+        filter.addAction(ACTION_MEDIA_REWIND);
+        filter.addAction(ACTION_MEDIA_FORWARD);
+        filter.addAction(ACTION_LOG_PAUSE_RESUME);
+        filter.addAction(ACTION_LOG_STOP_SAVE);
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
-            registerReceiver(pipActionReceiver, pipFilter, Context.RECEIVER_NOT_EXPORTED);
+            registerReceiver(pipActionReceiver, filter, Context.RECEIVER_NOT_EXPORTED);
         } else {
-            registerReceiver(pipActionReceiver, pipFilter);
+            registerReceiver(pipActionReceiver, filter);
+        }
+    }
+
+    private void createNotificationChannels() {
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+            NotificationManager nm = getSystemService(NotificationManager.class);
+            if (nm != null) {
+                NotificationChannel mediaChan = new NotificationChannel(
+                        CHANNEL_MEDIA_ID,
+                        "Media Playback (YouTube)",
+                        NotificationManager.IMPORTANCE_LOW
+                );
+                mediaChan.setDescription("Controls for active media playback and lock screen Now Bar");
+                mediaChan.setShowBadge(false);
+                nm.createNotificationChannel(mediaChan);
+
+                NotificationChannel logChan = new NotificationChannel(
+                        CHANNEL_LOGGER_ID,
+                        "Caspian Diagnostic Logger",
+                        NotificationManager.IMPORTANCE_LOW
+                );
+                logChan.setDescription("Status and controls for active console/diagnostic recording");
+                logChan.setShowBadge(true);
+                nm.createNotificationChannel(logChan);
+            }
+        }
+    }
+
+    private void setupMediaSession() {
+        try {
+            createNotificationChannels();
+            mediaSession = new MediaSessionCompat(this, "CaspianMediaSession");
+            mediaSession.setFlags(MediaSessionCompat.FLAG_HANDLES_MEDIA_BUTTONS | MediaSessionCompat.FLAG_HANDLES_TRANSPORT_CONTROLS);
+            mediaSession.setCallback(new MediaSessionCompat.Callback() {
+                @Override
+                public void onPlay() {
+                    togglePlayYouTube();
+                }
+
+                @Override
+                public void onPause() {
+                    togglePlayYouTube();
+                }
+
+                @Override
+                public void onSkipToPrevious() {
+                    seekYouTube(-10);
+                }
+
+                @Override
+                public void onSkipToNext() {
+                    seekYouTube(10);
+                }
+
+                @Override
+                public void onSeekTo(long pos) {
+                    seekYouTubeTo(pos / 1000.0);
+                }
+            });
+            mediaSession.setActive(true);
+        } catch (Exception e) {
+            Log.e(TAG, "setupMediaSession error", e);
+        }
+    }
+
+    public void updateMediaMetadata(String title, String thumbUrl) {
+        if (title != null && !title.trim().isEmpty()) {
+            this.currentMediaTitle = title.trim();
+        }
+        if (thumbUrl != null && !thumbUrl.trim().isEmpty() && !thumbUrl.equals(currentMediaThumbUrl)) {
+            this.currentMediaThumbUrl = thumbUrl.trim();
+            new Thread(() -> {
+                try {
+                    java.io.InputStream in = new java.net.URL(currentMediaThumbUrl).openStream();
+                    Bitmap bmp = BitmapFactory.decodeStream(in);
+                    runOnUiThread(() -> {
+                        currentMediaThumbBitmap = bmp;
+                        TabItem cur = getTabById(activeTabId);
+                        boolean isPlaying = cur != null && cur.isPlayingAudio;
+                        updateMediaPlaybackNotification(isPlaying);
+                    });
+                } catch (Exception ignored) {}
+            }).start();
+        }
+        TabItem cur = getTabById(activeTabId);
+        boolean isPlaying = cur != null && cur.isPlayingAudio;
+        updateMediaPlaybackNotification(isPlaying);
+    }
+
+    public void updateMediaPlaybackNotification(boolean isPlaying) {
+        TabItem cur = getTabById(activeTabId);
+        boolean isYt = cur != null && cur.url != null && (cur.url.toLowerCase().contains("youtube.com") || "youtube".equalsIgnoreCase(cur.service));
+        if (!isYt) {
+            dismissMediaNotification();
+            return;
+        }
+
+        try {
+            if (mediaSession != null) {
+                int state = isPlaying ? PlaybackStateCompat.STATE_PLAYING : PlaybackStateCompat.STATE_PAUSED;
+                PlaybackStateCompat.Builder stateBuilder = new PlaybackStateCompat.Builder()
+                        .setActions(PlaybackStateCompat.ACTION_PLAY | PlaybackStateCompat.ACTION_PAUSE
+                                | PlaybackStateCompat.ACTION_PLAY_PAUSE | PlaybackStateCompat.ACTION_SKIP_TO_PREVIOUS
+                                | PlaybackStateCompat.ACTION_SKIP_TO_NEXT | PlaybackStateCompat.ACTION_SEEK_TO)
+                        .setState(state, 0L, 1.0f);
+                mediaSession.setPlaybackState(stateBuilder.build());
+
+                MediaMetadataCompat.Builder metaBuilder = new MediaMetadataCompat.Builder()
+                        .putString(MediaMetadataCompat.METADATA_KEY_TITLE, currentMediaTitle)
+                        .putString(MediaMetadataCompat.METADATA_KEY_ARTIST, "YouTube • Caspian Flow")
+                        .putString(MediaMetadataCompat.METADATA_KEY_ALBUM, "Caspian Flow")
+                        .putLong(MediaMetadataCompat.METADATA_KEY_DURATION, (long)(currentVideoDuration * 1000));
+                if (currentMediaThumbBitmap != null) {
+                    metaBuilder.putBitmap(MediaMetadataCompat.METADATA_KEY_ALBUM_ART, currentMediaThumbBitmap);
+                }
+                mediaSession.setMetadata(metaBuilder.build());
+            }
+
+            Intent appIntent = new Intent(this, MainActivity.class);
+            PendingIntent pAppIntent = PendingIntent.getActivity(
+                    this, 0, appIntent, PendingIntent.FLAG_UPDATE_CURRENT | PendingIntent.FLAG_IMMUTABLE
+            );
+
+            Intent rewIntent = new Intent(ACTION_MEDIA_REWIND).setPackage(getPackageName());
+            PendingIntent pRew = PendingIntent.getBroadcast(this, 201, rewIntent, PendingIntent.FLAG_UPDATE_CURRENT | PendingIntent.FLAG_IMMUTABLE);
+
+            Intent ppIntent = new Intent(ACTION_MEDIA_PLAY_PAUSE).setPackage(getPackageName());
+            PendingIntent pPlayPause = PendingIntent.getBroadcast(this, 202, ppIntent, PendingIntent.FLAG_UPDATE_CURRENT | PendingIntent.FLAG_IMMUTABLE);
+
+            Intent fwdIntent = new Intent(ACTION_MEDIA_FORWARD).setPackage(getPackageName());
+            PendingIntent pFwd = PendingIntent.getBroadcast(this, 203, fwdIntent, PendingIntent.FLAG_UPDATE_CURRENT | PendingIntent.FLAG_IMMUTABLE);
+
+            NotificationCompat.Builder notif = new NotificationCompat.Builder(this, CHANNEL_MEDIA_ID)
+                    .setSmallIcon(R.drawable.ic_pod_play)
+                    .setContentTitle(currentMediaTitle)
+                    .setContentText("YouTube • Caspian Flow")
+                    .setContentIntent(pAppIntent)
+                    .setVisibility(NotificationCompat.VISIBILITY_PUBLIC)
+                    .setOngoing(isPlaying)
+                    .setShowWhen(false)
+                    .addAction(R.drawable.ic_pod_rewind, "Rewind 10s", pRew)
+                    .addAction(isPlaying ? R.drawable.ic_pod_pause : R.drawable.ic_pod_play, isPlaying ? "Pause" : "Play", pPlayPause)
+                    .addAction(R.drawable.ic_pod_fastfwd, "Forward 10s", pFwd)
+                    .setStyle(new androidx.media.app.NotificationCompat.MediaStyle()
+                            .setMediaSession(mediaSession != null ? mediaSession.getSessionToken() : null)
+                            .setShowActionsInCompactView(0, 1, 2));
+
+            if (currentMediaThumbBitmap != null) {
+                notif.setLargeIcon(currentMediaThumbBitmap);
+            }
+
+            NotificationManagerCompat.from(this).notify(NOTIFICATION_ID_MEDIA, notif.build());
+        } catch (Exception e) {
+            Log.e(TAG, "updateMediaPlaybackNotification error", e);
+        }
+    }
+
+    public void dismissMediaNotification() {
+        try {
+            NotificationManagerCompat.from(this).cancel(NOTIFICATION_ID_MEDIA);
+            if (mediaSession != null) {
+                PlaybackStateCompat.Builder stateBuilder = new PlaybackStateCompat.Builder()
+                        .setState(PlaybackStateCompat.STATE_STOPPED, 0, 1.0f);
+                mediaSession.setPlaybackState(stateBuilder.build());
+            }
+        } catch (Exception ignored) {}
+    }
+
+    public void updateLoggerNotification() {
+        if (!isDebugRecording) {
+            try {
+                NotificationManagerCompat.from(this).cancel(NOTIFICATION_ID_LOGGER);
+            } catch (Exception ignored) {}
+            return;
+        }
+
+        try {
+            createNotificationChannels();
+
+            Intent appIntent = new Intent(this, MainActivity.class);
+            PendingIntent pApp = PendingIntent.getActivity(this, 0, appIntent, PendingIntent.FLAG_UPDATE_CURRENT | PendingIntent.FLAG_IMMUTABLE);
+
+            Intent pauseIntent = new Intent(ACTION_LOG_PAUSE_RESUME).setPackage(getPackageName());
+            PendingIntent pPause = PendingIntent.getBroadcast(this, 301, pauseIntent, PendingIntent.FLAG_UPDATE_CURRENT | PendingIntent.FLAG_IMMUTABLE);
+
+            Intent stopIntent = new Intent(ACTION_LOG_STOP_SAVE).setPackage(getPackageName());
+            PendingIntent pStop = PendingIntent.getBroadcast(this, 302, stopIntent, PendingIntent.FLAG_UPDATE_CURRENT | PendingIntent.FLAG_IMMUTABLE);
+
+            NotificationCompat.Builder notif = new NotificationCompat.Builder(this, CHANNEL_LOGGER_ID)
+                    .setSmallIcon(R.drawable.ic_pod_lock)
+                    .setContentTitle(isDebugRecordingPaused ? "🟡 Caspian System Logger: Paused" : "🔴 Caspian System Logger: Recording Active")
+                    .setContentText("Capturing console logs, network events & diagnostics to file")
+                    .setContentIntent(pApp)
+                    .setOngoing(true)
+                    .setVisibility(NotificationCompat.VISIBILITY_PUBLIC)
+                    .addAction(R.drawable.ic_pod_play, isDebugRecordingPaused ? "Resume" : "Pause", pPause)
+                    .addAction(R.drawable.ic_pod_close, "Stop & Save", pStop);
+
+            NotificationManagerCompat.from(this).notify(NOTIFICATION_ID_LOGGER, notif.build());
+        } catch (Exception e) {
+            Log.e(TAG, "updateLoggerNotification error", e);
         }
     }
 
@@ -8778,7 +9028,6 @@ public class MainActivity extends AppCompatActivity {
         if (Build.VERSION.SDK_INT < Build.VERSION_CODES.O) return actions;
 
         try {
-            // 1. Rewind 10s
             Intent rewindIntent = new Intent(ACTION_PIP_REWIND).setPackage(getPackageName());
             PendingIntent rewindPendingIntent = PendingIntent.getBroadcast(
                     this, 101, rewindIntent, PendingIntent.FLAG_UPDATE_CURRENT | PendingIntent.FLAG_IMMUTABLE
@@ -8786,7 +9035,6 @@ public class MainActivity extends AppCompatActivity {
             Icon rewindIcon = Icon.createWithResource(this, R.drawable.ic_pod_rewind);
             actions.add(new RemoteAction(rewindIcon, "Rewind 10s", "Rewind 10s", rewindPendingIntent));
 
-            // 2. Play / Pause
             Intent playPauseIntent = new Intent(ACTION_PIP_PLAY_PAUSE).setPackage(getPackageName());
             PendingIntent playPausePendingIntent = PendingIntent.getBroadcast(
                     this, 102, playPauseIntent, PendingIntent.FLAG_UPDATE_CURRENT | PendingIntent.FLAG_IMMUTABLE
@@ -8794,7 +9042,6 @@ public class MainActivity extends AppCompatActivity {
             Icon playPauseIcon = Icon.createWithResource(this, isPlaying ? R.drawable.ic_pod_pause : R.drawable.ic_pod_play);
             actions.add(new RemoteAction(playPauseIcon, isPlaying ? "Pause" : "Play", isPlaying ? "Pause" : "Play", playPausePendingIntent));
 
-            // 3. Fast forward 10s
             Intent fwdIntent = new Intent(ACTION_PIP_FORWARD).setPackage(getPackageName());
             PendingIntent fwdPendingIntent = PendingIntent.getBroadcast(
                     this, 103, fwdIntent, PendingIntent.FLAG_UPDATE_CURRENT | PendingIntent.FLAG_IMMUTABLE
@@ -8836,6 +9083,19 @@ public class MainActivity extends AppCompatActivity {
             PictureInPictureParams.Builder pipBuilder = new PictureInPictureParams.Builder();
             pipBuilder.setAspectRatio(new Rational(16, 9));
             pipBuilder.setActions(buildPiPRemoteActions(isPlaying));
+
+            Rect sourceRect = new Rect();
+            if (customView != null) {
+                customView.getGlobalVisibleRect(sourceRect);
+                pipBuilder.setSourceRectHint(sourceRect);
+            } else if (tab != null && tab.webView != null) {
+                tab.webView.evaluateJavascript(
+                        "(function(){ if (window.__CaspianYouTube) window.__CaspianYouTube.enterPipMode(); })()", null
+                );
+                tab.webView.getGlobalVisibleRect(sourceRect);
+                pipBuilder.setSourceRectHint(sourceRect);
+            }
+
             if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
                 pipBuilder.setAutoEnterEnabled(true);
                 pipBuilder.setSeamlessResizeEnabled(true);
@@ -8850,6 +9110,7 @@ public class MainActivity extends AppCompatActivity {
     @Override
     public void onPictureInPictureModeChanged(boolean isInPictureInPictureMode, Configuration newConfig) {
         super.onPictureInPictureModeChanged(isInPictureInPictureMode, newConfig);
+        TabItem tab = getTabById(activeTabId);
         if (isInPictureInPictureMode) {
             if (omniboxHeader != null) omniboxHeader.setVisibility(View.GONE);
             if (floatingCaspianCard != null) floatingCaspianCard.setVisibility(View.GONE);
@@ -8858,9 +9119,24 @@ public class MainActivity extends AppCompatActivity {
             if (searchNavContainer != null) searchNavContainer.setVisibility(View.GONE);
             if (browserProgressBar != null) browserProgressBar.setVisibility(View.GONE);
             if (videoTouchLockOverlay != null) videoTouchLockOverlay.setVisibility(View.GONE);
+
+            if (tab != null && tab.webView != null) {
+                tab.webView.evaluateJavascript(
+                        "(function(){ if (window.__CaspianYouTube) window.__CaspianYouTube.enterPipMode(); var v = document.querySelector('video'); if (v && v.paused) v.play().catch(()=>{}); })()", null
+                );
+            }
         } else {
             if (omniboxHeader != null) omniboxHeader.setVisibility(View.VISIBLE);
-            TabItem tab = getTabById(activeTabId);
+            if (floatingCaspianCard != null && customView == null) {
+                floatingCaspianCard.setVisibility(View.VISIBLE);
+                floatingCaspianCard.setAlpha(1.0f);
+                floatingCaspianCard.bringToFront();
+            }
+            if (tab != null && tab.webView != null) {
+                tab.webView.evaluateJavascript(
+                        "(function(){ if (window.__CaspianYouTube) window.__CaspianYouTube.exitPipMode(); })()", null
+                );
+            }
             if (tab != null) updateOmniboxState();
             syncTimelineBarWidth();
         }
@@ -8870,7 +9146,7 @@ public class MainActivity extends AppCompatActivity {
     protected void onUserLeaveHint() {
         super.onUserLeaveHint();
         TabItem tab = getTabById(activeTabId);
-        if (tab != null && tab.url != null && tab.url.toLowerCase().contains("youtube.com")) {
+        if (tab != null && tab.url != null && (tab.url.toLowerCase().contains("youtube.com") || "youtube".equalsIgnoreCase(tab.service))) {
             if (tab.isPlayingAudio) {
                 enterYouTubePiP();
             }
@@ -8885,6 +9161,15 @@ public class MainActivity extends AppCompatActivity {
                 unregisterReceiver(pipActionReceiver);
             } catch (Exception ignored) {}
         }
+        dismissMediaNotification();
+        if (mediaSession != null) {
+            try {
+                mediaSession.release();
+            } catch (Exception ignored) {}
+        }
+        try {
+            NotificationManagerCompat.from(this).cancel(NOTIFICATION_ID_LOGGER);
+        } catch (Exception ignored) {}
         try {
             if (youtubeWakeLock != null && youtubeWakeLock.isHeld()) {
                 youtubeWakeLock.release();

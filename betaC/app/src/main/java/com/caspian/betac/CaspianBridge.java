@@ -252,6 +252,13 @@ public class CaspianBridge {
     }
 
     @JavascriptInterface
+    public void updateMediaMetadata(String title, String thumbnailUrl) {
+        if (activity != null && title != null) {
+            activity.runOnUiThread(() -> activity.updateMediaMetadata(title, thumbnailUrl));
+        }
+    }
+
+    @JavascriptInterface
     public void openInOtherSplit(String url) {
         if (activity != null) {
             activity.runOnUiThread(() -> activity.openInOtherSplitPane(url));
