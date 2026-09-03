@@ -621,6 +621,13 @@ public class CaspianBridge {
     }
 
     @JavascriptInterface
+    public void updateYouTubeTime(double currentTime, double duration) {
+        if (activity != null) {
+            activity.runOnUiThread(() -> activity.updateYouTubeTimeLive(currentTime, duration));
+        }
+    }
+
+    @JavascriptInterface
     public void toggleMuteYouTube() {
         if (activity != null) activity.runOnUiThread(activity::toggleMuteYouTube);
     }

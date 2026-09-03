@@ -1112,187 +1112,269 @@
         android:elevation="250dp"
         android:visibility="gone">
 
-        <!-- Expanded Full Remote Dock -->
-        <HorizontalScrollView
-            android:id="@+id/yt_floating_remote_scroll"
+        <LinearLayout
+            android:id="@+id/yt_floating_remote_wrapper"
             android:layout_width="wrap_content"
-            android:layout_height="48dp"
-            android:background="@drawable/bg_liquid_glass"
-            android:clipToOutline="true"
-            android:scrollbars="none"
-            android:overScrollMode="never"
-            android:fillViewport="true">
+            android:layout_height="wrap_content"
+            android:orientation="vertical"
+            android:gravity="end">
 
+            <!-- Floating Overlayed Timeline Bar -->
             <LinearLayout
-                android:id="@+id/yt_floating_remote_dock"
-                android:layout_width="wrap_content"
-                android:layout_height="match_parent"
+                android:id="@+id/yt_floating_timeline_bar"
+                android:layout_width="320dp"
+                android:layout_height="38dp"
+                android:layout_marginBottom="6dp"
+                android:background="@drawable/bg_liquid_glass"
                 android:orientation="horizontal"
-                android:paddingStart="8dp"
-                android:paddingEnd="6dp"
-                android:gravity="center_vertical">
-
-                <ImageButton
-                    android:id="@+id/yt_remote_close"
-                    android:layout_width="26dp"
-                    android:layout_height="26dp"
-                    android:background="?attr/selectableItemBackgroundBorderless"
-                    android:src="@drawable/ic_pod_close"
-                    android:tint="#88FFFFFF"
-                    android:contentDescription="Close Remote" />
-
-                <View
-                    android:layout_width="1dp"
-                    android:layout_height="16dp"
-                    android:layout_marginStart="3dp"
-                    android:layout_marginEnd="3dp"
-                    android:background="#33FFFFFF" />
-
-                <ImageButton
-                    android:id="@+id/yt_remote_reload"
-                    android:layout_width="26dp"
-                    android:layout_height="26dp"
-                    android:background="?attr/selectableItemBackgroundBorderless"
-                    android:src="@drawable/ic_pod_reload"
-                    android:tint="#FFFFFF"
-                    android:contentDescription="Reload YouTube Tab" />
-
-                <ImageButton
-                    android:id="@+id/yt_remote_fullscreen"
-                    android:layout_width="26dp"
-                    android:layout_height="26dp"
-                    android:layout_marginStart="2dp"
-                    android:background="?attr/selectableItemBackgroundBorderless"
-                    android:src="@drawable/ic_pod_fullscreen"
-                    android:tint="#FFFFFF"
-                    android:contentDescription="Fullscreen Toggle" />
-
-                <ImageButton
-                    android:id="@+id/yt_remote_timeline"
-                    android:layout_width="26dp"
-                    android:layout_height="26dp"
-                    android:layout_marginStart="2dp"
-                    android:background="?attr/selectableItemBackgroundBorderless"
-                    android:src="@drawable/ic_pod_timeline"
-                    android:tint="#FFFFFF"
-                    android:contentDescription="Show Player Controls &amp; Timeline" />
-
-                <ImageButton
-                    android:id="@+id/yt_remote_prev_video"
-                    android:layout_width="26dp"
-                    android:layout_height="26dp"
-                    android:layout_marginStart="2dp"
-                    android:background="?attr/selectableItemBackgroundBorderless"
-                    android:src="@drawable/ic_pod_prev"
-                    android:tint="#FFFFFF"
-                    android:contentDescription="Previous Video" />
-
-                <ImageButton
-                    android:id="@+id/yt_remote_seek_back"
-                    android:layout_width="26dp"
-                    android:layout_height="26dp"
-                    android:layout_marginStart="2dp"
-                    android:background="?attr/selectableItemBackgroundBorderless"
-                    android:src="@drawable/ic_pod_rewind"
-                    android:tint="#FFFFFF"
-                    android:contentDescription="-5s Seek" />
-
-                <ImageButton
-                    android:id="@+id/yt_remote_play_pause"
-                    android:layout_width="32dp"
-                    android:layout_height="32dp"
-                    android:layout_marginStart="2dp"
-                    android:layout_marginEnd="2dp"
-                    android:background="?attr/selectableItemBackgroundBorderless"
-                    android:src="@drawable/ic_pod_play"
-                    android:tint="#FFFFFF"
-                    android:contentDescription="Play/Pause" />
-
-                <ImageButton
-                    android:id="@+id/yt_remote_seek_fwd"
-                    android:layout_width="26dp"
-                    android:layout_height="26dp"
-                    android:background="?attr/selectableItemBackgroundBorderless"
-                    android:src="@drawable/ic_pod_fastfwd"
-                    android:tint="#FFFFFF"
-                    android:contentDescription="+5s Seek" />
-
-                <ImageButton
-                    android:id="@+id/yt_remote_next_video"
-                    android:layout_width="26dp"
-                    android:layout_height="26dp"
-                    android:layout_marginStart="2dp"
-                    android:background="?attr/selectableItemBackgroundBorderless"
-                    android:src="@drawable/ic_pod_next"
-                    android:tint="#FFFFFF"
-                    android:contentDescription="Next Video" />
-
-                <ImageButton
-                    android:id="@+id/yt_remote_mute"
-                    android:layout_width="26dp"
-                    android:layout_height="26dp"
-                    android:layout_marginStart="2dp"
-                    android:background="?attr/selectableItemBackgroundBorderless"
-                    android:src="@drawable/ic_pod_unmute"
-                    android:tint="#FFFFFF"
-                    android:contentDescription="Mute / Unmute" />
+                android:gravity="center_vertical"
+                android:paddingStart="12dp"
+                android:paddingEnd="12dp"
+                android:elevation="30dp"
+                android:visibility="gone">
 
                 <TextView
-                    android:id="@+id/yt_remote_speed_btn"
+                    android:id="@+id/yt_timeline_current_time"
                     android:layout_width="wrap_content"
-                    android:layout_height="26dp"
-                    android:layout_marginStart="4dp"
-                    android:paddingStart="6dp"
-                    android:paddingEnd="6dp"
-                    android:gravity="center"
-                    android:background="@drawable/bg_liquid_glass_pill"
-                    android:text="1x"
-                    android:textColor="#FFFFFF"
+                    android:layout_height="wrap_content"
+                    android:text="00:00"
+                    android:textColor="#00E5FF"
                     android:textSize="11sp"
+                    android:fontFamily="monospace"
                     android:textStyle="bold" />
 
+                <SeekBar
+                    android:id="@+id/yt_timeline_seekbar"
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                    android:layout_weight="1"
+                    android:layout_marginStart="6dp"
+                    android:layout_marginEnd="6dp"
+                    android:max="1000"
+                    android:progress="0"
+                    android:thumbTint="#00E5FF"
+                    android:progressTint="#00E5FF"
+                    android:progressBackgroundTint="#44FFFFFF"
+                    android:splitTrack="false" />
+
                 <TextView
-                    android:id="@+id/yt_remote_quality_btn"
+                    android:id="@+id/yt_timeline_total_time"
                     android:layout_width="wrap_content"
-                    android:layout_height="26dp"
-                    android:layout_marginStart="4dp"
-                    android:paddingStart="6dp"
-                    android:paddingEnd="6dp"
-                    android:gravity="center"
-                    android:background="@drawable/bg_liquid_glass_pill"
-                    android:text="Auto"
-                    android:textColor="#FFFFFF"
+                    android:layout_height="wrap_content"
+                    android:text="00:00"
+                    android:textColor="#DFE2F0"
                     android:textSize="11sp"
-                    android:textStyle="bold" />
-
-                <View
-                    android:layout_width="1dp"
-                    android:layout_height="16dp"
-                    android:layout_marginStart="4dp"
-                    android:layout_marginEnd="2dp"
-                    android:background="#33FFFFFF" />
-
-                <TextView
-                    android:id="@+id/yt_remote_drag_handle"
-                    android:layout_width="32dp"
-                    android:layout_height="32dp"
-                    android:gravity="center"
-                    android:text="⠿"
-                    android:textColor="#B3FFFFFF"
-                    android:textSize="16sp"
-                    android:contentDescription="Drag Remote" />
-
-                <ImageButton
-                    android:id="@+id/yt_remote_shrink_btn"
-                    android:layout_width="28dp"
-                    android:layout_height="28dp"
-                    android:layout_marginStart="1dp"
-                    android:background="?attr/selectableItemBackgroundBorderless"
-                    android:src="@drawable/ic_shrink_bubble"
-                    android:tint="#CCFFFFFF"
-                    android:contentDescription="Shrink to Ball" />
+                    android:fontFamily="monospace" />
             </LinearLayout>
-        </HorizontalScrollView>
+
+            <!-- Expanded Full Remote Dock -->
+            <HorizontalScrollView
+                android:id="@+id/yt_floating_remote_scroll"
+                android:layout_width="wrap_content"
+                android:layout_height="48dp"
+                android:background="@drawable/bg_liquid_glass"
+                android:clipToOutline="true"
+                android:scrollbars="none"
+                android:overScrollMode="never"
+                android:fillViewport="true">
+
+                <LinearLayout
+                    android:id="@+id/yt_floating_remote_dock"
+                    android:layout_width="wrap_content"
+                    android:layout_height="match_parent"
+                    android:orientation="horizontal"
+                    android:paddingStart="8dp"
+                    android:paddingEnd="6dp"
+                    android:gravity="center_vertical">
+
+                    <ImageButton
+                        android:id="@+id/yt_remote_close"
+                        android:layout_width="26dp"
+                        android:layout_height="26dp"
+                        android:background="?attr/selectableItemBackgroundBorderless"
+                        android:src="@drawable/ic_pod_close"
+                        android:tint="#88FFFFFF"
+                        android:contentDescription="Close Remote" />
+
+                    <View
+                        android:layout_width="1dp"
+                        android:layout_height="16dp"
+                        android:layout_marginStart="3dp"
+                        android:layout_marginEnd="3dp"
+                        android:background="#33FFFFFF" />
+
+                    <ImageButton
+                        android:id="@+id/yt_remote_reload"
+                        android:layout_width="26dp"
+                        android:layout_height="26dp"
+                        android:background="?attr/selectableItemBackgroundBorderless"
+                        android:src="@drawable/ic_pod_reload"
+                        android:tint="#FFFFFF"
+                        android:contentDescription="Reload YouTube Tab" />
+
+                    <ImageButton
+                        android:id="@+id/yt_remote_fullscreen"
+                        android:layout_width="26dp"
+                        android:layout_height="26dp"
+                        android:layout_marginStart="2dp"
+                        android:background="?attr/selectableItemBackgroundBorderless"
+                        android:src="@drawable/ic_pod_fullscreen"
+                        android:tint="#FFFFFF"
+                        android:contentDescription="Fullscreen Toggle" />
+
+                    <ImageButton
+                        android:id="@+id/yt_remote_timeline"
+                        android:layout_width="26dp"
+                        android:layout_height="26dp"
+                        android:layout_marginStart="2dp"
+                        android:background="?attr/selectableItemBackgroundBorderless"
+                        android:src="@drawable/ic_pod_timeline"
+                        android:tint="#FFFFFF"
+                        android:contentDescription="Show Player Controls &amp; Timeline" />
+
+                    <ImageButton
+                        android:id="@+id/yt_remote_lock"
+                        android:layout_width="26dp"
+                        android:layout_height="26dp"
+                        android:layout_marginStart="2dp"
+                        android:background="?attr/selectableItemBackgroundBorderless"
+                        android:src="@drawable/ic_pod_unlock"
+                        android:tint="#FFFFFF"
+                        android:contentDescription="Lock Screen Touches" />
+
+                    <ImageButton
+                        android:id="@+id/yt_remote_prev_video"
+                        android:layout_width="26dp"
+                        android:layout_height="26dp"
+                        android:layout_marginStart="2dp"
+                        android:background="?attr/selectableItemBackgroundBorderless"
+                        android:src="@drawable/ic_pod_prev"
+                        android:tint="#FFFFFF"
+                        android:contentDescription="Previous Video" />
+
+                    <ImageButton
+                        android:id="@+id/yt_remote_seek_back"
+                        android:layout_width="26dp"
+                        android:layout_height="26dp"
+                        android:layout_marginStart="2dp"
+                        android:background="?attr/selectableItemBackgroundBorderless"
+                        android:src="@drawable/ic_pod_rewind"
+                        android:tint="#FFFFFF"
+                        android:contentDescription="-5s Seek" />
+
+                    <ImageButton
+                        android:id="@+id/yt_remote_play_pause"
+                        android:layout_width="32dp"
+                        android:layout_height="32dp"
+                        android:layout_marginStart="2dp"
+                        android:layout_marginEnd="2dp"
+                        android:background="?attr/selectableItemBackgroundBorderless"
+                        android:src="@drawable/ic_pod_play"
+                        android:tint="#FFFFFF"
+                        android:contentDescription="Play/Pause" />
+
+                    <ImageButton
+                        android:id="@+id/yt_remote_seek_fwd"
+                        android:layout_width="26dp"
+                        android:layout_height="26dp"
+                        android:layout_marginStart="2dp"
+                        android:background="?attr/selectableItemBackgroundBorderless"
+                        android:src="@drawable/ic_pod_fastfwd"
+                        android:tint="#FFFFFF"
+                        android:contentDescription="+5s Seek" />
+
+                    <ImageButton
+                        android:id="@+id/yt_remote_next_video"
+                        android:layout_width="26dp"
+                        android:layout_height="26dp"
+                        android:layout_marginStart="2dp"
+                        android:background="?attr/selectableItemBackgroundBorderless"
+                        android:src="@drawable/ic_pod_next"
+                        android:tint="#FFFFFF"
+                        android:contentDescription="Next Video" />
+
+                    <ImageButton
+                        android:id="@+id/yt_remote_mute"
+                        android:layout_width="26dp"
+                        android:layout_height="26dp"
+                        android:layout_marginStart="2dp"
+                        android:background="?attr/selectableItemBackgroundBorderless"
+                        android:src="@drawable/ic_pod_unmute"
+                        android:tint="#FFFFFF"
+                        android:contentDescription="Mute / Unmute" />
+
+                    <TextView
+                        android:id="@+id/yt_remote_volume_btn"
+                        android:layout_width="wrap_content"
+                        android:layout_height="26dp"
+                        android:layout_marginStart="2dp"
+                        android:paddingStart="6dp"
+                        android:paddingEnd="6dp"
+                        android:gravity="center"
+                        android:background="@drawable/bg_liquid_glass_pill"
+                        android:text="100%"
+                        android:textColor="#00E5FF"
+                        android:textSize="11sp"
+                        android:textStyle="bold"
+                        android:contentDescription="Volume Level Slider" />
+
+                    <TextView
+                        android:id="@+id/yt_remote_speed_btn"
+                        android:layout_width="wrap_content"
+                        android:layout_height="26dp"
+                        android:layout_marginStart="4dp"
+                        android:paddingStart="6dp"
+                        android:paddingEnd="6dp"
+                        android:gravity="center"
+                        android:background="@drawable/bg_liquid_glass_pill"
+                        android:text="1x"
+                        android:textColor="#FFFFFF"
+                        android:textSize="11sp"
+                        android:textStyle="bold" />
+
+                    <TextView
+                        android:id="@+id/yt_remote_quality_btn"
+                        android:layout_width="wrap_content"
+                        android:layout_height="26dp"
+                        android:layout_marginStart="4dp"
+                        android:paddingStart="6dp"
+                        android:paddingEnd="6dp"
+                        android:gravity="center"
+                        android:background="@drawable/bg_liquid_glass_pill"
+                        android:text="Auto"
+                        android:textColor="#FFFFFF"
+                        android:textSize="11sp"
+                        android:textStyle="bold" />
+
+                    <View
+                        android:layout_width="1dp"
+                        android:layout_height="16dp"
+                        android:layout_marginStart="4dp"
+                        android:layout_marginEnd="2dp"
+                        android:background="#33FFFFFF" />
+
+                    <TextView
+                        android:id="@+id/yt_remote_drag_handle"
+                        android:layout_width="32dp"
+                        android:layout_height="32dp"
+                        android:gravity="center"
+                        android:text="⠿"
+                        android:textColor="#B3FFFFFF"
+                        android:textSize="16sp"
+                        android:contentDescription="Drag Remote" />
+
+                    <ImageButton
+                        android:id="@+id/yt_remote_shrink_btn"
+                        android:layout_width="28dp"
+                        android:layout_height="28dp"
+                        android:layout_marginStart="1dp"
+                        android:background="?attr/selectableItemBackgroundBorderless"
+                        android:src="@drawable/ic_shrink_bubble"
+                        android:tint="#CCFFFFFF"
+                        android:contentDescription="Shrink to Ball" />
+                </LinearLayout>
+            </HorizontalScrollView>
+        </LinearLayout>
 
         <!-- Collapsed Floating Liquid Glass Ball (Draggable) -->
         <FrameLayout
@@ -2082,6 +2164,17 @@
         android:layout_height="match_parent"
         android:background="#000000"
         android:elevation="120dp"
+        android:visibility="gone" />
+
+    <!-- Fullscreen Video Touch Lock Interceptor Overlay -->
+    <View
+        android:id="@+id/video_touch_lock_overlay"
+        android:layout_width="match_parent"
+        android:layout_height="match_parent"
+        android:background="#01000000"
+        android:clickable="true"
+        android:focusable="true"
+        android:elevation="240dp"
         android:visibility="gone" />
 
     <!-- 9. Caspian BetaA Video Splash Screen Overlay -->

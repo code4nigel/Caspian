@@ -80,7 +80,9 @@ import android.widget.ImageButton;
 import android.widget.ImageView;
 import android.widget.LinearLayout;
 import android.widget.PopupMenu;
+import android.media.AudioManager;
 import android.widget.ProgressBar;
+import android.widget.SeekBar;
 import android.widget.TextView;
 import android.widget.Toast;
 
@@ -295,6 +297,17 @@ public class MainActivity extends AppCompatActivity {
     private ImageButton ytRemoteReload;
     private ImageButton ytRemoteFullscreen;
     private ImageButton ytRemoteTimeline;
+    private ImageButton ytRemoteLock;
+    private TextView ytRemoteVolumeBtn;
+    private LinearLayout ytFloatingTimelineBar;
+    private TextView ytTimelineCurrentTime;
+    private SeekBar ytTimelineSeekbar;
+    private TextView ytTimelineTotalTime;
+    private boolean isUserScrubbingTimeline = false;
+    private double currentVideoDuration = 0;
+    private View videoTouchLockOverlay;
+    private boolean isScreenTouchLocked = false;
+    private PopupWindow volumePopupWindow;
     private ImageButton ytRemotePrevVideo;
     private ImageButton ytRemoteSeekBack;
     private ImageButton ytRemotePlayPause;
@@ -1540,6 +1553,13 @@ public class MainActivity extends AppCompatActivity {
             ytRemoteReload = findViewById(R.id.yt_remote_reload);
             ytRemoteFullscreen = findViewById(R.id.yt_remote_fullscreen);
             ytRemoteTimeline = findViewById(R.id.yt_remote_timeline);
+            ytRemoteLock = findViewById(R.id.yt_remote_lock);
+            ytRemoteVolumeBtn = findViewById(R.id.yt_remote_volume_btn);
+            ytFloatingTimelineBar = findViewById(R.id.yt_floating_timeline_bar);
+            ytTimelineCurrentTime = findViewById(R.id.yt_timeline_current_time);
+            ytTimelineSeekbar = findViewById(R.id.yt_timeline_seekbar);
+            ytTimelineTotalTime = findViewById(R.id.yt_timeline_total_time);
+            videoTouchLockOverlay = findViewById(R.id.video_touch_lock_overlay);
             ytRemotePrevVideo = findViewById(R.id.yt_remote_prev_video);
             ytRemoteSeekBack = findViewById(R.id.yt_remote_seek_back);
             ytRemotePlayPause = findViewById(R.id.yt_remote_play_pause);
@@ -2835,11 +2855,180 @@ public class MainActivity extends AppCompatActivity {
             if (floatingCaspianCard != null) {
                 floatingCaspianCard.setVisibility(View.VISIBLE);
             }
+            if (isScreenTouchLocked) {
+                toggleScreenTouchLock();
+            }
+            if (ytFloatingTimelineBar != null) {
+                ytFloatingTimelineBar.setVisibility(View.GONE);
+            }
+            if (ytRemoteTimeline != null) {
+                ytRemoteTimeline.setColorFilter(0xFFFFFFFF);
+            }
+            if (volumePopupWindow != null && volumePopupWindow.isShowing()) {
+                volumePopupWindow.dismiss();
+            }
             if (ytRemoteFullscreen != null) {
                 ytRemoteFullscreen.setImageResource(R.drawable.ic_pod_fullscreen);
                 ytRemoteFullscreen.setContentDescription("Fullscreen Toggle");
             }
         });
+    }
+
+    public void updateYouTubeTimeLive(double currentTime, double duration) {
+        if (isUserScrubbingTimeline) return;
+        currentVideoDuration = duration;
+        if (ytTimelineCurrentTime != null) {
+            ytTimelineCurrentTime.setText(formatTime(currentTime));
+        }
+        if (ytTimelineTotalTime != null) {
+            ytTimelineTotalTime.setText(formatTime(duration));
+        }
+        if (ytTimelineSeekbar != null && duration > 0) {
+            int progress = (int) Math.min(1000, Math.max(0, (currentTime / duration) * 1000));
+            ytTimelineSeekbar.setProgress(progress);
+        }
+    }
+
+    private String formatTime(double seconds) {
+        if (Double.isNaN(seconds) || seconds < 0) return "00:00";
+        int totalSec = (int) Math.round(seconds);
+        int m = totalSec / 60;
+        int s = totalSec % 60;
+        int h = m / 60;
+        m = m % 60;
+        if (h > 0) {
+            return String.format(Locale.US, "%d:%02d:%02d", h, m, s);
+        } else {
+            return String.format(Locale.US, "%02d:%02d", m, s);
+        }
+    }
+
+    public void seekYouTubeTo(double targetSec) {
+        TabItem currentTab = getTabById(activeTabId);
+        if (currentTab != null && currentTab.webView != null) {
+            currentTab.webView.evaluateJavascript(
+                    "if (window.__CaspianYouTube) window.__CaspianYouTube.seekTo(" + targetSec + "); else { var v = document.querySelector('video'); if (v) v.currentTime = " + targetSec + "; }", null
+            );
+        }
+    }
+
+    public void toggleScreenTouchLock() {
+        playUiFeedbackSound("tap");
+        isScreenTouchLocked = !isScreenTouchLocked;
+        if (videoTouchLockOverlay != null) {
+            videoTouchLockOverlay.setVisibility(isScreenTouchLocked ? View.VISIBLE : View.GONE);
+            if (isScreenTouchLocked) {
+                videoTouchLockOverlay.setOnTouchListener((v, event) -> {
+                    if (event.getAction() == MotionEvent.ACTION_DOWN) {
+                        Toast.makeText(this, "🔒 Screen Locked • Tap Lock on Float Pod to unlock", Toast.LENGTH_SHORT).show();
+                    }
+                    return true;
+                });
+            }
+        }
+        if (ytRemoteLock != null) {
+            ytRemoteLock.setImageResource(isScreenTouchLocked ? R.drawable.ic_pod_lock : R.drawable.ic_pod_unlock);
+            ytRemoteLock.setColorFilter(isScreenTouchLocked ? 0xFFFF5252 : 0xFFFFFFFF);
+        }
+        Toast.makeText(this, isScreenTouchLocked ? "🔒 Screen Locked (Float Pod active)" : "🔓 Screen Unlocked", Toast.LENGTH_SHORT).show();
+    }
+
+    public void updateVolumeButtonDisplay() {
+        try {
+            AudioManager am = (AudioManager) getSystemService(Context.AUDIO_SERVICE);
+            if (am != null) {
+                int cur = am.getStreamVolume(AudioManager.STREAM_MUSIC);
+                int max = am.getStreamMaxVolume(AudioManager.STREAM_MUSIC);
+                int pct = max > 0 ? (cur * 100 / max) : 100;
+                if (ytRemoteVolumeBtn != null) {
+                    ytRemoteVolumeBtn.setText(pct + "%");
+                }
+            }
+        } catch (Exception ignored) {}
+    }
+
+    public void showFloatingVolumePopup(View anchor) {
+        playUiFeedbackSound("tap");
+        if (volumePopupWindow != null && volumePopupWindow.isShowing()) {
+            volumePopupWindow.dismiss();
+            return;
+        }
+
+        View popupView = getLayoutInflater().inflate(R.layout.popup_caspian_volume, null);
+        TextView percentTv = popupView.findViewById(R.id.popup_volume_percent);
+        SeekBar volumeSeekBar = popupView.findViewById(R.id.popup_volume_seekbar);
+        ImageView volumeIcon = popupView.findViewById(R.id.popup_volume_icon);
+
+        AudioManager am = (AudioManager) getSystemService(Context.AUDIO_SERVICE);
+        int max = (am != null) ? am.getStreamMaxVolume(AudioManager.STREAM_MUSIC) : 15;
+        int cur = (am != null) ? am.getStreamVolume(AudioManager.STREAM_MUSIC) : 15;
+        int currentPct = max > 0 ? (cur * 100 / max) : 100;
+
+        percentTv.setText(currentPct + "%");
+        volumeSeekBar.setProgress(currentPct);
+        if (volumeIcon != null) {
+            volumeIcon.setImageResource(currentPct == 0 ? R.drawable.ic_pod_mute : R.drawable.ic_pod_sound);
+        }
+
+        volumeSeekBar.setOnSeekBarChangeListener(new SeekBar.OnSeekBarChangeListener() {
+            @Override
+            public void onProgressChanged(SeekBar seekBar, int progress, boolean fromUser) {
+                percentTv.setText(progress + "%");
+                if (ytRemoteVolumeBtn != null) ytRemoteVolumeBtn.setText(progress + "%");
+                if (volumeIcon != null) {
+                    volumeIcon.setImageResource(progress == 0 ? R.drawable.ic_pod_mute : R.drawable.ic_pod_sound);
+                }
+                if (fromUser) {
+                    try {
+                        if (am != null && max > 0) {
+                            int targetStreamVol = (int) Math.round((progress / 100.0) * max);
+                            am.setStreamVolume(AudioManager.STREAM_MUSIC, targetStreamVol, 0);
+                        }
+                        TabItem tab = getTabById(activeTabId);
+                        if (tab != null && tab.webView != null) {
+                            tab.webView.evaluateJavascript(
+                                    "if (window.__CaspianYouTube) window.__CaspianYouTube.setVolume(" + (progress / 100.0) + "); else { var v = document.querySelector('video'); if (v) v.volume = " + (progress / 100.0) + "; }", null
+                            );
+                        }
+                    } catch (Exception ignored) {}
+                }
+            }
+
+            @Override
+            public void onStartTrackingTouch(SeekBar seekBar) {}
+
+            @Override
+            public void onStopTrackingTouch(SeekBar seekBar) {}
+        });
+
+        volumePopupWindow = new PopupWindow(
+                popupView,
+                dpToPx(56),
+                dpToPx(210),
+                true
+        );
+        volumePopupWindow.setBackgroundDrawable(new ColorDrawable(Color.TRANSPARENT));
+        volumePopupWindow.setElevation(dpToPx(30));
+
+        int[] anchorLoc = new int[2];
+        anchor.getLocationOnScreen(anchorLoc);
+        int anchorX = anchorLoc[0];
+        int anchorY = anchorLoc[1];
+        int targetW = dpToPx(56);
+        int targetH = dpToPx(210);
+
+        DisplayMetrics dm = getResources().getDisplayMetrics();
+        int screenW = dm.widthPixels;
+        int screenH = dm.heightPixels;
+
+        int posX = anchorX + (anchor.getWidth() - targetW) / 2;
+        if (posX + targetW > screenW - dpToPx(8)) posX = screenW - targetW - dpToPx(8);
+        if (posX < dpToPx(8)) posX = dpToPx(8);
+
+        int posY = anchorY - targetH - dpToPx(8);
+        if (posY < dpToPx(8)) posY = anchorY + anchor.getHeight() + dpToPx(8);
+
+        volumePopupWindow.showAtLocation(anchor, Gravity.NO_GRAVITY, posX, posY);
     }
 
     public void showYouTubeQualityPopup(View anchor) {
@@ -3565,8 +3754,52 @@ public class MainActivity extends AppCompatActivity {
             if (ytRemoteTimeline != null) {
                 ytRemoteTimeline.setOnClickListener(v -> {
                     playUiFeedbackSound("tap");
-                    showYouTubePlayerControls();
+                    if (ytFloatingTimelineBar != null) {
+                        boolean isShown = ytFloatingTimelineBar.getVisibility() == View.VISIBLE;
+                        ytFloatingTimelineBar.setVisibility(isShown ? View.GONE : View.VISIBLE);
+                        ytRemoteTimeline.setColorFilter(isShown ? 0xFFFFFFFF : 0xFF00E5FF);
+                        if (!isShown) {
+                            TabItem tab = getTabById(activeTabId);
+                            if (tab != null && tab.webView != null) {
+                                tab.webView.evaluateJavascript(
+                                        "(function(){ var v = document.querySelector('video'); if (v && window.CaspianBridge) window.CaspianBridge.updateYouTubeTime(v.currentTime||0, v.duration||0); })()", null
+                                );
+                            }
+                        }
+                    }
                 });
+            }
+
+            if (ytTimelineSeekbar != null) {
+                ytTimelineSeekbar.setOnSeekBarChangeListener(new SeekBar.OnSeekBarChangeListener() {
+                    @Override
+                    public void onProgressChanged(SeekBar seekBar, int progress, boolean fromUser) {
+                        if (fromUser && currentVideoDuration > 0) {
+                            double targetSec = (progress / 1000.0) * currentVideoDuration;
+                            if (ytTimelineCurrentTime != null) {
+                                ytTimelineCurrentTime.setText(formatTime(targetSec));
+                            }
+                        }
+                    }
+
+                    @Override
+                    public void onStartTrackingTouch(SeekBar seekBar) {
+                        isUserScrubbingTimeline = true;
+                    }
+
+                    @Override
+                    public void onStopTrackingTouch(SeekBar seekBar) {
+                        if (currentVideoDuration > 0) {
+                            double targetSec = (seekBar.getProgress() / 1000.0) * currentVideoDuration;
+                            seekYouTubeTo(targetSec);
+                        }
+                        isUserScrubbingTimeline = false;
+                    }
+                });
+            }
+
+            if (ytRemoteLock != null) {
+                ytRemoteLock.setOnClickListener(v -> toggleScreenTouchLock());
             }
 
             ytRemotePrevVideo.setOnClickListener(v -> {
@@ -3604,6 +3837,11 @@ public class MainActivity extends AppCompatActivity {
                 playUiFeedbackSound("tap");
                 toggleMuteYouTube();
             });
+
+            if (ytRemoteVolumeBtn != null) {
+                ytRemoteVolumeBtn.setOnClickListener(this::showFloatingVolumePopup);
+                updateVolumeButtonDisplay();
+            }
 
             ytRemoteSpeedBtn.setOnClickListener(this::showYouTubeSpeedPopup);
             ytRemoteQualityBtn.setOnClickListener(this::showYouTubeQualityPopup);

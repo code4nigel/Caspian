@@ -1,0 +1,47 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="56dp"
+    android:layout_height="210dp"
+    android:background="@drawable/bg_liquid_glass"
+    android:orientation="vertical"
+    android:gravity="center_horizontal"
+    android:padding="8dp"
+    android:elevation="30dp">
+
+    <TextView
+        android:id="@+id/popup_volume_percent"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:text="100%"
+        android:textColor="#00E5FF"
+        android:textSize="12sp"
+        android:textStyle="bold"
+        android:layout_marginBottom="6dp" />
+
+    <FrameLayout
+        android:layout_width="36dp"
+        android:layout_height="0dp"
+        android:layout_weight="1">
+
+        <SeekBar
+            android:id="@+id/popup_volume_seekbar"
+            android:layout_width="128dp"
+            android:layout_height="36dp"
+            android:layout_gravity="center"
+            android:rotation="270"
+            android:max="100"
+            android:progress="100"
+            android:thumbTint="#00E5FF"
+            android:progressTint="#00E5FF"
+            android:progressBackgroundTint="#55FFFFFF"
+            android:splitTrack="false" />
+    </FrameLayout>
+
+    <ImageView
+        android:id="@+id/popup_volume_icon"
+        android:layout_width="20dp"
+        android:layout_height="20dp"
+        android:src="@drawable/ic_pod_sound"
+        android:tint="#DFE2F0"
+        android:layout_marginTop="6dp" />
+</LinearLayout>

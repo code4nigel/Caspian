@@ -137,6 +137,23 @@
         }
       } catch (e) { }
     },
+    seekTo: function (sec) {
+      try {
+        const v = this.getVideo();
+        if (v && Number.isFinite(sec)) {
+          v.currentTime = sec;
+        }
+      } catch (e) { }
+    },
+    setVolume: function (vol) {
+      try {
+        const v = this.getVideo();
+        if (v && Number.isFinite(vol)) {
+          v.volume = Math.max(0, Math.min(1, vol));
+          if (v.volume > 0 && v.muted) v.muted = false;
+        }
+      } catch (e) { }
+    },
     showPlayerControls: function () {
       try {
         const player = document.getElementById('movie_player') || document.querySelector('.html5-video-player') || document.querySelector('.player-container') || document.querySelector('ytm-media-item');
@@ -210,6 +227,11 @@
           v.addEventListener(evt, () => {
             if (window.__CaspianYouTube) window.__CaspianYouTube.notifyState();
           });
+        });
+        v.addEventListener('timeupdate', () => {
+          if (window.CaspianBridge && typeof window.CaspianBridge.updateYouTubeTime === 'function') {
+            window.CaspianBridge.updateYouTubeTime(v.currentTime || 0, v.duration || 0);
+          }
         });
       }
       if (window.__CaspianYouTube) window.__CaspianYouTube.notifyState();
