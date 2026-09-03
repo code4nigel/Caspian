@@ -8553,16 +8553,19 @@ public class MainActivity extends AppCompatActivity {
                         SharedPreferences appPrefs = getSharedPreferences(PREFS_NAME, MODE_PRIVATE);
                         appPrefs.edit().putInt("action_btn_click_count", actionButtonClickCount).apply();
 
+                        floatingCaspianCard.animate().cancel();
+                        floatingCaspianCard.setScaleX(1.0f);
+                        floatingCaspianCard.setScaleY(1.0f);
                         floatingCaspianCard.animate()
-                                .scaleX(0.88f)
-                                .scaleY(0.88f)
-                                .setDuration(100)
+                                .scaleX(0.86f)
+                                .scaleY(0.86f)
+                                .setDuration(70)
                                 .withEndAction(() -> {
                                     floatingCaspianCard.animate()
                                             .scaleX(1.0f)
                                             .scaleY(1.0f)
-                                            .setDuration(120)
-                                            .setInterpolator(new OvershootInterpolator(1.2f))
+                                            .setDuration(110)
+                                            .setInterpolator(new OvershootInterpolator(1.4f))
                                             .start();
                                 })
                                 .start();
@@ -8688,26 +8691,29 @@ public class MainActivity extends AppCompatActivity {
         if (chatgptDockContainer != null) chatgptDockContainer.setVisibility(View.GONE);
 
         SharedPreferences prefs = getSharedPreferences(PREFS_NAME, MODE_PRIVATE);
-        int openDuration = 180;
+        int baseOpenDuration = 180;
         try {
             String openDurStr = prefs.getString("sheetOpenDuration", "180");
-            openDuration = Integer.parseInt(openDurStr);
+            baseOpenDuration = Integer.parseInt(openDurStr);
         } catch (Exception ignored) {}
         String animStyle = prefs.getString("sheetAnimationStyle", "genie");
 
+        // Cancel running animations immediately mid-flight
         sheetBackdrop.animate().cancel();
-        sheetBackdrop.setAlpha(0f);
+        controlWebView.animate().cancel();
+
+        float curBackdropAlpha = sheetBackdrop.getAlpha();
+        long backdropDuration = Math.max(50, (long) (baseOpenDuration * Math.max(0.15f, 1.0f - curBackdropAlpha)));
         sheetBackdrop.animate()
                 .alpha(1f)
-                .setDuration(openDuration)
+                .setDuration(backdropDuration)
                 .start();
 
         Runnable onOpenComplete = () -> {
             controlWebView.evaluateJavascript("if (typeof renderOpenTabs === 'function') renderOpenTabs(); if (typeof syncAppVersion === 'function') syncAppVersion(); if (typeof restoreSavedSettings === 'function') restoreSavedSettings(); if (typeof updateDevHudCounters === 'function') updateDevHudCounters();", null);
         };
 
-        controlWebView.animate().cancel();
-        if ("none".equalsIgnoreCase(animStyle) || openDuration <= 0) {
+        if ("none".equalsIgnoreCase(animStyle) || baseOpenDuration <= 0) {
             controlWebView.setScaleX(1f);
             controlWebView.setScaleY(1f);
             controlWebView.setAlpha(1f);
@@ -8719,16 +8725,26 @@ public class MainActivity extends AppCompatActivity {
 
             controlWebView.setPivotX(buttonCenterX);
             controlWebView.setPivotY(buttonCenterY);
-            controlWebView.setScaleX(0.05f);
-            controlWebView.setScaleY(0.05f);
-            controlWebView.setAlpha(0f);
+
+            float currentScale = controlWebView.getScaleX();
+            // If it was completely closed, start from 0.05f
+            if (currentScale < 0.06f || controlWebView.getAlpha() <= 0.01f) {
+                controlWebView.setScaleX(0.05f);
+                controlWebView.setScaleY(0.05f);
+                controlWebView.setAlpha(0f);
+                currentScale = 0.05f;
+            }
             controlWebView.setTranslationY(0f);
+
+            // Dynamically scale duration based on remaining distance
+            float remainingFrac = Math.max(0.15f, Math.min(1.0f, (1.0f - currentScale) / 0.95f));
+            long dynamicDuration = Math.max(50, (long) (baseOpenDuration * remainingFrac));
 
             controlWebView.animate()
                     .scaleX(1f)
                     .scaleY(1f)
                     .alpha(1f)
-                    .setDuration(openDuration)
+                    .setDuration(dynamicDuration)
                     .setInterpolator(new DecelerateInterpolator(1.8f))
                     .withEndAction(onOpenComplete)
                     .start();
@@ -8736,13 +8752,21 @@ public class MainActivity extends AppCompatActivity {
             int height = sheetOverlayContainer.getHeight();
             if (height <= 0) height = getResources().getDisplayMetrics().heightPixels;
 
+            float curTransY = controlWebView.getTranslationY();
+            if (curTransY <= 0 || curTransY > height) {
+                curTransY = height;
+                controlWebView.setTranslationY(curTransY);
+            }
             controlWebView.setScaleX(1f);
             controlWebView.setScaleY(1f);
             controlWebView.setAlpha(1f);
-            controlWebView.setTranslationY(height);
+
+            float remainingFrac = Math.max(0.15f, Math.min(1.0f, curTransY / (float) height));
+            long dynamicDuration = Math.max(50, (long) (baseOpenDuration * remainingFrac));
+
             controlWebView.animate()
                     .translationY(0)
-                    .setDuration(openDuration)
+                    .setDuration(dynamicDuration)
                     .setInterpolator(new PathInterpolator(0.2f, 0f, 0f, 1f))
                     .withEndAction(onOpenComplete)
                     .start();
@@ -8784,21 +8808,25 @@ public class MainActivity extends AppCompatActivity {
         }
 
         SharedPreferences prefs = getSharedPreferences(PREFS_NAME, MODE_PRIVATE);
-        int closeDuration = 160;
+        int baseCloseDuration = 160;
         try {
             String closeDurStr = prefs.getString("sheetCloseDuration", "160");
-            closeDuration = Integer.parseInt(closeDurStr);
+            baseCloseDuration = Integer.parseInt(closeDurStr);
         } catch (Exception ignored) {}
         String animStyle = prefs.getString("sheetAnimationStyle", "genie");
 
+        // Cancel running animations immediately mid-flight
         sheetBackdrop.animate().cancel();
+        controlWebView.animate().cancel();
+
+        float curBackdropAlpha = sheetBackdrop.getAlpha();
+        long backdropDuration = Math.max(50, (long) (baseCloseDuration * Math.max(0.15f, curBackdropAlpha)));
         sheetBackdrop.animate()
                 .alpha(0f)
-                .setDuration(closeDuration)
+                .setDuration(backdropDuration)
                 .start();
 
-        controlWebView.animate().cancel();
-        if ("none".equalsIgnoreCase(animStyle) || closeDuration <= 0) {
+        if ("none".equalsIgnoreCase(animStyle) || baseCloseDuration <= 0) {
             sheetOverlayContainer.setVisibility(View.INVISIBLE);
         } else if ("genie".equalsIgnoreCase(animStyle)) {
             float buttonCenterX = floatingCaspianCard.getX() + floatingCaspianCard.getWidth() / 2f;
@@ -8807,11 +8835,15 @@ public class MainActivity extends AppCompatActivity {
             controlWebView.setPivotX(buttonCenterX);
             controlWebView.setPivotY(buttonCenterY);
 
+            float currentScale = controlWebView.getScaleX();
+            float remainingFrac = Math.max(0.15f, Math.min(1.0f, (currentScale - 0.05f) / 0.95f));
+            long dynamicDuration = Math.max(50, (long) (baseCloseDuration * remainingFrac));
+
             controlWebView.animate()
                     .scaleX(0.05f)
                     .scaleY(0.05f)
                     .alpha(0f)
-                    .setDuration(closeDuration)
+                    .setDuration(dynamicDuration)
                     .setInterpolator(new PathInterpolator(0.3f, 0f, 0.8f, 0.15f))
                     .withEndAction(() -> {
                         if (!isSheetOpen) sheetOverlayContainer.setVisibility(View.INVISIBLE);
@@ -8821,9 +8853,13 @@ public class MainActivity extends AppCompatActivity {
             int height = sheetOverlayContainer.getHeight();
             if (height <= 0) height = getResources().getDisplayMetrics().heightPixels;
 
+            float curTransY = controlWebView.getTranslationY();
+            float remainingFrac = Math.max(0.15f, Math.min(1.0f, (height - curTransY) / (float) height));
+            long dynamicDuration = Math.max(50, (long) (baseCloseDuration * remainingFrac));
+
             controlWebView.animate()
                     .translationY(height)
-                    .setDuration(closeDuration)
+                    .setDuration(dynamicDuration)
                     .setInterpolator(new PathInterpolator(0.3f, 0f, 0.8f, 0.15f))
                     .withEndAction(() -> {
                         if (!isSheetOpen) sheetOverlayContainer.setVisibility(View.INVISIBLE);
