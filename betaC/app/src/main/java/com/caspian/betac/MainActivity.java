@@ -9097,7 +9097,7 @@ public class MainActivity extends AppCompatActivity {
             }
 
             if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
-                pipBuilder.setAutoEnterEnabled(true);
+                pipBuilder.setAutoEnterEnabled(false);
                 pipBuilder.setSeamlessResizeEnabled(true);
             }
             enterPictureInPictureMode(pipBuilder.build());
@@ -9145,12 +9145,8 @@ public class MainActivity extends AppCompatActivity {
     @Override
     protected void onUserLeaveHint() {
         super.onUserLeaveHint();
-        TabItem tab = getTabById(activeTabId);
-        if (tab != null && tab.url != null && (tab.url.toLowerCase().contains("youtube.com") || "youtube".equalsIgnoreCase(tab.service))) {
-            if (tab.isPlayingAudio) {
-                enterYouTubePiP();
-            }
-        }
+        // PiP is only entered explicitly via the YouTube Float Pod button.
+        // On home gesture, continuous background audio playback continues without PiP!
     }
 
     @Override
