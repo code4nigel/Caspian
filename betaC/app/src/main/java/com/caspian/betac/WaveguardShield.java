@@ -250,6 +250,7 @@ public class WaveguardShield {
             js.append("        } else {\n");
             js.append("          h = s.split('/')[0].split('?')[0].split(':')[0];\n");
             js.append("        }\n");
+            js.append("        if (h === 'google.com' || h === 'www.google.com' || h === 'youtube.com' || h === 'www.youtube.com' || h === 'facebook.com' || h === 'www.facebook.com' || h === 'linkedin.com' || h === 'www.linkedin.com' || h === 'tiktok.com' || h === 'www.tiktok.com' || h === 'reddit.com' || h === 'www.reddit.com' || h === 'wikipedia.org') return false;\n");
             js.append("        if (blockedSet.has(h)) return true;\n");
             js.append("        var dot = h.indexOf('.');\n");
             js.append("        while (dot > 0 && dot < h.length - 1) {\n");
@@ -377,6 +378,21 @@ public class WaveguardShield {
         return Collections.unmodifiableSet(whitelistedHosts);
     }
 
+    public static boolean isEssentialHost(String host) {
+        if (host == null) return false;
+        String h = host.toLowerCase(java.util.Locale.ROOT).trim();
+        if (h.startsWith("www.")) h = h.substring(4);
+        if ("google.com".equals(h) || h.endsWith(".google.com")) {
+            return !h.startsWith("adservice.") && !h.startsWith("partnerad.") && !h.startsWith("fundingchoicesmessages.");
+        }
+        return "youtube.com".equals(h) || "m.youtube.com".equals(h)
+                || "facebook.com".equals(h) || "m.facebook.com".equals(h)
+                || "instagram.com".equals(h) || "linkedin.com".equals(h)
+                || "tiktok.com".equals(h) || "reddit.com".equals(h)
+                || "twitter.com".equals(h) || "x.com".equals(h)
+                || "wikipedia.org".equals(h) || "github.com".equals(h);
+    }
+
     public int getBlockedCountForTab(int tabId) {
         AtomicInteger count = tabBlockedCounts.get(tabId);
         return count != null ? count.get() : 0;
@@ -420,19 +436,21 @@ public class WaveguardShield {
             if (host == null) return false;
             host = host.toLowerCase(java.util.Locale.ROOT);
 
-            // Suffix and exact domain matching
+            // Suffix and exact domain matching (skipped for essential services like google.com, youtube.com)
             boolean matchesDomain = false;
-            if (blockedDomains.contains(host)) {
-                matchesDomain = true;
-            } else {
-                int dotIndex = host.indexOf('.');
-                while (dotIndex > 0 && dotIndex < host.length() - 1) {
-                    String sub = host.substring(dotIndex + 1);
-                    if (blockedDomains.contains(sub)) {
-                        matchesDomain = true;
-                        break;
+            if (!isEssentialHost(host)) {
+                if (blockedDomains.contains(host)) {
+                    matchesDomain = true;
+                } else {
+                    int dotIndex = host.indexOf('.');
+                    while (dotIndex > 0 && dotIndex < host.length() - 1) {
+                        String sub = host.substring(dotIndex + 1);
+                        if (blockedDomains.contains(sub)) {
+                            matchesDomain = true;
+                            break;
+                        }
+                        dotIndex = host.indexOf('.', dotIndex + 1);
                     }
-                    dotIndex = host.indexOf('.', dotIndex + 1);
                 }
             }
 

@@ -7702,9 +7702,11 @@ public class MainActivity extends AppCompatActivity {
 
             @Override
             public WebResourceResponse shouldInterceptRequest(WebView view, WebResourceRequest request) {
-                if (request != null && request.getUrl() != null) {
-                    Uri reqUri = request.getUrl();
-                    if ("caspian.pdf".equalsIgnoreCase(reqUri.getHost()) && "/stream".equalsIgnoreCase(reqUri.getPath())) {
+                if (request == null || request.getUrl() == null || request.isForMainFrame()) {
+                    return super.shouldInterceptRequest(view, request);
+                }
+                Uri reqUri = request.getUrl();
+                if ("caspian.pdf".equalsIgnoreCase(reqUri.getHost()) && "/stream".equalsIgnoreCase(reqUri.getPath())) {
                         String filePath = reqUri.getQueryParameter("path");
                         if (filePath != null) {
                             File file = new File(filePath);
@@ -7721,7 +7723,6 @@ public class MainActivity extends AppCompatActivity {
                             }
                         }
                     }
-                }
                 try {
                     String pageHost = null;
                     if (tabItem != null && tabItem.url != null) {
