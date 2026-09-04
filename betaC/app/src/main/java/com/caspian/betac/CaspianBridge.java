@@ -725,6 +725,14 @@ public class CaspianBridge {
     }
 
     @JavascriptInterface
+    public void onYouTubeVideoEnded(int tabId) {
+        if (activity != null) {
+            Integer effectiveId = (tabId > 0) ? tabId : boundTabId;
+            activity.runOnUiThread(() -> activity.handleYouTubeVideoEnded(effectiveId));
+        }
+    }
+
+    @JavascriptInterface
     public void toggleMuteYouTube() {
         if (activity != null) activity.runOnUiThread(activity::toggleMuteYouTube);
     }

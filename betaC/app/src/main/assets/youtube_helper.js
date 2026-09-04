@@ -424,11 +424,22 @@
         v.__caspian_attached = true;
         ['play', 'playing', 'pause', 'ended', 'volumechange', 'ratechange'].forEach(evt => {
           v.addEventListener(evt, () => {
+            if (evt === 'ended') {
+              const tabId = window.__caspian_tab_id || 0;
+              if (window.CaspianBridge && typeof window.CaspianBridge.onYouTubeVideoEnded === 'function') {
+                window.CaspianBridge.onYouTubeVideoEnded(tabId);
+              }
+            }
             if (window.__CaspianYouTube) window.__CaspianYouTube.notifyState();
           });
         });
         v.addEventListener('timeupdate', () => {
           const tabId = window.__caspian_tab_id || 0;
+          if (v.ended || (v.duration > 0 && Math.abs((v.currentTime || 0) - v.duration) < 0.5)) {
+            if (window.CaspianBridge && typeof window.CaspianBridge.onYouTubeVideoEnded === 'function') {
+              window.CaspianBridge.onYouTubeVideoEnded(tabId);
+            }
+          }
           if (window.CaspianBridge && typeof window.CaspianBridge.updateTabYouTubeTime === 'function') {
             window.CaspianBridge.updateTabYouTubeTime(tabId, v.currentTime || 0, v.duration || 0);
           } else if (window.CaspianBridge && typeof window.CaspianBridge.updateYouTubeTime === 'function') {

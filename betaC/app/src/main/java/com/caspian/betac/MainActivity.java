@@ -2514,14 +2514,11 @@ public class MainActivity extends AppCompatActivity {
             }
             updateMediaPlaybackNotification(isPlaying);
         }
-        boolean anyPlaying = false;
-        for (TabItem t : tabsList) {
-            if (t.isPlayingAudio) {
-                anyPlaying = true;
-                break;
-            }
+        boolean anyPlaying = hasAnyPlayingYouTubeTab();
+        if (!anyPlaying && (!isPlaying || !hasAnyYouTubeTab())) {
+            dismissMediaNotification();
         }
-        manageYouTubeWakeLock(anyPlaying || isPlaying);
+        manageYouTubeWakeLock(anyPlaying);
     }
 
     private void manageYouTubeWakeLock(boolean acquire) {
@@ -7725,8 +7722,15 @@ public class MainActivity extends AppCompatActivity {
 
             @Override
             public void onPageStarted(WebView view, String pageUrl, Bitmap favicon) {
+                String oldUrl = tabItem.url;
                 tabItem.url = pageUrl;
                 tabItem.service = AICommandRouter.detectServiceFromUrl(pageUrl);
+                if (oldUrl != null && oldUrl.toLowerCase().contains("youtube.com") && (pageUrl == null || !pageUrl.toLowerCase().contains("youtube.com"))) {
+                    tabItem.isPlayingAudio = false;
+                    if (!hasAnyPlayingYouTubeTab()) {
+                        dismissMediaNotification();
+                    }
+                }
                 if (tabItem.id == activeTabId) {
                     browserProgressBar.setVisibility(View.VISIBLE);
                     browserProgressBar.setProgress(15);
@@ -8201,6 +8205,11 @@ public class MainActivity extends AppCompatActivity {
             applySplitViewLayout();
         }
         updateOmniboxState();
+        TabItem curTab = getActiveOrDominantTab();
+        boolean isCurYt = curTab != null && curTab.url != null && (curTab.url.toLowerCase().contains("youtube.com") || "youtube".equalsIgnoreCase(curTab.service));
+        if (!isCurYt && !hasAnyPlayingYouTubeTab()) {
+            dismissMediaNotification();
+        }
         hideControlSheet(false);
         playUiFeedbackSound("tm_tabs");
         saveOpenTabsState();
@@ -8228,6 +8237,9 @@ public class MainActivity extends AppCompatActivity {
             last.title = "Caspian Hub";
             last.webView.loadUrl(last.url);
             updateOmniboxState();
+            if (!hasAnyYouTubeTab() || !hasAnyPlayingYouTubeTab()) {
+                dismissMediaNotification();
+            }
             saveOpenTabsState();
             return;
         }
@@ -8258,6 +8270,13 @@ public class MainActivity extends AppCompatActivity {
                 switchToTab(activeTabId);
             }
         }
+        if (!hasAnyYouTubeTab() || !hasAnyPlayingYouTubeTab()) {
+            TabItem cur = getActiveOrDominantTab();
+            boolean isCurYt = cur != null && cur.url != null && (cur.url.toLowerCase().contains("youtube.com") || "youtube".equalsIgnoreCase(cur.service));
+            if (!isCurYt) {
+                dismissMediaNotification();
+            }
+        }
         updateOmniboxState();
         saveOpenTabsState();
     }
@@ -8265,6 +8284,9 @@ public class MainActivity extends AppCompatActivity {
     public void closeMultipleTabs(List<Integer> ids) {
         for (int id : ids) {
             closeTab(id);
+        }
+        if (!hasAnyYouTubeTab()) {
+            dismissMediaNotification();
         }
         saveOpenTabsState();
     }
@@ -8533,6 +8555,9 @@ public class MainActivity extends AppCompatActivity {
     }
 
     public void updateOmniboxState() {
+        if (!hasAnyYouTubeTab()) {
+            dismissMediaNotification();
+        }
         TabItem currentTab = getActiveOrDominantTab();
         int themeAccent = Color.parseColor(podStartColor);
 
@@ -9289,7 +9314,7 @@ public class MainActivity extends AppCompatActivity {
                     seekYouTubeTo(pos / 1000.0);
                 }
             });
-            mediaSession.setActive(true);
+            mediaSession.setActive(false);
         } catch (Exception e) {
             Log.e(TAG, "setupMediaSession error", e);
         }
@@ -9350,16 +9375,88 @@ public class MainActivity extends AppCompatActivity {
         updateMediaPlaybackNotification(isPlaying);
     }
 
+    public boolean hasAnyYouTubeTab() {
+        if (tabsList == null) return false;
+        for (TabItem t : tabsList) {
+            if (t != null && t.url != null && (t.url.toLowerCase().contains("youtube.com") || "youtube".equalsIgnoreCase(t.service))) {
+                return true;
+            }
+        }
+        return false;
+    }
+
+    public boolean hasAnyPlayingYouTubeTab() {
+        if (tabsList == null) return false;
+        for (TabItem t : tabsList) {
+            if (t != null && t.isPlayingAudio && t.url != null && (t.url.toLowerCase().contains("youtube.com") || "youtube".equalsIgnoreCase(t.service))) {
+                return true;
+            }
+        }
+        return false;
+    }
+
+    public void handleYouTubeVideoEnded(Integer tabId) {
+        if (tabId != null && tabId > 0) {
+            TabItem tab = getTabById(tabId);
+            if (tab != null) {
+                tab.isPlayingAudio = false;
+            }
+        } else {
+            TabItem cur = getActiveOrDominantTab();
+            if (cur != null) {
+                cur.isPlayingAudio = false;
+            }
+        }
+        if (ytRemotePlayPause != null) {
+            ytRemotePlayPause.setImageResource(R.drawable.ic_pod_play);
+        }
+        if (ytTimelinePlayPause != null) {
+            ytTimelinePlayPause.setImageResource(R.drawable.ic_pod_play);
+        }
+        dismissMediaNotification();
+    }
+
     public void updateMediaPlaybackNotification(boolean isPlaying) {
-        TabItem cur = getTabById(activeTabId);
-        boolean isYt = cur != null && cur.url != null && (cur.url.toLowerCase().contains("youtube.com") || "youtube".equalsIgnoreCase(cur.service));
-        if (!isYt) {
+        TabItem cur = getActiveOrDominantTab();
+        boolean isCurYt = cur != null && cur.url != null && (cur.url.toLowerCase().contains("youtube.com") || "youtube".equalsIgnoreCase(cur.service));
+
+        TabItem playingTab = null;
+        for (TabItem t : tabsList) {
+            if (t != null && t.isPlayingAudio && t.url != null && (t.url.toLowerCase().contains("youtube.com") || "youtube".equalsIgnoreCase(t.service))) {
+                playingTab = t;
+                break;
+            }
+        }
+
+        // 1. If no YouTube tab exists at all in the browser, dismiss and exit immediately
+        if (!hasAnyYouTubeTab()) {
+            dismissMediaNotification();
+            return;
+        }
+
+        // 2. If user is NOT on a YouTube tab and nothing is playing in the background, dismiss and exit
+        if (!isCurYt && playingTab == null) {
+            dismissMediaNotification();
+            return;
+        }
+
+        // 3. If playback stopped/paused AND video has ended (current time at or near duration), dismiss!
+        if (!isPlaying && currentVideoDuration > 0 && currentVideoTime >= (currentVideoDuration - 1.0)) {
+            dismissMediaNotification();
+            return;
+        }
+
+        // 4. If playback stopped/paused AND user is no longer on YouTube tab, dismiss!
+        if (!isPlaying && !isCurYt) {
             dismissMediaNotification();
             return;
         }
 
         try {
             if (mediaSession != null) {
+                if (!mediaSession.isActive()) {
+                    mediaSession.setActive(true);
+                }
                 int state = isPlaying ? PlaybackStateCompat.STATE_PLAYING : PlaybackStateCompat.STATE_PAUSED;
                 long posMs = (long)(currentVideoTime * 1000);
                 float speed = isPlaying ? ytCurrentSpeed : 0.0f;
@@ -9435,8 +9532,10 @@ public class MainActivity extends AppCompatActivity {
             NotificationManagerCompat.from(this).cancel(NOTIFICATION_ID_MEDIA);
             if (mediaSession != null) {
                 PlaybackStateCompat.Builder stateBuilder = new PlaybackStateCompat.Builder()
-                        .setState(PlaybackStateCompat.STATE_STOPPED, 0, 1.0f);
+                        .setState(PlaybackStateCompat.STATE_NONE, 0, 0.0f);
                 mediaSession.setPlaybackState(stateBuilder.build());
+                mediaSession.setMetadata(null);
+                mediaSession.setActive(false);
             }
         } catch (Exception ignored) {}
     }
