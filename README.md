@@ -10,9 +10,9 @@ It addresses everyday web performance and workflow friction: eliminating typing 
 
 | Desktop Extension (Chromium) | Caspian Flow / Mobile (Android) | Automatic Updates (Obtainium) |
 | :--- | :--- | :--- |
-| Universal Chromium Extension (V6.1.5) | Floating Action Pod & Bottom Sheet UI | One-click app updates via GitHub Releases |
+| Universal Chromium Extension (V6.2.0) | Floating Action Pod & Bottom Sheet UI | One-click app updates via GitHub Releases |
 | ChatGPT, Google Gemini, YouTube, Media | Omnibox Multi-Tab Browser & AI Docks | Import configuration file included in repo |
-| DOM Pruner, Flow Speed, Exporters & Themes | Zero-Lag DOM Pruning & Video Remote | Background update notifications & installs |
+| DOM Pruner, Flow Speed, RippleFrame, Exporters | Zero-Lag DOM Pruning & Video Remote | Background update notifications & installs |
 
 ---
 
@@ -45,12 +45,21 @@ It addresses everyday web performance and workflow friction: eliminating typing 
 
 ---
 
-## Desktop Extension Highlights (V6.1.5)
+## Desktop Extension Highlights (V6.2.0)
 
-### 1. Real-Time AI Chat DOM Pruning
+### 1. RippleFrame: Full-Page Scrolling Screenshot & Annotation Studio
+Capture seamless full-length screenshots of any webpage and open them in an interactive editing studio tab:
+- **Progressive Full-Page Capture**: Scrolls through the active page smoothly while freezing sticky headers to prevent duplicate navigation bars.
+- **Interactive Crop Tool**: Rectangular crop box with 8-point drag handles and instant canvas resize.
+- **Privacy Redaction & Blur**: Pixelate or blur sensitive passwords, emails, and tokens with an interactive box brush.
+- **Blackout & Hide Boxes**: Draw solid opaque rectangles for confidential document redaction.
+- **Vector Annotations**: Freehand pen, highlighters, directional vector arrows, rectangle/circle outlines, and text tags.
+- **Multi-Format High-Res Exporter**: Export edited captures to `PNG`, `JPG / JPEG` (with compression quality slider), or clean `PDF` documents with custom names and location prompts.
+
+### 2. Real-Time AI Chat DOM Pruning
 Long conversation threads on ChatGPT and Google Gemini often introduce severe typing latency, frame drops, and browser memory bloat due to thousands of rendered DOM elements. Caspian dynamically virtualizes offscreen conversation messages from the active viewport using lightweight CSS rules. Typing lag is eliminated immediately while 100% of your chat history remains intact in memory.
 
-### 2. Flow Speed: Universal Media Playback Controller
+### 3. Flow Speed: Universal Media Playback Controller
 A clean, system-wide media rate controller that works on `<video>` and `<audio>` elements across any website (YouTube, Netflix, Twitch, Coursera, Udemy, Vimeo, and embedded players):
 - **Precision Speed Control**: Adjust playback speed continuously from `0.25x` to `5.0x` or use instant preset pills.
 - **Smart A/B Toggle (<kbd>Alt</kbd> + <kbd>S</kbd>)**: Switches between `1.00x` and your last active custom speed (e.g. `1.75x`) with a single keypress.
@@ -60,7 +69,7 @@ A clean, system-wide media rate controller that works on `<video>` and `<audio>`
 - **Toolbar Icon Speed Badge**: Live speed badge on the extension icon with an ON/OFF toggle in settings.
 - **Input Protection**: Automatically disables shortcuts when typing inside search inputs, comment boxes, or editors.
 
-### 3. YouTube Home Feed Cleaner & Instant Feedback
+### 4. YouTube Home Feed Cleaner & Instant Feedback
 - **Feed Limit Control**: Limit the number of videos displayed on your YouTube homepage (in neat multiples of 3: `3`, `6`, `9`, `12`, `15`, `18`, `21`, `24`, `30`, or `∞ All`).
 - **1-Click "Not Interested" Button**: Hovering over any video thumbnail reveals an instant "Not interested" button at the top-left, automatically triggering YouTube's native feedback menu without requiring extra clicks.
 
@@ -86,7 +95,7 @@ Easily backup all your theme accents, chat limits, YouTube preferences, and Flow
 - Google Chrome, Microsoft Edge, Brave, Opera, Vivaldi, Arc, and other Chromium-based browsers.
 
 ### Installation Steps
-1. Download the latest release archive (`Caspian-Extension-v6.1.5.zip`) from the [GitHub Releases Page](https://github.com/code4nigel/Caspian/releases).
+1. Download the latest release archive (`Caspian-Extension-v6.2.0.zip`) from the [GitHub Releases Page](https://github.com/code4nigel/Caspian/releases).
 2. Unzip the downloaded file to a local folder.
 3. Open your browser and go to the extensions management page:
    - **Chrome**: `chrome://extensions`

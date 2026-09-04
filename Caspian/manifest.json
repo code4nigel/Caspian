@@ -1,7 +1,7 @@
 {
   "manifest_version": 3,
   "name": "Caspian - AI Chat Pruner",
-  "version": "6.1.5",
+  "version": "6.2.0",
   "description": "Chromium Browser Extension to fix AI chat lag via DOM pruning, convert temporary chats to permanent history, and export multi-format transcripts.",
   "permissions": ["storage", "tabs", "downloads", "scripting", "activeTab"],
   "host_permissions": [

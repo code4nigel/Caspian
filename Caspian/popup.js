@@ -22,6 +22,9 @@ const DEFAULTS = {
   flow_speed_show_hud: true,
   flow_speed_badge_enabled: true,
   flow_speed_card_collapsed: false,
+  rf_capture_scope: 'full',
+  rf_scroll_delay: 150,
+  rf_card_collapsed: false,
   disabledSites: [],
   pinnedPresets: []
 };
@@ -1750,6 +1753,96 @@ function setupCardToggleHandlers() {
 
   if (toggleFlowSpeedBadgeBtn) toggleFlowSpeedBadgeBtn.addEventListener('click', handleBadgeToggle);
   if (toggleSettingsSpeedBadgeBtn) toggleSettingsSpeedBadgeBtn.addEventListener('click', handleBadgeToggle);
+
+  // RippleFrame Card Handlers
+  const rfHeader = document.getElementById('rippleframe-header');
+  const rfBody = document.getElementById('rippleframe-body');
+  const rfSub = document.getElementById('rf-status-sub-text');
+  const triggerRfCaptureBtn = document.getElementById('trigger-rf-capture-btn');
+  const btnRfFullpageDirect = document.getElementById('btn-rf-fullpage-direct');
+  const btnRfOpenStudio = document.getElementById('btn-rf-open-studio');
+  const rfDelaySlider = document.getElementById('rf-delay-slider');
+  const rfDelayVal = document.getElementById('rf-delay-val');
+
+  if (rfHeader && rfBody) {
+    rfHeader.addEventListener('click', (e) => {
+      if (e.target.closest('#trigger-rf-capture-btn')) return;
+      const isCurrentlyHidden = rfBody.style.display === 'none';
+      const nextState = isCurrentlyHidden ? 'flex' : 'none';
+      rfBody.style.display = nextState;
+      if (rfSub) {
+        rfSub.textContent = nextState === 'none' 
+          ? 'Long screenshot & studio editor. Tap to expand.' 
+          : 'Long screenshot & studio editor. Tap to collapse.';
+      }
+      chrome.storage.local.set({ rf_card_collapsed: nextState === 'none' });
+    });
+  }
+
+  // Scope pills
+  document.querySelectorAll('.rf-scope-pill').forEach(pill => {
+    pill.addEventListener('click', (e) => {
+      e.stopPropagation();
+      const scope = pill.dataset.scope;
+      chrome.storage.local.set({ rf_capture_scope: scope }, loadSettings);
+    });
+  });
+
+  // Delay slider
+  if (rfDelaySlider) {
+    rfDelaySlider.addEventListener('input', (e) => {
+      const val = parseInt(e.target.value);
+      if (rfDelayVal) rfDelayVal.textContent = `${val}ms`;
+      chrome.storage.local.set({ rf_scroll_delay: val });
+    });
+  }
+
+  // Launch Capture Handler
+  const launchRippleFrameCapture = (overrideScope = null) => {
+    chrome.storage.local.get(['rf_capture_scope', 'rf_scroll_delay'], (data) => {
+      const scope = overrideScope || (data.rf_capture_scope || DEFAULTS.rf_capture_scope);
+      const delay = data.rf_scroll_delay || DEFAULTS.rf_scroll_delay;
+
+      chrome.tabs.query({ active: true, currentWindow: true }, (tabs) => {
+        if (!tabs || tabs.length === 0) return;
+        const activeTab = tabs[0];
+
+        // Execute capture script in active tab
+        chrome.scripting.executeScript({
+          target: { tabId: activeTab.id },
+          files: ['rippleframe_capture.js']
+        }, () => {
+          chrome.tabs.sendMessage(activeTab.id, {
+            action: 'start_rippleframe_capture',
+            options: { scope, delay }
+          });
+          window.close(); // Close popup so it doesn't obstruct capture
+        });
+      });
+    });
+  };
+
+  if (triggerRfCaptureBtn) {
+    triggerRfCaptureBtn.addEventListener('click', (e) => {
+      e.stopPropagation();
+      launchRippleFrameCapture();
+    });
+  }
+
+  if (btnRfFullpageDirect) {
+    btnRfFullpageDirect.addEventListener('click', (e) => {
+      e.stopPropagation();
+      launchRippleFrameCapture('full');
+    });
+  }
+
+  if (btnRfOpenStudio) {
+    btnRfOpenStudio.addEventListener('click', (e) => {
+      e.stopPropagation();
+      chrome.tabs.create({ url: chrome.runtime.getURL('rippleframe.html') });
+      window.close();
+    });
+  }
 }
 
 // Sites Toggles Setup (ChatGPT & Gemini)
@@ -1788,7 +1881,7 @@ function setupDevExclusiveThemes() {
 }
 
 function loadSettings() {
-  chrome.storage.local.get(['pruningEnabled', 'vaultEnabled', 'enabled', 'limit', 'mode', 'accent', 'secondary', 'customBgColor', 'ui_zoom', 'font_scale', 'pinnedPresets', 'disabledSites', 'chat_pruning_mode', 'limit_card_collapsed', 'aesthetics_card_collapsed', 'display_card_collapsed', 'yt_feed_limit_enabled', 'yt_feed_limit', 'yt_not_interested_enabled', 'yt_card_collapsed', 'flow_speed_enabled', 'flow_speed_badge_enabled', 'flow_speed_val', 'flow_speed_cycle_list', 'flow_speed_shortcut_reset', 'flow_speed_shortcut_cycle', 'flow_speed_shortcut_up', 'flow_speed_shortcut_down', 'flow_speed_show_hud', 'flow_speed_card_collapsed'], (data) => {
+  chrome.storage.local.get(['pruningEnabled', 'vaultEnabled', 'enabled', 'limit', 'mode', 'accent', 'secondary', 'customBgColor', 'ui_zoom', 'font_scale', 'pinnedPresets', 'disabledSites', 'chat_pruning_mode', 'limit_card_collapsed', 'aesthetics_card_collapsed', 'display_card_collapsed', 'yt_feed_limit_enabled', 'yt_feed_limit', 'yt_not_interested_enabled', 'yt_card_collapsed', 'flow_speed_enabled', 'flow_speed_badge_enabled', 'flow_speed_val', 'flow_speed_cycle_list', 'flow_speed_shortcut_reset', 'flow_speed_shortcut_cycle', 'flow_speed_shortcut_up', 'flow_speed_shortcut_down', 'flow_speed_show_hud', 'flow_speed_card_collapsed', 'rf_capture_scope', 'rf_scroll_delay', 'rf_card_collapsed'], (data) => {
     const currentMode = data.mode || DEFAULTS.mode;
     updateThemeMode(currentMode);
     updateThemeColors(data);
@@ -1923,6 +2016,31 @@ function loadSettings() {
 
     document.querySelectorAll('.speed-pill').forEach(p => {
       p.classList.toggle('active', Math.abs(parseFloat(p.dataset.speed) - flowSpeedVal) < 0.02);
+    });
+
+    // RippleFrame Card State & Sync
+    const rfScope = data.rf_capture_scope || DEFAULTS.rf_capture_scope;
+    const rfDelay = data.rf_scroll_delay || DEFAULTS.rf_scroll_delay;
+    const isRfCollapsed = data.rf_card_collapsed ?? false;
+
+    const rfBody = document.getElementById('rippleframe-body');
+    const rfSub = document.getElementById('rf-status-sub-text');
+    const rfScopeHint = document.getElementById('rf-scope-hint');
+    const rfDelaySlider = document.getElementById('rf-delay-slider');
+    const rfDelayVal = document.getElementById('rf-delay-val');
+
+    if (rfBody) rfBody.style.display = isRfCollapsed ? 'none' : 'flex';
+    if (rfSub) {
+      rfSub.textContent = isRfCollapsed 
+        ? 'Long screenshot & studio editor. Tap to expand.' 
+        : 'Long screenshot & studio editor. Tap to collapse.';
+    }
+    if (rfScopeHint) rfScopeHint.textContent = rfScope === 'full' ? 'Full Page' : 'Viewport';
+    if (rfDelaySlider) rfDelaySlider.value = rfDelay;
+    if (rfDelayVal) rfDelayVal.textContent = `${rfDelay}ms`;
+
+    document.querySelectorAll('.rf-scope-pill').forEach(pill => {
+      pill.classList.toggle('active', pill.dataset.scope === rfScope);
     });
 
     // Chat Message Limit Card State & Collapsible Accordion

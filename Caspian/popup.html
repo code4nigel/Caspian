@@ -28,7 +28,7 @@
         </div>
         <div class="brand-text">
           <span class="brand-name">CASPIAN</span>
-          <span class="brand-tag" id="extension-version">V6.1.5</span>
+          <span class="brand-tag" id="extension-version">V6.2.0</span>
         </div>
       </div>
       
@@ -291,6 +291,54 @@
                 <span class="card-sub" style="font-size: calc(8px * var(--font-scale, 1));">Show live playback speed on extension icon</span>
               </div>
               <button class="pill-toggle-btn active" id="toggle-flow-speed-badge-btn" title="Toggle Extension Icon Speed Badge">ON</button>
+            </div>
+          </div>
+        </div>
+
+        <!-- 5. Collapsible RippleFrame Full-Page Studio -->
+        <div id="card-rippleframe" class="glass-card expandable" style="margin-top: 2px;">
+          <div class="card-header-row" id="rippleframe-header" style="cursor: pointer;" title="Tap to expand or collapse RippleFrame options">
+            <div class="card-header-left">
+              <span class="chip-icon" style="font-size: 13px;">🎞️</span>
+              <div class="card-title-group">
+                <span class="card-title" id="rf-status-title">RippleFrame: Ready</span>
+                <span id="rf-status-sub-text" class="card-sub">Long screenshot & studio editor. Tap to collapse.</span>
+              </div>
+            </div>
+            <div class="card-header-right">
+              <button id="trigger-rf-capture-btn" class="pill-toggle-btn active" style="background: linear-gradient(135deg, #0284c7 0%, #0ea5e9 100%); color: #fff; border-color: rgba(56, 189, 248, 0.6);" title="Capture active tab now">📸 Capture</button>
+            </div>
+          </div>
+
+          <!-- Collapsible Body for RippleFrame -->
+          <div class="limit-inner-body" id="rippleframe-body" style="gap: 8px;">
+            <!-- Capture Scope Pills -->
+            <div class="inner-section-label">
+              <span>CAPTURE SCOPE</span>
+              <span class="section-hint" id="rf-scope-hint" style="font-family: 'JetBrains Mono', monospace; font-weight: 700; color: var(--accent);">Full Page</span>
+            </div>
+            <div class="pill-grid" style="grid-template-columns: 1fr 1fr;">
+              <button class="pill rf-scope-pill active" data-scope="full">📜 Full Scrolling Page</button>
+              <button class="pill rf-scope-pill" data-scope="viewport">🖼️ Visible Viewport</button>
+            </div>
+
+            <!-- Scroll Delay Slider -->
+            <div class="theme-mode-row" style="margin-top: 2px; padding: 5px 8px; background: var(--input-bg); border-radius: 9px; border: 1px solid var(--border-glass); flex-direction: column; align-items: flex-start; gap: 4px;">
+              <div style="display: flex; justify-content: space-between; width: 100%;">
+                <span class="input-label" style="color: var(--text-main); font-weight: 700; font-size: calc(9.5px * var(--font-scale, 1));">⏱️ Scroll Delay per Slice</span>
+                <span id="rf-delay-val" class="card-sub" style="font-family: 'JetBrains Mono', monospace; font-weight: 700; color: var(--accent);">150ms</span>
+              </div>
+              <input type="range" id="rf-delay-slider" min="50" max="500" step="25" value="150" class="custom-range-slider" style="width: 100%;">
+            </div>
+
+            <!-- Action Buttons Row -->
+            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 6px; margin-top: 2px;">
+              <button id="btn-rf-fullpage-direct" class="pill" style="display: flex; align-items: center; justify-content: center; gap: 5px; font-weight: 700; background: var(--accent-light); color: var(--accent); border: 1px solid var(--accent); padding: 6px 8px; border-radius: 7px; cursor: pointer; font-size: calc(9px * var(--font-scale, 1));">
+                <span>📜 Full Page</span>
+              </button>
+              <button id="btn-rf-open-studio" class="pill" style="display: flex; align-items: center; justify-content: center; gap: 5px; font-weight: 700; background: var(--input-bg); color: var(--text-main); border: 1px solid var(--border-glass); padding: 6px 8px; border-radius: 7px; cursor: pointer; font-size: calc(9px * var(--font-scale, 1));">
+                <span>🎨 Open Studio</span>
+              </button>
             </div>
           </div>
         </div>

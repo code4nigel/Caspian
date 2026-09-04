@@ -47,3 +47,23 @@ chrome.commands.onCommand.addListener((command) => {
     });
   }
 });
+
+// Runtime Messages for RippleFrame Capture & Studio Tab
+chrome.runtime.onMessage.addListener((req, sender, sendResponse) => {
+  if (req.action === 'capture_visible_tab') {
+    chrome.tabs.captureVisibleTab(null, { format: 'png' }, (dataUrl) => {
+      if (chrome.runtime.lastError) {
+        sendResponse({ error: chrome.runtime.lastError.message });
+      } else {
+        sendResponse({ dataUrl });
+      }
+    });
+    return true; // Keep message channel open for async response
+  }
+
+  if (req.action === 'open_rippleframe_studio') {
+    const studioUrl = chrome.runtime.getURL('rippleframe.html');
+    chrome.tabs.create({ url: studioUrl });
+    sendResponse({ status: 'opened' });
+  }
+});
