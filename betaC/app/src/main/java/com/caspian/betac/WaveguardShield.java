@@ -151,7 +151,7 @@ public class WaveguardShield {
                                 "  if (document.getElementById('caspian-waveguard-style')) return;" +
                                 "  var style = document.createElement('style');" +
                                 "  style.id = 'caspian-waveguard-style';" +
-                                "  style.textContent = '" + combinedSelectors.replace("'", "\\'") + " { display: none !important; visibility: hidden !important; height: 0 !important; min-height: 0 !important; }';" +
+                                "  style.textContent = '" + combinedSelectors.replace("'", "\\'") + " { display: none !important; visibility: hidden !important; width: 0 !important; height: 0 !important; min-width: 0 !important; min-height: 0 !important; max-width: 0 !important; max-height: 0 !important; opacity: 0 !important; pointer-events: none !important; margin: 0 !important; padding: 0 !important; border: 0 !important; }';" +
                                 "  (document.head || document.documentElement).appendChild(style);" +
                                 "})();";
                     }
@@ -345,21 +345,27 @@ public class WaveguardShield {
         try {
             if (urlString != null && isDefuserEnabled) {
                 String lower = urlString.toLowerCase(java.util.Locale.ROOT);
-                // Video VAST & player midroll ad mocking
-                if (lower.contains("/pagead/") || lower.contains("doubleclick") || lower.contains("ad_type") || lower.contains("vast")) {
-                    headers.put("Content-Type", "application/xml; charset=UTF-8");
-                    String emptyVast = "<?xml version=\"1.0\" encoding=\"UTF-8\"?><VAST version=\"2.0\"></VAST>";
-                    return new WebResourceResponse("application/xml", "UTF-8", 200, "OK", headers,
-                            new ByteArrayInputStream(emptyVast.getBytes(StandardCharsets.UTF_8)));
-                } else if (lower.contains("/youtubei/v1/player/ad_break") || lower.contains("/ad_break") || lower.contains("/get_midroll_info")) {
-                    headers.put("Content-Type", "application/json; charset=UTF-8");
-                    return new WebResourceResponse("application/json", "UTF-8", 200, "OK", headers,
-                            new ByteArrayInputStream("{}".getBytes(StandardCharsets.UTF_8)));
+                // Video VAST & player midroll ad mocking (STRICTLY for video player ads, NEVER for scripts, images, or general web pages)
+                boolean isScriptOrMedia = lower.endsWith(".js") || lower.contains(".js?") || lower.contains("/js/") ||
+                                          lower.endsWith(".png") || lower.endsWith(".jpg") || lower.endsWith(".gif") ||
+                                          lower.endsWith(".swf") || lower.endsWith(".webp");
+                if (!isScriptOrMedia) {
+                    if ((lower.contains("/pagead/") || lower.contains("doubleclick") || lower.contains("ad_type") || lower.contains("vast"))
+                            && (lower.contains("advideo") || lower.contains("output=xml") || lower.contains("output=vast") || lower.contains("env=vp") || lower.contains("/pagead/ads?") || lower.contains("correlator="))) {
+                        headers.put("Content-Type", "application/xml; charset=UTF-8");
+                        String emptyVast = "<?xml version=\"1.0\" encoding=\"UTF-8\"?><VAST version=\"2.0\"></VAST>";
+                        return new WebResourceResponse("application/xml", "UTF-8", 200, "OK", headers,
+                                new ByteArrayInputStream(emptyVast.getBytes(StandardCharsets.UTF_8)));
+                    } else if (lower.contains("/youtubei/v1/player/ad_break") || lower.contains("/get_midroll_info")) {
+                        headers.put("Content-Type", "application/json; charset=UTF-8");
+                        return new WebResourceResponse("application/json", "UTF-8", 200, "OK", headers,
+                                new ByteArrayInputStream("{}".getBytes(StandardCharsets.UTF_8)));
+                    }
                 }
             }
         } catch (Throwable ignored) {}
 
-        // For all trackers, banners, and analytics, return 403 Forbidden with 0 bytes to trigger onerror on script/img tags
+        // For all trackers, banners, scripts, and analytics, return 403 Forbidden with 0 bytes to trigger onerror on script/img/embed tags
         headers.put("Content-Type", "text/plain; charset=UTF-8");
         return new WebResourceResponse("text/plain", "UTF-8", 403, "Forbidden", headers,
                 new ByteArrayInputStream(new byte[0]));
