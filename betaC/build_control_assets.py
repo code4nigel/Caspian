@@ -339,7 +339,7 @@ def build_html(version_name):
             <div id="adblock-dot" class="status-dot active"></div>
             <div>
               <div class="m3-card-title">Waveguard</div>
-              <div class="m3-card-sub">Next-Gen Privacy &amp; AdBlock Shield.</div>
+              <div class="m3-card-sub">AdBlock for peaceful internet.</div>
             </div>
           </div>
           <button id="toggle-adblock-btn" class="oneui-pill-btn primary" style="font-size: 11px; padding: 4px 10px;">ON</button>
@@ -347,6 +347,50 @@ def build_html(version_name):
 
         <!-- Accordion Body -->
         <div id="adblock-body" style="display: none; margin-top: 12px; border-top: 1px solid var(--border-glass); padding-top: 10px;">
+          <!-- Live Threat Metric Bar -->
+          <div style="background: rgba(0, 229, 255, 0.06); border: 1px solid rgba(0, 229, 255, 0.2); border-radius: 12px; padding: 10px; margin-bottom: 10px; display: flex; align-items: center; justify-content: space-between;">
+            <div>
+              <div style="font-size: 12px; font-weight: 700; color: #FFFFFF;">🛡️ Waveguard Protection</div>
+              <div id="waveguard-stats-subtitle" style="font-size: 10px; color: var(--text-muted); margin-top: 2px;">227 filters active &amp; compiling</div>
+            </div>
+            <span id="waveguard-total-badge" style="background: rgba(0,229,255,0.18); color: #00E5FF; font-weight: 700; font-size: 12px; padding: 3px 8px; border-radius: 8px;">0 Blocked</span>
+          </div>
+
+          <!-- Advanced Defense Sub-Section (Synced with Omnibox Flyout) -->
+          <div style="background: rgba(255,255,255,0.02); border: 1px solid var(--border-glass); border-radius: 12px; padding: 10px; margin-bottom: 10px;">
+            <div style="font-size: 11px; font-weight: 700; color: var(--text-main); margin-bottom: 8px;">⚔️ Advanced Defense Controls</div>
+            <div style="display: flex; flex-direction: column; gap: 8px;">
+              <label style="display: flex; align-items: center; justify-content: space-between; font-size: 11px; color: var(--text-main); cursor: pointer;">
+                <div>
+                  <div style="font-weight: 600;">Cross-Site Trackers &amp; Ads</div>
+                  <div style="font-size: 9px; color: var(--text-muted);">Blocks ad networks, telemetry beacons, and fingerprinting</div>
+                </div>
+                <input type="checkbox" id="chk-waveguard-trackers" checked style="accent-color: #00E5FF;" />
+              </label>
+              <label style="display: flex; align-items: center; justify-content: space-between; font-size: 11px; color: var(--text-main); cursor: pointer;">
+                <div>
+                  <div style="font-weight: 600;">Cosmetic Element Hiding</div>
+                  <div style="font-size: 9px; color: var(--text-muted);">Collapses empty ad frames, banner slots, and promotional spaces</div>
+                </div>
+                <input type="checkbox" id="chk-waveguard-cosmetic" checked style="accent-color: #00E5FF;" />
+              </label>
+              <label style="display: flex; align-items: center; justify-content: space-between; font-size: 11px; color: var(--text-main); cursor: pointer;">
+                <div>
+                  <div style="font-weight: 600;">Anti-Adblock Defuser</div>
+                  <div style="font-size: 9px; color: var(--text-muted);">Neutralizes detection scripts &amp; video ad blockers without page breaks</div>
+                </div>
+                <input type="checkbox" id="chk-waveguard-defuser" checked style="accent-color: #00E5FF;" />
+              </label>
+              <label style="display: flex; align-items: center; justify-content: space-between; font-size: 11px; color: var(--text-main); cursor: pointer;">
+                <div>
+                  <div style="font-weight: 600;">Block Popups &amp; Redirects</div>
+                  <div style="font-size: 9px; color: var(--text-muted);">EasyPrivacy strict telemetry &amp; popup filtering</div>
+                </div>
+                <input type="checkbox" id="chk-waveguard-popups" checked style="accent-color: #00E5FF;" />
+              </label>
+            </div>
+          </div>
+
           <!-- Video Defuser Sub-Section -->
           <div style="background: rgba(255,255,255,0.03); border: 1px solid var(--border-glass); border-radius: 12px; padding: 10px; margin-bottom: 10px;">
             <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 6px;">
@@ -360,28 +404,21 @@ def build_html(version_name):
             <div style="display: flex; flex-direction: column; gap: 6px;">
               <label style="display: flex; align-items: center; justify-content: space-between; font-size: 11px; color: var(--text-main); cursor: pointer;">
                 <span>⚡ Defuse Video Ad Placements</span>
-                <input type="checkbox" id="chk-adblock-yt" checked style="accent-color: var(--accent);" />
+                <input type="checkbox" id="chk-adblock-yt" checked style="accent-color: #00E5FF;" />
               </label>
               <label style="display: flex; align-items: center; justify-content: space-between; font-size: 11px; color: var(--text-main); cursor: pointer;">
                 <span>⏩ 0ms Auto-Fast-Forward Fallback</span>
-                <input type="checkbox" id="chk-adblock-skip" checked style="accent-color: var(--accent);" />
+                <input type="checkbox" id="chk-adblock-skip" checked style="accent-color: #00E5FF;" />
               </label>
             </div>
           </div>
 
-          <!-- General Web AdBlock Sub-Section -->
-          <div style="background: rgba(255,255,255,0.02); border: 1px solid var(--border-glass); border-radius: 12px; padding: 10px;">
-            <div style="font-size: 11px; font-weight: 700; color: var(--text-main); margin-bottom: 6px;">🌐 Universal Web Filters</div>
-            <div style="display: flex; flex-direction: column; gap: 6px;">
-              <label style="display: flex; align-items: center; justify-content: space-between; font-size: 11px; color: var(--text-main); cursor: pointer;">
-                <span>🚫 Block Banners & Overlays</span>
-                <input type="checkbox" id="chk-adblock-banner" checked style="accent-color: var(--accent);" />
-              </label>
-              <label style="display: flex; align-items: center; justify-content: space-between; font-size: 11px; color: var(--text-main); cursor: pointer;">
-                <span>🔒 Block Trackers & Telemetry</span>
-                <input type="checkbox" id="chk-adblock-trackers" checked style="accent-color: var(--accent);" />
-              </label>
-            </div>
+          <!-- Filter Lists Update Row -->
+          <div style="display: flex; justify-content: space-between; align-items: center; padding: 4px 2px;">
+            <span id="waveguard-filter-ver-label" style="font-size: 10px; color: var(--text-muted);">Database: Waveguard Active</span>
+            <button id="btn-waveguard-update-filters" class="oneui-pill-btn secondary" style="font-size: 11px; padding: 4px 10px; color: #00E5FF;">
+              🔄 Update Lists
+            </button>
           </div>
         </div>
       </div>

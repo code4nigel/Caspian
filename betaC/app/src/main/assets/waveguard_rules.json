@@ -177,6 +177,8 @@
     "sentry.io",
     "serving-sys.com",
     "sharethrough.com",
+    "sentry-cdn.com",
+    "js.sentry-cdn.com",
     "siftscience.com",
     "simpli.fi",
     "singular.net",
@@ -257,7 +259,11 @@
     "/ad_box",
     "/ads/banner",
     "/ad-slot",
-    "ad.admitad.com"
+    "ad.admitad.com",
+    "pr_advertising_ads_banner",
+    "_ads_banner.",
+    "/pr_advertising_",
+    "adblock-tester.com/banners/"
   ],
   "cosmeticSelectors": [
     ".ad",
@@ -337,6 +343,10 @@
     "img[src*=\"ads/\"]",
     "img[src*=\"/ad/\"]",
     "img[alt*=\"advertisement\" i]",
-    "img[alt*=\"sponsored\" i]"
+    "img[alt*=\"sponsored\" i]",
+    "img[src*=\"pr_advertising\"]",
+    "object[data*=\"pr_advertising\"]",
+    "embed[src*=\"pr_advertising\"]",
+    "img[src*=\"_ads_banner\"]"
   ]
 }

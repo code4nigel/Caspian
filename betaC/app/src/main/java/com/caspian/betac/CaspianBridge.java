@@ -93,6 +93,56 @@ public class CaspianBridge {
     }
 
     @JavascriptInterface
+    public void setWaveguardSetting(String key, boolean val) {
+        if (activity != null) {
+            WaveguardShield shield = activity.getWaveguardShield();
+            if (shield != null) {
+                if ("trackers".equalsIgnoreCase(key) || "global".equalsIgnoreCase(key)) {
+                    shield.setGlobalEnabled(val);
+                } else if ("cosmetic".equalsIgnoreCase(key)) {
+                    shield.setCosmeticEnabled(val);
+                } else if ("defuser".equalsIgnoreCase(key)) {
+                    shield.setDefuserEnabled(val);
+                } else if ("popups".equalsIgnoreCase(key) || "easyprivacy".equalsIgnoreCase(key)) {
+                    shield.setEasyPrivacyEnabled(val);
+                }
+            }
+            activity.runOnUiThread(() -> {
+                activity.updateOmniboxState();
+                activity.syncWaveguardToControlWeb();
+            });
+        }
+    }
+
+    @JavascriptInterface
+    public String getWaveguardStats() {
+        if (activity != null) {
+            WaveguardShield shield = activity.getWaveguardShield();
+            if (shield != null) {
+                return shield.getStatusJson().toString();
+            }
+        }
+        return "{}";
+    }
+
+    @JavascriptInterface
+    public void updateWaveguardLists() {
+        if (activity != null) {
+            WaveguardShield shield = activity.getWaveguardShield();
+            if (shield != null) {
+                shield.checkForUpdates((success, newCount, msg) -> {
+                    activity.runOnUiThread(() -> {
+                        Toast.makeText(activity, msg, Toast.LENGTH_SHORT).show();
+                        if (activity.getControlWebView() != null) {
+                            activity.getControlWebView().evaluateJavascript("if (typeof syncWaveguardUI === 'function') syncWaveguardUI();", null);
+                        }
+                    });
+                });
+            }
+        }
+    }
+
+    @JavascriptInterface
     public void applyTimelineDefaultBehavior(String behavior) {
         if (activity != null && behavior != null) {
             activity.runOnUiThread(() -> activity.applyTimelineDefaultBehavior(behavior));

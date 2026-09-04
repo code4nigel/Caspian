@@ -322,6 +322,19 @@ public class WaveguardShield {
         }
     }
 
+    public org.json.JSONObject getStatusJson() {
+        org.json.JSONObject json = new org.json.JSONObject();
+        try {
+            json.put("globalEnabled", isGlobalEnabled);
+            json.put("cosmeticEnabled", isCosmeticEnabled);
+            json.put("easyPrivacyEnabled", isEasyPrivacyEnabled);
+            json.put("defuserEnabled", isDefuserEnabled);
+            json.put("totalBlocked", totalBlockedCount.get());
+            json.put("ruleCount", getRuleCount());
+        } catch (Exception ignored) {}
+        return json;
+    }
+
     /**
      * Synthesizes defused empty mock responses for video players and analytics with valid non-null headers.
      */
@@ -331,27 +344,24 @@ public class WaveguardShield {
 
         try {
             if (urlString != null && isDefuserEnabled) {
-                String lower = urlString.toLowerCase();
+                String lower = urlString.toLowerCase(java.util.Locale.ROOT);
                 // Video VAST & player midroll ad mocking
                 if (lower.contains("/pagead/") || lower.contains("doubleclick") || lower.contains("ad_type") || lower.contains("vast")) {
                     headers.put("Content-Type", "application/xml; charset=UTF-8");
                     String emptyVast = "<?xml version=\"1.0\" encoding=\"UTF-8\"?><VAST version=\"2.0\"></VAST>";
                     return new WebResourceResponse("application/xml", "UTF-8", 200, "OK", headers,
                             new ByteArrayInputStream(emptyVast.getBytes(StandardCharsets.UTF_8)));
-                } else if (lower.contains("/youtubei/v1/player/ad_break") || lower.contains("/ad_break") || lower.contains(".json")) {
+                } else if (lower.contains("/youtubei/v1/player/ad_break") || lower.contains("/ad_break") || lower.contains("/get_midroll_info")) {
                     headers.put("Content-Type", "application/json; charset=UTF-8");
                     return new WebResourceResponse("application/json", "UTF-8", 200, "OK", headers,
                             new ByteArrayInputStream("{}".getBytes(StandardCharsets.UTF_8)));
-                } else if (lower.endsWith(".js") || lower.contains("analytics.js") || lower.contains("gtag/js") || lower.contains("fbevents.js")) {
-                    headers.put("Content-Type", "application/javascript; charset=UTF-8");
-                    return new WebResourceResponse("application/javascript", "UTF-8", 200, "OK", headers,
-                            new ByteArrayInputStream("/* Waveguard Neutralized */".getBytes(StandardCharsets.UTF_8)));
                 }
             }
         } catch (Throwable ignored) {}
 
+        // For all trackers, banners, and analytics, return 403 Forbidden with 0 bytes to trigger onerror on script/img tags
         headers.put("Content-Type", "text/plain; charset=UTF-8");
-        return new WebResourceResponse("text/plain", "UTF-8", 200, "OK", headers,
+        return new WebResourceResponse("text/plain", "UTF-8", 403, "Forbidden", headers,
                 new ByteArrayInputStream(new byte[0]));
     }
 

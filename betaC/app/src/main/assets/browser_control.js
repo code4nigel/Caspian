@@ -1270,8 +1270,10 @@
           const adblockSubOptions = [
             { id: 'chk-adblock-yt', key: 'adblock_yt_enabled' },
             { id: 'chk-adblock-skip', key: 'adblock_yt_autoskip_enabled' },
-            { id: 'chk-adblock-banner', key: 'adblock_banner_enabled' },
-            { id: 'chk-adblock-trackers', key: 'adblock_trackers_enabled' }
+            { id: 'chk-waveguard-trackers', key: 'waveguard_trackers', waveguardType: 'trackers' },
+            { id: 'chk-waveguard-cosmetic', key: 'waveguard_cosmetic', waveguardType: 'cosmetic' },
+            { id: 'chk-waveguard-defuser', key: 'waveguard_defuser', waveguardType: 'defuser' },
+            { id: 'chk-waveguard-popups', key: 'waveguard_popups', waveguardType: 'popups' }
           ];
 
           adblockSubOptions.forEach(opt => {
@@ -1288,10 +1290,18 @@
                   if (window.CaspianBridge && typeof window.CaspianBridge.saveSetting === 'function') {
                     window.CaspianBridge.saveSetting(opt.key, val);
                   }
+                  if (opt.waveguardType && window.CaspianBridge && typeof window.CaspianBridge.setWaveguardSetting === 'function') {
+                    window.CaspianBridge.setWaveguardSetting(opt.waveguardType, el.checked);
+                  }
+                  if (opt.waveguardType === 'trackers') {
+                    localStorage.setItem('adblock_enabled', val);
+                    updateEngineCardUI(cardAB, toggleAdblockBtn, null, document.getElementById('adblock-dot'), 'adblock_enabled');
+                  }
                 });
               }
             }
           });
+          if (typeof window.syncWaveguardUI === 'function') window.syncWaveguardUI();
 
           const startCol = prefs.theme_start_color || localStorage.getItem('theme_start_color') || '#A2A9A9';
           const endCol = prefs.theme_end_color || localStorage.getItem('theme_end_color') || '#1B4264';
@@ -2529,6 +2539,8 @@
         requestAnimationFrame(() => {
           renderOpenTabs();
         });
+      } else if (targetTab === 'engine') {
+        if (typeof window.syncWaveguardUI === 'function') window.syncWaveguardUI();
       }
     });
   });
@@ -3739,12 +3751,15 @@
       });
     });
 
-    // 4. AdBlocker Accordion & Toggle
+    // 4. Waveguard AdBlocker Accordion & Toggle
     if (adblockHeader && adblockBody) {
       adblockHeader.addEventListener('click', (e) => {
         if (e.target === toggleAdblockBtn || (toggleAdblockBtn && toggleAdblockBtn.contains(e.target))) return;
         const isOpen = adblockBody.style.display !== 'none';
         adblockBody.style.display = isOpen ? 'none' : 'block';
+        if (!isOpen && typeof window.syncWaveguardUI === 'function') {
+          window.syncWaveguardUI();
+        }
       });
     }
     if (toggleAdblockBtn) {
@@ -3757,7 +3772,66 @@
         if (window.CaspianBridge && typeof window.CaspianBridge.saveSetting === 'function') {
           window.CaspianBridge.saveSetting('adblock_enabled', next ? 'true' : 'false');
         }
+        if (window.CaspianBridge && typeof window.CaspianBridge.setWaveguardSetting === 'function') {
+          window.CaspianBridge.setWaveguardSetting('global', next);
+        }
+        const chkTrackers = document.getElementById('chk-waveguard-trackers');
+        if (chkTrackers) chkTrackers.checked = next;
         updateEngineCardUI(cardAB, toggleAdblockBtn, adblockBody, document.getElementById('adblock-dot'), 'adblock_enabled');
+      });
+    }
+
+    // Waveguard Bi-Directional Synchronization
+    window.syncWaveguardUI = function() {
+      if (!window.CaspianBridge || typeof window.CaspianBridge.getWaveguardStats !== 'function') return;
+      try {
+        const statsStr = window.CaspianBridge.getWaveguardStats();
+        const stats = JSON.parse(statsStr || '{}');
+        const isGlobal = stats.globalEnabled !== undefined ? stats.globalEnabled : (localStorage.getItem('adblock_enabled') !== 'false');
+
+        localStorage.setItem('adblock_enabled', isGlobal ? 'true' : 'false');
+        updateEngineCardUI(cardAB, toggleAdblockBtn, null, document.getElementById('adblock-dot'), 'adblock_enabled');
+
+        const chkTrackers = document.getElementById('chk-waveguard-trackers');
+        if (chkTrackers) chkTrackers.checked = !!isGlobal;
+
+        const chkCosmetic = document.getElementById('chk-waveguard-cosmetic');
+        if (chkCosmetic) chkCosmetic.checked = stats.cosmeticEnabled !== false;
+
+        const chkDefuser = document.getElementById('chk-waveguard-defuser');
+        if (chkDefuser) chkDefuser.checked = stats.defuserEnabled !== false;
+
+        const chkPopups = document.getElementById('chk-waveguard-popups');
+        if (chkPopups) chkPopups.checked = stats.easyPrivacyEnabled !== false;
+
+        const totalBadge = document.getElementById('waveguard-total-badge');
+        if (totalBadge) totalBadge.textContent = (stats.totalBlocked || 0) + ' Blocked';
+
+        const subTitle = document.getElementById('waveguard-stats-subtitle');
+        if (subTitle) subTitle.textContent = (stats.ruleCount || 227) + ' filters active & compiling';
+
+        const verLabel = document.getElementById('waveguard-filter-ver-label');
+        if (verLabel) verLabel.textContent = 'Database: Waveguard Active (' + (stats.ruleCount || 227) + ' filters)';
+      } catch (e) {
+        console.warn('Failed to sync Waveguard UI: ', e);
+      }
+    };
+
+    const btnUpdateWaveguard = document.getElementById('btn-waveguard-update-filters');
+    if (btnUpdateWaveguard) {
+      btnUpdateWaveguard.addEventListener('click', (e) => {
+        e.stopPropagation();
+        playSFX('tb_clicks');
+        btnUpdateWaveguard.textContent = '⏳ Updating...';
+        btnUpdateWaveguard.disabled = true;
+        if (window.CaspianBridge && typeof window.CaspianBridge.updateWaveguardLists === 'function') {
+          window.CaspianBridge.updateWaveguardLists();
+        }
+        setTimeout(() => {
+          btnUpdateWaveguard.textContent = '🔄 Update Lists';
+          btnUpdateWaveguard.disabled = false;
+          if (typeof window.syncWaveguardUI === 'function') window.syncWaveguardUI();
+        }, 2000);
       });
     }
 

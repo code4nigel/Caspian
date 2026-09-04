@@ -5215,6 +5215,7 @@ public class MainActivity extends AppCompatActivity {
                     waveguardShield.setGlobalEnabled(isChecked);
                 }
                 updateOmniboxState();
+                syncWaveguardToControlWeb();
                 if (isChecked) {
                     statusBadge.setText("PROTECTED");
                     statusBadge.setTextColor(android.graphics.Color.parseColor("#00E5FF"));
@@ -5238,21 +5239,25 @@ public class MainActivity extends AppCompatActivity {
             swAdblock.setOnCheckedChangeListener((b, val) -> {
                 waveguardShield.setGlobalEnabled(val);
                 updateOmniboxState();
+                syncWaveguardToControlWeb();
             });
 
             swCosmetic.setChecked(waveguardShield.isCosmeticEnabled());
             swCosmetic.setOnCheckedChangeListener((b, val) -> {
                 waveguardShield.setCosmeticEnabled(val);
+                syncWaveguardToControlWeb();
             });
 
             swDefuser.setChecked(waveguardShield.isDefuserEnabled());
             swDefuser.setOnCheckedChangeListener((b, val) -> {
                 waveguardShield.setDefuserEnabled(val);
+                syncWaveguardToControlWeb();
             });
 
             swPopups.setChecked(waveguardShield.isEasyPrivacyEnabled());
             swPopups.setOnCheckedChangeListener((b, val) -> {
                 waveguardShield.setEasyPrivacyEnabled(val);
+                syncWaveguardToControlWeb();
             });
 
             TextView btnUpdateRules = popupView.findViewById(R.id.btn_update_rules);
@@ -5263,6 +5268,7 @@ public class MainActivity extends AppCompatActivity {
                         btnUpdateRules.setText("Updated");
                         rulesVersionText.setText("Waveguard Active (" + newCount + " filters)");
                         Toast.makeText(MainActivity.this, message, Toast.LENGTH_SHORT).show();
+                        syncWaveguardToControlWeb();
                     });
                 });
             });
@@ -7776,12 +7782,18 @@ public class MainActivity extends AppCompatActivity {
                 }
 
                 if (waveguardShield != null && waveguardShield.isGlobalEnabled() && waveguardShield.isCosmeticEnabled()) {
-                    try {
-                        String cosmetic = waveguardShield.getCosmeticCssInjection();
-                        if (cosmetic != null && !cosmetic.isEmpty()) {
-                            view.evaluateJavascript(cosmetic, null);
-                        }
-                    } catch (Throwable ignored) {}
+                    String pageHost = null;
+                    if (pageUrl != null) {
+                        try { pageHost = Uri.parse(pageUrl).getHost(); } catch (Exception ignored) {}
+                    }
+                    if (!waveguardShield.isSiteWhitelisted(pageHost)) {
+                        try {
+                            String cosmetic = waveguardShield.getCosmeticCssInjection();
+                            if (cosmetic != null && !cosmetic.isEmpty()) {
+                                view.evaluateJavascript(cosmetic, null);
+                            }
+                        } catch (Throwable ignored) {}
+                    }
                 }
 
                 if (tabItem.pendingPrompt != null && !tabItem.pendingPrompt.isEmpty()) {
@@ -7809,6 +7821,20 @@ public class MainActivity extends AppCompatActivity {
                 if (tabItem.id == activeTabId) {
                     browserProgressBar.setProgress(newProgress);
                     if (newProgress == 100) browserProgressBar.setVisibility(View.GONE);
+                }
+                if (newProgress >= 25 && newProgress <= 80) {
+                    if (waveguardShield != null && waveguardShield.isGlobalEnabled() && waveguardShield.isCosmeticEnabled()) {
+                        String pageHost = null;
+                        if (tabItem != null && tabItem.url != null) {
+                            try { pageHost = Uri.parse(tabItem.url).getHost(); } catch (Exception ignored) {}
+                        }
+                        if (!waveguardShield.isSiteWhitelisted(pageHost)) {
+                            String cosmetic = waveguardShield.getCosmeticCssInjection();
+                            if (cosmetic != null && !cosmetic.isEmpty()) {
+                                view.evaluateJavascript(cosmetic, null);
+                            }
+                        }
+                    }
                 }
             }
 
@@ -8496,7 +8522,17 @@ public class MainActivity extends AppCompatActivity {
         return null;
     }
 
-    private void updateOmniboxState() {
+    public WebView getControlWebView() {
+        return controlWebView;
+    }
+
+    public void syncWaveguardToControlWeb() {
+        if (controlWebView != null) {
+            controlWebView.evaluateJavascript("if (typeof syncWaveguardUI === 'function') syncWaveguardUI();", null);
+        }
+    }
+
+    public void updateOmniboxState() {
         TabItem currentTab = getActiveOrDominantTab();
         int themeAccent = Color.parseColor(podStartColor);
 
