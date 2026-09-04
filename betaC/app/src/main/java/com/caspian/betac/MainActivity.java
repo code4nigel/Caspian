@@ -7623,6 +7623,19 @@ public class MainActivity extends AppCompatActivity {
         settings.setOffscreenPreRaster(true);
         settings.setEnableSmoothTransition(true);
 
+        if (waveguardShield != null && waveguardShield.isGlobalEnabled()) {
+            try {
+                if (androidx.webkit.WebViewFeature.isFeatureSupported(androidx.webkit.WebViewFeature.DOCUMENT_START_SCRIPT)) {
+                    String protection = waveguardShield.getClientSideProtectionJs();
+                    if (protection != null && !protection.isEmpty()) {
+                        androidx.webkit.WebViewCompat.addDocumentStartJavaScript(webView, protection, java.util.Collections.singleton("*"));
+                    }
+                }
+            } catch (Throwable t) {
+                Log.e(TAG, "Error configuring DOCUMENT_START_SCRIPT: ", t);
+            }
+        }
+
         TabItem tabItem = new TabItem(id, "New Tab", url, service, webView, isIncognito);
         tabItem.pendingPrompt = promptPayload;
         tabItem.caskId = finalCaskId;

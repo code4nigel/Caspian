@@ -79,27 +79,20 @@ public class WaveguardShield {
             this.whitelistedHosts.addAll(savedWhitelist);
         }
 
-        // Load rules into memory
-        loadRulesAsync();
+        // Load rules into memory immediately
+        loadRulesInternal();
     }
 
-    private void loadRulesAsync() {
-        new Thread(() -> {
+    public void loadRulesAsync() {
+        new Thread(this::loadRulesInternal).start();
+    }
+
+    private synchronized void loadRulesInternal() {
+        try {
+            // Priority 1: Read bundled asset rules
+            String assetJsonStr = "";
             try {
-                // Priority 1: Check for downloaded custom rules in internal storage
-                File customRulesFile = new File(context.getFilesDir(), "waveguard_rules_custom.json");
-                InputStream is = null;
-                if (customRulesFile.exists() && customRulesFile.length() > 50) {
-                    try {
-                        is = new FileInputStream(customRulesFile);
-                    } catch (Exception ignored) {}
-                }
-
-                // Priority 2: Fall back to bundled asset rules
-                if (is == null) {
-                    is = context.getAssets().open("waveguard_rules.json");
-                }
-
+                InputStream is = context.getAssets().open("waveguard_rules.json");
                 BufferedReader reader = new BufferedReader(new InputStreamReader(is, StandardCharsets.UTF_8));
                 StringBuilder sb = new StringBuilder();
                 String line;
@@ -107,61 +100,205 @@ public class WaveguardShield {
                     sb.append(line);
                 }
                 reader.close();
-
-                JSONObject root = new JSONObject(sb.toString());
-
-                // 1. Blocked Domains
-                JSONArray domainsArr = root.optJSONArray("blockedDomains");
-                if (domainsArr != null) {
-                    Set<String> tempDomains = new HashSet<>();
-                    for (int i = 0; i < domainsArr.length(); i++) {
-                        String d = domainsArr.optString(i, "").trim().toLowerCase();
-                        if (!d.isEmpty()) tempDomains.add(d);
-                    }
-                    blockedDomains.clear();
-                    blockedDomains.addAll(tempDomains);
-                }
-
-                // 2. Path Keywords
-                JSONArray pathsArr = root.optJSONArray("pathKeywords");
-                if (pathsArr != null) {
-                    List<String> tempPaths = new ArrayList<>();
-                    for (int i = 0; i < pathsArr.length(); i++) {
-                        String p = pathsArr.optString(i, "").trim().toLowerCase();
-                        if (!p.isEmpty()) tempPaths.add(p);
-                    }
-                    pathKeywords.clear();
-                    pathKeywords.addAll(tempPaths);
-                }
-
-                // 3. Cosmetic Selectors
-                JSONArray cssArr = root.optJSONArray("cosmeticSelectors");
-                if (cssArr != null) {
-                    StringBuilder cssBuilder = new StringBuilder();
-                    for (int i = 0; i < cssArr.length(); i++) {
-                        String sel = cssArr.optString(i, "").trim();
-                        if (!sel.isEmpty()) {
-                            if (cssBuilder.length() > 0) cssBuilder.append(", ");
-                            cssBuilder.append(sel);
-                        }
-                    }
-                    String combinedSelectors = cssBuilder.toString();
-                    if (!combinedSelectors.isEmpty()) {
-                        cosmeticCssInjection = "(function() {" +
-                                "  if (document.getElementById('caspian-waveguard-style')) return;" +
-                                "  var style = document.createElement('style');" +
-                                "  style.id = 'caspian-waveguard-style';" +
-                                "  style.textContent = '" + combinedSelectors.replace("'", "\\'") + " { display: none !important; visibility: hidden !important; width: 0 !important; height: 0 !important; min-width: 0 !important; min-height: 0 !important; max-width: 0 !important; max-height: 0 !important; opacity: 0 !important; pointer-events: none !important; margin: 0 !important; padding: 0 !important; border: 0 !important; }';" +
-                                "  (document.head || document.documentElement).appendChild(style);" +
-                                "})();";
-                    }
-                }
-
-                Log.d(TAG, "Waveguard loaded " + blockedDomains.size() + " domains, " + pathKeywords.size() + " paths, and cosmetic filters.");
+                assetJsonStr = sb.toString();
             } catch (Exception e) {
-                Log.e(TAG, "Error loading Waveguard rules: ", e);
+                Log.e(TAG, "Failed reading bundled asset rules: ", e);
             }
-        }).start();
+
+            JSONObject assetRoot = !assetJsonStr.isEmpty() ? new JSONObject(assetJsonStr) : new JSONObject();
+            JSONArray assetDomains = assetRoot.optJSONArray("blockedDomains");
+            int assetDomainCount = assetDomains != null ? assetDomains.length() : 0;
+
+            JSONObject chosenRoot = assetRoot;
+
+            // Priority 2: Check for custom rules in internal storage
+            File customRulesFile = new File(context.getFilesDir(), "waveguard_rules_custom.json");
+            if (customRulesFile.exists() && customRulesFile.length() > 50) {
+                try {
+                    InputStream fis = new FileInputStream(customRulesFile);
+                    BufferedReader reader = new BufferedReader(new InputStreamReader(fis, StandardCharsets.UTF_8));
+                    StringBuilder csb = new StringBuilder();
+                    String line;
+                    while ((line = reader.readLine()) != null) {
+                        csb.append(line);
+                    }
+                    reader.close();
+                    JSONObject customRoot = new JSONObject(csb.toString());
+                    JSONArray customDomains = customRoot.optJSONArray("blockedDomains");
+                    int customDomainCount = customDomains != null ? customDomains.length() : 0;
+
+                    // If custom rules have strictly MORE domains than asset rules, use custom.
+                    // Otherwise bundled APK asset rules take precedence and overwrite the stale custom file.
+                    if (customDomainCount > assetDomainCount) {
+                        chosenRoot = customRoot;
+                    } else if (!assetJsonStr.isEmpty()) {
+                        try {
+                            FileOutputStream fos = new FileOutputStream(customRulesFile);
+                            fos.write(assetJsonStr.getBytes(StandardCharsets.UTF_8));
+                            fos.close();
+                        } catch (Exception ignored) {}
+                    }
+                } catch (Exception ignored) {}
+            }
+
+            // 1. Blocked Domains
+            JSONArray domainsArr = chosenRoot.optJSONArray("blockedDomains");
+            StringBuilder domainsJson = new StringBuilder();
+            if (domainsArr != null) {
+                Set<String> tempDomains = new HashSet<>();
+                for (int i = 0; i < domainsArr.length(); i++) {
+                    String d = domainsArr.optString(i, "").trim().toLowerCase(java.util.Locale.ROOT);
+                    if (!d.isEmpty()) {
+                        tempDomains.add(d);
+                        if (domainsJson.length() > 0) domainsJson.append(",");
+                        domainsJson.append("\"").append(d).append("\"");
+                    }
+                }
+                blockedDomains.clear();
+                blockedDomains.addAll(tempDomains);
+            }
+
+            // 2. Path Keywords
+            JSONArray pathsArr = chosenRoot.optJSONArray("pathKeywords");
+            StringBuilder pathsJson = new StringBuilder();
+            if (pathsArr != null) {
+                List<String> tempPaths = new ArrayList<>();
+                for (int i = 0; i < pathsArr.length(); i++) {
+                    String p = pathsArr.optString(i, "").trim().toLowerCase(java.util.Locale.ROOT);
+                    if (!p.isEmpty()) {
+                        tempPaths.add(p);
+                        if (pathsJson.length() > 0) pathsJson.append(",");
+                        pathsJson.append("\"").append(p).append("\"");
+                    }
+                }
+                pathKeywords.clear();
+                pathKeywords.addAll(tempPaths);
+            }
+
+            // 3. Cosmetic Selectors
+            JSONArray cssArr = chosenRoot.optJSONArray("cosmeticSelectors");
+            StringBuilder cssBuilder = new StringBuilder();
+            if (cssArr != null) {
+                for (int i = 0; i < cssArr.length(); i++) {
+                    String sel = cssArr.optString(i, "").trim();
+                    if (!sel.isEmpty()) {
+                        if (cssBuilder.length() > 0) cssBuilder.append(", ");
+                        cssBuilder.append(sel);
+                    }
+                }
+            }
+            String combinedSelectors = cssBuilder.toString();
+
+            // 4. Build comprehensive client-side protection script (CSS + MutationObserver + Fetch/XHR Guard)
+            StringBuilder js = new StringBuilder();
+            js.append("(function() {\n");
+            js.append("  if (window.__caspian_waveguard_active) return;\n");
+            js.append("  window.__caspian_waveguard_active = true;\n");
+
+            if (!combinedSelectors.isEmpty()) {
+                String escapedCss = combinedSelectors.replace("'", "\\'");
+                js.append("  try {\n");
+                js.append("    var s = document.getElementById('caspian-waveguard-style') || document.createElement('style');\n");
+                js.append("    s.id = 'caspian-waveguard-style';\n");
+                js.append("    s.textContent = '").append(escapedCss).append(" { display: none !important; visibility: hidden !important; width: 0 !important; height: 0 !important; min-width: 0 !important; min-height: 0 !important; max-width: 0 !important; max-height: 0 !important; opacity: 0 !important; pointer-events: none !important; margin: 0 !important; padding: 0 !important; border: 0 !important; }';\n");
+                js.append("    if (!s.parentNode) (document.head || document.documentElement).appendChild(s);\n");
+                js.append("  } catch(e) {}\n");
+
+                js.append("  try {\n");
+                js.append("    var sel = '").append(escapedCss).append("';\n");
+                js.append("    function cleanNode(n) {\n");
+                js.append("      if (!n || n.nodeType !== 1) return;\n");
+                js.append("      try {\n");
+                js.append("        if (n.classList && n.classList.contains('aderasr-test-adsbox')) return;\n");
+                js.append("        if (n.matches && n.matches(sel)) { n.remove(); return; }\n");
+                js.append("        var m = n.querySelectorAll(sel);\n");
+                js.append("        for (var i = 0; i < m.length; i++) {\n");
+                js.append("          if (!m[i].classList.contains('aderasr-test-adsbox')) m[i].remove();\n");
+                js.append("        }\n");
+                js.append("      } catch(err) {}\n");
+                js.append("    }\n");
+                js.append("    var obs = new MutationObserver(function(muts) {\n");
+                js.append("      for (var i = 0; i < muts.length; i++) {\n");
+                js.append("        var nodes = muts[i].addedNodes;\n");
+                js.append("        for (var j = 0; j < nodes.length; j++) cleanNode(nodes[j]);\n");
+                js.append("      }\n");
+                js.append("    });\n");
+                js.append("    obs.observe(document.documentElement || document.body, { childList: true, subtree: true });\n");
+                js.append("  } catch(e) {}\n");
+            }
+
+            js.append("  try {\n");
+            js.append("    var blockedSet = new Set([").append(domainsJson.toString()).append("]);\n");
+            js.append("    var kwList = [").append(pathsJson.toString()).append("];\n");
+            js.append("    function isBlockedUrl(u) {\n");
+            js.append("      if (!u) return false;\n");
+            js.append("      try {\n");
+            js.append("        var s = String(u).toLowerCase();\n");
+            js.append("        for (var k = 0; k < kwList.length; k++) {\n");
+            js.append("          if (s.indexOf(kwList[k]) !== -1) return true;\n");
+            js.append("        }\n");
+            js.append("        var h = '';\n");
+            js.append("        var pIdx = s.indexOf('://');\n");
+            js.append("        if (pIdx !== -1) {\n");
+            js.append("          var p = pIdx + 3;\n");
+            js.append("          var sl = s.indexOf('/', p);\n");
+            js.append("          var q = s.indexOf('?', p);\n");
+            js.append("          var end = sl !== -1 ? sl : (q !== -1 ? q : s.length);\n");
+            js.append("          h = s.substring(p, end);\n");
+            js.append("          var col = h.indexOf(':');\n");
+            js.append("          if (col !== -1) h = h.substring(0, col);\n");
+            js.append("        } else {\n");
+            js.append("          h = s.split('/')[0].split('?')[0].split(':')[0];\n");
+            js.append("        }\n");
+            js.append("        if (blockedSet.has(h)) return true;\n");
+            js.append("        var dot = h.indexOf('.');\n");
+            js.append("        while (dot > 0 && dot < h.length - 1) {\n");
+            js.append("          if (blockedSet.has(h.substring(dot + 1))) return true;\n");
+            js.append("          dot = h.indexOf('.', dot + 1);\n");
+            js.append("        }\n");
+            js.append("      } catch(e) {}\n");
+            js.append("      return false;\n");
+            js.append("    }\n");
+            js.append("    if (window.fetch) {\n");
+            js.append("      var origFetch = window.fetch;\n");
+            js.append("      window.fetch = function(input, init) {\n");
+            js.append("        var url = typeof input === 'string' ? input : (input && input.url ? input.url : '');\n");
+            js.append("        if (isBlockedUrl(url)) {\n");
+            js.append("          return Promise.reject(new TypeError('Failed to fetch (net::ERR_BLOCKED_BY_CLIENT)'));\n");
+            js.append("        }\n");
+            js.append("        return origFetch.apply(this, arguments);\n");
+            js.append("      };\n");
+            js.append("    }\n");
+            js.append("    if (window.XMLHttpRequest) {\n");
+            js.append("      var origOpen = XMLHttpRequest.prototype.open;\n");
+            js.append("      var origSend = XMLHttpRequest.prototype.send;\n");
+            js.append("      XMLHttpRequest.prototype.open = function(m, url) {\n");
+            js.append("        this.__c_blocked = isBlockedUrl(url);\n");
+            js.append("        return origOpen.apply(this, arguments);\n");
+            js.append("      };\n");
+            js.append("      XMLHttpRequest.prototype.send = function() {\n");
+            js.append("        if (this.__c_blocked) {\n");
+            js.append("          var self = this;\n");
+            js.append("          setTimeout(function() {\n");
+            js.append("            try {\n");
+            js.append("              self.dispatchEvent(new ProgressEvent('error'));\n");
+            js.append("              if (typeof self.onerror === 'function') self.onerror(new ProgressEvent('error'));\n");
+            js.append("            } catch(e) {}\n");
+            js.append("          }, 0);\n");
+            js.append("          return;\n");
+            js.append("        }\n");
+            js.append("        return origSend.apply(this, arguments);\n");
+            js.append("      };\n");
+            js.append("    }\n");
+            js.append("  } catch(e) {}\n");
+            js.append("})();");
+
+            cosmeticCssInjection = js.toString();
+
+            Log.d(TAG, "Waveguard loaded " + blockedDomains.size() + " domains, " + pathKeywords.size() + " paths, and " + (cssArr != null ? cssArr.length() : 0) + " cosmetic selectors.");
+        } catch (Exception e) {
+            Log.e(TAG, "Error loading Waveguard rules: ", e);
+        }
     }
 
     public boolean isGlobalEnabled() {
@@ -258,8 +395,12 @@ public class WaveguardShield {
         return blockedDomains.size() + pathKeywords.size();
     }
 
+    public String getClientSideProtectionJs() {
+        return isGlobalEnabled ? cosmeticCssInjection : "";
+    }
+
     public String getCosmeticCssInjection() {
-        return isCosmeticEnabled ? cosmeticCssInjection : "";
+        return getClientSideProtectionJs();
     }
 
     /**
