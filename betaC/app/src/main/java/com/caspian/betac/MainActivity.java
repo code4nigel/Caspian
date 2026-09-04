@@ -4506,14 +4506,20 @@ public class MainActivity extends AppCompatActivity {
 
             navBackBtn.setOnClickListener(v -> {
                 playUiFeedbackSound("tap");
-                TabItem currentTab = getTabById(activeTabId);
-                if (currentTab != null && currentTab.webView.canGoBack()) currentTab.webView.goBack();
+                TabItem currentTab = getActiveOrDominantTab();
+                if (currentTab != null && currentTab.webView != null && currentTab.webView.canGoBack()) {
+                    currentTab.webView.goBack();
+                    v.postDelayed(this::updateOmniboxState, 150);
+                }
             });
 
             navForwardBtn.setOnClickListener(v -> {
                 playUiFeedbackSound("tap");
-                TabItem currentTab = getTabById(activeTabId);
-                if (currentTab != null && currentTab.webView.canGoForward()) currentTab.webView.goForward();
+                TabItem currentTab = getActiveOrDominantTab();
+                if (currentTab != null && currentTab.webView != null && currentTab.webView.canGoForward()) {
+                    currentTab.webView.goForward();
+                    v.postDelayed(this::updateOmniboxState, 150);
+                }
             });
 
             searchDockUrl.setOnClickListener(v -> {
@@ -7801,7 +7807,10 @@ public class MainActivity extends AppCompatActivity {
                 }
 
                 if (tabItem.pendingPrompt != null && !tabItem.pendingPrompt.isEmpty()) {
-                    injectAIPrompt(view, tabItem.pendingPrompt, false);
+                    if ("chatgpt".equalsIgnoreCase(tabItem.service) || "gemini".equalsIgnoreCase(tabItem.service)
+                            || "claude".equalsIgnoreCase(tabItem.service) || "deepseek".equalsIgnoreCase(tabItem.service)) {
+                        injectAIPrompt(view, tabItem.pendingPrompt, false);
+                    }
                     tabItem.pendingPrompt = null;
                 }
             }
@@ -8479,16 +8488,18 @@ public class MainActivity extends AppCompatActivity {
         TabItem tab = getTabById(tabId);
         if (tab != null && tab.webView != null) {
             try {
-                tab.webView.stopLoading();
-                String url = tab.webView.getUrl();
-                if (url == null || url.isEmpty()) url = tab.url;
-                if (url != null && !url.isEmpty()) {
-                    tab.webView.loadUrl(url);
+                String curUrl = tab.webView.getUrl();
+                if (curUrl == null || curUrl.isEmpty()) {
+                    if (tab.url != null && !tab.url.isEmpty()) {
+                        tab.webView.loadUrl(tab.url);
+                    } else {
+                        tab.webView.reload();
+                    }
                 } else {
                     tab.webView.reload();
                 }
             } catch (Exception e) {
-                tab.webView.reload();
+                try { tab.webView.reload(); } catch (Exception ignored) {}
             }
         }
     }
@@ -8497,16 +8508,18 @@ public class MainActivity extends AppCompatActivity {
         TabItem tab = getActiveOrDominantTab();
         if (tab != null && tab.webView != null) {
             try {
-                tab.webView.stopLoading();
-                String url = tab.webView.getUrl();
-                if (url == null || url.isEmpty()) url = tab.url;
-                if (url != null && !url.isEmpty()) {
-                    tab.webView.loadUrl(url);
+                String curUrl = tab.webView.getUrl();
+                if (curUrl == null || curUrl.isEmpty()) {
+                    if (tab.url != null && !tab.url.isEmpty()) {
+                        tab.webView.loadUrl(tab.url);
+                    } else {
+                        tab.webView.reload();
+                    }
                 } else {
                     tab.webView.reload();
                 }
             } catch (Exception e) {
-                tab.webView.reload();
+                try { tab.webView.reload(); } catch (Exception ignored) {}
             }
         }
     }

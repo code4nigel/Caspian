@@ -101,7 +101,7 @@ public class AICommandRouter {
         // 3. Fallback to Web Search Engine
         SearchEngine engine = defaultEngine != null ? defaultEngine : SearchEngine.GOOGLE;
         String searchUrl = engine.searchUrl + encodeParam(input);
-        return new RouteResult(searchUrl, "web", input, false);
+        return new RouteResult(searchUrl, "web", null, false);
     }
 
     public static String detectServiceFromUrl(String url) {
