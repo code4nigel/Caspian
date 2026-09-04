@@ -33,6 +33,7 @@ import android.graphics.Rect;
 import android.graphics.SurfaceTexture;
 import android.graphics.drawable.ColorDrawable;
 import android.graphics.drawable.GradientDrawable;
+import android.view.LayoutInflater;
 import android.view.PixelCopy;
 import android.webkit.RenderProcessGoneDetail;
 import java.util.function.Consumer;
@@ -207,7 +208,7 @@ public class MainActivity extends AppCompatActivity {
     private boolean isSheetOpen = false;
     private boolean isMasterSfxMuted = false;
 
-    private AdBlockShield adBlockShield;
+    private WaveguardShield waveguardShield;
     private AICommandRouter.SearchEngine currentSearchEngine = AICommandRouter.SearchEngine.GOOGLE;
 
     private FrameLayout rootContainer;
@@ -219,6 +220,7 @@ public class MainActivity extends AppCompatActivity {
     private boolean isDarkTheme = true;
     
     private LinearLayout omniboxUrlContainer;
+    private FrameLayout omniboxShieldBtn;
     private ImageView omniboxShieldIcon;
     private EditText omniboxEditText;
     private ImageButton omniboxClearBtn;
@@ -498,7 +500,7 @@ public class MainActivity extends AppCompatActivity {
             Log.e(TAG, "setContentView error: ", t);
         }
 
-        try { adBlockShield = new AdBlockShield(this); } catch (Throwable ignored) {}
+        try { waveguardShield = new WaveguardShield(this); } catch (Throwable ignored) {}
         try { initSoundPool(); } catch (Throwable ignored) {}
         try { bindViews(); } catch (Throwable ignored) {}
         try { loadPodPreferences(); } catch (Throwable ignored) {}
@@ -1519,6 +1521,7 @@ public class MainActivity extends AppCompatActivity {
             omniboxForwardBtn = findViewById(R.id.omnibox_forward_btn);
 
             omniboxUrlContainer = findViewById(R.id.omnibox_url_container);
+            omniboxShieldBtn = findViewById(R.id.omnibox_shield_btn);
             omniboxShieldIcon = findViewById(R.id.omnibox_shield_icon);
             omniboxEditText = findViewById(R.id.omnibox_edit_text);
             omniboxClearBtn = findViewById(R.id.omnibox_clear_btn);
@@ -4687,7 +4690,12 @@ public class MainActivity extends AppCompatActivity {
             reloadActiveTab();
         });
 
-        omniboxShieldIcon.setOnClickListener(v -> showShieldStatusDialog());
+        if (omniboxShieldBtn != null) {
+            omniboxShieldBtn.setOnClickListener(this::showWaveguardFlyout);
+        }
+        if (omniboxShieldIcon != null) {
+            omniboxShieldIcon.setOnClickListener(this::showWaveguardFlyout);
+        }
 
         omniboxEditText.setOnTouchListener(new View.OnTouchListener() {
             private long lastTapTime = 0;
@@ -5115,10 +5123,12 @@ public class MainActivity extends AppCompatActivity {
                 () -> toggleGoogleSearchDock(isSearchNavExplicitlyHidden)
         ));
         menuItems.add(new CaspianMenuItem(
-                "🛡️ Privacy Shield: " + (adBlockShield.isEnabled() ? "ON" : "OFF"),
+                "🛡️ Waveguard Shield: " + (waveguardShield != null && waveguardShield.isGlobalEnabled() ? "ON" : "OFF"),
                 () -> {
-                    adBlockShield.setEnabled(!adBlockShield.isEnabled());
-                    updateOmniboxState();
+                    if (waveguardShield != null) {
+                        waveguardShield.setGlobalEnabled(!waveguardShield.isGlobalEnabled());
+                        updateOmniboxState();
+                    }
                 }
         ));
 
@@ -5140,17 +5150,147 @@ public class MainActivity extends AppCompatActivity {
         }
     }
 
+    private void showWaveguardFlyout(View anchor) {
+        if (waveguardShield == null) return;
+        try {
+            LayoutInflater inflater = LayoutInflater.from(this);
+            View popupView = inflater.inflate(R.layout.popup_waveguard_shield, null);
+
+            final PopupWindow popupWindow = new PopupWindow(
+                    popupView,
+                    (int) (getResources().getDisplayMetrics().density * 320),
+                    ViewGroup.LayoutParams.WRAP_CONTENT,
+                    true
+            );
+            popupWindow.setBackgroundDrawable(new android.graphics.drawable.ColorDrawable(android.graphics.Color.TRANSPARENT));
+            popupWindow.setElevation(24f);
+            popupWindow.setOutsideTouchable(true);
+
+            TabItem currentTab = getActiveOrDominantTab();
+            String currentUrl = currentTab != null ? currentTab.url : null;
+            String host = "";
+            if (currentUrl != null && !currentUrl.isEmpty()) {
+                try {
+                    Uri u = Uri.parse(currentUrl);
+                    host = u.getHost();
+                } catch (Exception ignored) {}
+            }
+            if (host == null || host.isEmpty()) host = "Active Tab";
+
+            TextView domainText = popupView.findViewById(R.id.current_site_domain);
+            domainText.setText(host);
+
+            final String cleanHost = host;
+            boolean isWhitelisted = waveguardShield.isSiteWhitelisted(cleanHost);
+            boolean isGlobalOn = waveguardShield.isGlobalEnabled();
+
+            androidx.appcompat.widget.SwitchCompat siteShieldSwitch = popupView.findViewById(R.id.site_shield_switch);
+            TextView statusBadge = popupView.findViewById(R.id.shield_status_badge);
+            TextView blockedBadge = popupView.findViewById(R.id.blocked_count_badge);
+            TextView blockedTotalText = popupView.findViewById(R.id.blocked_total_text);
+            TextView rulesVersionText = popupView.findViewById(R.id.rules_version_text);
+
+            int tabBlocks = currentTab != null ? waveguardShield.getBlockedCountForTab(currentTab.id) : 0;
+            int totalBlocks = waveguardShield.getTotalBlockedCount();
+            blockedBadge.setText(String.valueOf(tabBlocks));
+            blockedTotalText.setText(totalBlocks + " blocked all-time across tabs");
+            rulesVersionText.setText("Waveguard Active (" + waveguardShield.getRuleCount() + " filters)");
+
+            boolean siteActive = isGlobalOn && !isWhitelisted;
+            siteShieldSwitch.setChecked(siteActive);
+            if (siteActive) {
+                statusBadge.setText("PROTECTED");
+                statusBadge.setTextColor(android.graphics.Color.parseColor("#00E5FF"));
+                statusBadge.setBackgroundColor(android.graphics.Color.parseColor("#2000E5FF"));
+            } else {
+                statusBadge.setText("PAUSED");
+                statusBadge.setTextColor(android.graphics.Color.parseColor("#FF5252"));
+                statusBadge.setBackgroundColor(android.graphics.Color.parseColor("#20FF5252"));
+            }
+
+            siteShieldSwitch.setOnCheckedChangeListener((btn, isChecked) -> {
+                if (cleanHost.contains(".")) {
+                    waveguardShield.setSiteWhitelisted(cleanHost, !isChecked);
+                } else {
+                    waveguardShield.setGlobalEnabled(isChecked);
+                }
+                updateOmniboxState();
+                if (isChecked) {
+                    statusBadge.setText("PROTECTED");
+                    statusBadge.setTextColor(android.graphics.Color.parseColor("#00E5FF"));
+                    statusBadge.setBackgroundColor(android.graphics.Color.parseColor("#2000E5FF"));
+                } else {
+                    statusBadge.setText("PAUSED");
+                    statusBadge.setTextColor(android.graphics.Color.parseColor("#FF5252"));
+                    statusBadge.setBackgroundColor(android.graphics.Color.parseColor("#20FF5252"));
+                }
+                if (currentTab != null && currentTab.webView != null) {
+                    currentTab.webView.reload();
+                }
+            });
+
+            androidx.appcompat.widget.SwitchCompat swAdblock = popupView.findViewById(R.id.switch_adblock);
+            androidx.appcompat.widget.SwitchCompat swCosmetic = popupView.findViewById(R.id.switch_cosmetic);
+            androidx.appcompat.widget.SwitchCompat swDefuser = popupView.findViewById(R.id.switch_defuser);
+            androidx.appcompat.widget.SwitchCompat swPopups = popupView.findViewById(R.id.switch_popups);
+
+            swAdblock.setChecked(waveguardShield.isGlobalEnabled());
+            swAdblock.setOnCheckedChangeListener((b, val) -> {
+                waveguardShield.setGlobalEnabled(val);
+                updateOmniboxState();
+            });
+
+            swCosmetic.setChecked(waveguardShield.isCosmeticEnabled());
+            swCosmetic.setOnCheckedChangeListener((b, val) -> {
+                waveguardShield.setCosmeticEnabled(val);
+            });
+
+            swDefuser.setChecked(waveguardShield.isDefuserEnabled());
+            swDefuser.setOnCheckedChangeListener((b, val) -> {
+                waveguardShield.setDefuserEnabled(val);
+            });
+
+            swPopups.setChecked(waveguardShield.isEasyPrivacyEnabled());
+            swPopups.setOnCheckedChangeListener((b, val) -> {
+                waveguardShield.setEasyPrivacyEnabled(val);
+            });
+
+            TextView btnUpdateRules = popupView.findViewById(R.id.btn_update_rules);
+            btnUpdateRules.setOnClickListener(v -> {
+                btnUpdateRules.setText("Updating...");
+                waveguardShield.checkForUpdates((success, newCount, message) -> {
+                    runOnUiThread(() -> {
+                        btnUpdateRules.setText("Updated");
+                        rulesVersionText.setText("Waveguard Active (" + newCount + " filters)");
+                        Toast.makeText(MainActivity.this, message, Toast.LENGTH_SHORT).show();
+                    });
+                });
+            });
+
+            if (anchor != null) {
+                popupWindow.showAsDropDown(anchor, 0, 10);
+            } else {
+                popupWindow.showAtLocation(rootContainer, Gravity.TOP | Gravity.START, 20, 120);
+            }
+        } catch (Exception e) {
+            Log.e(TAG, "Failed to show Waveguard flyout: ", e);
+            showShieldStatusDialog();
+        }
+    }
+
     private void showShieldStatusDialog() {
+        if (waveguardShield == null) return;
         AlertDialog.Builder builder = new AlertDialog.Builder(this);
-        builder.setTitle("🛡️ Caspian Privacy Shield");
-        String message = "Status: " + (adBlockShield.isEnabled() ? "ACTIVE (Shielding)" : "PAUSED") +
-                "\n\nBlocked Ads & Trackers: " + adBlockShield.getBlockedCount() +
+        builder.setTitle("🛡️ Waveguard Privacy Shield");
+        String message = "Status: " + (waveguardShield.isGlobalEnabled() ? "ACTIVE (Shielding)" : "PAUSED") +
+                "\n\nBlocked Ads & Trackers: " + waveguardShield.getTotalBlockedCount() +
+                "\nActive Filter Rules: " + waveguardShield.getRuleCount() +
                 "\nHardware GPU Acceleration: 60/120 FPS Active" +
                 "\nUniversal DOM Pruning: Dynamic Sliding Window Active";
         builder.setMessage(message);
         builder.setPositiveButton("OK", null);
         builder.setNeutralButton("Toggle Shield", (dialog, which) -> {
-            adBlockShield.setEnabled(!adBlockShield.isEnabled());
+            waveguardShield.setGlobalEnabled(!waveguardShield.isGlobalEnabled());
             updateOmniboxState();
         });
         builder.setNegativeButton("Close", null);
@@ -7560,8 +7700,8 @@ public class MainActivity extends AppCompatActivity {
                         }
                     }
                 }
-                if (adBlockShield != null && adBlockShield.isBlocked(request.getUrl().toString())) {
-                    return adBlockShield.getBlockedResponse(request.getUrl().toString());
+                if (waveguardShield != null && waveguardShield.isBlocked(request.getUrl().toString(), view.getUrl() != null ? Uri.parse(view.getUrl()).getHost() : null, id)) {
+                    return waveguardShield.getBlockedResponse(request.getUrl().toString());
                 }
                 return super.shouldInterceptRequest(view, request);
             }
@@ -7603,16 +7743,18 @@ public class MainActivity extends AppCompatActivity {
                     }
                 }
 
-                String prunerJs = readAssetScript("mobile_pruner.js");
-                if (!prunerJs.isEmpty()) {
-                    SharedPreferences prefs = getSharedPreferences(PREFS_NAME, MODE_PRIVATE);
-                    int limit = 5;
-                    try {
-                        limit = Integer.parseInt(prefs.getString("chat_message_limit", "5"));
-                    } catch (Exception ignored) {}
-                    String mode = prefs.getString("chat_pruning_mode", "sliding_window");
-                    boolean enabled = !"false".equalsIgnoreCase(prefs.getString("chat_limit_enabled", "true"));
-                    view.evaluateJavascript(prunerJs + "\nif (window.__CASPIAN_PRUNER_UPDATE) window.__CASPIAN_PRUNER_UPDATE(" + limit + ", '" + mode + "', " + enabled + ");", null);
+                if (pageUrl != null && (pageUrl.contains("chatgpt.com") || pageUrl.contains("gemini.google.com"))) {
+                    String prunerJs = readAssetScript("mobile_pruner.js");
+                    if (!prunerJs.isEmpty()) {
+                        SharedPreferences prefs = getSharedPreferences(PREFS_NAME, MODE_PRIVATE);
+                        int limit = 5;
+                        try {
+                            limit = Integer.parseInt(prefs.getString("chat_message_limit", "5"));
+                        } catch (Exception ignored) {}
+                        String mode = prefs.getString("chat_pruning_mode", "sliding_window");
+                        boolean enabled = !"false".equalsIgnoreCase(prefs.getString("chat_limit_enabled", "true"));
+                        view.evaluateJavascript(prunerJs + "\nif (window.__CASPIAN_PRUNER_UPDATE) window.__CASPIAN_PRUNER_UPDATE(" + limit + ", '" + mode + "', " + enabled + ");", null);
+                    }
                 }
 
                 if (pageUrl != null && pageUrl.toLowerCase().contains("youtube.com")) {
@@ -7622,8 +7764,11 @@ public class MainActivity extends AppCompatActivity {
                     }
                 }
 
-                if (adBlockShield != null && adBlockShield.isEnabled()) {
-                    view.evaluateJavascript(AdBlockShield.COSMETIC_CSS_INJECTION, null);
+                if (waveguardShield != null && waveguardShield.isGlobalEnabled() && waveguardShield.isCosmeticEnabled()) {
+                    String cosmetic = waveguardShield.getCosmeticCssInjection();
+                    if (cosmetic != null && !cosmetic.isEmpty()) {
+                        view.evaluateJavascript(cosmetic, null);
+                    }
                 }
 
                 if (tabItem.pendingPrompt != null && !tabItem.pendingPrompt.isEmpty()) {
@@ -8317,12 +8462,18 @@ public class MainActivity extends AppCompatActivity {
     }
 
     public void setAdBlockEnabled(boolean enabled) {
-        adBlockShield.setEnabled(enabled);
-        updateOmniboxState();
+        if (waveguardShield != null) {
+            waveguardShield.setGlobalEnabled(enabled);
+            updateOmniboxState();
+        }
     }
 
     public int getBlockedAdsCount() {
-        return adBlockShield.getBlockedCount();
+        return waveguardShield != null ? waveguardShield.getTotalBlockedCount() : 0;
+    }
+
+    public WaveguardShield getWaveguardShield() {
+        return waveguardShield;
     }
 
     private TabItem getTabById(int tabId) {
@@ -8449,7 +8600,17 @@ public class MainActivity extends AppCompatActivity {
 
         if (omniboxShieldIcon != null) {
             omniboxShieldIcon.setColorFilter(themeAccent);
-            omniboxShieldIcon.setAlpha(adBlockShield.isEnabled() ? 1.0f : 0.4f);
+            boolean active = waveguardShield != null && waveguardShield.isGlobalEnabled();
+            TabItem current = getActiveOrDominantTab();
+            if (current != null && current.url != null && waveguardShield != null) {
+                try {
+                    String h = Uri.parse(current.url).getHost();
+                    if (waveguardShield.isSiteWhitelisted(h)) {
+                        active = false;
+                    }
+                } catch (Exception ignored) {}
+            }
+            omniboxShieldIcon.setAlpha(active ? 1.0f : 0.35f);
         }
 
         if (omniboxVoiceBtn != null) {

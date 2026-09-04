@@ -86,6 +86,9 @@ public class CaspianBridge {
                 SharedPreferences prefs = activity.getSharedPreferences("CaspianFlowPrefs", Context.MODE_PRIVATE);
                 prefs.edit().putString(key, val).apply();
             });
+            if ("adblock_enabled".equals(key) || "waveguard_enabled".equals(key)) {
+                activity.runOnUiThread(() -> activity.setAdBlockEnabled(!"false".equalsIgnoreCase(val)));
+            }
         }
     }
 

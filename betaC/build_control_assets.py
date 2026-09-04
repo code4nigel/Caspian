@@ -338,8 +338,8 @@ def build_html(version_name):
           <div class="m3-card-left">
             <div id="adblock-dot" class="status-dot active"></div>
             <div>
-              <div class="m3-card-title">AdBlock Engine</div>
-              <div class="m3-card-sub">AdBlock for peaceful internet.</div>
+              <div class="m3-card-title">Waveguard</div>
+              <div class="m3-card-sub">Next-Gen Privacy &amp; AdBlock Shield.</div>
             </div>
           </div>
           <button id="toggle-adblock-btn" class="oneui-pill-btn primary" style="font-size: 11px; padding: 4px 10px;">ON</button>

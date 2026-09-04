@@ -123,7 +123,7 @@ Easily backup all your theme accents, chat limits, YouTube preferences, and Flow
 
 ### APK Installation
 1. Download the latest `.apk` from [GitHub Releases](https://github.com/code4nigel/Caspian/releases):
-   - **Caspian Flow (Beta C)**: `Caspian-Flow-v1.1.40-BetaC.apk`
+   - **Caspian Flow (Beta C)**: `Caspian-Flow-v1.1.87-BetaC.apk`
    - **Caspian Mobile (Stable)**: `Caspian-Mobile-v1.2.40.apk`
    - **Caspian Beta A (Experimental)**: `Caspian-Beta-A-v1.2.48.apk`
 2. Open the file on your Android device (Android 7.0+).

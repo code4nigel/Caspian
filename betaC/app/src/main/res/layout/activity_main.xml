@@ -98,14 +98,25 @@
                         android:paddingStart="8dp"
                         android:paddingEnd="6dp">
 
-                        <!-- Lock / Privacy Shield Indicator -->
-                        <ImageView
-                            android:id="@+id/omnibox_shield_icon"
-                            android:layout_width="14dp"
-                            android:layout_height="14dp"
-                            android:src="@drawable/ic_browser_shield"
-                            android:tint="#00E5FF"
-                            android:contentDescription="Privacy Shield Active" />
+                        <!-- Lock / Privacy Shield Indicator Button -->
+                        <FrameLayout
+                            android:id="@+id/omnibox_shield_btn"
+                            android:layout_width="32dp"
+                            android:layout_height="32dp"
+                            android:clickable="true"
+                            android:focusable="true"
+                            android:background="?attr/selectableItemBackgroundBorderless"
+                            android:contentDescription="Waveguard Privacy Shield">
+
+                            <ImageView
+                                android:id="@+id/omnibox_shield_icon"
+                                android:layout_width="16dp"
+                                android:layout_height="16dp"
+                                android:layout_gravity="center"
+                                android:src="@drawable/ic_browser_shield"
+                                android:tint="#00E5FF"
+                                android:contentDescription="Waveguard Active" />
+                        </FrameLayout>
 
                         <!-- URL & AI Search Input -->
                         <EditText
