@@ -6934,58 +6934,112 @@ public class MainActivity extends AppCompatActivity {
                 "      var match = window.location.pathname.match(/\\/c\\/([a-f0-9-]+)/i);\n" +
                 "      if (match && match[1]) {\n" +
                 "        var convoId = match[1];\n" +
-                "        var sessionResp = await fetch('/api/auth/session');\n" +
-                "        if (sessionResp.ok) {\n" +
-                "          var sessionData = await sessionResp.json();\n" +
-                "          var token = sessionData.accessToken;\n" +
-                "          if (token) {\n" +
-                "            var resp = await fetch('/backend-api/conversation/' + convoId, {\n" +
-                "              headers: { 'Authorization': 'Bearer ' + token }\n" +
-                "            });\n" +
-                "            if (resp.ok) {\n" +
-                "              var json = await resp.json();\n" +
-                "              if (json && json.mapping) {\n" +
-                "                var nodes = [];\n" +
-                "                var map = json.mapping;\n" +
-                "                for (var key in map) {\n" +
-                "                  var node = map[key];\n" +
-                "                  if (node && node.message && node.message.content && node.message.content.parts) {\n" +
-                "                    var author = (node.message.author && node.message.author.role) ? node.message.author.role : 'assistant';\n" +
-                "                    if (author === 'user' || author === 'assistant') {\n" +
-                "                      var parts = node.message.content.parts;\n" +
-                "                      var textContent = parts.map(function(p){ return (typeof p === 'string') ? p : JSON.stringify(p); }).join('\\n').trim();\n" +
-                "                      if (textContent) {\n" +
-                "                        nodes.push({\n" +
-                "                          create_time: node.message.create_time || 0,\n" +
-                "                          author: author,\n" +
-                "                          text: textContent\n" +
-                "                        });\n" +
-                "                      }\n" +
-                "                    }\n" +
-                "                  }\n" +
-                "                }\n" +
-                "                if (nodes.length > 0) {\n" +
-                "                  nodes.sort(function(a,b){ return a.create_time - b.create_time; });\n" +
-                "                  for (var k = 0; k < nodes.length; k++) {\n" +
-                "                    if (!seen.has(nodes[k].text)) {\n" +
-                "                      seen.add(nodes[k].text);\n" +
-                "                      var parsedHtml = parseMarkdownAndLaTeX(nodes[k].text);\n" +
-                "                      var localImgs = await getTurnImages(turns.length);\n" +
-                "                      localImgs.forEach(b64 => {\n" +
-                "                        parsedHtml += '<div style=\"margin-top:12px; text-align:center;\"><img src=\"' + b64 + '\" style=\"max-width:100%; border-radius:8px; box-shadow:0 4px 12px rgba(0,0,0,0.1);\" /></div>';\n" +
-                "                      });\n" +
-                "                      turns.push({\n" +
-                "                        index: turns.length + 1,\n" +
-                "                        author: nodes[k].author,\n" +
-                "                        role: nodes[k].author === 'user' ? 'User' : 'ChatGPT',\n" +
-                "                        text: nodes[k].text,\n" +
-                "                        html: parsedHtml,\n" +
-                "                        service: 'chatgpt'\n" +
-                "                      });\n" +
-                "                    }\n" +
+                "        var json = null;\n" +
+                "\n" +
+                "        // 1. Check in-memory unpruned conversation cache from interceptor\n" +
+                "        if (window.__CASPIAN_RAW_CONVERSATION_CACHE && window.__CASPIAN_RAW_CONVERSATION_CACHE[convoId]) {\n" +
+                "          json = window.__CASPIAN_RAW_CONVERSATION_CACHE[convoId];\n" +
+                "        }\n" +
+                "\n" +
+                "        // 2. Fetch directly via un-intercepted native fetch\n" +
+                "        if (!json) {\n" +
+                "          var token = null;\n" +
+                "          try {\n" +
+                "            if (window.__NEXT_DATA__ && window.__NEXT_DATA__.props && window.__NEXT_DATA__.props.pageProps) {\n" +
+                "              token = window.__NEXT_DATA__.props.pageProps.accessToken;\n" +
+                "            }\n" +
+                "          } catch(ne) {}\n" +
+                "\n" +
+                "          if (!token) {\n" +
+                "            try {\n" +
+                "              var sessionResp = await fetch('/api/auth/session', { credentials: 'include' });\n" +
+                "              if (sessionResp.ok) {\n" +
+                "                var sessionData = await sessionResp.json();\n" +
+                "                token = sessionData.accessToken;\n" +
+                "              }\n" +
+                "            } catch(se) {}\n" +
+                "          }\n" +
+                "\n" +
+                "          var nativeFetch = window.__CASPIAN_NATIVE_FETCH || window.fetch;\n" +
+                "          var fetchHeaders = {\n" +
+                "            'Accept': 'application/json',\n" +
+                "            'X-Caspian-Export': 'full'\n" +
+                "          };\n" +
+                "          if (token) fetchHeaders['Authorization'] = 'Bearer ' + token;\n" +
+                "\n" +
+                "          var resp = await nativeFetch('/backend-api/conversation/' + convoId, {\n" +
+                "            headers: fetchHeaders,\n" +
+                "            credentials: 'include'\n" +
+                "          });\n" +
+                "          if (resp.ok) {\n" +
+                "            json = await resp.json();\n" +
+                "          }\n" +
+                "        }\n" +
+                "\n" +
+                "        if (json && json.mapping) {\n" +
+                "          var activeNodes = [];\n" +
+                "          if (json.current_node && json.mapping[json.current_node]) {\n" +
+                "            var currId = json.current_node;\n" +
+                "            var visited = new Set();\n" +
+                "            while (currId && json.mapping[currId] && !visited.has(currId)) {\n" +
+                "              visited.add(currId);\n" +
+                "              var node = json.mapping[currId];\n" +
+                "              if (node && node.message && node.message.content && node.message.content.parts) {\n" +
+                "                var author = (node.message.author && node.message.author.role) ? node.message.author.role : 'assistant';\n" +
+                "                if (author === 'user' || author === 'assistant') {\n" +
+                "                  var parts = node.message.content.parts;\n" +
+                "                  var textContent = parts.map(function(p){ return (typeof p === 'string') ? p : JSON.stringify(p); }).join('\\n').trim();\n" +
+                "                  if (textContent) {\n" +
+                "                    activeNodes.unshift({\n" +
+                "                      author: author,\n" +
+                "                      text: textContent\n" +
+                "                    });\n" +
                 "                  }\n" +
                 "                }\n" +
                 "              }\n" +
+                "              currId = node.parent;\n" +
+                "            }\n" +
+                "          }\n" +
+                "\n" +
+                "          // Fallback: sort mapping nodes if current_node was not found or yielded 0 nodes\n" +
+                "          if (activeNodes.length === 0) {\n" +
+                "            var map = json.mapping;\n" +
+                "            for (var key in map) {\n" +
+                "              var n = map[key];\n" +
+                "              if (n && n.message && n.message.content && n.message.content.parts) {\n" +
+                "                var a = (n.message.author && n.message.author.role) ? n.message.author.role : 'assistant';\n" +
+                "                if (a === 'user' || a === 'assistant') {\n" +
+                "                  var ps = n.message.content.parts;\n" +
+                "                  var tc = ps.map(function(p){ return (typeof p === 'string') ? p : JSON.stringify(p); }).join('\\n').trim();\n" +
+                "                  if (tc) {\n" +
+                "                    activeNodes.push({\n" +
+                "                      create_time: n.message.create_time || 0,\n" +
+                "                      author: a,\n" +
+                "                      text: tc\n" +
+                "                    });\n" +
+                "                  }\n" +
+                "                }\n" +
+                "              }\n" +
+                "            }\n" +
+                "            activeNodes.sort(function(a,b){ return (a.create_time || 0) - (b.create_time || 0); });\n" +
+                "          }\n" +
+                "\n" +
+                "          for (var k = 0; k < activeNodes.length; k++) {\n" +
+                "            if (!seen.has(activeNodes[k].text)) {\n" +
+                "              seen.add(activeNodes[k].text);\n" +
+                "              var parsedHtml = parseMarkdownAndLaTeX(activeNodes[k].text);\n" +
+                "              var localImgs = await getTurnImages(turns.length);\n" +
+                "              localImgs.forEach(function(b64) {\n" +
+                "                parsedHtml += '<div style=\"margin-top:12px; text-align:center;\"><img src=\"' + b64 + '\" style=\"max-width:100%; border-radius:8px; box-shadow:0 4px 12px rgba(0,0,0,0.1);\" /></div>';\n" +
+                "              });\n" +
+                "              turns.push({\n" +
+                "                index: turns.length + 1,\n" +
+                "                author: activeNodes[k].author,\n" +
+                "                role: activeNodes[k].author === 'user' ? 'User' : 'ChatGPT',\n" +
+                "                text: activeNodes[k].text,\n" +
+                "                html: parsedHtml,\n" +
+                "                service: 'chatgpt'\n" +
+                "              });\n" +
                 "            }\n" +
                 "          }\n" +
                 "        }\n" +
@@ -7109,10 +7163,10 @@ public class MainActivity extends AppCompatActivity {
                 "          }\n" +
                 "          var textDiv = row.querySelector('.markdown, div.markdown, .prose, .whitespace-pre-wrap');\n" +
                 "          if (textDiv) {\n" +
-                "            text = textDiv.innerText.trim();\n" +
+                "            text = (textDiv.innerText || textDiv.textContent || '').trim();\n" +
                 "          } else {\n" +
                 "            var contentDiv = row.querySelector('.content, div.text-token-text-primary');\n" +
-                "            text = contentDiv ? contentDiv.innerText.trim() : row.innerText.trim();\n" +
+                "            text = contentDiv ? (contentDiv.innerText || contentDiv.textContent || '').trim() : (row.innerText || row.textContent || '').trim();\n" +
                 "          }\n" +
                 "          if (text && !seen.has(text)) {\n" +
                 "            seen.add(text);\n" +
