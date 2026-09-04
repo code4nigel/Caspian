@@ -144,7 +144,7 @@ You can use [Obtainium](https://github.com/ImranR98/Obtainium) to receive automa
 
 ## License
 
-- **Author**: Copyright © 2026 **NigelWeb** ([github.com/code4nigel](https://github.com/code4nigel))
+- **Author**: Copyright © 2026 **Shivanshu Yadav** ([github.com/code4nigel](https://github.com/code4nigel))
 - **Repository**: [https://github.com/code4nigel/Caspian](https://github.com/code4nigel/Caspian)
 - **License**: [GNU General Public License v3.0 (GPL-3.0)](LICENSE)
 
