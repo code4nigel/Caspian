@@ -22,8 +22,9 @@ const DEFAULTS = {
   flow_speed_show_hud: true,
   flow_speed_badge_enabled: true,
   flow_speed_card_collapsed: false,
+  rf_enabled: true,
   rf_capture_scope: 'full',
-  rf_scroll_delay: 150,
+  rf_scroll_delay: 550,
   rf_card_collapsed: false,
   disabledSites: [],
   pinnedPresets: []
@@ -1758,15 +1759,25 @@ function setupCardToggleHandlers() {
   const rfHeader = document.getElementById('rippleframe-header');
   const rfBody = document.getElementById('rippleframe-body');
   const rfSub = document.getElementById('rf-status-sub-text');
-  const triggerRfCaptureBtn = document.getElementById('trigger-rf-capture-btn');
-  const btnRfFullpageDirect = document.getElementById('btn-rf-fullpage-direct');
+  const toggleRfBtn = document.getElementById('toggle-rippleframe-btn');
+  const btnRfCaptureMain = document.getElementById('btn-rf-capture-main');
   const btnRfOpenStudio = document.getElementById('btn-rf-open-studio');
   const rfDelaySlider = document.getElementById('rf-delay-slider');
   const rfDelayVal = document.getElementById('rf-delay-val');
 
+  if (toggleRfBtn) {
+    toggleRfBtn.addEventListener('click', (e) => {
+      e.stopPropagation();
+      chrome.storage.local.get('rf_enabled', (data) => {
+        const current = data.rf_enabled ?? DEFAULTS.rf_enabled;
+        chrome.storage.local.set({ rf_enabled: !current }, loadSettings);
+      });
+    });
+  }
+
   if (rfHeader && rfBody) {
     rfHeader.addEventListener('click', (e) => {
-      if (e.target.closest('#trigger-rf-capture-btn')) return;
+      if (e.target.closest('#toggle-rippleframe-btn')) return;
       const isCurrentlyHidden = rfBody.style.display === 'none';
       const nextState = isCurrentlyHidden ? 'flex' : 'none';
       rfBody.style.display = nextState;
@@ -1799,7 +1810,10 @@ function setupCardToggleHandlers() {
 
   // Launch Capture Handler
   const launchRippleFrameCapture = (overrideScope = null) => {
-    chrome.storage.local.get(['rf_capture_scope', 'rf_scroll_delay'], (data) => {
+    chrome.storage.local.get(['rf_enabled', 'rf_capture_scope', 'rf_scroll_delay'], (data) => {
+      const isEnabled = data.rf_enabled ?? DEFAULTS.rf_enabled;
+      if (!isEnabled) return;
+
       const scope = overrideScope || (data.rf_capture_scope || DEFAULTS.rf_capture_scope);
       const delay = data.rf_scroll_delay || DEFAULTS.rf_scroll_delay;
 
@@ -1807,32 +1821,21 @@ function setupCardToggleHandlers() {
         if (!tabs || tabs.length === 0) return;
         const activeTab = tabs[0];
 
-        // Execute capture script in active tab
-        chrome.scripting.executeScript({
-          target: { tabId: activeTab.id },
-          files: ['rippleframe_capture.js']
+        chrome.runtime.sendMessage({
+          action: 'init_rippleframe_capture',
+          tabId: activeTab.id,
+          options: { scope, delay }
         }, () => {
-          chrome.tabs.sendMessage(activeTab.id, {
-            action: 'start_rippleframe_capture',
-            options: { scope, delay }
-          });
           window.close(); // Close popup so it doesn't obstruct capture
         });
       });
     });
   };
 
-  if (triggerRfCaptureBtn) {
-    triggerRfCaptureBtn.addEventListener('click', (e) => {
+  if (btnRfCaptureMain) {
+    btnRfCaptureMain.addEventListener('click', (e) => {
       e.stopPropagation();
       launchRippleFrameCapture();
-    });
-  }
-
-  if (btnRfFullpageDirect) {
-    btnRfFullpageDirect.addEventListener('click', (e) => {
-      e.stopPropagation();
-      launchRippleFrameCapture('full');
     });
   }
 
@@ -1881,7 +1884,7 @@ function setupDevExclusiveThemes() {
 }
 
 function loadSettings() {
-  chrome.storage.local.get(['pruningEnabled', 'vaultEnabled', 'enabled', 'limit', 'mode', 'accent', 'secondary', 'customBgColor', 'ui_zoom', 'font_scale', 'pinnedPresets', 'disabledSites', 'chat_pruning_mode', 'limit_card_collapsed', 'aesthetics_card_collapsed', 'display_card_collapsed', 'yt_feed_limit_enabled', 'yt_feed_limit', 'yt_not_interested_enabled', 'yt_card_collapsed', 'flow_speed_enabled', 'flow_speed_badge_enabled', 'flow_speed_val', 'flow_speed_cycle_list', 'flow_speed_shortcut_reset', 'flow_speed_shortcut_cycle', 'flow_speed_shortcut_up', 'flow_speed_shortcut_down', 'flow_speed_show_hud', 'flow_speed_card_collapsed', 'rf_capture_scope', 'rf_scroll_delay', 'rf_card_collapsed'], (data) => {
+  chrome.storage.local.get(['pruningEnabled', 'vaultEnabled', 'enabled', 'limit', 'mode', 'accent', 'secondary', 'customBgColor', 'ui_zoom', 'font_scale', 'pinnedPresets', 'disabledSites', 'chat_pruning_mode', 'limit_card_collapsed', 'aesthetics_card_collapsed', 'display_card_collapsed', 'yt_feed_limit_enabled', 'yt_feed_limit', 'yt_not_interested_enabled', 'yt_card_collapsed', 'flow_speed_enabled', 'flow_speed_badge_enabled', 'flow_speed_val', 'flow_speed_cycle_list', 'flow_speed_shortcut_reset', 'flow_speed_shortcut_cycle', 'flow_speed_shortcut_up', 'flow_speed_shortcut_down', 'flow_speed_show_hud', 'flow_speed_card_collapsed', 'rf_enabled', 'rf_capture_scope', 'rf_scroll_delay', 'rf_card_collapsed'], (data) => {
     const currentMode = data.mode || DEFAULTS.mode;
     updateThemeMode(currentMode);
     updateThemeColors(data);
@@ -2019,17 +2022,33 @@ function loadSettings() {
     });
 
     // RippleFrame Card State & Sync
+    const rfEnabled = data.rf_enabled ?? DEFAULTS.rf_enabled;
     const rfScope = data.rf_capture_scope || DEFAULTS.rf_capture_scope;
     const rfDelay = data.rf_scroll_delay || DEFAULTS.rf_scroll_delay;
     const isRfCollapsed = data.rf_card_collapsed ?? false;
 
+    const rfCard = document.getElementById('card-rippleframe');
+    const rfStatusTitle = document.getElementById('rf-status-title');
+    const toggleRfBtn = document.getElementById('toggle-rippleframe-btn');
     const rfBody = document.getElementById('rippleframe-body');
     const rfSub = document.getElementById('rf-status-sub-text');
     const rfScopeHint = document.getElementById('rf-scope-hint');
     const rfDelaySlider = document.getElementById('rf-delay-slider');
     const rfDelayVal = document.getElementById('rf-delay-val');
+    const btnRfCaptureMain = document.getElementById('btn-rf-capture-main');
 
     if (rfBody) rfBody.style.display = isRfCollapsed ? 'none' : 'flex';
+    if (rfCard) rfCard.classList.toggle('is-disabled', !rfEnabled);
+    if (rfStatusTitle) rfStatusTitle.textContent = rfEnabled ? 'RippleFrame: ON' : 'RippleFrame: OFF';
+    if (toggleRfBtn) {
+      toggleRfBtn.textContent = rfEnabled ? 'ON' : 'OFF';
+      toggleRfBtn.classList.toggle('active', rfEnabled);
+    }
+    if (btnRfCaptureMain) {
+      btnRfCaptureMain.disabled = !rfEnabled;
+      btnRfCaptureMain.style.opacity = rfEnabled ? '1' : '0.5';
+      btnRfCaptureMain.style.pointerEvents = rfEnabled ? 'auto' : 'none';
+    }
     if (rfSub) {
       rfSub.textContent = isRfCollapsed 
         ? 'Long screenshot & studio editor. Tap to expand.' 
@@ -2111,8 +2130,8 @@ function loadSettings() {
       }
     }
 
-    // Master Power Ring State
-    const isMasterOn = pruningEnabled || vaultEnabled;
+    // Master Power Ring State (Consolidated across all Caspian engines)
+    const isMasterOn = Boolean(pruningEnabled || vaultEnabled || ytFeedEnabled || flowSpeedEnabled || rfEnabled);
     const powerToggle = document.getElementById('power-toggle');
     if (powerToggle) powerToggle.classList.toggle('active', isMasterOn);
 
@@ -2268,13 +2287,20 @@ document.querySelectorAll('.pill').forEach(p => {
 const powerToggleBtn = document.getElementById('power-toggle');
 if (powerToggleBtn) {
   powerToggleBtn.addEventListener('click', () => {
-    chrome.storage.local.get(['pruningEnabled', 'vaultEnabled'], (data) => {
-      const isCurrentlyOn = (data.pruningEnabled ?? true) || (data.vaultEnabled ?? true);
+    chrome.storage.local.get(['pruningEnabled', 'vaultEnabled', 'enabled', 'yt_feed_limit_enabled', 'flow_speed_enabled', 'rf_enabled'], (data) => {
+      const isCurrentlyOn = (data.pruningEnabled ?? true) || 
+                            (data.vaultEnabled ?? true) || 
+                            (data.yt_feed_limit_enabled ?? DEFAULTS.yt_feed_limit_enabled) || 
+                            (data.flow_speed_enabled ?? DEFAULTS.flow_speed_enabled) || 
+                            (data.rf_enabled ?? DEFAULTS.rf_enabled);
       const nextState = !isCurrentlyOn;
       chrome.storage.local.set({
         pruningEnabled: nextState,
         vaultEnabled: nextState,
-        enabled: nextState
+        enabled: nextState,
+        yt_feed_limit_enabled: nextState,
+        flow_speed_enabled: nextState,
+        rf_enabled: nextState
       }, loadSettings);
     });
   });

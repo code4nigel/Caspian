@@ -31,10 +31,17 @@
 
       <div class="header-divider"></div>
 
-      <!-- Filename Input -->
-      <div class="filename-container">
-        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>
-        <input type="text" id="studio-filename-input" value="Caspian_Capture" title="Click to rename capture">
+      <!-- Left Undo / Redo / Reset History Controls -->
+      <div class="history-btn-group">
+        <button class="icon-btn" id="btn-undo" title="Undo (Ctrl+Z)" disabled>
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 7v6h6"/><path d="M21 17a9 9 0 0 0-9-9 9 9 0 0 0-6 2.3L3 13"/></svg>
+        </button>
+        <button class="icon-btn" id="btn-redo" title="Redo (Ctrl+Y)" disabled>
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 7v6h-6"/><path d="M3 17a9 9 0 0 1 9-9 9 9 0 0 1 6 2.3l3 2.7"/></svg>
+        </button>
+        <button class="icon-btn" id="btn-reset-canvas" title="Reset All Annotations & Crop">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8"/><path d="M3 3v5h5"/></svg>
+        </button>
       </div>
 
       <span class="dimensions-badge" id="image-dimensions-badge">0 × 0 px</span>
@@ -51,23 +58,39 @@
       </div>
     </div>
 
-    <!-- Right Action & Export Buttons -->
+    <!-- Right Action & Export Buttons with Renaming Input -->
     <div class="header-right">
-      <div class="history-btn-group">
-        <button class="icon-btn" id="btn-undo" title="Undo (Ctrl+Z)" disabled>
-          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 7v6h6"/><path d="M21 17a9 9 0 0 0-9-9 9 9 0 0 0-6 2.3L3 13"/></svg>
+      <!-- Filename Input positioned next to Export -->
+      <div class="filename-container">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>
+        <input type="text" id="studio-filename-input" value="Caspian_Capture" title="Click to rename capture">
+      </div>
+
+      <!-- Quick Export Buttons -->
+      <div class="quick-export-group">
+        <button class="quick-export-btn png" id="btn-quick-export-png" title="Quick 1-Click PNG Download">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="8.5" cy="8.5" r="1.5"/><path d="m21 15-5-5L5 21"/></svg>
+          <span>PNG</span>
         </button>
-        <button class="icon-btn" id="btn-redo" title="Redo (Ctrl+Y)" disabled>
-          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 7v6h-6"/><path d="M3 17a9 9 0 0 1 9-9 9 9 0 0 1 6 2.3l3 2.7"/></svg>
-        </button>
-        <button class="icon-btn" id="btn-reset-canvas" title="Reset All Annotations & Crop">
-          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8"/><path d="M3 3v5h5"/></svg>
+        <button class="quick-export-btn pdf" id="btn-quick-export-pdf" title="Quick 1-Click PDF Export">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/><polyline points="10 9 9 9 8 9"/></svg>
+          <span>PDF</span>
         </button>
       </div>
 
-      <button class="export-launch-btn" id="btn-open-export-modal">
+      <!-- Delete / Clear Capture Button -->
+      <button class="header-danger-btn" id="btn-delete-capture" title="Clear Canvas & Delete Screenshot from Storage">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+          <path d="M3 6h18M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path>
+          <line x1="10" y1="11" x2="10" y2="17"></line>
+          <line x1="14" y1="11" x2="14" y2="17"></line>
+        </svg>
+        <span>Clear</span>
+      </button>
+
+      <button class="export-launch-btn" id="btn-open-export-modal" title="Custom Export Options (JPG, PNG, PDF, Quality)">
         <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
-        <span>Export</span>
+        <span>Export ▾</span>
       </button>
     </div>
   </header>
@@ -77,82 +100,96 @@
 
     <!-- Left Floating Tool Palette -->
     <aside class="tool-palette-card">
+      <!-- 1. Navigation Group -->
       <div class="tool-group">
         <button class="tool-btn active" data-tool="pan" id="tool-pan" title="Pan & Move Canvas (V)">
           <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 9l-3 3 3 3M9 5l3-3 3 3M15 19l-3 3-3-3M19 9l3 3-3 3M2 12h20M12 2v20"/></svg>
-          <span class="tool-tooltip">Pan / Hand</span>
+          <span class="tool-tooltip">Pan / Hand (V)</span>
         </button>
         <button class="tool-btn" data-tool="crop" id="tool-crop" title="Crop Area (C)">
           <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M6.13 1L6 16a2 2 0 0 0 2 2h15"/><path d="M1 6.13L16 6a2 2 0 0 1 2 2v15"/></svg>
-          <span class="tool-tooltip">Crop</span>
+          <span class="tool-tooltip">Crop (C)</span>
         </button>
       </div>
 
       <div class="palette-divider"></div>
 
-      <!-- Privacy & Redaction Tools -->
-      <div class="tool-group">
-        <button class="tool-btn" data-tool="blur" id="tool-blur" title="Blur / Pixelate Sensitive Info (B)">
-          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 22a7 7 0 0 0 7-7c0-2-1-3.9-3-5.5s-3.5-4-4-6.5c-.5 2.5-2 4.9-4 6.5C6 11.1 5 13 5 15a7 7 0 0 0 7 7z"/></svg>
-          <span class="tool-tooltip">Privacy Blur</span>
-        </button>
-        <button class="tool-btn" data-tool="blackout" id="tool-blackout" title="Blackout / Hide Box (X)">
-          <svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor"><rect x="3" y="3" width="18" height="18" rx="2"/></svg>
-          <span class="tool-tooltip">Hide Box</span>
-        </button>
-      </div>
-
-      <div class="palette-divider"></div>
-
-      <!-- Drawing & Annotations -->
+      <!-- 2. Freehand & Annotation Group -->
       <div class="tool-group">
         <button class="tool-btn" data-tool="pen" id="tool-pen" title="Pen / Freehand (P)">
           <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 19l7-7 3 3-7 7-3-3z"/><path d="M18 13l-1.5-7.5L2 2l3.5 14.5L13 18l5-5z"/><path d="M2 2l7.586 7.586"/><circle cx="11" cy="11" r="2"/></svg>
-          <span class="tool-tooltip">Pen</span>
+          <span class="tool-tooltip">Pen (P)</span>
         </button>
         <button class="tool-btn" data-tool="highlighter" id="tool-highlighter" title="Highlighter (H)">
           <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m9 11-6 6v3h3l6-6"/><path d="m22 2-2.3 2.3a1 1 0 0 0 0 1.4L21 7a1 1 0 0 1 0 1.4L11 18.4l-5.4-5.4L15.6 3a1 1 0 0 1 1.4 0l1.3 1.3a1 1 0 0 0 1.4 0L22 2z"/></svg>
-          <span class="tool-tooltip">Highlighter</span>
+          <span class="tool-tooltip">Highlighter (H)</span>
         </button>
         <button class="tool-btn" data-tool="arrow" id="tool-arrow" title="Arrow (A)">
           <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="5" y1="19" x2="19" y2="5"/><polyline points="10 5 19 5 19 14"/></svg>
-          <span class="tool-tooltip">Arrow</span>
-        </button>
-        <button class="tool-btn" data-tool="rect" id="tool-rect" title="Rectangle Box (R)">
-          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="18" height="18" rx="2"/></svg>
-          <span class="tool-tooltip">Rectangle</span>
-        </button>
-        <button class="tool-btn" data-tool="circle" id="tool-circle" title="Circle / Ellipse (O)">
-          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/></svg>
-          <span class="tool-tooltip">Circle</span>
+          <span class="tool-tooltip">Arrow (A)</span>
         </button>
         <button class="tool-btn" data-tool="text" id="tool-text" title="Text Label (T)">
           <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="4 7 4 4 20 4 20 7"/><line x1="9" y1="20" x2="15" y2="20"/><line x1="12" y1="4" x2="12" y2="20"/></svg>
-          <span class="tool-tooltip">Text</span>
+          <span class="tool-tooltip">Text (T)</span>
         </button>
       </div>
 
       <div class="palette-divider"></div>
 
-      <!-- Color & Stroke Selector -->
+      <!-- 3. Grouped Shapes & Privacy Redactions Area -->
+      <div class="tool-group">
+        <button class="tool-btn" data-tool="rect" id="tool-rect" title="Rectangle Box (R)">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="18" height="18" rx="2"/></svg>
+          <span class="tool-tooltip">Rectangle (R)</span>
+        </button>
+        <button class="tool-btn" data-tool="circle" id="tool-circle" title="Circle / Ellipse (O)">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/></svg>
+          <span class="tool-tooltip">Circle (O)</span>
+        </button>
+        <button class="tool-btn" data-tool="blur" id="tool-blur" title="Blur / Pixelate Sensitive Info (B)">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 22a7 7 0 0 0 7-7c0-2-1-3.9-3-5.5s-3.5-4-4-6.5c-.5 2.5-2 4.9-4 6.5C6 11.1 5 13 5 15a7 7 0 0 0 7 7z"/></svg>
+          <span class="tool-tooltip">Privacy Blur (B)</span>
+        </button>
+        <button class="tool-btn" data-tool="blackout" id="tool-blackout" title="Blackout / Hide Box (X)">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor"><rect x="3" y="3" width="18" height="18" rx="2"/></svg>
+          <span class="tool-tooltip">Hide Box (X)</span>
+        </button>
+      </div>
+
+      <div class="palette-divider"></div>
+
+      <!-- 4. Color Swatches & Custom Picker -->
       <div class="palette-controls">
         <div class="color-picker-group">
-          <button class="color-swatch active" data-color="#ef4444" style="background: #ef4444;"></button>
-          <button class="color-swatch" data-color="#f59e0b" style="background: #f59e0b;"></button>
-          <button class="color-swatch" data-color="#10b981" style="background: #10b981;"></button>
-          <button class="color-swatch" data-color="#38bdf8" style="background: #38bdf8;"></button>
-          <button class="color-swatch" data-color="#a855f7" style="background: #a855f7;"></button>
-          <button class="color-swatch" data-color="#ffffff" style="background: #ffffff;"></button>
-          <button class="color-swatch" data-color="#000000" style="background: #000000; border: 1px solid #475569;"></button>
-          <input type="color" id="custom-color-picker" value="#38bdf8" class="custom-color-input" title="Custom color">
-        </div>
-
-        <div class="stroke-slider-container">
-          <span class="slider-label" id="stroke-size-label">4px</span>
-          <input type="range" id="stroke-size-slider" min="2" max="32" value="4" class="studio-range-slider" title="Stroke size">
+          <button class="color-swatch active" data-color="#ef4444" style="background: #ef4444;" title="Red"></button>
+          <button class="color-swatch" data-color="#f59e0b" style="background: #f59e0b;" title="Amber"></button>
+          <button class="color-swatch" data-color="#10b981" style="background: #10b981;" title="Emerald"></button>
+          <button class="color-swatch" data-color="#38bdf8" style="background: #38bdf8;" title="Sky Blue"></button>
+          <button class="color-swatch" data-color="#a855f7" style="background: #a855f7;" title="Purple"></button>
+          <button class="color-swatch" data-color="#ffffff" style="background: #ffffff;" title="White"></button>
+          <button class="color-swatch" data-color="#000000" style="background: #000000; border: 1px solid #475569;" title="Black"></button>
+          <input type="color" id="custom-color-picker" value="#38bdf8" class="custom-color-input" title="Custom color picker">
         </div>
       </div>
     </aside>
+
+    <!-- Floating Dynamic Tool Size Panel (Visible only when Pen/Drawing/Shape tools selected) -->
+    <div class="tool-size-floating-panel" id="tool-size-panel" style="display: none;">
+      <div class="size-panel-header">
+        <span class="size-panel-label" id="tool-size-type-label">Stroke Width</span>
+        <span class="size-panel-badge" id="tool-size-val-badge">4px</span>
+      </div>
+      <div class="size-slider-row">
+        <input type="range" id="stroke-size-slider" min="1" max="40" value="4" class="custom-studio-slider" title="Adjust stroke/font size">
+      </div>
+      <div class="size-preset-row" id="tool-size-presets">
+        <button class="size-preset-pill" data-size="2">2px</button>
+        <button class="size-preset-pill active" data-size="4">4px</button>
+        <button class="size-preset-pill" data-size="8">8px</button>
+        <button class="size-preset-pill" data-size="16">16px</button>
+        <button class="size-preset-pill" data-size="24">24px</button>
+      </div>
+    </div>
 
     <!-- Crop Action Floating Bar (Visible when in Crop Mode) -->
     <div class="crop-floating-bar" id="crop-bar" style="display: none;">
@@ -172,60 +209,100 @@
 
   </main>
 
-  <!-- Export Modal Dialog -->
+  <!-- Export Modal Dialog (Elevated Premium UI) -->
   <div class="export-modal-backdrop" id="export-modal" style="display: none;">
     <div class="export-modal-card">
       <div class="modal-header">
-        <div class="modal-title-group">
-          <span class="modal-title">Export RippleFrame Capture</span>
-          <span class="modal-sub">Choose your preferred image or document format</span>
+        <div class="modal-header-left">
+          <div class="modal-header-icon">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#38bdf8" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+              <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path>
+              <polyline points="7 10 12 15 17 10"></polyline>
+              <line x1="12" y1="15" x2="12" y2="3"></line>
+            </svg>
+          </div>
+          <div class="modal-title-group">
+            <span class="modal-title">Export RippleFrame Capture</span>
+            <span class="modal-sub">Configure document format, file naming, and quality output</span>
+          </div>
         </div>
-        <button class="modal-close-btn" id="btn-close-export-modal">&times;</button>
+        <button class="modal-close-btn" id="btn-close-export-modal" title="Close modal">&times;</button>
       </div>
 
       <div class="modal-body">
-        <!-- Filename field -->
+        <!-- Filename Field -->
         <div class="form-group">
-          <label class="form-label">FILE NAME</label>
-          <input type="text" id="export-filename-field" class="form-input" value="Caspian_Capture">
+          <div class="form-label-row">
+            <label class="form-label">FILE NAME</label>
+            <span class="filename-format-badge" id="export-ext-badge">.png</span>
+          </div>
+          <div class="filename-input-box">
+            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>
+            <input type="text" id="export-filename-field" class="form-input" value="Caspian_Capture" placeholder="Enter file name...">
+          </div>
         </div>
 
-        <!-- Format Selector Pills -->
+        <!-- Format Cards Grid -->
         <div class="form-group">
           <label class="form-label">EXPORT FORMAT</label>
-          <div class="format-pill-grid">
-            <button class="format-pill active" data-format="png">
-              <span class="pill-ext">PNG</span>
-              <span class="pill-desc">Lossless High-Res</span>
+          <div class="format-card-grid">
+            <button class="format-card active" data-format="png">
+              <div class="format-card-top">
+                <span class="format-icon">🖼️</span>
+                <span class="format-title">PNG</span>
+                <span class="format-check-badge">✓</span>
+              </div>
+              <span class="format-desc">Lossless 100% crisp pixel fidelity</span>
             </button>
-            <button class="format-pill" data-format="jpg">
-              <span class="pill-ext">JPG / JPEG</span>
-              <span class="pill-desc">Compact Photo</span>
+            <button class="format-card" data-format="jpg">
+              <div class="format-card-top">
+                <span class="format-icon">📸</span>
+                <span class="format-title">JPG</span>
+                <span class="format-check-badge">✓</span>
+              </div>
+              <span class="format-desc">Compact photo compression</span>
             </button>
-            <button class="format-pill" data-format="pdf">
-              <span class="pill-ext">PDF</span>
-              <span class="pill-desc">Document Ready</span>
+            <button class="format-card" data-format="pdf">
+              <div class="format-card-top">
+                <span class="format-icon">📄</span>
+                <span class="format-title">PDF</span>
+                <span class="format-check-badge">✓</span>
+              </div>
+              <span class="format-desc">Document vector specification</span>
             </button>
           </div>
         </div>
 
         <!-- Quality Slider (Visible for JPG) -->
         <div class="form-group" id="jpg-quality-group" style="display: none;">
-          <div style="display: flex; justify-content: space-between;">
-            <label class="form-label">JPEG QUALITY</label>
+          <div class="form-label-row">
+            <label class="form-label">JPEG QUALITY PRESET</label>
             <span class="form-hint" id="quality-val-display">92%</span>
           </div>
-          <input type="range" id="jpg-quality-slider" min="30" max="100" value="92" class="studio-range-slider">
+          <input type="range" id="jpg-quality-slider" min="30" max="100" value="92" class="custom-studio-slider">
+          <div class="quality-preset-pills">
+            <button class="quality-preset-btn" data-quality="60">Compact (60%)</button>
+            <button class="quality-preset-btn" data-quality="80">Balanced (80%)</button>
+            <button class="quality-preset-btn active" data-quality="92">High (92%)</button>
+            <button class="quality-preset-btn" data-quality="100">Max (100%)</button>
+          </div>
         </div>
 
-        <!-- Resolution info -->
+        <!-- Resolution & Storage stats -->
         <div class="export-stats-row">
           <div class="stat-col">
-            <span class="stat-label">Canvas Dimensions</span>
+            <div class="stat-header">
+              <span class="stat-icon">📐</span>
+              <span class="stat-label">Canvas Dimensions</span>
+            </div>
             <span class="stat-val" id="export-res-display">1920 × 1080 px</span>
           </div>
+          <div class="stat-divider"></div>
           <div class="stat-col">
-            <span class="stat-label">Estimated Output</span>
+            <div class="stat-header">
+              <span class="stat-icon">💾</span>
+              <span class="stat-label">Estimated Output</span>
+            </div>
             <span class="stat-val" id="export-est-display">~2.4 MB</span>
           </div>
         </div>

@@ -1,274 +1,149 @@
 // ==========================================================================
-// CASPIAN - RIPPLEFRAME FULL-PAGE SCROLLING SCREENSHOT ENGINE
+// CASPIAN - RIPPLEFRAME CONTENT PAGE HELPER (GoFullPage Engine)
 // ==========================================================================
 
 (function () {
   'use strict';
 
-  // Prevent multiple injections
-  if (window.__CASPIAN_RIPPLEFRAME_ACTIVE) return;
-  window.__CASPIAN_RIPPLEFRAME_ACTIVE = true;
+  let originalScrollX = 0;
+  let originalScrollY = 0;
+  let hiddenFixedNodes = [];
+  let scrollbarStyleTag = null;
 
-  // Open / Init IndexedDB for high-capacity image storage
-  function openDatabase() {
-    return new Promise((resolve, reject) => {
-      const req = indexedDB.open('caspian_rippleframe_db', 1);
-      req.onupgradeneeded = (e) => {
-        const db = e.target.result;
-        if (!db.objectStoreNames.contains('captures')) {
-          db.createObjectStore('captures', { keyPath: 'id' });
+  // 1. Hide Scrollbars during capture
+  function suppressScrollbars() {
+    if (!scrollbarStyleTag) {
+      scrollbarStyleTag = document.createElement('style');
+      scrollbarStyleTag.id = 'caspian-rf-hide-scrollbars';
+      scrollbarStyleTag.textContent = `
+        html, body {
+          scrollbar-width: none !important;
+          -ms-overflow-style: none !important;
         }
-      };
-      req.onsuccess = () => resolve(req.result);
-      req.onerror = () => reject(req.error);
-    });
-  }
-
-  async function saveCaptureToDB(captureData) {
-    const db = await openDatabase();
-    return new Promise((resolve, reject) => {
-      const tx = db.transaction('captures', 'readwrite');
-      const store = tx.objectStore('captures');
-      store.put({ id: 'latest_capture', ...captureData, timestamp: Date.now() });
-      tx.oncomplete = () => resolve();
-      tx.onerror = () => reject(tx.error);
-    });
-  }
-
-  // Create progress HUD overlay
-  function createProgressHud() {
-    const existing = document.getElementById('caspian-rf-hud');
-    if (existing) existing.remove();
-
-    const hud = document.createElement('div');
-    hud.id = 'caspian-rf-hud';
-    hud.innerHTML = `
-      <div style="
-        position: fixed !important;
-        bottom: 28px !important;
-        right: 28px !important;
-        z-index: 2147483647 !important;
-        background: rgba(15, 23, 42, 0.92) !important;
-        backdrop-filter: blur(16px) !important;
-        -webkit-backdrop-filter: blur(16px) !important;
-        border: 1.5px solid rgba(56, 189, 248, 0.5) !important;
-        color: #ffffff !important;
-        font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif !important;
-        padding: 12px 20px !important;
-        border-radius: 16px !important;
-        box-shadow: 0 12px 36px rgba(0,0,0,0.6), 0 0 24px rgba(56, 189, 248, 0.35) !important;
-        display: flex !important;
-        align-items: center !important;
-        gap: 12px !important;
-        min-width: 240px !important;
-        animation: caspianFadeIn 0.25s ease forwards !important;
-      ">
-        <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#38bdf8" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" style="animation: caspianSpin 1.8s linear infinite;">
-          <path d="M21.5 2v6h-6M21.34 15.57a10 10 0 1 1-.57-8.38l5.67-5.67"/>
-        </svg>
-        <div style="display: flex; flex-direction: column; gap: 2px;">
-          <span style="font-weight: 700; font-size: 13px; color: #f8fafc; letter-spacing: 0.3px;">RippleFrame Capturing</span>
-          <span id="caspian-rf-progress-text" style="font-size: 11px; color: #94a3b8; font-family: monospace;">Scanning page (0%)...</span>
-        </div>
-      </div>
-      <style>
-        @keyframes caspianSpin { 100% { transform: rotate(360deg); } }
-        @keyframes caspianFadeIn { 0% { opacity: 0; transform: translateY(10px); } 100% { opacity: 1; transform: translateY(0); } }
-      </style>
-    `;
-    document.documentElement.appendChild(hud);
-    return hud;
-  }
-
-  function updateProgress(percent, text) {
-    const el = document.getElementById('caspian-rf-progress-text');
-    if (el) el.textContent = text || `${Math.round(percent)}% completed`;
-  }
-
-  function removeProgressHud() {
-    const hud = document.getElementById('caspian-rf-hud');
-    if (hud) hud.remove();
-  }
-
-  // Sleep helper
-  const sleep = (ms) => new Promise(r => setTimeout(r, ms));
-
-  // Request single tab screenshot from background service worker
-  function captureViewport() {
-    return new Promise((resolve, reject) => {
-      chrome.runtime.sendMessage({ action: 'capture_visible_tab' }, (response) => {
-        if (chrome.runtime.lastError) {
-          return reject(new Error(chrome.runtime.lastError.message));
+        ::-webkit-scrollbar {
+          display: none !important;
+          width: 0 !important;
+          height: 0 !important;
         }
-        if (response && response.dataUrl) {
-          resolve(response.dataUrl);
-        } else {
-          reject(new Error(response?.error || 'Failed to capture tab viewport'));
-        }
-      });
-    });
+      `;
+      (document.head || document.documentElement).appendChild(scrollbarStyleTag);
+    }
   }
 
-  // Load image object from dataURL
-  function loadImage(dataUrl) {
-    return new Promise((resolve, reject) => {
-      const img = new Image();
-      img.onload = () => resolve(img);
-      img.onerror = () => reject(new Error('Image decode error'));
-      img.src = dataUrl;
-    });
+  function restoreScrollbars() {
+    if (scrollbarStyleTag) {
+      scrollbarStyleTag.remove();
+      scrollbarStyleTag = null;
+    }
   }
 
-  // Hide sticky headers / fixed bars temporarily to prevent ghost repetitions in long screenshots
+  // 2. Freeze sticky/fixed headers after first slice
   function hideStickyElements() {
-    const hiddenNodes = [];
+    hiddenFixedNodes = [];
     const elements = document.querySelectorAll('*');
     for (let i = 0; i < elements.length; i++) {
       const el = elements[i];
       if (el.id === 'caspian-rf-hud') continue;
       const style = window.getComputedStyle(el);
       if (style.position === 'fixed' || style.position === 'sticky') {
-        const prevVisibility = el.style.visibility;
+        hiddenFixedNodes.push({ el, prev: el.style.visibility });
         el.style.visibility = 'hidden';
-        hiddenNodes.push({ el, prevVisibility });
       }
     }
-    return () => {
-      hiddenNodes.forEach(item => {
-        item.el.style.visibility = item.prevVisibility;
-      });
+  }
+
+  function restoreStickyElements() {
+    hiddenFixedNodes.forEach(item => {
+      item.el.style.visibility = item.prev;
+    });
+    hiddenFixedNodes = [];
+  }
+
+  // 3. Accurate Document Dimensions
+  function getPageMetrics() {
+    const doc = document.documentElement;
+    const body = document.body;
+
+    const totalHeight = Math.max(
+      doc ? doc.scrollHeight : 0,
+      doc ? doc.offsetHeight : 0,
+      doc ? doc.clientHeight : 0,
+      body ? body.scrollHeight : 0,
+      body ? body.offsetHeight : 0,
+      body ? body.clientHeight : 0,
+      window.innerHeight || 0
+    );
+
+    const totalWidth = Math.max(
+      doc ? doc.scrollWidth : 0,
+      doc ? doc.offsetWidth : 0,
+      doc ? doc.clientWidth : 0,
+      body ? body.scrollWidth : 0,
+      body ? body.offsetWidth : 0,
+      body ? body.clientWidth : 0,
+      window.innerWidth || 0
+    );
+
+    return {
+      totalHeight,
+      totalWidth,
+      viewportHeight: window.innerHeight,
+      viewportWidth: window.innerWidth,
+      dpr: window.devicePixelRatio || 1,
+      title: document.title || 'Screen Capture',
+      url: window.location.href
     };
   }
 
-  // Main capture sequence
-  async function startCapture(options = {}) {
-    const isFullPage = options.scope !== 'viewport';
-    const delay = options.delay || 150;
-    const hud = createProgressHud();
-
-    const originalScrollX = window.scrollX || document.documentElement.scrollLeft || 0;
-    const originalScrollY = window.scrollY || document.documentElement.scrollTop || 0;
-
-    // Viewport-only capture mode
-    if (!isFullPage) {
-      updateProgress(50, 'Capturing viewport...');
-      try {
-        const dataUrl = await captureViewport();
-        await saveCaptureToDB({
-          dataUrl,
-          title: document.title || 'Screen Capture',
-          url: window.location.href,
-          width: window.innerWidth,
-          height: window.innerHeight,
-          fullPage: false
-        });
-        removeProgressHud();
-        chrome.runtime.sendMessage({ action: 'open_rippleframe_studio' });
-      } catch (err) {
-        removeProgressHud();
-        alert('❌ RippleFrame Capture Failed: ' + err.message);
-      } finally {
-        window.__CASPIAN_RIPPLEFRAME_ACTIVE = false;
-      }
-      return;
-    }
-
-    // Full-page scrolling capture mode
-    const restoreSticky = hideStickyElements();
-    const totalHeight = Math.max(
-      document.body.scrollHeight,
-      document.documentElement.scrollHeight,
-      document.body.offsetHeight,
-      document.documentElement.offsetHeight,
-      document.body.clientHeight,
-      document.documentElement.clientHeight
-    );
-    const viewportHeight = window.innerHeight;
-    const viewportWidth = window.innerWidth;
-    const dpr = window.devicePixelRatio || 1;
-
-    const slices = [];
-    let currentScroll = 0;
-
-    try {
-      window.scrollTo(0, 0);
-      await sleep(delay);
-
-      while (currentScroll < totalHeight) {
-        window.scrollTo(0, currentScroll);
-        await sleep(delay);
-
-        const actualScrollY = window.scrollY || document.documentElement.scrollTop || currentScroll;
-        const percent = Math.min(95, (actualScrollY / (totalHeight - viewportHeight || 1)) * 100);
-        updateProgress(percent, `Capturing section (${Math.round(percent)}%)...`);
-
-        const dataUrl = await captureViewport();
-        slices.push({
-          dataUrl,
-          scrollY: actualScrollY
-        });
-
-        // If remaining height is smaller than viewport, advance exactly to the bottom
-        if (currentScroll + viewportHeight >= totalHeight) {
-          break;
-        }
-
-        currentScroll += viewportHeight - 20; // 20px overlap for seamless registration
-        if (currentScroll + viewportHeight > totalHeight) {
-          currentScroll = totalHeight - viewportHeight;
-        }
-      }
-
-      updateProgress(98, 'Stitching ultra-res canvas...');
-      restoreSticky();
-
-      // Stitch slices together onto single high-res canvas
-      const canvas = document.createElement('canvas');
-      canvas.width = viewportWidth * dpr;
-      canvas.height = totalHeight * dpr;
-      const ctx = canvas.getContext('2d');
-
-      for (let i = 0; i < slices.length; i++) {
-        const slice = slices[i];
-        const img = await loadImage(slice.dataUrl);
-        const destY = slice.scrollY * dpr;
-        ctx.drawImage(img, 0, destY);
-      }
-
-      // Convert to high-quality PNG data URL
-      const finalDataUrl = canvas.toDataURL('image/png');
-
-      await saveCaptureToDB({
-        dataUrl: finalDataUrl,
-        title: document.title || 'Full Page Capture',
-        url: window.location.href,
-        width: canvas.width,
-        height: canvas.height,
-        fullPage: true
-      });
-
-      removeProgressHud();
-      // Restore original scroll
-      window.scrollTo(originalScrollX, originalScrollY);
-
-      // Launch RippleFrame Studio tab
-      chrome.runtime.sendMessage({ action: 'open_rippleframe_studio' });
-    } catch (err) {
-      restoreSticky();
-      removeProgressHud();
-      window.scrollTo(originalScrollX, originalScrollY);
-      console.error('[RippleFrame Error]', err);
-      alert('❌ RippleFrame Capture Failed: ' + err.message);
-    } finally {
-      window.__CASPIAN_RIPPLEFRAME_ACTIVE = false;
-    }
-  }
-
-  // Listen for trigger command from popup
+  // 4. Message Listener
   chrome.runtime.onMessage.addListener((req, sender, sendResponse) => {
-    if (req.action === 'start_rippleframe_capture') {
-      startCapture(req.options || {});
-      sendResponse({ status: 'started' });
+    if (req.action === 'rf_prepare_capture') {
+      originalScrollX = window.scrollX || (document.documentElement ? document.documentElement.scrollLeft : 0) || 0;
+      originalScrollY = window.scrollY || (document.documentElement ? document.documentElement.scrollTop : 0) || 0;
+
+      suppressScrollbars();
+
+      // Scroll to top
+      window.scrollTo(0, 0);
+      if (document.scrollingElement) document.scrollingElement.scrollTop = 0;
+
+      const metrics = getPageMetrics();
+      console.log(`[RippleFrame Content] Prepared capture metrics: Total Height = ${metrics.totalHeight}px, Viewport = ${metrics.viewportWidth}x${metrics.viewportHeight}px, DPR = ${metrics.dpr}`);
+      sendResponse(metrics);
+      return true;
+    }
+
+    if (req.action === 'rf_scroll_to') {
+      // Hide sticky elements on subsequent slices (after top slice is captured)
+      if (req.sliceIndex > 0) {
+        hideStickyElements();
+      }
+
+      window.scrollTo({ top: req.y, left: 0, behavior: 'instant' });
+      if (document.scrollingElement) document.scrollingElement.scrollTop = req.y;
+      if (document.documentElement) document.documentElement.scrollTop = req.y;
+      if (document.body) document.body.scrollTop = req.y;
+
+      const actualY = window.scrollY || (document.scrollingElement ? document.scrollingElement.scrollTop : 0) || (document.documentElement ? document.documentElement.scrollTop : 0) || req.y;
+      const metrics = getPageMetrics();
+      console.log(`[RippleFrame Content] Scroll command target = ${req.y}px (actual window.scrollY = ${actualY}px, totalHeight = ${metrics.totalHeight}px)`);
+
+      sendResponse({
+        scrolled: true,
+        actualY,
+        totalHeight: metrics.totalHeight
+      });
+      return true;
+    }
+
+    if (req.action === 'rf_restore_page') {
+      restoreStickyElements();
+      restoreScrollbars();
+      window.scrollTo(originalScrollX, originalScrollY);
+      if (document.scrollingElement) document.scrollingElement.scrollTop = originalScrollY;
+      console.log(`[RippleFrame Content] Restored original scroll position (${originalScrollX}, ${originalScrollY})`);
+      sendResponse({ restored: true });
+      return true;
     }
   });
 

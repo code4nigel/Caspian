@@ -10,7 +10,7 @@ It addresses everyday web performance and workflow friction: eliminating typing 
 
 | Desktop Extension (Chromium) | Caspian Flow / Mobile (Android) | Automatic Updates (Obtainium) |
 | :--- | :--- | :--- |
-| Universal Chromium Extension (V6.2.0) | Floating Action Pod & Bottom Sheet UI | One-click app updates via GitHub Releases |
+| Universal Chromium Extension (V6.3.0) | Floating Action Pod & Bottom Sheet UI | One-click app updates via GitHub Releases |
 | ChatGPT, Google Gemini, YouTube, Media | Omnibox Multi-Tab Browser & AI Docks | Import configuration file included in repo |
 | DOM Pruner, Flow Speed, RippleFrame, Exporters | Zero-Lag DOM Pruning & Video Remote | Background update notifications & installs |
 
@@ -45,7 +45,7 @@ It addresses everyday web performance and workflow friction: eliminating typing 
 
 ---
 
-## Desktop Extension Highlights (V6.2.0)
+## Desktop Extension Highlights (V6.3.0)
 
 ### 1. RippleFrame: Full-Page Scrolling Screenshot & Annotation Studio
 Capture seamless full-length screenshots of any webpage and open them in an interactive editing studio tab:
@@ -95,7 +95,7 @@ Easily backup all your theme accents, chat limits, YouTube preferences, and Flow
 - Google Chrome, Microsoft Edge, Brave, Opera, Vivaldi, Arc, and other Chromium-based browsers.
 
 ### Installation Steps
-1. Download the latest release archive (`Caspian-Extension-v6.2.0.zip`) from the [GitHub Releases Page](https://github.com/code4nigel/Caspian/releases).
+1. Download the latest release archive (`Caspian-Extension-v6.3.0.zip`) from the [GitHub Releases Page](https://github.com/code4nigel/Caspian/releases).
 2. Unzip the downloaded file to a local folder.
 3. Open your browser and go to the extensions management page:
    - **Chrome**: `chrome://extensions`

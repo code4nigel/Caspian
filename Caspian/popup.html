@@ -301,12 +301,12 @@
             <div class="card-header-left">
               <span class="chip-icon" style="font-size: 13px;">🎞️</span>
               <div class="card-title-group">
-                <span class="card-title" id="rf-status-title">RippleFrame: Ready</span>
+                <span class="card-title" id="rf-status-title">RippleFrame: ON</span>
                 <span id="rf-status-sub-text" class="card-sub">Long screenshot & studio editor. Tap to collapse.</span>
               </div>
             </div>
             <div class="card-header-right">
-              <button id="trigger-rf-capture-btn" class="pill-toggle-btn active" style="background: linear-gradient(135deg, #0284c7 0%, #0ea5e9 100%); color: #fff; border-color: rgba(56, 189, 248, 0.6);" title="Capture active tab now">📸 Capture</button>
+              <button id="toggle-rippleframe-btn" class="pill-toggle-btn active" title="Toggle RippleFrame Engine">ON</button>
             </div>
           </div>
 
@@ -326,18 +326,19 @@
             <div class="theme-mode-row" style="margin-top: 2px; padding: 5px 8px; background: var(--input-bg); border-radius: 9px; border: 1px solid var(--border-glass); flex-direction: column; align-items: flex-start; gap: 4px;">
               <div style="display: flex; justify-content: space-between; width: 100%;">
                 <span class="input-label" style="color: var(--text-main); font-weight: 700; font-size: calc(9.5px * var(--font-scale, 1));">⏱️ Scroll Delay per Slice</span>
-                <span id="rf-delay-val" class="card-sub" style="font-family: 'JetBrains Mono', monospace; font-weight: 700; color: var(--accent);">150ms</span>
+                <span id="rf-delay-val" class="card-sub" style="font-family: 'JetBrains Mono', monospace; font-weight: 700; color: var(--accent);">550ms</span>
               </div>
-              <input type="range" id="rf-delay-slider" min="50" max="500" step="25" value="150" class="custom-range-slider" style="width: 100%;">
+              <input type="range" id="rf-delay-slider" min="500" max="1500" step="50" value="550" class="custom-range-slider" style="width: 100%;">
             </div>
 
-            <!-- Action Buttons Row -->
-            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 6px; margin-top: 2px;">
-              <button id="btn-rf-fullpage-direct" class="pill" style="display: flex; align-items: center; justify-content: center; gap: 5px; font-weight: 700; background: var(--accent-light); color: var(--accent); border: 1px solid var(--accent); padding: 6px 8px; border-radius: 7px; cursor: pointer; font-size: calc(9px * var(--font-scale, 1));">
-                <span>📜 Full Page</span>
+            <!-- Primary Big Capture Button & Studio Link -->
+            <div style="display: flex; flex-direction: column; gap: 6px; margin-top: 2px;">
+              <button id="btn-rf-capture-main" class="rf-main-capture-btn" title="Capture active tab now and open in RippleFrame Studio">
+                <span style="font-size: 13.5px;">📸</span>
+                <span>Take Screenshot</span>
               </button>
-              <button id="btn-rf-open-studio" class="pill" style="display: flex; align-items: center; justify-content: center; gap: 5px; font-weight: 700; background: var(--input-bg); color: var(--text-main); border: 1px solid var(--border-glass); padding: 6px 8px; border-radius: 7px; cursor: pointer; font-size: calc(9px * var(--font-scale, 1));">
-                <span>🎨 Open Studio</span>
+              <button id="btn-rf-open-studio" class="pill" style="display: flex; align-items: center; justify-content: center; gap: 5px; font-weight: 700; background: var(--input-bg); color: var(--text-main); border: 1px solid var(--border-glass); padding: 5px 8px; border-radius: 7px; cursor: pointer; font-size: calc(8.5px * var(--font-scale, 1));">
+                <span>🎨 Open Blank Studio Canvas</span>
               </button>
             </div>
           </div>
