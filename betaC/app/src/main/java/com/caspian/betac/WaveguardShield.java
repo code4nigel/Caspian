@@ -266,18 +266,18 @@ public class WaveguardShield {
      * Primary fast matching method called on shouldInterceptRequest.
      */
     public boolean isBlocked(String urlString, String currentHost, int tabId) {
-        if (!isGlobalEnabled || urlString == null) return false;
-
-        // Check if user has whitelisted the current site
-        if (currentHost != null && isSiteWhitelisted(currentHost)) {
-            return false;
-        }
-
         try {
+            if (!isGlobalEnabled || urlString == null) return false;
+
+            // Check if user has whitelisted the current site
+            if (currentHost != null && isSiteWhitelisted(currentHost)) {
+                return false;
+            }
+
             Uri uri = Uri.parse(urlString);
             String host = uri.getHost();
             if (host == null) return false;
-            host = host.toLowerCase();
+            host = host.toLowerCase(java.util.Locale.ROOT);
 
             // Suffix and exact domain matching
             boolean matchesDomain = false;
@@ -302,7 +302,7 @@ public class WaveguardShield {
 
             // Path & Telemetry matching
             if (isEasyPrivacyEnabled) {
-                String fullUrl = urlString.toLowerCase();
+                String fullUrl = urlString.toLowerCase(java.util.Locale.ROOT);
                 for (String kw : pathKeywords) {
                     if (fullUrl.contains(kw)) {
                         recordBlock(tabId);
@@ -310,41 +310,49 @@ public class WaveguardShield {
                     }
                 }
             }
-        } catch (Exception ignored) {}
+        } catch (Throwable ignored) {}
 
         return false;
     }
 
     private void recordBlock(int tabId) {
         totalBlockedCount.incrementAndGet();
-        prefs.edit().putInt(KEY_TOTAL_BLOCKED, totalBlockedCount.get()).apply();
-
-        tabBlockedCounts.computeIfAbsent(tabId, k -> new AtomicInteger(0)).incrementAndGet();
+        if (tabId >= 0) {
+            tabBlockedCounts.computeIfAbsent(tabId, k -> new AtomicInteger(0)).incrementAndGet();
+        }
     }
 
     /**
-     * Synthesizes defused empty mock responses for video players and analytics.
+     * Synthesizes defused empty mock responses for video players and analytics with valid non-null headers.
      */
     public WebResourceResponse getBlockedResponse(String urlString) {
-        if (urlString != null && isDefuserEnabled) {
-            String lower = urlString.toLowerCase();
-            // Video VAST & player midroll ad mocking
-            if (lower.contains("/pagead/") || lower.contains("doubleclick") || lower.contains("ad_type") || lower.contains("vast")) {
-                String emptyVast = "<?xml version=\"1.0\" encoding=\"UTF-8\"?><VAST version=\"2.0\"></VAST>";
-                return new WebResourceResponse("application/xml", "UTF-8", 200, "OK", null,
-                        new ByteArrayInputStream(emptyVast.getBytes(StandardCharsets.UTF_8)));
-            } else if (lower.contains("/youtubei/v1/player/ad_break") || lower.contains("/ad_break") || lower.contains(".json")) {
-                return new WebResourceResponse("application/json", "UTF-8", 200, "OK", null,
-                        new ByteArrayInputStream("{}".getBytes(StandardCharsets.UTF_8)));
-            } else if (lower.endsWith(".js") || lower.contains("analytics.js") || lower.contains("gtag/js") || lower.contains("fbevents.js")) {
-                return new WebResourceResponse("application/javascript", "UTF-8", 200, "OK", null,
-                        new ByteArrayInputStream("/* Waveguard Neutralized */".getBytes(StandardCharsets.UTF_8)));
-            }
-        }
+        Map<String, String> headers = new java.util.HashMap<>();
+        headers.put("Access-Control-Allow-Origin", "*");
 
-        // Return empty plain response
-        return new WebResourceResponse("text/plain", "UTF-8", 200, "OK", null,
-                new ByteArrayInputStream("".getBytes(StandardCharsets.UTF_8)));
+        try {
+            if (urlString != null && isDefuserEnabled) {
+                String lower = urlString.toLowerCase();
+                // Video VAST & player midroll ad mocking
+                if (lower.contains("/pagead/") || lower.contains("doubleclick") || lower.contains("ad_type") || lower.contains("vast")) {
+                    headers.put("Content-Type", "application/xml; charset=UTF-8");
+                    String emptyVast = "<?xml version=\"1.0\" encoding=\"UTF-8\"?><VAST version=\"2.0\"></VAST>";
+                    return new WebResourceResponse("application/xml", "UTF-8", 200, "OK", headers,
+                            new ByteArrayInputStream(emptyVast.getBytes(StandardCharsets.UTF_8)));
+                } else if (lower.contains("/youtubei/v1/player/ad_break") || lower.contains("/ad_break") || lower.contains(".json")) {
+                    headers.put("Content-Type", "application/json; charset=UTF-8");
+                    return new WebResourceResponse("application/json", "UTF-8", 200, "OK", headers,
+                            new ByteArrayInputStream("{}".getBytes(StandardCharsets.UTF_8)));
+                } else if (lower.endsWith(".js") || lower.contains("analytics.js") || lower.contains("gtag/js") || lower.contains("fbevents.js")) {
+                    headers.put("Content-Type", "application/javascript; charset=UTF-8");
+                    return new WebResourceResponse("application/javascript", "UTF-8", 200, "OK", headers,
+                            new ByteArrayInputStream("/* Waveguard Neutralized */".getBytes(StandardCharsets.UTF_8)));
+                }
+            }
+        } catch (Throwable ignored) {}
+
+        headers.put("Content-Type", "text/plain; charset=UTF-8");
+        return new WebResourceResponse("text/plain", "UTF-8", 200, "OK", headers,
+                new ByteArrayInputStream(new byte[0]));
     }
 
     /**

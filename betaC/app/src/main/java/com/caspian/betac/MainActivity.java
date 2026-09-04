@@ -7700,8 +7700,19 @@ public class MainActivity extends AppCompatActivity {
                         }
                     }
                 }
-                if (waveguardShield != null && waveguardShield.isBlocked(request.getUrl().toString(), view.getUrl() != null ? Uri.parse(view.getUrl()).getHost() : null, id)) {
-                    return waveguardShield.getBlockedResponse(request.getUrl().toString());
+                try {
+                    String pageHost = null;
+                    if (tabItem != null && tabItem.url != null) {
+                        try {
+                            pageHost = Uri.parse(tabItem.url).getHost();
+                        } catch (Exception ignored) {}
+                    }
+                    if (waveguardShield != null && waveguardShield.isBlocked(request.getUrl().toString(), pageHost, tabItem != null ? tabItem.id : -1)) {
+                        WebResourceResponse blockedResp = waveguardShield.getBlockedResponse(request.getUrl().toString());
+                        if (blockedResp != null) return blockedResp;
+                    }
+                } catch (Throwable t) {
+                    Log.e(TAG, "Waveguard interception error: ", t);
                 }
                 return super.shouldInterceptRequest(view, request);
             }
@@ -7765,10 +7776,12 @@ public class MainActivity extends AppCompatActivity {
                 }
 
                 if (waveguardShield != null && waveguardShield.isGlobalEnabled() && waveguardShield.isCosmeticEnabled()) {
-                    String cosmetic = waveguardShield.getCosmeticCssInjection();
-                    if (cosmetic != null && !cosmetic.isEmpty()) {
-                        view.evaluateJavascript(cosmetic, null);
-                    }
+                    try {
+                        String cosmetic = waveguardShield.getCosmeticCssInjection();
+                        if (cosmetic != null && !cosmetic.isEmpty()) {
+                            view.evaluateJavascript(cosmetic, null);
+                        }
+                    } catch (Throwable ignored) {}
                 }
 
                 if (tabItem.pendingPrompt != null && !tabItem.pendingPrompt.isEmpty()) {
