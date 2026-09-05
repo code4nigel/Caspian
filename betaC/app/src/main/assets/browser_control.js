@@ -2791,32 +2791,13 @@
   // ==========================================
 
   let editingHarborTab = null;
+  let harborEditorInitialized = false;
 
-  function openHarborTabEditor(tab) {
-    editingHarborTab = tab;
+  function closeHarborModal() {
+    try { playSFX('tb_modal'); } catch (e) {}
     const modal = document.getElementById('harbor-tab-editor-modal');
-    const nameInput = document.getElementById('harbor-edit-name-input');
-    const urlInput = document.getElementById('harbor-edit-url-input');
-    const iconInput = document.getElementById('harbor-edit-icon-input');
-    const previewEmoji = document.getElementById('harbor-icon-preview-emoji');
-    const previewImg = document.getElementById('harbor-icon-preview-img');
-    const lockedNotice = document.getElementById('harbor-locked-notice');
-    const deleteBtn = document.getElementById('harbor-delete-btn');
-
-    if (!modal) return;
-
-    nameInput.value = tab.name || '';
-    urlInput.value = tab.url || '';
-    iconInput.value = tab.icon || '';
-
-    // Locked status
-    const isLocked = tab.isLocked === true;
-    if (lockedNotice) lockedNotice.style.display = isLocked ? 'block' : 'none';
-    if (deleteBtn) deleteBtn.style.display = isLocked ? 'none' : 'block';
-
-    updateHarborIconPreview(tab.icon || '🌐');
-
-    modal.style.display = 'flex';
+    if (modal) modal.style.display = 'none';
+    editingHarborTab = null;
   }
 
   function updateHarborIconPreview(iconVal) {
@@ -2835,105 +2816,173 @@
     }
   }
 
-  const iconInputEl = document.getElementById('harbor-edit-icon-input');
-  if (iconInputEl) {
-    iconInputEl.addEventListener('input', () => {
-      updateHarborIconPreview(iconInputEl.value.trim());
-    });
-  }
-
-  // Preset Icon buttons in modal
-  document.querySelectorAll('.harbor-preset-icon-btn').forEach(btn => {
-    btn.addEventListener('click', () => {
-      playSFX('tb_clicks');
-      const icon = btn.dataset.icon;
-      if (iconInputEl) {
-        iconInputEl.value = icon;
-        updateHarborIconPreview(icon);
-      }
-    });
-  });
-
-  // Auto Favicon button in modal
-  const autoFaviconBtn = document.getElementById('harbor-use-site-favicon-btn');
-  if (autoFaviconBtn) {
-    autoFaviconBtn.addEventListener('click', () => {
-      playSFX('tb_clicks');
-      const urlInput = document.getElementById('harbor-edit-url-input');
-      const url = urlInput ? urlInput.value.trim() : '';
-      if (url) {
-        try {
-          const host = new URL(url.startsWith('http') ? url : 'https://' + url).hostname;
-          const favUrl = `https://www.google.com/s2/favicons?domain=${host}&sz=64`;
-          if (iconInputEl) {
-            iconInputEl.value = favUrl;
-            updateHarborIconPreview(favUrl);
-          }
-        } catch (e) {}
-      }
-    });
-  }
-
-  // Close & Cancel editor modal
-  const closeEditorBtn = document.getElementById('harbor-editor-close-btn');
-  const cancelEditorBtn = document.getElementById('harbor-editor-cancel-btn');
-  const closeHarborModal = () => {
-    playSFX('tb_modal');
+  function initHarborTabEditorModal() {
     const modal = document.getElementById('harbor-tab-editor-modal');
-    if (modal) modal.style.display = 'none';
-    editingHarborTab = null;
-  };
+    if (!modal) return;
+    if (harborEditorInitialized) return;
+    harborEditorInitialized = true;
 
-  if (closeEditorBtn) closeEditorBtn.addEventListener('click', closeHarborModal);
-  if (cancelEditorBtn) cancelEditorBtn.addEventListener('click', closeHarborModal);
-
-  // Save editor modal
-  const saveEditorBtn = document.getElementById('harbor-editor-save-btn');
-  if (saveEditorBtn) {
-    saveEditorBtn.addEventListener('click', () => {
-      if (!editingHarborTab) return;
-      playSFX('tb_clicks');
-      const nameInput = document.getElementById('harbor-edit-name-input');
-      const urlInput = document.getElementById('harbor-edit-url-input');
-      const iconInput = document.getElementById('harbor-edit-icon-input');
-
-      if (nameInput && nameInput.value.trim()) {
-        editingHarborTab.name = nameInput.value.trim();
-      }
-      if (urlInput && urlInput.value.trim()) {
-        editingHarborTab.url = urlInput.value.trim();
-      }
-      if (iconInput && iconInput.value.trim()) {
-        editingHarborTab.icon = iconInput.value.trim();
-      }
-
-      saveHarborTabs();
-      closeHarborModal();
-      renderHarborTabs();
-      if (window.CaspianBridge && typeof window.CaspianBridge.showToast === 'function') {
-        window.CaspianBridge.showToast('⚓ Harbor Tab updated!');
+    // Backdrop click: dismiss when clicking overlay outside card
+    modal.addEventListener('click', (e) => {
+      if (e.target === modal) {
+        closeHarborModal();
       }
     });
-  }
 
-  // Delete editor modal
-  const deleteEditorBtn = document.getElementById('harbor-delete-btn');
-  if (deleteEditorBtn) {
-    deleteEditorBtn.addEventListener('click', () => {
-      if (!editingHarborTab || editingHarborTab.isLocked) return;
-      playSFX('tb_close');
-      const name = editingHarborTab.name;
-      harborTabs = harborTabs.filter(t => t.id !== editingHarborTab.id);
-      saveHarborTabs();
-      closeHarborModal();
-      renderHarborTabs();
-      if (window.CaspianBridge && typeof window.CaspianBridge.showToast === 'function') {
-        window.CaspianBridge.showToast(`🗑️ Removed "${name}" from Harbor.`);
-      }
+    const modalCard = modal.querySelector('.modal-card');
+    if (modalCard) {
+      modalCard.addEventListener('click', (e) => e.stopPropagation());
+    }
+
+    // Close & Cancel buttons
+    const closeBtn = document.getElementById('harbor-editor-close-btn');
+    if (closeBtn) {
+      closeBtn.addEventListener('click', (e) => {
+        e.stopPropagation();
+        closeHarborModal();
+      });
+    }
+
+    const cancelBtn = document.getElementById('harbor-editor-cancel-btn');
+    if (cancelBtn) {
+      cancelBtn.addEventListener('click', (e) => {
+        e.stopPropagation();
+        closeHarborModal();
+      });
+    }
+
+    // Input preview updates
+    const iconInputEl = document.getElementById('harbor-edit-icon-input');
+    if (iconInputEl) {
+      iconInputEl.addEventListener('input', () => {
+        updateHarborIconPreview(iconInputEl.value.trim());
+      });
+    }
+
+    // Preset icon buttons
+    modal.querySelectorAll('.harbor-preset-icon-btn').forEach(btn => {
+      btn.addEventListener('click', (e) => {
+        e.stopPropagation();
+        try { playSFX('tb_clicks'); } catch (err) {}
+        const icon = btn.dataset.icon;
+        const iconInput = document.getElementById('harbor-edit-icon-input');
+        if (iconInput) {
+          iconInput.value = icon;
+          updateHarborIconPreview(icon);
+        }
+      });
     });
+
+    // Auto Favicon button
+    const autoFaviconBtn = document.getElementById('harbor-use-site-favicon-btn');
+    if (autoFaviconBtn) {
+      autoFaviconBtn.addEventListener('click', (e) => {
+        e.stopPropagation();
+        try { playSFX('tb_clicks'); } catch (err) {}
+        const urlInput = document.getElementById('harbor-edit-url-input');
+        const iconInput = document.getElementById('harbor-edit-icon-input');
+        const url = urlInput ? urlInput.value.trim() : '';
+        if (url) {
+          try {
+            const parsedUrl = (url.startsWith('http://') || url.startsWith('https://')) ? url : 'https://' + url;
+            const host = new URL(parsedUrl).hostname;
+            if (host) {
+              const favUrl = `https://www.google.com/s2/favicons?domain=${host}&sz=64`;
+              if (iconInput) {
+                iconInput.value = favUrl;
+                updateHarborIconPreview(favUrl);
+              }
+            }
+          } catch (err) {
+            console.warn('Auto favicon parse error:', err);
+          }
+        }
+      });
+    }
+
+    // Save button
+    const saveBtn = document.getElementById('harbor-editor-save-btn');
+    if (saveBtn) {
+      saveBtn.addEventListener('click', (e) => {
+        e.stopPropagation();
+        if (!editingHarborTab) return;
+        try { playSFX('tb_clicks'); } catch (err) {}
+
+        const nameInput = document.getElementById('harbor-edit-name-input');
+        const urlInput = document.getElementById('harbor-edit-url-input');
+        const iconInput = document.getElementById('harbor-edit-icon-input');
+
+        if (nameInput && nameInput.value.trim()) {
+          editingHarborTab.name = nameInput.value.trim();
+        }
+        if (urlInput && urlInput.value.trim()) {
+          let u = urlInput.value.trim();
+          if (!u.startsWith('http://') && !u.startsWith('https://')) {
+            u = 'https://' + u;
+          }
+          editingHarborTab.url = u;
+        }
+        if (iconInput && iconInput.value.trim()) {
+          editingHarborTab.icon = iconInput.value.trim();
+        }
+
+        saveHarborTabs();
+        closeHarborModal();
+        renderHarborTabs();
+        if (window.CaspianBridge && typeof window.CaspianBridge.showToast === 'function') {
+          window.CaspianBridge.showToast('⚓ Harbor Tab updated!');
+        }
+      });
+    }
+
+    // Delete button
+    const deleteBtn = document.getElementById('harbor-delete-btn');
+    if (deleteBtn) {
+      deleteBtn.addEventListener('click', (e) => {
+        e.stopPropagation();
+        if (!editingHarborTab || editingHarborTab.isLocked) return;
+        try { playSFX('tb_close'); } catch (err) {}
+        const name = editingHarborTab.name;
+        harborTabs = harborTabs.filter(t => t.id !== editingHarborTab.id);
+        saveHarborTabs();
+        closeHarborModal();
+        renderHarborTabs();
+        if (window.CaspianBridge && typeof window.CaspianBridge.showToast === 'function') {
+          window.CaspianBridge.showToast(`🗑️ Removed "${name}" from Harbor.`);
+        }
+      });
+    }
   }
 
-  // Initialize Harbor Tabs on startup
+  function openHarborTabEditor(tab) {
+    if (!harborEditorInitialized) {
+      initHarborTabEditorModal();
+    }
+    editingHarborTab = tab;
+    const modal = document.getElementById('harbor-tab-editor-modal');
+    if (!modal) return;
+
+    const nameInput = document.getElementById('harbor-edit-name-input');
+    const urlInput = document.getElementById('harbor-edit-url-input');
+    const iconInput = document.getElementById('harbor-edit-icon-input');
+    const lockedNotice = document.getElementById('harbor-locked-notice');
+    const deleteBtn = document.getElementById('harbor-delete-btn');
+
+    if (nameInput) nameInput.value = tab.name || '';
+    if (urlInput) urlInput.value = tab.url || '';
+    if (iconInput) iconInput.value = tab.icon || '';
+
+    // Locked status
+    const isLocked = tab.isLocked === true;
+    if (lockedNotice) lockedNotice.style.display = isLocked ? 'block' : 'none';
+    if (deleteBtn) deleteBtn.style.display = isLocked ? 'none' : 'block';
+
+    updateHarborIconPreview(tab.icon || '🌐');
+    modal.style.display = 'flex';
+  }
+
+  // Initialize Harbor Tabs & Editor on startup
+  initHarborTabEditorModal();
   loadHarborTabs();
   renderHarborTabs();
 
