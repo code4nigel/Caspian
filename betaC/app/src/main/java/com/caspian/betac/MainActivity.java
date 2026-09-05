@@ -5374,7 +5374,7 @@ public class MainActivity extends AppCompatActivity {
         menuItems.add(new CaspianMenuItem("🔀 Split Screen", () -> cycleSplitViewMode()));
         menuItems.add(new CaspianMenuItem("📜 History", () -> showHistoryDialog()));
         menuItems.add(new CaspianMenuItem("📤 Share & Export", () -> showExportOptions()));
-        menuItems.add(new CaspianMenuItem("📥 Downloads", () -> openDownloadsFolder()));
+        menuItems.add(new CaspianMenuItem("📥 Downloads", () -> openDownloadsManagerModal()));
         menuItems.add(new CaspianMenuItem("🔍 Page Zoom (" + currentTextZoom + "%)", () -> showPageZoomDialog()));
 
         showCaspianCustomPopup(anchor, menuItems);
@@ -5577,6 +5577,17 @@ public class MainActivity extends AppCompatActivity {
 
     public int getPageZoom() {
         return currentTextZoom;
+    }
+
+    public void openDownloadsManagerModal() {
+        runOnUiThread(() -> {
+            openControlSheet();
+            if (controlWebView != null) {
+                controlWebView.postDelayed(() -> {
+                    evaluateJavascriptInControlSheet("if (typeof window.openDownloadsModal === 'function') window.openDownloadsModal(true);");
+                }, 220);
+            }
+        });
     }
 
     private void openDownloadsFolder() {

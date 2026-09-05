@@ -5688,6 +5688,7 @@
 (function() {
   let currentDownloadsTab = 'active'; // 'active' | 'completed'
   let cachedDownloads = [];
+  let expandedDownloadIds = new Set();
 
   function formatDownloadBytes(bytes) {
     if (!bytes || bytes <= 0) return '0 B';
@@ -5700,42 +5701,51 @@
   function getFileCategoryInfo(fileName, mimeType) {
     const ext = fileName ? fileName.split('.').pop().toLowerCase() : '';
     if (ext === 'apk' || (mimeType && mimeType.includes('vnd.android.package-archive'))) {
-      return { icon: '📦', class: 'apk', label: 'APK' };
+      return { icon: '📦', class: 'apk', label: 'APK', title: 'Android App Package (APK)' };
     }
     if (ext === 'pdf' || (mimeType && mimeType.includes('pdf'))) {
-      return { icon: '📄', class: 'pdf', label: 'PDF' };
+      return { icon: '📄', class: 'pdf', label: 'PDF', title: 'PDF Document' };
     }
     if (['jpg', 'jpeg', 'png', 'gif', 'webp', 'svg'].includes(ext) || (mimeType && mimeType.startsWith('image/'))) {
-      return { icon: '🖼️', class: 'media', label: 'IMG' };
+      return { icon: '🖼️', class: 'media', label: 'IMG', title: 'Image Graphic' };
     }
     if (['mp4', 'mkv', 'webm', 'mov', 'avi'].includes(ext) || (mimeType && mimeType.startsWith('video/'))) {
-      return { icon: '🎬', class: 'media', label: 'VID' };
+      return { icon: '🎬', class: 'media', label: 'VID', title: 'Video Recording' };
     }
     if (['mp3', 'wav', 'ogg', 'm4a', 'flac'].includes(ext) || (mimeType && mimeType.startsWith('audio/'))) {
-      return { icon: '🎵', class: 'media', label: 'AUD' };
+      return { icon: '🎵', class: 'media', label: 'AUD', title: 'Audio Music Track' };
     }
     if (['zip', 'rar', '7z', 'tar', 'gz'].includes(ext) || (mimeType && (mimeType.includes('zip') || mimeType.includes('compressed')))) {
-      return { icon: '🗜️', class: 'archive', label: 'ZIP' };
+      return { icon: '🗜️', class: 'archive', label: 'ZIP', title: 'Compressed Zip Archive' };
     }
     if (['html', 'js', 'json', 'css', 'py', 'java', 'xml', 'txt', 'md'].includes(ext)) {
-      return { icon: '💻', class: 'code', label: ext.toUpperCase() };
+      return { icon: '💻', class: 'code', label: ext.toUpperCase(), title: ext.toUpperCase() + ' Source File' };
     }
-    return { icon: '📁', class: 'doc', label: ext ? ext.toUpperCase() : 'FILE' };
+    return { icon: '📁', class: 'doc', label: ext ? ext.toUpperCase() : 'FILE', title: (ext ? ext.toUpperCase() + ' ' : '') + 'File' };
   }
 
-  function openDownloadsModal() {
+  window.openDownloadsModal = function(fromOmnibox) {
     try { if (window.playSFX) window.playSFX('tb_clicks'); } catch (e) {}
+    if (fromOmnibox) {
+      window.__openedFromOmnibox = true;
+    }
     const modal = document.getElementById('caspian-downloads-modal');
     if (!modal) return;
     refreshDownloadsList();
     modal.style.display = 'flex';
-  }
+  };
 
-  function closeDownloadsModal() {
+  window.closeDownloadsModal = function() {
     try { if (window.playSFX) window.playSFX('tb_clicks'); } catch (e) {}
     const modal = document.getElementById('caspian-downloads-modal');
     if (modal) modal.style.display = 'none';
-  }
+    if (window.__openedFromOmnibox) {
+      window.__openedFromOmnibox = false;
+      if (window.CaspianBridge && typeof window.CaspianBridge.hideControlSheet === 'function') {
+        window.CaspianBridge.hideControlSheet();
+      }
+    }
+  };
 
   function switchDownloadsTab(tab) {
     try { if (window.playSFX) window.playSFX('tb_clicks'); } catch (e) {}
@@ -5782,6 +5792,16 @@
     }
   }
 
+  window.toggleExpandDownloadCard = function(id) {
+    try { if (window.playSFX) window.playSFX('tb_clicks'); } catch (e) {}
+    if (expandedDownloadIds.has(id)) {
+      expandedDownloadIds.delete(id);
+    } else {
+      expandedDownloadIds.add(id);
+    }
+    renderDownloadsUI();
+  };
+
   function renderDownloadsUI() {
     const activeListEl = document.getElementById('downloads-active-list');
     const completedListEl = document.getElementById('downloads-completed-list');
@@ -5813,6 +5833,7 @@
         const percent = item.totalBytes > 0 ? Math.min(100, Math.round((item.downloadedBytes * 100) / item.totalBytes)) : 0;
         const isIndeterminate = item.totalBytes <= 0;
         const isPaused = item.status === 'PAUSED';
+        const isExpanded = expandedDownloadIds.has(item.id);
 
         let statsText = formatDownloadBytes(item.downloadedBytes);
         if (item.totalBytes > 0) statsText += ' / ' + formatDownloadBytes(item.totalBytes) + ' (' + percent + '%)';
@@ -5821,26 +5842,56 @@
         if (isPaused) statsText += ' • Paused';
 
         const card = document.createElement('div');
-        card.className = 'download-item-card';
-        card.innerHTML = `
-          <div style="display: flex; align-items: center; gap: 10px;">
-            <div class="download-file-icon-box ` + cat.class + `">` + cat.icon + `</div>
-            <div style="flex: 1; min-width: 0;">
-              <div style="font-size: 12.5px; font-weight: 700; color: var(--text-main); overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">` + (item.fileName || 'Download') + `</div>
-              <div style="font-size: 10.5px; color: var(--text-muted); margin-top: 2px;">` + statsText + `</div>
+        card.className = 'download-item-card' + (isExpanded ? ' expanded' : '');
+        card.onclick = function() { window.toggleExpandDownloadCard(item.id); };
+
+        if (!isExpanded) {
+          card.innerHTML = `
+            <div style="display: flex; align-items: center; gap: 10px;">
+              <div class="download-file-icon-box ` + cat.class + `">` + cat.icon + `</div>
+              <div style="flex: 1; min-width: 0;">
+                <div style="font-size: 12.5px; font-weight: 700; color: var(--text-main); overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">` + (item.fileName || 'Download') + `</div>
+                <div style="font-size: 10.5px; color: var(--text-muted); margin-top: 2px;">` + statsText + `</div>
+              </div>
+              <div style="display: flex; gap: 4px; align-items: center;">
+                <button class="download-action-btn ` + (isPaused ? 'primary' : '') + `" onclick="event.stopPropagation(); window.toggleDownloadPause('` + item.id + `', ` + isPaused + `);" title="` + (isPaused ? 'Resume' : 'Pause') + `">
+                  ` + (isPaused ? '▶️' : '⏸️') + `
+                </button>
+                <button class="download-action-btn danger" onclick="event.stopPropagation(); window.cancelDownloadItem('` + item.id + `');" title="Cancel">
+                  ✕
+                </button>
+              </div>
             </div>
-            <div style="display: flex; gap: 4px;">
-              <button class="download-action-btn ` + (isPaused ? 'primary' : '') + `" onclick="event.stopPropagation(); window.toggleDownloadPause('` + item.id + `', ` + isPaused + `);">
-                ` + (isPaused ? '▶️ Resume' : '⏸️ Pause') + `
-              </button>
-              <button class="download-action-btn danger" onclick="event.stopPropagation(); window.cancelDownloadItem('` + item.id + `');">
-                ✕
-              </button>
+            <div class="download-progress-track">
+              <div class="download-progress-fill ` + (isIndeterminate ? 'indeterminate' : '') + `" style="width: ` + percent + `%;"></div>
+            </div>`;
+        } else {
+          // Expanded view: Full filename visible without truncation, emoji + text explanation, expanded buttons!
+          card.innerHTML = `
+            <div style="display: flex; align-items: flex-start; gap: 10px;">
+              <div class="download-file-icon-box ` + cat.class + `" style="margin-top: 2px;">` + cat.icon + `</div>
+              <div style="flex: 1; min-width: 0;">
+                <div style="font-size: 13.5px; font-weight: 800; color: var(--text-main); word-break: break-all; line-height: 1.35;">` + (item.fileName || 'Download') + `</div>
+                <div style="margin-top: 6px;">
+                  <div class="download-type-pill ` + cat.class + `">
+                    <span>` + cat.icon + `</span> <span>` + cat.title + `</span>
+                  </div>
+                </div>
+                <div style="font-size: 11px; color: var(--text-muted); margin-top: 6px;">` + statsText + `</div>
+              </div>
             </div>
-          </div>
-          <div class="download-progress-track">
-            <div class="download-progress-fill ` + (isIndeterminate ? 'indeterminate' : '') + `" style="width: ` + percent + `%;"></div>
-          </div>`;
+            <div class="download-progress-track" style="margin-top: 6px;">
+              <div class="download-progress-fill ` + (isIndeterminate ? 'indeterminate' : '') + `" style="width: ` + percent + `%;"></div>
+            </div>
+            <div class="download-expanded-actions">
+              <button class="download-action-btn ` + (isPaused ? 'primary' : '') + `" style="flex: 1; justify-content: center; padding: 7px 12px; font-size: 11.5px;" onclick="event.stopPropagation(); window.toggleDownloadPause('` + item.id + `', ` + isPaused + `);">
+                ` + (isPaused ? '▶️ Resume Download' : '⏸️ Pause Download') + `
+              </button>
+              <button class="download-action-btn danger" style="padding: 7px 12px; font-size: 11.5px;" onclick="event.stopPropagation(); window.cancelDownloadItem('` + item.id + `');">
+                ✕ Cancel
+              </button>
+            </div>`;
+        }
         activeListEl.appendChild(card);
       });
     }
@@ -5859,6 +5910,7 @@
         const isFailed = item.status === 'FAILED';
         const isCancelled = item.status === 'CANCELLED';
         const isApk = cat.class === 'apk';
+        const isExpanded = expandedDownloadIds.has(item.id);
 
         let subText = formatDownloadBytes(item.totalBytes > 0 ? item.totalBytes : item.downloadedBytes);
         let statusBadge = '';
@@ -5869,34 +5921,72 @@
         }
 
         const card = document.createElement('div');
-        card.className = 'download-item-card';
-        card.innerHTML = `
-          <div style="display: flex; align-items: center; gap: 10px;">
-            <div class="download-file-icon-box ` + cat.class + `">` + cat.icon + `</div>
-            <div style="flex: 1; min-width: 0;">
-              <div style="font-size: 12.5px; font-weight: 700; color: var(--text-main); overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">` + (item.fileName || 'File') + `</div>
-              <div style="font-size: 10.5px; color: var(--text-muted); margin-top: 2px;">
-                ` + subText + ` ` + statusBadge + `
+        card.className = 'download-item-card' + (isExpanded ? ' expanded' : '');
+        card.onclick = function() { window.toggleExpandDownloadCard(item.id); };
+
+        if (!isExpanded) {
+          card.innerHTML = `
+            <div style="display: flex; align-items: center; gap: 10px;">
+              <div class="download-file-icon-box ` + cat.class + `">` + cat.icon + `</div>
+              <div style="flex: 1; min-width: 0;">
+                <div style="font-size: 12.5px; font-weight: 700; color: var(--text-main); overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">` + (item.fileName || 'File') + `</div>
+                <div style="font-size: 10.5px; color: var(--text-muted); margin-top: 2px;">
+                  ` + subText + ` ` + statusBadge + `
+                </div>
+              </div>
+              <div style="display: flex; gap: 4px; align-items: center;">
+                ` + (!isFailed && !isCancelled ? `
+                  <button class="download-action-btn primary" onclick="event.stopPropagation(); window.openDownloadedItem('` + item.id + `');" title="` + (isApk ? 'Install' : 'Open') + `">
+                    ` + (isApk ? '🚀 Install' : '📂 Open') + `
+                  </button>
+                  <button class="download-action-btn" onclick="event.stopPropagation(); window.shareDownloadedItem('` + item.id + `');" title="Share">
+                    📤
+                  </button>
+                ` : `
+                  <button class="download-action-btn primary" onclick="event.stopPropagation(); window.retryDownloadItem('` + item.id + `');" title="Retry">
+                    🔄
+                  </button>
+                `) + `
+                <button class="download-action-btn danger" onclick="event.stopPropagation(); window.deleteDownloadItem('` + item.id + `');" title="Delete">
+                  🗑️
+                </button>
+              </div>
+            </div>`;
+        } else {
+          // Expanded view: Full filename visible without truncation, emoji + text explanation, expanded buttons!
+          card.innerHTML = `
+            <div style="display: flex; align-items: flex-start; gap: 10px;">
+              <div class="download-file-icon-box ` + cat.class + `" style="margin-top: 2px;">` + cat.icon + `</div>
+              <div style="flex: 1; min-width: 0;">
+                <div style="font-size: 13.5px; font-weight: 800; color: var(--text-main); word-break: break-all; line-height: 1.35;">` + (item.fileName || 'File') + `</div>
+                <div style="margin-top: 6px;">
+                  <div class="download-type-pill ` + cat.class + `">
+                    <span>` + cat.icon + `</span> <span>` + cat.title + `</span>
+                  </div>
+                </div>
+                <div style="font-size: 11px; color: var(--text-muted); margin-top: 6px;">
+                  Size: ` + subText + ` ` + statusBadge + ` • Saved in Downloads
+                </div>
               </div>
             </div>
-            <div style="display: flex; gap: 4px;">
+            <div class="download-expanded-actions">
               ` + (!isFailed && !isCancelled ? `
-                <button class="download-action-btn primary" onclick="event.stopPropagation(); window.openDownloadedItem('` + item.id + `');">
-                  ` + (isApk ? '🚀 Install' : '📂 Open') + `
+                <button class="download-action-btn primary" style="flex: 1; justify-content: center; padding: 7px 12px; font-size: 11.5px;" onclick="event.stopPropagation(); window.openDownloadedItem('` + item.id + `');">
+                  ` + (isApk ? '🚀 Install APK' : '📂 Open File') + `
                 </button>
-                <button class="download-action-btn" onclick="event.stopPropagation(); window.shareDownloadedItem('` + item.id + `');">
-                  📤
+                <button class="download-action-btn" style="flex: 1; justify-content: center; padding: 7px 12px; font-size: 11.5px;" onclick="event.stopPropagation(); window.shareDownloadedItem('` + item.id + `');">
+                  📤 Share File
                 </button>
               ` : `
-                <button class="download-action-btn primary" onclick="event.stopPropagation(); window.retryDownloadItem('` + item.id + `');">
-                  🔄 Retry
+                <button class="download-action-btn primary" style="flex: 1; justify-content: center; padding: 7px 12px; font-size: 11.5px;" onclick="event.stopPropagation(); window.retryDownloadItem('` + item.id + `');">
+                  🔄 Retry Download
                 </button>
               `) + `
-              <button class="download-action-btn danger" onclick="event.stopPropagation(); window.deleteDownloadItem('` + item.id + `');">
-                🗑️
+              <button class="download-action-btn danger" style="padding: 7px 12px; font-size: 11.5px;" onclick="event.stopPropagation(); window.deleteDownloadItem('` + item.id + `');">
+                🗑️ Delete
               </button>
-            </div>
-          </div>`;
+            </div>`;
+        }
         completedListEl.appendChild(card);
       });
     }
@@ -6004,11 +6094,12 @@
 
   // Setup UI Listeners when DOM is ready
   function initDownloadManagerUI() {
-    const headerDownloadsBtn = document.getElementById('header-downloads-btn');
-    if (headerDownloadsBtn) {
-      headerDownloadsBtn.addEventListener('click', (e) => {
-        e.stopPropagation();
-        openDownloadsModal();
+    const modal = document.getElementById('caspian-downloads-modal');
+    if (modal) {
+      modal.addEventListener('click', (e) => {
+        if (e.target === modal) {
+          window.closeDownloadsModal();
+        }
       });
     }
 
@@ -6016,7 +6107,7 @@
     if (closeDownloadsBtn) {
       closeDownloadsBtn.addEventListener('click', (e) => {
         e.stopPropagation();
-        closeDownloadsModal();
+        window.closeDownloadsModal();
       });
     }
 

@@ -1681,13 +1681,44 @@ body.theme-flow .oneui-pill-btn.primary {
   display: flex;
   flex-direction: column;
   gap: 8px;
-  transition: background 0.2s ease, border-color 0.2s ease, transform 0.15s ease;
+  cursor: pointer;
+  -webkit-tap-highlight-color: transparent;
+  transition: background 0.2s ease, border-color 0.2s ease, transform 0.15s ease, box-shadow 0.2s ease;
 }
 
 .download-item-card:hover {
   background: rgba(255, 255, 255, 0.05);
   border-color: rgba(255, 255, 255, 0.15);
 }
+
+.download-item-card:active {
+  transform: scale(0.99);
+}
+
+.download-item-card.expanded {
+  background: rgba(255, 255, 255, 0.06);
+  border-color: rgba(0, 229, 255, 0.35);
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.3);
+}
+
+.download-type-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  padding: 3px 8px;
+  border-radius: 8px;
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 0.2px;
+  width: fit-content;
+}
+
+.download-type-pill.apk { background: rgba(16, 185, 129, 0.15); border: 1px solid rgba(16, 185, 129, 0.35); color: #10b981; }
+.download-type-pill.pdf { background: rgba(239, 68, 68, 0.15); border: 1px solid rgba(239, 68, 68, 0.35); color: #ef4444; }
+.download-type-pill.media { background: rgba(59, 130, 246, 0.15); border: 1px solid rgba(59, 130, 246, 0.35); color: #3b82f6; }
+.download-type-pill.archive { background: rgba(245, 158, 11, 0.15); border: 1px solid rgba(245, 158, 11, 0.35); color: #f59e0b; }
+.download-type-pill.code { background: rgba(168, 85, 247, 0.15); border: 1px solid rgba(168, 85, 247, 0.35); color: #a855f7; }
+.download-type-pill.doc { background: rgba(0, 229, 255, 0.15); border: 1px solid rgba(0, 229, 255, 0.35); color: #00e5ff; }
 
 .download-file-icon-box {
   width: 38px;
@@ -1739,14 +1770,14 @@ body.theme-flow .oneui-pill-btn.primary {
   background: rgba(255, 255, 255, 0.06);
   border: 1px solid var(--border-glass);
   border-radius: 8px;
-  padding: 4px 10px;
+  padding: 5px 10px;
   font-size: 11px;
   font-weight: 600;
   color: var(--text-main);
   cursor: pointer;
   display: flex;
   align-items: center;
-  gap: 4px;
+  gap: 5px;
   transition: background 0.15s, border-color 0.15s, transform 0.1s;
 }
 
@@ -1770,6 +1801,16 @@ body.theme-flow .oneui-pill-btn.primary {
   border-color: rgba(239, 68, 68, 0.4);
   color: #ef4444;
 }
+
+.download-expanded-actions {
+  display: flex;
+  gap: 8px;
+  margin-top: 6px;
+  padding-top: 8px;
+  border-top: 1px solid rgba(255, 255, 255, 0.08);
+  width: 100%;
+}
+
 
 
 
