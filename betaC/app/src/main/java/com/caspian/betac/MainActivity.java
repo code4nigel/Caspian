@@ -8252,10 +8252,14 @@ public class MainActivity extends AppCompatActivity {
     }
 
     public void addNewTab(String service, String prompt, String url, boolean isIncognito) {
-        addNewTab(service, prompt, url, isIncognito, null);
+        addNewTab(service, prompt, url, isIncognito, null, true);
     }
 
     public void addNewTab(String service, String prompt, String url, boolean isIncognito, String targetCaskId) {
+        addNewTab(service, prompt, url, isIncognito, targetCaskId, true);
+    }
+
+    public void addNewTab(String service, String prompt, String url, boolean isIncognito, String targetCaskId, boolean switchTo) {
         int id = nextTabId++;
         String finalUrl = (url != null && !url.trim().isEmpty()) ? url : "file:///android_asset/launch_hub.html";
         String finalService = (service != null && !service.trim().isEmpty()) ? service : ("file:///android_asset/launch_hub.html".equals(finalUrl) ? "hub" : "web");
@@ -8267,7 +8271,17 @@ public class MainActivity extends AppCompatActivity {
             tab.title = "Caspian Hub";
         }
         tabsList.add(tab);
-        switchToTab(id);
+        if (switchTo || activeTabId == -1 || getTabById(activeTabId) == null) {
+            switchToTab(id);
+        } else {
+            if (tab.webView != null && tab.webView.getParent() != webViewContainer) {
+                if (tab.webView.getParent() != null) {
+                    ((ViewGroup) tab.webView.getParent()).removeView(tab.webView);
+                }
+                tab.webView.setVisibility(View.INVISIBLE);
+                webViewContainer.addView(tab.webView);
+            }
+        }
         saveOpenTabsState();
     }
 
@@ -8322,6 +8336,10 @@ public class MainActivity extends AppCompatActivity {
     }
 
     public void switchToTab(int tabId) {
+        switchToTab(tabId, true);
+    }
+
+    public void switchToTab(int tabId, boolean closeSheet) {
         if (customView != null && tabId != activeTabId) {
             exitFullscreenCustomView();
         }
@@ -8369,7 +8387,9 @@ public class MainActivity extends AppCompatActivity {
         if (!isCurYt && !hasAnyPlayingYouTubeTab()) {
             dismissMediaNotification();
         }
-        hideControlSheet(false);
+        if (closeSheet) {
+            hideControlSheet(false);
+        }
         playUiFeedbackSound("tm_tabs");
         saveOpenTabsState();
     }
@@ -8445,8 +8465,10 @@ public class MainActivity extends AppCompatActivity {
             saveTabGroups();
 
             if (activeTabId == tabId) {
-                activeTabId = tabsList.get(tabsList.size() - 1).id;
-                switchToTab(activeTabId);
+                if (!tabsList.isEmpty()) {
+                    activeTabId = tabsList.get(tabsList.size() - 1).id;
+                    switchToTab(activeTabId, !isSheetOpen);
+                }
             }
         }
         if (!hasAnyYouTubeTab() || !hasAnyPlayingYouTubeTab()) {
@@ -8486,22 +8508,19 @@ public class MainActivity extends AppCompatActivity {
     public int restoreLastClosedBatch() {
         if (!closedTabBatches.isEmpty()) {
             List<ClosedTabRecord> batch = closedTabBatches.remove(closedTabBatches.size() - 1);
-            int lastRestoredId = -1;
+            boolean hadActiveTab = (activeTabId != -1 && getTabById(activeTabId) != null);
             for (ClosedTabRecord rec : batch) {
-                addNewTab(rec.service, rec.pendingPrompt, rec.url, rec.isIncognito);
+                // When restoring, keep restored tabs in background without stealing active status
+                boolean shouldSwitch = !hadActiveTab;
+                addNewTab(rec.service, rec.pendingPrompt, rec.url, rec.isIncognito, rec.caskId, shouldSwitch);
                 if (!tabsList.isEmpty()) {
                     TabItem restoredTab = tabsList.get(tabsList.size() - 1);
                     if (restoredTab != null) {
-                        lastRestoredId = restoredTab.id;
                         if (rec.title != null) restoredTab.title = rec.title;
-                        restoredTab.caskId = rec.caskId;
                         restoredTab.isFavorite = rec.isFavorite;
                         restoredTab.faviconB64 = rec.faviconB64;
                     }
                 }
-            }
-            if (lastRestoredId != -1) {
-                switchToTab(lastRestoredId);
             }
             notifyUndoStateChanged();
             evaluateJavascriptInControlSheet("if(typeof renderOpenTabs === 'function') renderOpenTabs();");
@@ -8683,7 +8702,7 @@ public class MainActivity extends AppCompatActivity {
             if (getTabById(activeTabId) == null) {
                 activeTabId = tabsList.get(0).id;
             }
-            switchToTab(activeTabId);
+            switchToTab(activeTabId, !isSheetOpen);
         }
         updateOmniboxState();
         saveOpenTabsState();
