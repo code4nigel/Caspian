@@ -2957,12 +2957,12 @@ public class MainActivity extends AppCompatActivity {
 
     public TabItem getYouTubeTab() {
         TabItem cur = getActiveOrDominantTab();
-        if (cur != null && cur.url != null && (cur.url.toLowerCase().contains("youtube.com") || "youtube".equalsIgnoreCase(cur.service))) {
+        if (cur != null && cur.url != null && (cur.url.toLowerCase().contains("youtube.com") || "youtube".equalsIgnoreCase(cur.service) || "youtubemusic".equalsIgnoreCase(cur.service))) {
             return cur;
         }
         if (tabsList != null) {
             for (TabItem t : tabsList) {
-                if (t != null && t.url != null && (t.url.toLowerCase().contains("youtube.com") || "youtube".equalsIgnoreCase(t.service))) {
+                if (t != null && t.url != null && (t.url.toLowerCase().contains("youtube.com") || "youtube".equalsIgnoreCase(t.service) || "youtubemusic".equalsIgnoreCase(t.service))) {
                     return t;
                 }
             }
@@ -8106,7 +8106,8 @@ public class MainActivity extends AppCompatActivity {
                     String curUrl = (tabItem.webView != null && tabItem.webView.getUrl() != null)
                             ? tabItem.webView.getUrl()
                             : (tabItem.url != null ? tabItem.url : "");
-                    boolean isYt = curUrl.toLowerCase().contains("youtube.com") || "youtube".equalsIgnoreCase(tabItem.service);
+                    boolean isYtMusic = curUrl.toLowerCase().contains("music.youtube.com") || (tabItem != null && "youtubemusic".equalsIgnoreCase(tabItem.service));
+                    boolean isYt = (curUrl.toLowerCase().contains("youtube.com") || (tabItem != null && "youtube".equalsIgnoreCase(tabItem.service))) && !isYtMusic;
                     if (isYt && !isYtRemoteExplicitlyHidden) {
                         ytFloatingRemoteContainer.setVisibility(View.VISIBLE);
                         if (ytFloatingRemoteScroll != null && ytFloatingRemoteBall != null) {
@@ -8860,7 +8861,8 @@ public class MainActivity extends AppCompatActivity {
             omniboxForwardBtn.setEnabled(canFwd);
             omniboxForwardBtn.setAlpha(canFwd ? 1.0f : 0.4f);
 
-            boolean isYtTab = url.toLowerCase().contains("youtube.com") || "youtube".equalsIgnoreCase(currentTab.service);
+            boolean isYtMusic = url.toLowerCase().contains("music.youtube.com") || (currentTab != null && "youtubemusic".equalsIgnoreCase(currentTab.service));
+            boolean isYtTab = (url.toLowerCase().contains("youtube.com") || (currentTab != null && "youtube".equalsIgnoreCase(currentTab.service))) && !isYtMusic;
             if (ytFloatingRemoteContainer != null) {
                 if (isYtTab && !isYtRemoteExplicitlyHidden) {
                     if (ytFloatingRemoteContainer.getVisibility() != View.VISIBLE) {
@@ -9420,7 +9422,8 @@ public class MainActivity extends AppCompatActivity {
     private void restoreFloatingWidgetsOnClose() {
         TabItem curTab = getActiveOrDominantTab();
         String curUrl = (curTab != null && curTab.url != null) ? curTab.url.toLowerCase() : "";
-        boolean isYt = curTab != null && (curUrl.contains("youtube.com") || "youtube".equalsIgnoreCase(curTab.service));
+        boolean isYtMusic = curUrl.contains("music.youtube.com") || (curTab != null && "youtubemusic".equalsIgnoreCase(curTab.service));
+        boolean isYt = curTab != null && (curUrl.contains("youtube.com") || "youtube".equalsIgnoreCase(curTab.service)) && !isYtMusic;
         if (ytFloatingRemoteContainer != null) {
             ytFloatingRemoteContainer.setAlpha(1.0f);
             if (isYt && !isYtRemoteExplicitlyHidden) {
@@ -9654,7 +9657,7 @@ public class MainActivity extends AppCompatActivity {
     public void updateMediaMetadata(Integer tabId, String title, String thumbUrl) {
         if (tabId != null && tabId > 0 && tabId != activeTabId) {
             TabItem activeTab = getTabById(activeTabId);
-            boolean activeIsYt = activeTab != null && activeTab.url != null && activeTab.url.toLowerCase().contains("youtube.com");
+            boolean activeIsYt = activeTab != null && activeTab.url != null && (activeTab.url.toLowerCase().contains("youtube.com") || "youtube".equalsIgnoreCase(activeTab.service) || "youtubemusic".equalsIgnoreCase(activeTab.service));
             if (activeIsYt && activeTab.isPlayingAudio) {
                 return;
             }
@@ -9688,7 +9691,7 @@ public class MainActivity extends AppCompatActivity {
     public boolean hasAnyYouTubeTab() {
         if (tabsList == null) return false;
         for (TabItem t : tabsList) {
-            if (t != null && t.url != null && (t.url.toLowerCase().contains("youtube.com") || "youtube".equalsIgnoreCase(t.service))) {
+            if (t != null && t.url != null && (t.url.toLowerCase().contains("youtube.com") || "youtube".equalsIgnoreCase(t.service) || "youtubemusic".equalsIgnoreCase(t.service))) {
                 return true;
             }
         }
@@ -9698,7 +9701,7 @@ public class MainActivity extends AppCompatActivity {
     public boolean hasAnyPlayingYouTubeTab() {
         if (tabsList == null) return false;
         for (TabItem t : tabsList) {
-            if (t != null && t.isPlayingAudio && t.url != null && (t.url.toLowerCase().contains("youtube.com") || "youtube".equalsIgnoreCase(t.service))) {
+            if (t != null && t.isPlayingAudio && t.url != null && (t.url.toLowerCase().contains("youtube.com") || "youtube".equalsIgnoreCase(t.service) || "youtubemusic".equalsIgnoreCase(t.service))) {
                 return true;
             }
         }

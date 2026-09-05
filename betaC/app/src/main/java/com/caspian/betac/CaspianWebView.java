@@ -66,4 +66,29 @@ public class CaspianWebView extends WebView {
         }
         return super.getWindowVisibility();
     }
+
+    @Override
+    public boolean hasWindowFocus() {
+        if (isBackgroundPlaybackEnabled) {
+            return true;
+        }
+        return super.hasWindowFocus();
+    }
+
+    @Override
+    public void onWindowFocusChanged(boolean hasWindowFocus) {
+        if (isBackgroundPlaybackEnabled) {
+            super.onWindowFocusChanged(true);
+            return;
+        }
+        super.onWindowFocusChanged(hasWindowFocus);
+    }
+
+    @Override
+    public boolean isShown() {
+        if (isBackgroundPlaybackEnabled) {
+            return true;
+        }
+        return super.isShown();
+    }
 }

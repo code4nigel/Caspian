@@ -2725,8 +2725,8 @@
           if (!isDrag) clearTimeout(pressTimer);
         }
 
-        // Detect horizontal swipe
-        if (!isDrag && moveDist > 16 && Math.abs(diffX) > Math.abs(diffY) * 1.4) {
+        // Detect horizontal swipe only when in editing mode
+        if (isHarborEditing && !isDrag && moveDist > 16 && Math.abs(diffX) > Math.abs(diffY) * 1.4) {
           isSwipe = true;
           try { e.preventDefault(); } catch (err) {}
           card.style.transform = `translateX(${diffX}px)`;
@@ -2754,8 +2754,8 @@
           c.style.transition = '';
         });
 
-        // 1. Drag & Drop Reorder
-        if (wasDrag) {
+        // 1. Drag & Drop Reorder (only in editing mode)
+        if (isHarborEditing && wasDrag) {
           const activeDropTarget = grid.querySelector('.harbor-tab-card.drop-target') || (() => {
             const item = cachedTargets.find(t =>
               t.el !== card && t.index > 0 &&
@@ -2786,8 +2786,8 @@
           return;
         }
 
-        // 2. Swipe Gestures
-        if (wasSwipe) {
+        // 2. Swipe Gestures (strictly only in editing mode)
+        if (isHarborEditing && wasSwipe) {
           isSwipe = false;
 
           // Swipe Left (< -70px): Delete / Remove Harbor Tab
@@ -2837,6 +2837,9 @@
           card.style.transform = '';
           return;
         }
+
+        // If not in editing mode, ensure transform is cleared
+        card.style.transform = '';
       };
 
       card.addEventListener('touchstart', onTouchStart, { passive: false });

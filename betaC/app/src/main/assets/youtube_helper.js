@@ -44,17 +44,17 @@
     } catch(e){}
   } catch (e) { }
 
-  // Block automatic pausing triggered by backgrounding
-  const originalPause = HTMLVideoElement.prototype.pause;
-  HTMLVideoElement.prototype.pause = function () {
+  // Block automatic pausing triggered by backgrounding on all media elements (video & audio)
+  const originalPause = HTMLMediaElement.prototype.pause;
+  HTMLMediaElement.prototype.pause = function () {
     if (window.__caspian_explicit_pause) {
       window.__caspian_explicit_pause = false;
       return originalPause.apply(this, arguments);
     }
     const err = new Error();
     const stack = (err.stack || '').toLowerCase();
-    // Only intercept genuine backgrounding event triggers (visibilitychange, pagehide)
-    if (stack.includes('visibilitychange') || stack.includes('pagehide')) {
+    // Intercept genuine backgrounding event triggers (visibilitychange, pagehide, blur, focusout, freeze)
+    if (stack.includes('visibilitychange') || stack.includes('pagehide') || stack.includes('blur') || stack.includes('focusout') || stack.includes('freeze')) {
       return;
     }
     return originalPause.apply(this, arguments);
@@ -67,22 +67,22 @@
     _lastPlaying: null,
     _lastMuted: null,
     getVideo: function () {
-      // 1. Primary: watch player video element on m.youtube.com and youtube.com
+      // 1. Primary: watch player video/audio element on YouTube and YouTube Music
       const mainVid = document.querySelector(
-        '#movie_player video, .html5-video-player video, #player video, #player-container-id video, .player-container video, ytm-watch video, video.html5-main-video, video[src*="blob:"]'
+        'ytmusic-player-bar video, ytmusic-player-bar audio, ytmusic-player video, ytmusic-player audio, #movie_player video, .html5-video-player video, #player video, #player-container-id video, .player-container video, ytm-watch video, video.html5-main-video, video[src*="blob:"], video, audio'
       );
       if (mainVid) return mainVid;
 
       // 2. Filter out feed preview overlays only
-      const allVideos = Array.from(document.querySelectorAll('video')).filter(v => {
+      const allVideos = Array.from(document.querySelectorAll('video, audio')).filter(v => {
         return !v.closest('ytm-thumbnail-overlay-preview-video-renderer, ytd-thumbnail-overlay-preview-video-renderer, .ytp-inline-preview-ui, #inline-preview-player, .inline-preview-player');
       });
       if (allVideos.length > 0) {
         return allVideos.find(v => !v.paused && v.currentTime > 0) || allVideos[0];
       }
 
-      // 3. Fallback to any video element on page
-      return document.querySelector('video');
+      // 3. Fallback to any video or audio element on page
+      return document.querySelector('video, audio');
     },
     notifyState: function (force) {
       try {
@@ -419,34 +419,36 @@
 
   function attachVideoListeners() {
     try {
-      const v = window.__CaspianYouTube ? window.__CaspianYouTube.getVideo() : document.querySelector('video');
-      if (v && !v.__caspian_attached) {
-        v.__caspian_attached = true;
-        ['play', 'playing', 'pause', 'ended', 'volumechange', 'ratechange'].forEach(evt => {
-          v.addEventListener(evt, () => {
-            if (evt === 'ended') {
-              const tabId = window.__caspian_tab_id || 0;
+      const mediaElements = Array.from(document.querySelectorAll('video, audio'));
+      mediaElements.forEach(v => {
+        if (v && !v.__caspian_attached) {
+          v.__caspian_attached = true;
+          ['play', 'playing', 'pause', 'ended', 'volumechange', 'ratechange'].forEach(evt => {
+            v.addEventListener(evt, () => {
+              if (evt === 'ended') {
+                const tabId = window.__caspian_tab_id || 0;
+                if (window.CaspianBridge && typeof window.CaspianBridge.onYouTubeVideoEnded === 'function') {
+                  window.CaspianBridge.onYouTubeVideoEnded(tabId);
+                }
+              }
+              if (window.__CaspianYouTube) window.__CaspianYouTube.notifyState();
+            });
+          });
+          v.addEventListener('timeupdate', () => {
+            const tabId = window.__caspian_tab_id || 0;
+            if (v.ended || (v.duration > 0 && Math.abs((v.currentTime || 0) - v.duration) < 0.5)) {
               if (window.CaspianBridge && typeof window.CaspianBridge.onYouTubeVideoEnded === 'function') {
                 window.CaspianBridge.onYouTubeVideoEnded(tabId);
               }
             }
-            if (window.__CaspianYouTube) window.__CaspianYouTube.notifyState();
-          });
-        });
-        v.addEventListener('timeupdate', () => {
-          const tabId = window.__caspian_tab_id || 0;
-          if (v.ended || (v.duration > 0 && Math.abs((v.currentTime || 0) - v.duration) < 0.5)) {
-            if (window.CaspianBridge && typeof window.CaspianBridge.onYouTubeVideoEnded === 'function') {
-              window.CaspianBridge.onYouTubeVideoEnded(tabId);
+            if (window.CaspianBridge && typeof window.CaspianBridge.updateTabYouTubeTime === 'function') {
+              window.CaspianBridge.updateTabYouTubeTime(tabId, v.currentTime || 0, v.duration || 0);
+            } else if (window.CaspianBridge && typeof window.CaspianBridge.updateYouTubeTime === 'function') {
+              window.CaspianBridge.updateYouTubeTime(v.currentTime || 0, v.duration || 0);
             }
-          }
-          if (window.CaspianBridge && typeof window.CaspianBridge.updateTabYouTubeTime === 'function') {
-            window.CaspianBridge.updateTabYouTubeTime(tabId, v.currentTime || 0, v.duration || 0);
-          } else if (window.CaspianBridge && typeof window.CaspianBridge.updateYouTubeTime === 'function') {
-            window.CaspianBridge.updateYouTubeTime(v.currentTime || 0, v.duration || 0);
-          }
-        });
-      }
+          });
+        }
+      });
       if (window.__CaspianYouTube) window.__CaspianYouTube.notifyState();
     } catch (e) { }
   }
@@ -955,24 +957,55 @@
 
       if (isPlaying) {
         var title = '';
-        var titleEl = document.querySelector('h1.title, .slim-video-metadata-title, ytm-slim-video-metadata-renderer .title, meta[name="title"]');
-        if (titleEl) title = titleEl.textContent || titleEl.getAttribute('content') || '';
-        if (!title) title = (document.title || '').replace(' - YouTube', '').trim();
         var thumbUrl = '';
-        var videoId = '';
-        var vMatch = location.search.match(/[?&]v=([^&]+)/);
-        if (vMatch && vMatch[1]) {
-          videoId = vMatch[1];
-        } else {
-          var pMatch = location.pathname.match(/\/(?:shorts|embed|v)\/([^/?]+)/);
-          if (pMatch && pMatch[1]) videoId = pMatch[1];
+
+        // 1. Check navigator.mediaSession metadata (standard for YouTube and YouTube Music)
+        try {
+          if (navigator.mediaSession && navigator.mediaSession.metadata) {
+            var meta = navigator.mediaSession.metadata;
+            if (meta.title) {
+              title = meta.title;
+              if (meta.artist) {
+                title = title + ' • ' + meta.artist;
+              }
+            }
+            if (meta.artwork && meta.artwork.length > 0) {
+              thumbUrl = meta.artwork[meta.artwork.length - 1].src || '';
+            }
+          }
+        } catch(e){}
+
+        // 2. DOM extraction fallback (covers m.youtube.com, youtube.com, music.youtube.com)
+        if (!title) {
+          var titleEl = document.querySelector('ytmusic-player-bar .title, .ytmusic-player-bar.title, h1.title, .slim-video-metadata-title, ytm-slim-video-metadata-renderer .title, meta[name="title"]');
+          if (titleEl) title = titleEl.textContent || titleEl.getAttribute('content') || '';
         }
-        if (videoId) {
-          thumbUrl = 'https://i.ytimg.com/vi/' + videoId + '/maxresdefault.jpg';
-        } else {
-          var ogImage = document.querySelector('meta[property="og:image"]');
-          if (ogImage) thumbUrl = ogImage.getAttribute('content') || '';
+        if (!title) {
+          title = (document.title || '').replace(' - YouTube Music', '').replace(' - YouTube', '').trim();
         }
+
+        if (!thumbUrl) {
+          var ytmImg = document.querySelector('ytmusic-player-bar img#img, .thumbnail-image-wrapper img');
+          if (ytmImg && ytmImg.src) {
+            thumbUrl = ytmImg.src;
+          } else {
+            var videoId = '';
+            var vMatch = location.search.match(/[?&]v=([^&]+)/);
+            if (vMatch && vMatch[1]) {
+              videoId = vMatch[1];
+            } else {
+              var pMatch = location.pathname.match(/\/(?:shorts|embed|v)\/([^/?]+)/);
+              if (pMatch && pMatch[1]) videoId = pMatch[1];
+            }
+            if (videoId) {
+              thumbUrl = 'https://i.ytimg.com/vi/' + videoId + '/maxresdefault.jpg';
+            } else {
+              var ogImage = document.querySelector('meta[property="og:image"]');
+              if (ogImage) thumbUrl = ogImage.getAttribute('content') || '';
+            }
+          }
+        }
+
         if (title && window.CaspianBridge) {
           if (typeof window.CaspianBridge.updateTabMediaMetadata === 'function') {
             window.CaspianBridge.updateTabMediaMetadata(tabId, title, thumbUrl);
@@ -983,4 +1016,56 @@
       }
     } catch (e) { }
   }, 1000);
+
+  // -------------------------------------------------------------
+  // Continuous Background Media & Worker Keep-Alive Engine
+  // -------------------------------------------------------------
+  (function initKeepAlive() {
+    try {
+      // 1. Silent WebAudio loop to keep Chromium's audio output stream & V8 thread awake
+      const AudioCtx = window.AudioContext || window.webkitAudioContext;
+      if (AudioCtx) {
+        let ctx = null;
+        const ensureCtx = () => {
+          try {
+            if (!ctx) {
+              ctx = new AudioCtx();
+              const osc = ctx.createOscillator();
+              const gain = ctx.createGain();
+              gain.gain.value = 0.0001; // virtually silent
+              osc.connect(gain);
+              gain.connect(ctx.destination);
+              osc.start();
+            }
+            if (ctx.state === 'suspended') {
+              ctx.resume();
+            }
+          } catch(e){}
+        };
+        ['play', 'playing', 'click', 'touchstart'].forEach(evt => {
+          document.addEventListener(evt, ensureCtx, { once: true, passive: true });
+        });
+      }
+
+      // 2. Web Worker ticker that never gets clamped by Chromium's background timer throttling
+      const blob = new Blob([
+        "let timer = null;\n" +
+        "self.onmessage = function(e) {\n" +
+        "  if (e.data === 'start' && !timer) {\n" +
+        "    timer = setInterval(function() { self.postMessage('tick'); }, 1000);\n" +
+        "  } else if (e.data === 'stop' && timer) {\n" +
+        "    clearInterval(timer); timer = null;\n" +
+        "  }\n" +
+        "};"
+      ], { type: 'application/javascript' });
+      const workerUrl = URL.createObjectURL(blob);
+      const worker = new Worker(workerUrl);
+      worker.onmessage = function() {
+        if (window.__CaspianYouTube) {
+          window.__CaspianYouTube.notifyState();
+        }
+      };
+      worker.postMessage('start');
+    } catch(e) {}
+  })();
 })();

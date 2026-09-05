@@ -5,8 +5,10 @@ import android.app.Service;
 import android.content.Context;
 import android.content.Intent;
 import android.content.pm.ServiceInfo;
+import android.net.wifi.WifiManager;
 import android.os.Build;
 import android.os.IBinder;
+import android.os.PowerManager;
 
 import androidx.core.content.ContextCompat;
 
@@ -56,6 +58,53 @@ public class CaspianMediaService extends Service {
         } catch (Exception ignored) {}
     }
 
+    private PowerManager.WakeLock wakeLock;
+    private WifiManager.WifiLock wifiLock;
+
+    private void acquireLocks() {
+        try {
+            if (wakeLock == null) {
+                PowerManager pm = (PowerManager) getSystemService(Context.POWER_SERVICE);
+                if (pm != null) {
+                    wakeLock = pm.newWakeLock(PowerManager.PARTIAL_WAKE_LOCK, "Caspian:MediaServiceWakeLock");
+                }
+            }
+            if (wakeLock != null && !wakeLock.isHeld()) {
+                wakeLock.acquire(4 * 60 * 60 * 1000L);
+            }
+        } catch (Exception ignored) {}
+
+        try {
+            if (wifiLock == null) {
+                WifiManager wm = (WifiManager) getApplicationContext().getSystemService(Context.WIFI_SERVICE);
+                if (wm != null) {
+                    if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
+                        wifiLock = wm.createWifiLock(WifiManager.WIFI_MODE_FULL_LOW_LATENCY, "Caspian:MediaServiceWifiLock");
+                    } else {
+                        wifiLock = wm.createWifiLock(WifiManager.WIFI_MODE_FULL_HIGH_PERF, "Caspian:MediaServiceWifiLock");
+                    }
+                    wifiLock.setReferenceCounted(false);
+                }
+            }
+            if (wifiLock != null && !wifiLock.isHeld()) {
+                wifiLock.acquire();
+            }
+        } catch (Exception ignored) {}
+    }
+
+    private void releaseLocks() {
+        try {
+            if (wakeLock != null && wakeLock.isHeld()) {
+                wakeLock.release();
+            }
+        } catch (Exception ignored) {}
+        try {
+            if (wifiLock != null && wifiLock.isHeld()) {
+                wifiLock.release();
+            }
+        } catch (Exception ignored) {}
+    }
+
     @Override
     public int onStartCommand(Intent intent, int flags, int startId) {
         if (intent != null) {
@@ -75,6 +124,7 @@ public class CaspianMediaService extends Service {
                             startForeground(NOTIFICATION_ID_MEDIA, notification);
                         }
                         isServiceRunning = true;
+                        acquireLocks();
                     } catch (Exception ignored) {}
                 }
             } else if (ACTION_PAUSE_FOREGROUND.equals(action)) {
@@ -85,6 +135,7 @@ public class CaspianMediaService extends Service {
                         stopForeground(false);
                     }
                 } catch (Exception ignored) {}
+                releaseLocks();
             } else if (ACTION_STOP_FOREGROUND.equals(action)) {
                 try {
                     if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.N) {
@@ -93,6 +144,7 @@ public class CaspianMediaService extends Service {
                         stopForeground(true);
                     }
                 } catch (Exception ignored) {}
+                releaseLocks();
                 isServiceRunning = false;
                 stopSelf();
             }
@@ -103,6 +155,7 @@ public class CaspianMediaService extends Service {
     @Override
     public void onDestroy() {
         super.onDestroy();
+        releaseLocks();
         isServiceRunning = false;
     }
 
