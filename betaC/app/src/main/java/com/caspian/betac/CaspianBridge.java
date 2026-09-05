@@ -1057,4 +1057,78 @@ public class CaspianBridge {
             return "";
         }
     }
+
+    // ==========================================
+    // CASPIAN DOWNLOAD MANAGER INTERFACE
+    // ==========================================
+
+    @JavascriptInterface
+    public void startDownload(String url, String userAgent, String contentDisposition, String mimeType) {
+        if (activity == null) return;
+        activity.runOnUiThread(() -> {
+            CaspianDownloadManager.getInstance(activity).enqueueDownload(url, userAgent, contentDisposition, mimeType, -1);
+        });
+    }
+
+    @JavascriptInterface
+    public void pauseDownload(String downloadId) {
+        if (activity == null || downloadId == null) return;
+        CaspianDownloadManager.getInstance(activity).pauseDownload(downloadId);
+    }
+
+    @JavascriptInterface
+    public void resumeDownload(String downloadId) {
+        if (activity == null || downloadId == null) return;
+        CaspianDownloadManager.getInstance(activity).resumeDownload(downloadId);
+    }
+
+    @JavascriptInterface
+    public void cancelDownload(String downloadId) {
+        if (activity == null || downloadId == null) return;
+        CaspianDownloadManager.getInstance(activity).cancelDownload(downloadId);
+    }
+
+    @JavascriptInterface
+    public boolean openDownloadedFile(String downloadId) {
+        if (activity == null || downloadId == null) return false;
+        return CaspianDownloadManager.getInstance(activity).openFile(downloadId);
+    }
+
+    @JavascriptInterface
+    public boolean shareDownloadedFile(String downloadId) {
+        if (activity == null || downloadId == null) return false;
+        return CaspianDownloadManager.getInstance(activity).shareFile(downloadId);
+    }
+
+    @JavascriptInterface
+    public void deleteDownload(String downloadId, boolean deleteFile) {
+        if (activity == null || downloadId == null) return;
+        CaspianDownloadManager.getInstance(activity).deleteDownload(downloadId, deleteFile);
+    }
+
+    @JavascriptInterface
+    public void clearCompletedDownloads() {
+        if (activity == null) return;
+        CaspianDownloadManager.getInstance(activity).clearCompletedDownloads();
+    }
+
+    @JavascriptInterface
+    public String getDownloadsJson() {
+        if (activity == null) return "[]";
+        return CaspianDownloadManager.getInstance(activity).getDownloadsJson();
+    }
+
+    @JavascriptInterface
+    public void openDownloadsFolder() {
+        if (activity == null) return;
+        activity.runOnUiThread(() -> {
+            CaspianDownloadManager.getInstance(activity).openDownloadsFolder();
+        });
+    }
+
+    @JavascriptInterface
+    public void saveBlobChunk(String downloadId, String filename, String mimeType, String base64Data, boolean isLast) {
+        if (activity == null) return;
+        CaspianDownloadManager.getInstance(activity).saveBlobChunk(downloadId, filename, mimeType, base64Data, isLast);
+    }
 }

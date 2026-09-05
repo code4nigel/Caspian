@@ -535,6 +535,7 @@ public class MainActivity extends AppCompatActivity {
         try { bindViews(); } catch (Throwable ignored) {}
         try { loadPodPreferences(); } catch (Throwable ignored) {}
         try { loadTabGroups(); } catch (Throwable ignored) {}
+        try { initDownloadManager(); } catch (Throwable ignored) {}
 
         try {
             SharedPreferences appPrefs = getSharedPreferences(PREFS_NAME, MODE_PRIVATE);
@@ -7714,20 +7715,8 @@ public class MainActivity extends AppCompatActivity {
 
         webView.setDownloadListener((downloadUrl, userAgent, contentDisposition, mimeType, contentLength) -> {
             try {
-                String fileName = URLUtil.guessFileName(downloadUrl, contentDisposition, mimeType);
-                DownloadManager.Request request = new DownloadManager.Request(Uri.parse(downloadUrl));
-                request.setMimeType(mimeType);
-                request.addRequestHeader("User-Agent", userAgent);
-                request.setDescription("Downloading file via Caspian Flow...");
-                request.setTitle(fileName);
-                request.setNotificationVisibility(DownloadManager.Request.VISIBILITY_VISIBLE_NOTIFY_COMPLETED);
-                request.setDestinationInExternalPublicDir(Environment.DIRECTORY_DOWNLOADS, fileName);
-
-                DownloadManager dm = (DownloadManager) getSystemService(Context.DOWNLOAD_SERVICE);
-                if (dm != null) {
-                    dm.enqueue(request);
-                    Toast.makeText(this, "📥 Downloading " + fileName, Toast.LENGTH_SHORT).show();
-                }
+                CaspianDownloadManager.getInstance(this).enqueueDownload(downloadUrl, userAgent, contentDisposition, mimeType, contentLength);
+                Toast.makeText(this, "📥 Starting download...", Toast.LENGTH_SHORT).show();
             } catch (Exception e) {
                 Toast.makeText(this, "Download error: " + e.getMessage(), Toast.LENGTH_SHORT).show();
             }
@@ -7949,6 +7938,35 @@ public class MainActivity extends AppCompatActivity {
                             "})();";
                     view.evaluateJavascript(googleAutofocusJs, null);
                 }
+
+                // Intercept blob: and data: download links client-side
+                view.evaluateJavascript(
+                    "(function() {\n" +
+                    "  if (window.__caspian_blob_interceptor) return;\n" +
+                    "  window.__caspian_blob_interceptor = true;\n" +
+                    "  document.addEventListener('click', function(e) {\n" +
+                    "    var a = e.target ? e.target.closest('a') : null;\n" +
+                    "    if (a && a.href && (a.href.indexOf('blob:') === 0 || a.href.indexOf('data:') === 0)) {\n" +
+                    "      if (a.hasAttribute('download') && window.CaspianBridge && typeof window.CaspianBridge.saveBlobChunk === 'function') {\n" +
+                    "        e.preventDefault();\n" +
+                    "        e.stopPropagation();\n" +
+                    "        var fn = a.getAttribute('download') || 'download';\n" +
+                    "        fetch(a.href).then(function(r) {\n" +
+                    "          var mime = r.headers.get('content-type') || 'application/octet-stream';\n" +
+                    "          return r.blob().then(function(b) {\n" +
+                    "            var reader = new FileReader();\n" +
+                    "            reader.onloadend = function() {\n" +
+                    "              var b64 = (reader.result || '').split(',')[1];\n" +
+                    "              var dlId = 'blob_' + Date.now();\n" +
+                    "              window.CaspianBridge.saveBlobChunk(dlId, fn, mime, b64, true);\n" +
+                    "            };\n" +
+                    "            reader.readAsDataURL(b);\n" +
+                    "          });\n" +
+                    "        }).catch(function(err) {});\n" +
+                    "      }\n" +
+                    "    }\n" +
+                    "  }, true);\n" +
+                    "})();", null);
 
                 if (tabItem.pendingPrompt != null && !tabItem.pendingPrompt.isEmpty()) {
                     if ("chatgpt".equalsIgnoreCase(tabItem.service) || "gemini".equalsIgnoreCase(tabItem.service)
@@ -9219,6 +9237,35 @@ public class MainActivity extends AppCompatActivity {
         runOnUiThread(() -> {
             if (controlWebView != null) {
                 controlWebView.evaluateJavascript(js, null);
+            }
+        });
+    }
+
+    private void initDownloadManager() {
+        CaspianDownloadManager.getInstance(this).setDownloadListener(new CaspianDownloadManager.DownloadListener() {
+            @Override
+            public void onDownloadStarted(CaspianDownloadManager.DownloadItem item) {
+                evaluateJavascriptInControlSheet("if(window.onDownloadStarted) window.onDownloadStarted(" + item.toJson().toString() + ");");
+            }
+
+            @Override
+            public void onDownloadProgress(CaspianDownloadManager.DownloadItem item) {
+                evaluateJavascriptInControlSheet("if(window.onDownloadProgress) window.onDownloadProgress(" + item.toJson().toString() + ");");
+            }
+
+            @Override
+            public void onDownloadCompleted(CaspianDownloadManager.DownloadItem item) {
+                evaluateJavascriptInControlSheet("if(window.onDownloadCompleted) window.onDownloadCompleted(" + item.toJson().toString() + ");");
+            }
+
+            @Override
+            public void onDownloadFailed(CaspianDownloadManager.DownloadItem item, String error) {
+                evaluateJavascriptInControlSheet("if(window.onDownloadFailed) window.onDownloadFailed(" + item.toJson().toString() + ", " + org.json.JSONObject.quote(error != null ? error : "") + ");");
+            }
+
+            @Override
+            public void onDownloadCancelled(CaspianDownloadManager.DownloadItem item) {
+                evaluateJavascriptInControlSheet("if(window.onDownloadCancelled) window.onDownloadCancelled(" + item.toJson().toString() + ");");
             }
         });
     }

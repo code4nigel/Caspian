@@ -1644,4 +1644,132 @@ body.theme-flow .oneui-pill-btn.primary {
   box-shadow: 0 0 20px rgba(239, 68, 68, 0.6) !important;
 }
 
+/* ==========================================================================
+   CASPIAN DOWNLOAD MANAGER STYLES
+   ========================================================================== */
+
+.downloads-badge {
+  position: absolute;
+  top: -2px;
+  right: -2px;
+  background: #00e5ff;
+  color: #000;
+  font-size: 9px;
+  font-weight: 800;
+  min-width: 15px;
+  height: 15px;
+  border-radius: 8px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0 3px;
+  box-shadow: 0 0 8px rgba(0, 229, 255, 0.6);
+  animation: badgePulse 1.8s infinite;
+}
+
+@keyframes badgePulse {
+  0% { transform: scale(1); box-shadow: 0 0 6px rgba(0, 229, 255, 0.5); }
+  50% { transform: scale(1.15); box-shadow: 0 0 12px rgba(0, 229, 255, 0.9); }
+  100% { transform: scale(1); box-shadow: 0 0 6px rgba(0, 229, 255, 0.5); }
+}
+
+.download-item-card {
+  background: rgba(255, 255, 255, 0.03);
+  border: 1px solid var(--border-glass);
+  border-radius: 16px;
+  padding: 12px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  transition: background 0.2s ease, border-color 0.2s ease, transform 0.15s ease;
+}
+
+.download-item-card:hover {
+  background: rgba(255, 255, 255, 0.05);
+  border-color: rgba(255, 255, 255, 0.15);
+}
+
+.download-file-icon-box {
+  width: 38px;
+  height: 38px;
+  min-width: 38px;
+  border-radius: 12px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 18px;
+  font-weight: 700;
+}
+
+.download-file-icon-box.apk { background: rgba(16, 185, 129, 0.15); border: 1px solid #10b981; color: #10b981; }
+.download-file-icon-box.pdf { background: rgba(239, 68, 68, 0.15); border: 1px solid #ef4444; color: #ef4444; }
+.download-file-icon-box.media { background: rgba(59, 130, 246, 0.15); border: 1px solid #3b82f6; color: #3b82f6; }
+.download-file-icon-box.archive { background: rgba(245, 158, 11, 0.15); border: 1px solid #f59e0b; color: #f59e0b; }
+.download-file-icon-box.code { background: rgba(168, 85, 247, 0.15); border: 1px solid #a855f7; color: #a855f7; }
+.download-file-icon-box.doc { background: rgba(0, 229, 255, 0.15); border: 1px solid #00e5ff; color: #00e5ff; }
+
+.download-progress-track {
+  width: 100%;
+  height: 6px;
+  background: rgba(255, 255, 255, 0.08);
+  border-radius: 4px;
+  overflow: hidden;
+  position: relative;
+}
+
+.download-progress-fill {
+  height: 100%;
+  background: linear-gradient(90deg, #00e5ff, #3b82f6);
+  border-radius: 4px;
+  transition: width 0.2s linear;
+  box-shadow: 0 0 8px rgba(0, 229, 255, 0.5);
+}
+
+.download-progress-fill.indeterminate {
+  width: 30% !important;
+  animation: downloadIndeterminate 1.4s infinite ease-in-out;
+}
+
+@keyframes downloadIndeterminate {
+  0% { transform: translateX(-100%); }
+  100% { transform: translateX(350%); }
+}
+
+.download-action-btn {
+  background: rgba(255, 255, 255, 0.06);
+  border: 1px solid var(--border-glass);
+  border-radius: 8px;
+  padding: 4px 10px;
+  font-size: 11px;
+  font-weight: 600;
+  color: var(--text-main);
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  transition: background 0.15s, border-color 0.15s, transform 0.1s;
+}
+
+.download-action-btn:hover {
+  background: rgba(255, 255, 255, 0.12);
+  border-color: rgba(255, 255, 255, 0.2);
+}
+
+.download-action-btn:active {
+  transform: scale(0.95);
+}
+
+.download-action-btn.primary {
+  background: rgba(0, 229, 255, 0.18);
+  border-color: #00e5ff;
+  color: #00e5ff;
+}
+
+.download-action-btn.danger {
+  background: rgba(239, 68, 68, 0.12);
+  border-color: rgba(239, 68, 68, 0.4);
+  color: #ef4444;
+}
+
+
 

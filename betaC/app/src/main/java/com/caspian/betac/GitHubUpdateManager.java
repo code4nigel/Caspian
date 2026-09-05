@@ -337,25 +337,54 @@ public class GitHubUpdateManager {
             InputStream is = null;
             FileOutputStream fos = null;
             try {
-                URL url = new URL(downloadUrl);
-                conn = (HttpURLConnection) url.openConnection();
-                conn.setRequestProperty("User-Agent", "Caspian-Flow-App");
-                conn.setConnectTimeout(15000);
-                conn.setReadTimeout(30000);
-                conn.connect();
+                URL currentUrl = new URL(downloadUrl);
+                int redirectCount = 0;
+                boolean connected = false;
 
-                // Follow redirects if any
-                int status = conn.getResponseCode();
-                if (status == HttpURLConnection.HTTP_MOVED_TEMP || status == HttpURLConnection.HTTP_MOVED_PERM || status == 307 || status == 308) {
-                    String newUrl = conn.getHeaderField("Location");
-                    conn.disconnect();
-                    url = new URL(newUrl);
-                    conn = (HttpURLConnection) url.openConnection();
+                while (redirectCount < 10) {
+                    conn = (HttpURLConnection) currentUrl.openConnection();
+                    conn.setInstanceFollowRedirects(false);
                     conn.setRequestProperty("User-Agent", "Caspian-Flow-App");
+                    conn.setRequestProperty("Accept", "*/*");
+                    conn.setConnectTimeout(15000);
+                    conn.setReadTimeout(30000);
+
+                    try {
+                        String cookies = android.webkit.CookieManager.getInstance().getCookie(currentUrl.toString());
+                        if (cookies != null && !cookies.isEmpty()) {
+                            conn.setRequestProperty("Cookie", cookies);
+                        }
+                    } catch (Exception ignored) {}
+
                     conn.connect();
+                    int status = conn.getResponseCode();
+
+                    if (status == HttpURLConnection.HTTP_MOVED_TEMP ||
+                        status == HttpURLConnection.HTTP_MOVED_PERM ||
+                        status == HttpURLConnection.HTTP_SEE_OTHER ||
+                        status == 307 || status == 308) {
+                        String newUrl = conn.getHeaderField("Location");
+                        conn.disconnect();
+                        if (newUrl != null && !newUrl.isEmpty()) {
+                            currentUrl = new URL(currentUrl, newUrl);
+                            redirectCount++;
+                            continue;
+                        }
+                    }
+
+                    if (status >= 200 && status < 300) {
+                        connected = true;
+                        break;
+                    } else {
+                        throw new Exception("HTTP " + status + ": " + conn.getResponseMessage());
+                    }
                 }
 
-                long totalBytes = conn.getContentLength();
+                if (!connected) {
+                    throw new Exception("Failed to connect after redirects");
+                }
+
+                long totalBytes = conn.getContentLengthLong();
                 is = conn.getInputStream();
 
                 cleanOldApks(context);
@@ -363,7 +392,7 @@ public class GitHubUpdateManager {
                 File outputFile = new File(cacheDir, apkFileName != null ? apkFileName : "caspian_flow_update.apk");
                 fos = new FileOutputStream(outputFile);
 
-                byte[] buffer = new byte[8192];
+                byte[] buffer = new byte[65536]; // 64 KB buffer
                 long downloadedBytes = 0;
                 int read;
                 long lastProgressUpdate = 0;
