@@ -76,6 +76,7 @@ import android.view.TextureView;
 import android.view.View;
 import android.view.ViewGroup;
 import android.view.WindowManager;
+import android.view.animation.AccelerateInterpolator;
 import android.view.animation.DecelerateInterpolator;
 import android.view.animation.OvershootInterpolator;
 import android.view.animation.PathInterpolator;
@@ -232,6 +233,7 @@ public class MainActivity extends AppCompatActivity {
     private boolean openLeftLinksToRight = false;
     private float splitRatio = 0.5f;
     private boolean isSheetOpen = false;
+    private boolean isDownloadsModalOpen = false;
     private boolean isMasterSfxMuted = false;
 
     private WaveguardShield waveguardShield;
@@ -5581,11 +5583,70 @@ public class MainActivity extends AppCompatActivity {
 
     public void openDownloadsManagerModal() {
         runOnUiThread(() -> {
-            openControlSheet();
+            isDownloadsModalOpen = true;
+            sheetOverlayContainer.setVisibility(View.VISIBLE);
+            sheetOverlayContainer.setClickable(true);
+            sheetOverlayContainer.setFocusable(true);
+
+            if (ytFloatingRemoteContainer != null) ytFloatingRemoteContainer.setVisibility(View.GONE);
+            if (searchNavContainer != null) searchNavContainer.setVisibility(View.GONE);
+            if (chatgptDockContainer != null) chatgptDockContainer.setVisibility(View.GONE);
+
+            sheetBackdrop.animate().cancel();
+            sheetBackdrop.setAlpha(0f);
+            sheetBackdrop.animate().alpha(1f).setDuration(180).start();
+
             if (controlWebView != null) {
-                controlWebView.postDelayed(() -> {
-                    evaluateJavascriptInControlSheet("if (typeof window.openDownloadsModal === 'function') window.openDownloadsModal(true);");
-                }, 220);
+                controlWebView.animate().cancel();
+                controlWebView.setPivotX(controlWebView.getWidth() / 2f);
+                controlWebView.setPivotY(controlWebView.getHeight() / 2f);
+                controlWebView.setScaleX(0.92f);
+                controlWebView.setScaleY(0.92f);
+                controlWebView.setAlpha(0f);
+                controlWebView.setTranslationY(0f);
+
+                evaluateJavascriptInControlSheet("if (typeof window.openDownloadsModalStandalone === 'function') window.openDownloadsModalStandalone();");
+
+                controlWebView.animate()
+                        .scaleX(1f)
+                        .scaleY(1f)
+                        .alpha(1f)
+                        .setDuration(180)
+                        .setInterpolator(new DecelerateInterpolator(1.6f))
+                        .start();
+            }
+        });
+    }
+
+    public void hideDownloadsManagerModal() {
+        runOnUiThread(() -> {
+            isDownloadsModalOpen = false;
+            sheetBackdrop.animate().cancel();
+            sheetBackdrop.animate().alpha(0f).setDuration(150).start();
+
+            if (controlWebView != null) {
+                controlWebView.animate().cancel();
+                controlWebView.animate()
+                        .scaleX(0.92f)
+                        .scaleY(0.92f)
+                        .alpha(0f)
+                        .setDuration(150)
+                        .setInterpolator(new AccelerateInterpolator(1.6f))
+                        .withEndAction(() -> {
+                            sheetOverlayContainer.setVisibility(View.INVISIBLE);
+                            sheetOverlayContainer.setClickable(false);
+                            sheetOverlayContainer.setFocusable(false);
+                            controlWebView.setScaleX(1f);
+                            controlWebView.setScaleY(1f);
+                            controlWebView.setAlpha(1f);
+                            controlWebView.setTranslationY(0f);
+                            evaluateJavascriptInControlSheet("if (typeof window.onDownloadsStandaloneClosed === 'function') window.onDownloadsStandaloneClosed();");
+                        })
+                        .start();
+            } else {
+                sheetOverlayContainer.setVisibility(View.INVISIBLE);
+                sheetOverlayContainer.setClickable(false);
+                sheetOverlayContainer.setFocusable(false);
             }
         });
     }
@@ -9220,7 +9281,13 @@ public class MainActivity extends AppCompatActivity {
             controlWebView.addJavascriptInterface(new CaspianBridge(this), "CaspianBridge");
             controlWebView.loadUrl("file:///android_asset/browser_control.html");
 
-            sheetBackdrop.setOnClickListener(v -> hideControlSheet());
+            sheetBackdrop.setOnClickListener(v -> {
+                if (isDownloadsModalOpen) {
+                    hideDownloadsManagerModal();
+                } else {
+                    hideControlSheet();
+                }
+            });
 
             // Clean up any old downloaded APK files left in cache from previous updates
             new Thread(() -> GitHubUpdateManager.cleanOldApks(MainActivity.this)).start();
@@ -9524,6 +9591,10 @@ public class MainActivity extends AppCompatActivity {
         }
         if (customView != null) {
             exitFullscreenCustomView();
+            return;
+        }
+        if (isDownloadsModalOpen) {
+            hideDownloadsManagerModal();
             return;
         }
         if (isSheetOpen) {

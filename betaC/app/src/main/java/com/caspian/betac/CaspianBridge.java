@@ -1137,4 +1137,10 @@ public class CaspianBridge {
         if (activity == null) return;
         CaspianDownloadManager.getInstance(activity).saveBlobChunk(downloadId, filename, mimeType, base64Data, isLast);
     }
+
+    @JavascriptInterface
+    public void hideDownloadsManagerModal() {
+        if (activity == null) return;
+        activity.runOnUiThread(() -> activity.hideDownloadsManagerModal());
+    }
 }

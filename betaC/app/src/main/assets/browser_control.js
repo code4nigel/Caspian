@@ -5724,11 +5724,26 @@
     return { icon: '📁', class: 'doc', label: ext ? ext.toUpperCase() : 'FILE', title: (ext ? ext.toUpperCase() + ' ' : '') + 'File' };
   }
 
-  window.openDownloadsModal = function(fromOmnibox) {
+  window.openDownloadsModalStandalone = function() {
     try { if (window.playSFX) window.playSFX('tb_clicks'); } catch (e) {}
+    document.body.classList.add('downloads-standalone-mode');
+    const modal = document.getElementById('caspian-downloads-modal');
+    if (modal) modal.style.display = 'flex';
+    refreshDownloadsList();
+  };
+
+  window.onDownloadsStandaloneClosed = function() {
+    document.body.classList.remove('downloads-standalone-mode');
+    const modal = document.getElementById('caspian-downloads-modal');
+    if (modal) modal.style.display = 'none';
+  };
+
+  window.openDownloadsModal = function(fromOmnibox) {
     if (fromOmnibox) {
-      window.__openedFromOmnibox = true;
+      window.openDownloadsModalStandalone();
+      return;
     }
+    try { if (window.playSFX) window.playSFX('tb_clicks'); } catch (e) {}
     const modal = document.getElementById('caspian-downloads-modal');
     if (!modal) return;
     refreshDownloadsList();
@@ -5737,14 +5752,14 @@
 
   window.closeDownloadsModal = function() {
     try { if (window.playSFX) window.playSFX('tb_clicks'); } catch (e) {}
-    const modal = document.getElementById('caspian-downloads-modal');
-    if (modal) modal.style.display = 'none';
-    if (window.__openedFromOmnibox) {
-      window.__openedFromOmnibox = false;
-      if (window.CaspianBridge && typeof window.CaspianBridge.hideControlSheet === 'function') {
-        window.CaspianBridge.hideControlSheet();
+    if (document.body.classList.contains('downloads-standalone-mode')) {
+      if (window.CaspianBridge && typeof window.CaspianBridge.hideDownloadsManagerModal === 'function') {
+        window.CaspianBridge.hideDownloadsManagerModal();
+        return;
       }
     }
+    const modal = document.getElementById('caspian-downloads-modal');
+    if (modal) modal.style.display = 'none';
   };
 
   function switchDownloadsTab(tab) {
