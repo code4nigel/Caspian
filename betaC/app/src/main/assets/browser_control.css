@@ -105,9 +105,11 @@ html:not(.sfx-muted) #mute-icon-muted { display: none !important; }
 
 .app-icon-grid {
   display: grid;
-  grid-template-columns: repeat(3, 1fr);
-  gap: 12px;
-  margin: 12px 0 16px 0;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 8px;
+  margin: 10px 0 14px 0;
+  width: 100%;
+  box-sizing: border-box;
 }
 
 .app-icon-card {
@@ -115,11 +117,15 @@ html:not(.sfx-muted) #mute-icon-muted { display: none !important; }
   flex-direction: column;
   align-items: center;
   justify-content: center;
-  padding: 14px 8px;
+  padding: 12px 4px;
   background: var(--card-bg);
   border: 1px solid var(--border-glass);
   border-radius: 16px;
   cursor: pointer;
+  min-width: 0;
+  width: 100%;
+  box-sizing: border-box;
+  overflow: hidden;
   transition: transform 0.2s ease, border-color 0.2s ease, box-shadow 0.2s ease;
 }
 
@@ -133,18 +139,26 @@ html:not(.sfx-muted) #mute-icon-muted { display: none !important; }
 }
 
 .app-icon-img {
-  width: 44px;
-  height: 44px;
+  width: 42px;
+  height: 42px;
   border-radius: 12px;
   object-fit: cover;
   margin-bottom: 8px;
+  flex-shrink: 0;
 }
 
 .app-icon-label {
-  font-size: 12px;
+  font-size: 11.5px;
   font-weight: 700;
   color: var(--text-main);
   text-align: center;
+  width: 100%;
+  max-width: 100%;
+  box-sizing: border-box;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  padding: 0 4px;
 }
 
 .tab-card-grid {
@@ -1555,12 +1569,27 @@ body.theme-flow .oneui-pill-btn.primary {
 .harbor-container-compact {
   max-height: 228px !important;
   overflow: hidden !important;
+  width: 100%;
+  box-sizing: border-box;
 }
 
 .harbor-container-expanded {
   max-height: 480px !important;
   overflow-y: auto !important;
+  overflow-x: hidden !important;
+  width: 100%;
+  box-sizing: border-box;
   scrollbar-width: thin;
+  padding-right: 2px;
+}
+
+.harbor-container-expanded::-webkit-scrollbar {
+  width: 4px;
+}
+
+.harbor-container-expanded::-webkit-scrollbar-thumb {
+  background: rgba(255, 255, 255, 0.2);
+  border-radius: 4px;
 }
 
 .harbor-tab-card {

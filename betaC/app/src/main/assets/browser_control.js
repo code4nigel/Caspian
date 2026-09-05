@@ -2581,7 +2581,7 @@
         <div class="app-icon-card harbor-tab-card ${editingClass}" data-harborid="${tab.id}" data-index="${index}">
           ${isLocked ? `<span class="harbor-locked-badge" title="Locked Core Platform Tab">🔒</span>` : ''}
           ${iconMarkup}
-          <span class="app-icon-label" style="max-width: 90px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">${tab.name}</span>
+          <span class="app-icon-label">${tab.name}</span>
         </div>
       `;
     });
