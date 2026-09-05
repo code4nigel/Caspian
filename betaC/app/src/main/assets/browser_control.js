@@ -2455,13 +2455,31 @@
   // HARBOR TABS ENGINE (EDITABLE TABS & FAVICONS)
   // ==========================================
 
-  let harborTabs = [
+  const DEFAULT_HARBOR_TABS = [
     { id: 'harbor_hub', name: 'Caspian Hub', url: 'caspian://hub', service: 'hub', icon: 'hub', isDefault: true, isLocked: true },
     { id: 'harbor_chatgpt', name: 'ChatGPT', url: 'https://chatgpt.com/', service: 'chatgpt', icon: 'chatgpt', isDefault: true, isLocked: false },
     { id: 'harbor_gemini', name: 'Google Gemini', url: 'https://gemini.google.com/', service: 'gemini', icon: 'gemini', isDefault: true, isLocked: false },
     { id: 'harbor_google', name: 'Google Search', url: 'https://www.google.com/', service: 'google', icon: 'google', isDefault: true, isLocked: false },
     { id: 'harbor_youtube', name: 'YouTube', url: 'https://www.youtube.com/', service: 'youtube', icon: 'youtube', isDefault: true, isLocked: false }
   ];
+
+  let harborTabs = JSON.parse(JSON.stringify(DEFAULT_HARBOR_TABS));
+  let harborUndoStack = [];
+
+  function pushHarborHistory() {
+    try {
+      harborUndoStack.push(JSON.parse(JSON.stringify(harborTabs)));
+      if (harborUndoStack.length > 25) harborUndoStack.shift();
+      updateHarborUndoButton();
+    } catch (e) {}
+  }
+
+  function updateHarborUndoButton() {
+    const btn = document.getElementById('btn-undo-harbor-edit');
+    if (btn) {
+      btn.style.display = (isHarborEditing && harborUndoStack.length > 0) ? 'inline-flex' : 'none';
+    }
+  }
 
   let isHarborEditing = false;
   let isHarborExpanded = false;
@@ -2512,6 +2530,7 @@
     if (!grid) return;
 
     if (banner) banner.style.display = isHarborEditing ? 'flex' : 'none';
+    updateHarborUndoButton();
 
     let html = '';
     harborTabs.forEach((tab, index) => {
@@ -2750,6 +2769,7 @@
             const targetIdx = parseInt(activeDropTarget.dataset.index);
 
             if (sourceIdx !== -1 && targetIdx > 0 && sourceIdx !== targetIdx) {
+              pushHarborHistory();
               const [moved] = harborTabs.splice(sourceIdx, 1);
               harborTabs.splice(targetIdx, 0, moved);
               saveHarborTabs();
@@ -2782,6 +2802,7 @@
             card.style.transform = 'translateX(-120%)';
             card.style.opacity = '0';
 
+            pushHarborHistory();
             const name = tab ? tab.name : 'Tab';
             harborTabs.splice(idx, 1);
             saveHarborTabs();
@@ -2869,13 +2890,51 @@
     });
   }
 
-  // Done button on editing banner
+  // Harbor Editing Banner Action Buttons: Done, Undo, Reset
   const btnDoneHarborEdit = document.getElementById('btn-done-harbor-edit');
   if (btnDoneHarborEdit) {
-    btnDoneHarborEdit.addEventListener('click', () => {
-      playSFX('tb_clicks');
+    btnDoneHarborEdit.addEventListener('click', (e) => {
+      e.stopPropagation();
+      try { playSFX('tb_clicks'); } catch (err) {}
       isHarborEditing = false;
+      harborUndoStack = [];
       renderHarborTabs();
+    });
+  }
+
+  const btnUndoHarborEdit = document.getElementById('btn-undo-harbor-edit');
+  if (btnUndoHarborEdit) {
+    btnUndoHarborEdit.addEventListener('click', (e) => {
+      e.stopPropagation();
+      if (harborUndoStack.length > 0) {
+        const previousState = harborUndoStack.pop();
+        harborTabs = previousState;
+        saveHarborTabs();
+        try { playSFX('tb_clicks'); } catch (err) {}
+        if (navigator.vibrate) navigator.vibrate(30);
+        if (window.CaspianBridge && typeof window.CaspianBridge.showToast === 'function') {
+          window.CaspianBridge.showToast('↩️ Undid last Harbor action!');
+        }
+        renderHarborTabs();
+        updateHarborUndoButton();
+      }
+    });
+  }
+
+  const btnResetHarborEdit = document.getElementById('btn-reset-harbor-edit');
+  if (btnResetHarborEdit) {
+    btnResetHarborEdit.addEventListener('click', (e) => {
+      e.stopPropagation();
+      pushHarborHistory();
+      harborTabs = JSON.parse(JSON.stringify(DEFAULT_HARBOR_TABS));
+      saveHarborTabs();
+      try { playSFX('tb_close'); } catch (err) {}
+      if (navigator.vibrate) navigator.vibrate(40);
+      if (window.CaspianBridge && typeof window.CaspianBridge.showToast === 'function') {
+        window.CaspianBridge.showToast('↺ Reset Harbor Tabs to default layout!');
+      }
+      renderHarborTabs();
+      updateHarborUndoButton();
     });
   }
 
@@ -2932,6 +2991,7 @@
       isLocked: false
     };
 
+    pushHarborHistory();
     harborTabs.push(newHarborTab);
     saveHarborTabs();
     playSFX('tb_clicks');
@@ -3067,6 +3127,7 @@
         const urlInput = document.getElementById('harbor-edit-url-input');
         const iconInput = document.getElementById('harbor-edit-icon-input');
 
+        pushHarborHistory();
         if (nameInput && nameInput.value.trim()) {
           editingHarborTab.name = nameInput.value.trim();
         }
@@ -3097,6 +3158,7 @@
         e.stopPropagation();
         if (!editingHarborTab || editingHarborTab.isLocked) return;
         try { playSFX('tb_close'); } catch (err) {}
+        pushHarborHistory();
         const name = editingHarborTab.name;
         harborTabs = harborTabs.filter(t => t.id !== editingHarborTab.id);
         saveHarborTabs();

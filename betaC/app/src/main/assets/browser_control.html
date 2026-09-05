@@ -60,7 +60,7 @@
         </div>
         <div style="display: flex; flex-direction: column;">
           <span class="sheet-brand-name">CASPIAN FLOW</span>
-          <span class="sheet-brand-tag">V1.1.94-BetaC</span>
+          <span class="sheet-brand-tag">V1.1.95-BetaC</span>
         </div>
       </div>
       <div class="header-icon-actions">
@@ -690,12 +690,20 @@
         </div>
 
         <!-- Harbor Editing Mode Banner -->
-        <div id="harbor-edit-banner" style="display: none; align-items: center; justify-content: space-between; background: rgba(0, 229, 255, 0.1); border: 1px solid rgba(0, 229, 255, 0.35); border-radius: 12px; padding: 6px 12px; margin-bottom: 10px;">
-          <div style="display: flex; align-items: center; gap: 6px; font-size: 11px; font-weight: 700; color: var(--text-main);">
+        <div id="harbor-edit-banner" style="display: none; align-items: center; justify-content: space-between; background: rgba(0, 229, 255, 0.1); border: 1px solid rgba(0, 229, 255, 0.35); border-radius: 12px; padding: 6px 10px; margin-bottom: 10px; gap: 8px;">
+          <div style="display: flex; align-items: center; gap: 5px; font-size: 11px; font-weight: 700; color: var(--text-main); min-width: 0; overflow: hidden; white-space: nowrap; text-overflow: ellipsis;">
             <span>⚓</span>
-            <span>Editing Harbor Tabs (Drag to reorder • Swipe left to remove)</span>
+            <span style="overflow: hidden; text-overflow: ellipsis;">Editing Harbor</span>
           </div>
-          <button id="btn-done-harbor-edit" class="oneui-pill-btn primary" style="padding: 2px 10px; font-size: 10px; height: 26px; border-radius: 13px; font-weight: 700;">Done</button>
+          <div style="display: flex; align-items: center; gap: 5px; flex-shrink: 0;">
+            <button type="button" id="btn-undo-harbor-edit" class="oneui-pill-btn secondary" style="padding: 2px 8px; font-size: 10px; height: 26px; border-radius: 13px; font-weight: 700; display: none; align-items: center; gap: 3px;" title="Undo Last Harbor Action">
+              <span>↩️</span> Undo
+            </button>
+            <button type="button" id="btn-reset-harbor-edit" class="oneui-pill-btn secondary" style="padding: 2px 8px; font-size: 10px; height: 26px; border-radius: 13px; font-weight: 700; display: inline-flex; align-items: center; gap: 3px;" title="Reset Harbor to Default Layout">
+              <span>↺</span> Reset
+            </button>
+            <button type="button" id="btn-done-harbor-edit" class="oneui-pill-btn primary" style="padding: 2px 10px; font-size: 10px; height: 26px; border-radius: 13px; font-weight: 700;">Done</button>
+          </div>
         </div>
 
         <!-- Dynamic Harbor Tabs Grid Container -->
