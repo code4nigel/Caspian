@@ -1583,68 +1583,21 @@ body.theme-flow .oneui-pill-btn.primary {
   100% { transform: rotate(-0.8deg); }
 }
 
-.harbor-reorder-bar {
-  display: none;
-  position: absolute;
-  top: 4px;
-  left: 4px;
-  right: 4px;
-  justify-content: space-between;
-  align-items: center;
-  z-index: 10;
-  pointer-events: auto;
+.harbor-tab-card.dragging {
+  z-index: 999 !important;
+  opacity: 0.94;
+  box-shadow: 0 14px 32px rgba(0, 0, 0, 0.7) !important;
+  border-color: #00e5ff !important;
+  pointer-events: none;
 }
 
-.harbor-tab-card.editing-shake .harbor-reorder-bar {
-  display: flex;
-}
-
-.harbor-move-btn {
-  width: 22px;
-  height: 22px;
-  border-radius: 6px;
-  background: rgba(0, 0, 0, 0.75);
-  color: #00e5ff;
-  border: 1px solid rgba(0, 229, 255, 0.4);
-  font-size: 11px;
-  font-weight: 800;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  cursor: pointer;
-  padding: 0;
-  line-height: 1;
-}
-
-.harbor-move-btn:active {
-  background: #00e5ff;
-  color: #050811;
-}
-
-.harbor-edit-badge {
-  display: none;
-  position: absolute;
-  bottom: 4px;
-  right: 4px;
-  width: 22px;
-  height: 22px;
-  border-radius: 6px;
-  background: rgba(0, 0, 0, 0.75);
-  color: #eab308;
-  border: 1px solid rgba(234, 179, 8, 0.4);
-  font-size: 11px;
-  align-items: center;
-  justify-content: center;
-  cursor: pointer;
-  z-index: 10;
-}
-
-.harbor-tab-card.editing-shake .harbor-edit-badge {
-  display: flex;
+.harbor-tab-card.drop-target {
+  border-color: #00e5ff !important;
+  box-shadow: 0 0 16px rgba(0, 229, 255, 0.5) !important;
+  transform: scale(0.92) translateY(4px);
 }
 
 .harbor-locked-badge {
-  display: none;
   position: absolute;
   top: 4px;
   right: 4px;
@@ -1652,8 +1605,21 @@ body.theme-flow .oneui-pill-btn.primary {
   z-index: 10;
 }
 
-.harbor-tab-card.editing-shake .harbor-locked-badge {
-  display: block;
+@keyframes violentLockedShake {
+  0% { transform: translateX(0); }
+  15% { transform: translateX(-9px) rotate(-5deg); }
+  30% { transform: translateX(9px) rotate(5deg); }
+  45% { transform: translateX(-9px) rotate(-5deg); }
+  60% { transform: translateX(9px) rotate(5deg); }
+  75% { transform: translateX(-5px) rotate(-2deg); }
+  90% { transform: translateX(5px) rotate(2deg); }
+  100% { transform: translateX(0); }
+}
+
+.harbor-tab-card.harbor-locked-shake {
+  animation: violentLockedShake 0.45s ease-in-out !important;
+  border-color: #ef4444 !important;
+  box-shadow: 0 0 20px rgba(239, 68, 68, 0.6) !important;
 }
 
 

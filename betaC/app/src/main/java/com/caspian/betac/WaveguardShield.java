@@ -250,7 +250,7 @@ public class WaveguardShield {
             js.append("        } else {\n");
             js.append("          h = s.split('/')[0].split('?')[0].split(':')[0];\n");
             js.append("        }\n");
-            js.append("        if (h === 'google.com' || h === 'www.google.com' || h === 'youtube.com' || h === 'www.youtube.com' || h === 'facebook.com' || h === 'www.facebook.com' || h === 'linkedin.com' || h === 'www.linkedin.com' || h === 'tiktok.com' || h === 'www.tiktok.com' || h === 'reddit.com' || h === 'www.reddit.com' || h === 'wikipedia.org') return false;\n");
+            js.append("        if (h === 'google.com' || h === 'www.google.com' || h === 'youtube.com' || h === 'www.youtube.com' || h === 'facebook.com' || h === 'www.facebook.com' || h === 'linkedin.com' || h === 'www.linkedin.com' || h === 'tiktok.com' || h === 'www.tiktok.com' || h === 'reddit.com' || h === 'www.reddit.com' || h === 'redditstatic.com' || h === 'www.redditstatic.com' || h === 'redditmedia.com' || h === 'www.redditmedia.com' || h === 'redd.it' || h === 'wikipedia.org') return false;\n");
             js.append("        if (blockedSet.has(h)) return true;\n");
             js.append("        var dot = h.indexOf('.');\n");
             js.append("        while (dot > 0 && dot < h.length - 1) {\n");
@@ -385,10 +385,16 @@ public class WaveguardShield {
         if ("google.com".equals(h) || h.endsWith(".google.com")) {
             return !h.startsWith("adservice.") && !h.startsWith("partnerad.") && !h.startsWith("fundingchoicesmessages.");
         }
+        if ("reddit.com".equals(h) || h.endsWith(".reddit.com")
+                || "redditstatic.com".equals(h) || h.endsWith(".redditstatic.com")
+                || "redditmedia.com".equals(h) || h.endsWith(".redditmedia.com")
+                || "redd.it".equals(h) || h.endsWith(".redd.it")) {
+            return !h.startsWith("alb.") && !h.startsWith("events.") && !h.startsWith("telemetry.");
+        }
         return "youtube.com".equals(h) || "m.youtube.com".equals(h)
                 || "facebook.com".equals(h) || "m.facebook.com".equals(h)
                 || "instagram.com".equals(h) || "linkedin.com".equals(h)
-                || "tiktok.com".equals(h) || "reddit.com".equals(h)
+                || "tiktok.com".equals(h)
                 || "twitter.com".equals(h) || "x.com".equals(h)
                 || "wikipedia.org".equals(h) || "github.com".equals(h);
     }

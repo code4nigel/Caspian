@@ -2556,20 +2556,11 @@
       }
 
       const isLocked = tab.isLocked === true;
-      const editingClass = isHarborEditing ? 'editing-shake' : '';
-      const canMoveLeft = isHarborEditing && !isLocked && index > 1;
-      const canMoveRight = isHarborEditing && !isLocked && index < harborTabs.length - 1;
+      const editingClass = (isHarborEditing && !isLocked) ? 'editing-shake' : '';
 
       html += `
         <div class="app-icon-card harbor-tab-card ${editingClass}" data-harborid="${tab.id}" data-index="${index}">
-          ${isLocked ? `<span class="harbor-locked-badge" title="Locked Default Tab">🔒</span>` : ''}
-          ${isHarborEditing && !isLocked ? `
-            <div class="harbor-reorder-bar">
-              ${canMoveLeft ? `<button class="harbor-move-btn btn-move-left" data-moveidx="${index}" data-dir="-1" title="Move Left">◀</button>` : '<span></span>'}
-              ${canMoveRight ? `<button class="harbor-move-btn btn-move-right" data-moveidx="${index}" data-dir="1" title="Move Right">▶</button>` : '<span></span>'}
-            </div>
-            <button class="harbor-edit-badge" data-editidx="${index}" title="Edit Tab">✏️</button>
-          ` : ''}
+          ${isLocked ? `<span class="harbor-locked-badge" title="Locked Core Platform Tab">🔒</span>` : ''}
           ${iconMarkup}
           <span class="app-icon-label" style="max-width: 90px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">${tab.name}</span>
         </div>
@@ -2580,125 +2571,289 @@
     attachHarborCardListeners();
   }
 
-  function moveHarborTab(index, direction) {
-    const targetIdx = index + direction;
-    if (index === 0 || targetIdx < 1 || targetIdx >= harborTabs.length) return;
-    const [moved] = harborTabs.splice(index, 1);
-    harborTabs.splice(targetIdx, 0, moved);
-    saveHarborTabs();
-    playSFX('tb_clicks');
-    renderHarborTabs();
+  function triggerViolentLockedShake(card) {
+    if (!card) return;
+    try { playSFX('tb_alert'); } catch (err) {}
+    if (navigator.vibrate) navigator.vibrate([60, 50, 80]);
+    card.classList.remove('harbor-locked-shake');
+    void card.offsetWidth;
+    card.classList.add('harbor-locked-shake');
+    setTimeout(() => {
+      card.classList.remove('harbor-locked-shake');
+    }, 460);
+
+    if (window.CaspianBridge && typeof window.CaspianBridge.showToast === 'function') {
+      window.CaspianBridge.showToast('🔒 Caspian Hub is a core platform tab and cannot be edited or removed.');
+    }
   }
 
   function attachHarborCardListeners() {
     const grid = document.getElementById('harbor-tabs-grid');
     if (!grid) return;
 
-    // Move left/right buttons
-    grid.querySelectorAll('.harbor-move-btn').forEach(btn => {
-      btn.addEventListener('click', (e) => {
-        e.stopPropagation();
-        const idx = parseInt(btn.dataset.moveidx);
-        const dir = parseInt(btn.dataset.dir);
-        moveHarborTab(idx, dir);
-      });
-    });
-
-    // Edit badge button
-    grid.querySelectorAll('.harbor-edit-badge').forEach(btn => {
-      btn.addEventListener('click', (e) => {
-        e.stopPropagation();
-        const idx = parseInt(btn.dataset.editidx);
-        const tab = harborTabs[idx];
-        if (tab) openHarborTabEditor(tab);
-      });
-    });
-
-    // Cards touch & click handlers (Long Press, Right Swipe, Launch)
     grid.querySelectorAll('.harbor-tab-card').forEach(card => {
       let touchStartX = 0;
       let touchStartY = 0;
+      let lastMoveX = 0;
+      let lastMoveY = 0;
       let diffX = 0;
       let diffY = 0;
       let longPressTimer = null;
-      let isSwiping = false;
+      let pressTimer = null;
+      let isDrag = false;
+      let isSwipe = false;
+      let cachedTargets = [];
+
+      const idx = parseInt(card.dataset.index);
+      const tab = harborTabs[idx];
+      const isLocked = tab ? (tab.isLocked === true || tab.service === 'hub') : false;
 
       const onTouchStart = (e) => {
         const touch = e.touches[0];
         touchStartX = touch.clientX;
         touchStartY = touch.clientY;
+        lastMoveX = touch.clientX;
+        lastMoveY = touch.clientY;
         diffX = 0;
         diffY = 0;
-        isSwiping = false;
+        isDrag = false;
+        isSwipe = false;
 
         clearTimeout(longPressTimer);
-        longPressTimer = setTimeout(() => {
-          if (!isHarborEditing) {
-            isHarborEditing = true;
-            if (navigator.vibrate) navigator.vibrate(60);
-            playSFX('tb_clicks');
-            renderHarborTabs();
+        clearTimeout(pressTimer);
+
+        if (isHarborEditing) {
+          // In editing mode: a short hold (~150ms) initiates drag reordering for editable tabs
+          if (!isLocked) {
+            cachedTargets = Array.from(grid.querySelectorAll('.harbor-tab-card')).map(el => ({
+              el,
+              rect: el.getBoundingClientRect(),
+              index: parseInt(el.dataset.index)
+            }));
+
+            pressTimer = setTimeout(() => {
+              isDrag = true;
+              card.classList.add('dragging');
+              card.style.zIndex = '999';
+              card.style.animation = 'none'; // pause wiggle while dragging
+              if (navigator.vibrate) navigator.vibrate(35);
+              try { playSFX('tb_clicks'); } catch (err) {}
+            }, 150);
           }
-        }, 500);
+        } else {
+          // In normal mode: 500ms long press toggles editing mode
+          longPressTimer = setTimeout(() => {
+            isHarborEditing = true;
+            if (navigator.vibrate) navigator.vibrate(50);
+            try { playSFX('tb_clicks'); } catch (err) {}
+            renderHarborTabs();
+          }, 500);
+        }
       };
 
       const onTouchMove = (e) => {
         const touch = e.touches[0];
+        lastMoveX = touch.clientX;
+        lastMoveY = touch.clientY;
         diffX = touch.clientX - touchStartX;
         diffY = touch.clientY - touchStartY;
-        if (Math.abs(diffX) > 10 || Math.abs(diffY) > 10) {
-          clearTimeout(longPressTimer);
+        const moveDist = Math.hypot(diffX, diffY);
+
+        if (isDrag) {
+          try { e.preventDefault(); } catch (err) {}
+          card.style.transform = `translate3d(${diffX}px, ${diffY}px, 0) scale(1.08)`;
+
+          // Spatial 2D collision detection with other harbor cards
+          const touchX = touch.clientX;
+          const touchY = touch.clientY;
+          let currentTarget = null;
+
+          for (let i = 0; i < cachedTargets.length; i++) {
+            const item = cachedTargets[i];
+            if (item.el === card) continue;
+            // Caspian Hub (index 0) cannot be moved or displaced
+            if (item.index === 0) continue;
+            const r = item.rect;
+            if (touchX >= r.left && touchX <= r.right && touchY >= r.top && touchY <= r.bottom) {
+              currentTarget = item.el;
+              break;
+            }
+          }
+
+          cachedTargets.forEach(item => {
+            if (item.el === card) return;
+            if (item.el === currentTarget) {
+              if (!item.el.classList.contains('drop-target')) {
+                item.el.classList.add('drop-target');
+              }
+              item.el.style.transform = 'scale(0.92) translateY(4px)';
+              item.el.style.transition = 'transform 0.15s ease-out';
+            } else {
+              item.el.classList.remove('drop-target');
+              item.el.style.transform = '';
+              item.el.style.transition = 'transform 0.15s ease-out';
+            }
+          });
+          return;
         }
-        if (diffX > 20 && Math.abs(diffX) > Math.abs(diffY)) {
-          isSwiping = true;
+
+        // Cancel long press & drag timers on clear movement
+        if (moveDist > 10) {
+          clearTimeout(longPressTimer);
+          if (!isDrag) clearTimeout(pressTimer);
+        }
+
+        // Detect horizontal swipe
+        if (!isDrag && moveDist > 16 && Math.abs(diffX) > Math.abs(diffY) * 1.4) {
+          isSwipe = true;
+          try { e.preventDefault(); } catch (err) {}
+          card.style.transform = `translateX(${diffX}px)`;
         }
       };
 
       const onTouchEnd = () => {
         clearTimeout(longPressTimer);
-        // Right swipe detection (> 45px) opens editor
-        if (isSwiping && diffX > 45 && Math.abs(diffY) < 35) {
-          const idx = parseInt(card.dataset.index);
-          const tab = harborTabs[idx];
-          if (tab) {
-            if (navigator.vibrate) navigator.vibrate(40);
-            playSFX('tb_modal');
-            openHarborTabEditor(tab);
+        clearTimeout(pressTimer);
+        const wasDrag = isDrag;
+        const wasSwipe = isSwipe;
+
+        // Reset drag visuals on current card
+        card.classList.remove('dragging');
+        card.style.zIndex = '';
+        card.style.transform = '';
+        card.style.animation = '';
+        isDrag = false;
+
+        // Reset drop targets
+        grid.querySelectorAll('.harbor-tab-card').forEach(c => {
+          c.classList.remove('drop-target');
+          c.classList.remove('dragging');
+          c.style.transform = '';
+          c.style.transition = '';
+        });
+
+        // 1. Drag & Drop Reorder
+        if (wasDrag) {
+          const activeDropTarget = grid.querySelector('.harbor-tab-card.drop-target') || (() => {
+            const item = cachedTargets.find(t =>
+              t.el !== card && t.index > 0 &&
+              lastMoveX >= t.rect.left && lastMoveX <= t.rect.right &&
+              lastMoveY >= t.rect.top && lastMoveY <= t.rect.bottom
+            );
+            return item ? item.el : null;
+          })();
+
+          cachedTargets = [];
+
+          if (activeDropTarget) {
+            const sourceIdx = parseInt(card.dataset.index);
+            const targetIdx = parseInt(activeDropTarget.dataset.index);
+
+            if (sourceIdx !== -1 && targetIdx > 0 && sourceIdx !== targetIdx) {
+              const [moved] = harborTabs.splice(sourceIdx, 1);
+              harborTabs.splice(targetIdx, 0, moved);
+              saveHarborTabs();
+              if (navigator.vibrate) navigator.vibrate(35);
+              try { playSFX('tb_clicks'); } catch (err) {}
+              renderHarborTabs();
+              return;
+            }
           }
+          renderHarborTabs();
+          return;
         }
-        isSwiping = false;
+
+        // 2. Swipe Gestures
+        if (wasSwipe) {
+          isSwipe = false;
+
+          // Swipe Left (< -70px): Delete / Remove Harbor Tab
+          if (diffX < -70) {
+            if (isLocked) {
+              // Caspian Hub cannot be deleted! Violently shake to warn user
+              triggerViolentLockedShake(card);
+              card.style.transition = 'transform 0.25s cubic-bezier(0.175, 0.885, 0.32, 1.275)';
+              card.style.transform = '';
+              return;
+            }
+
+            // Animate swipe-to-delete
+            card.style.transition = 'transform 0.22s ease-out, opacity 0.22s ease-out';
+            card.style.transform = 'translateX(-120%)';
+            card.style.opacity = '0';
+
+            const name = tab ? tab.name : 'Tab';
+            harborTabs.splice(idx, 1);
+            saveHarborTabs();
+            try { playSFX('tb_close'); } catch (err) {}
+            if (navigator.vibrate) navigator.vibrate(40);
+            if (window.CaspianBridge && typeof window.CaspianBridge.showToast === 'function') {
+              window.CaspianBridge.showToast(`🗑️ Removed "${name}" from Harbor.`);
+            }
+            setTimeout(renderHarborTabs, 200);
+            return;
+          }
+
+          // Swipe Right (> 70px): Open Tab Editor
+          if (diffX > 70) {
+            if (isLocked) {
+              triggerViolentLockedShake(card);
+              card.style.transition = 'transform 0.25s cubic-bezier(0.175, 0.885, 0.32, 1.275)';
+              card.style.transform = '';
+              return;
+            }
+            card.style.transition = 'transform 0.25s ease';
+            card.style.transform = '';
+            if (tab) openHarborTabEditor(tab);
+            return;
+          }
+
+          // Incomplete swipe -> snap back smoothly
+          card.style.transition = 'transform 0.25s cubic-bezier(0.175, 0.885, 0.32, 1.275)';
+          card.style.transform = '';
+          return;
+        }
       };
 
-      card.addEventListener('touchstart', onTouchStart, { passive: true });
-      card.addEventListener('touchmove', onTouchMove, { passive: true });
+      card.addEventListener('touchstart', onTouchStart, { passive: false });
+      card.addEventListener('touchmove', onTouchMove, { passive: false });
       card.addEventListener('touchend', onTouchEnd);
-      card.addEventListener('touchcancel', () => clearTimeout(longPressTimer));
+      card.addEventListener('touchcancel', () => {
+        clearTimeout(longPressTimer);
+        clearTimeout(pressTimer);
+        isDrag = false;
+        isSwipe = false;
+        card.style.transform = '';
+        card.classList.remove('dragging');
+      });
+
       card.addEventListener('contextmenu', (e) => {
         e.preventDefault();
         if (!isHarborEditing) {
           isHarborEditing = true;
-          playSFX('tb_clicks');
+          try { playSFX('tb_clicks'); } catch (err) {}
           renderHarborTabs();
         }
       });
 
-      // Click event
+      // Click / Tap Event
       card.addEventListener('click', (e) => {
-        if (e.target.closest('.harbor-move-btn') || e.target.closest('.harbor-edit-badge')) return;
         if (Math.abs(diffX) > 15 || Math.abs(diffY) > 15) return;
-
-        const idx = parseInt(card.dataset.index);
-        const tab = harborTabs[idx];
         if (!tab) return;
 
         if (isHarborEditing) {
-          // If in editing mode, clicking the card opens editor
+          if (isLocked) {
+            // Caspian Hub is completely un-editable: violently shake instead of opening editor
+            triggerViolentLockedShake(card);
+            return;
+          }
+          // Normal editable tab: tapping in editing mode opens editor options
           openHarborTabEditor(tab);
           return;
         }
 
         // Normal mode: Launch tab
-        playSFX('tb_clicks');
+        try { playSFX('tb_clicks'); } catch (err) {}
         if (tab.service === 'hub') {
           if (window.CaspianBridge && typeof window.CaspianBridge.openLaunchHubInNewTab === 'function') {
             window.CaspianBridge.openLaunchHubInNewTab();
