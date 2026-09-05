@@ -28,6 +28,7 @@ import android.graphics.Bitmap;
 import android.graphics.BitmapFactory;
 import android.graphics.Canvas;
 import android.graphics.Color;
+import android.graphics.Typeface;
 import android.content.pm.ActivityInfo;
 import android.graphics.Rect;
 import android.graphics.SurfaceTexture;
@@ -61,6 +62,7 @@ import android.speech.RecognitionListener;
 import android.speech.RecognizerIntent;
 import android.speech.SpeechRecognizer;
 import android.text.Editable;
+import android.text.TextUtils;
 import android.text.TextWatcher;
 import android.util.DisplayMetrics;
 import android.util.Log;
@@ -166,6 +168,8 @@ public class MainActivity extends AppCompatActivity {
         public String pendingPrompt = null;
         public Bitmap snapshotBitmap = null;
         public String faviconB64 = null;
+        public String favicon64 = null;
+        public String touchIconUrl = null;
         public String caskId = CaskManager.DEFAULT_CASK_ID;
         public String caskName = "Caspian Cask";
         public String caskIcon = "🌊";
@@ -210,6 +214,8 @@ public class MainActivity extends AppCompatActivity {
         public String caskId;
         public boolean isFavorite;
         public String faviconB64;
+        public String favicon64;
+        public String touchIconUrl;
 
         public ClosedTabRecord(TabItem tab) {
             this.service = tab.service;
@@ -220,6 +226,8 @@ public class MainActivity extends AppCompatActivity {
             this.caskId = tab.caskId;
             this.isFavorite = tab.isFavorite;
             this.faviconB64 = tab.faviconB64;
+            this.favicon64 = tab.favicon64;
+            this.touchIconUrl = tab.touchIconUrl;
         }
     }
 
@@ -7788,7 +7796,6 @@ public class MainActivity extends AppCompatActivity {
         webView.setDownloadListener((downloadUrl, userAgent, contentDisposition, mimeType, contentLength) -> {
             try {
                 CaspianDownloadManager.getInstance(this).enqueueDownload(downloadUrl, userAgent, contentDisposition, mimeType, contentLength);
-                Toast.makeText(this, "📥 Starting download...", Toast.LENGTH_SHORT).show();
             } catch (Exception e) {
                 Toast.makeText(this, "Download error: " + e.getMessage(), Toast.LENGTH_SHORT).show();
             }
@@ -7931,6 +7938,17 @@ public class MainActivity extends AppCompatActivity {
 
                 if (pageUrl != null && !pageUrl.startsWith("file://") && !pageUrl.startsWith("caspian://") && !pageUrl.startsWith("about:")) {
                     HistoryManager.getInstance(MainActivity.this).addEntry(tabItem.title, pageUrl);
+
+                    // Auto-detect high-res 64x64 or touch icons from HTML header
+                    view.evaluateJavascript("(function(){ try { var l = document.querySelector('link[rel*=\"icon\"][sizes*=\"64\"], link[rel=\"apple-touch-icon\"][sizes*=\"64\"], link[rel=\"apple-touch-icon\"]'); return l ? l.href : ''; } catch(e) { return ''; } })();", iconVal -> {
+                        if (iconVal != null && !iconVal.isEmpty() && !iconVal.equals("\"\"") && !iconVal.equals("null")) {
+                            String cleanUrl = iconVal.replace("\"", "").trim();
+                            if (!cleanUrl.isEmpty()) {
+                                tabItem.touchIconUrl = cleanUrl;
+                                tabItem.favicon64 = cleanUrl;
+                            }
+                        }
+                    });
                 }
 
                 if (pageUrl != null && pageUrl.contains("chatgpt.com")) {
@@ -8117,9 +8135,29 @@ public class MainActivity extends AppCompatActivity {
                         icon.compress(Bitmap.CompressFormat.PNG, 100, baos);
                         byte[] b = baos.toByteArray();
                         tabItem.faviconB64 = "data:image/png;base64," + android.util.Base64.encodeToString(b, android.util.Base64.NO_WRAP);
+
+                        try {
+                            Bitmap icon64 = Bitmap.createScaledBitmap(icon, 64, 64, true);
+                            ByteArrayOutputStream baos64 = new ByteArrayOutputStream();
+                            icon64.compress(Bitmap.CompressFormat.PNG, 100, baos64);
+                            byte[] b64 = baos64.toByteArray();
+                            tabItem.favicon64 = "data:image/png;base64," + android.util.Base64.encodeToString(b64, android.util.Base64.NO_WRAP);
+                        } catch (Exception ignored) {}
+
                         evaluateJavascriptInControlSheet("if(window.onTabFaviconReceived) window.onTabFaviconReceived(" 
                                 + tabItem.id + ", " + JSONObject.quote(tabItem.faviconB64) + ");");
                     } catch (Exception ignored) {}
+                }
+            }
+
+            @Override
+            public void onReceivedTouchIconUrl(WebView view, String url, boolean precomposed) {
+                super.onReceivedTouchIconUrl(view, url, precomposed);
+                if (url != null && tabItem != null) {
+                    tabItem.touchIconUrl = url;
+                    if (tabItem.favicon64 == null) {
+                        tabItem.favicon64 = url;
+                    }
                 }
             }
 
@@ -8634,6 +8672,8 @@ public class MainActivity extends AppCompatActivity {
                         if (rec.title != null) restoredTab.title = rec.title;
                         restoredTab.isFavorite = rec.isFavorite;
                         restoredTab.faviconB64 = rec.faviconB64;
+                        restoredTab.favicon64 = rec.favicon64;
+                        restoredTab.touchIconUrl = rec.touchIconUrl;
                     }
                 }
             }
@@ -9106,6 +9146,8 @@ public class MainActivity extends AppCompatActivity {
                 obj.put("url", tab.url);
                 obj.put("service", tab.service);
                 obj.put("faviconB64", tab.faviconB64 != null ? tab.faviconB64 : "");
+                obj.put("favicon64", tab.favicon64 != null ? tab.favicon64 : "");
+                obj.put("touchIconUrl", tab.touchIconUrl != null ? tab.touchIconUrl : "");
                 obj.put("active", tab.id == activeTabId);
                 obj.put("isActive", tab.id == activeTabId);
                 obj.put("isDesktop", tab.isDesktop);
