@@ -5605,23 +5605,25 @@ public class MainActivity extends AppCompatActivity {
             sheetBackdrop.animate().alpha(1f).setDuration(180).start();
 
             if (controlWebView != null) {
-                controlWebView.animate().cancel();
-                controlWebView.setPivotX(controlWebView.getWidth() / 2f);
-                controlWebView.setPivotY(controlWebView.getHeight() / 2f);
-                controlWebView.setScaleX(0.92f);
-                controlWebView.setScaleY(0.92f);
-                controlWebView.setAlpha(0f);
-                controlWebView.setTranslationY(0f);
+                if (!isSheetOpen) {
+                    controlWebView.animate().cancel();
+                    controlWebView.setPivotX(controlWebView.getWidth() / 2f);
+                    controlWebView.setPivotY(controlWebView.getHeight() / 2f);
+                    controlWebView.setScaleX(0.92f);
+                    controlWebView.setScaleY(0.92f);
+                    controlWebView.setAlpha(0f);
+                    controlWebView.setTranslationY(0f);
+
+                    controlWebView.animate()
+                            .scaleX(1f)
+                            .scaleY(1f)
+                            .alpha(1f)
+                            .setDuration(180)
+                            .setInterpolator(new DecelerateInterpolator(1.6f))
+                            .start();
+                }
 
                 evaluateJavascriptInControlSheet("if (typeof window.openDownloadsModalStandalone === 'function') window.openDownloadsModalStandalone();");
-
-                controlWebView.animate()
-                        .scaleX(1f)
-                        .scaleY(1f)
-                        .alpha(1f)
-                        .setDuration(180)
-                        .setInterpolator(new DecelerateInterpolator(1.6f))
-                        .start();
             }
         });
     }
@@ -5629,6 +5631,11 @@ public class MainActivity extends AppCompatActivity {
     public void hideDownloadsManagerModal() {
         runOnUiThread(() -> {
             isDownloadsModalOpen = false;
+            if (isSheetOpen) {
+                evaluateJavascriptInControlSheet("if (typeof window.onDownloadsStandaloneClosed === 'function') window.onDownloadsStandaloneClosed();");
+                return;
+            }
+
             sheetBackdrop.animate().cancel();
             sheetBackdrop.animate().alpha(0f).setDuration(150).start();
 
@@ -7795,7 +7802,8 @@ public class MainActivity extends AppCompatActivity {
 
         webView.setDownloadListener((downloadUrl, userAgent, contentDisposition, mimeType, contentLength) -> {
             try {
-                CaspianDownloadManager.getInstance(this).enqueueDownload(downloadUrl, userAgent, contentDisposition, mimeType, contentLength);
+                String referer = webView.getUrl();
+                CaspianDownloadManager.getInstance(this).enqueueDownload(downloadUrl, userAgent, contentDisposition, mimeType, contentLength, referer);
             } catch (Exception e) {
                 Toast.makeText(this, "Download error: " + e.getMessage(), Toast.LENGTH_SHORT).show();
             }
@@ -9324,10 +9332,10 @@ public class MainActivity extends AppCompatActivity {
             controlWebView.loadUrl("file:///android_asset/browser_control.html");
 
             sheetBackdrop.setOnClickListener(v -> {
-                if (isDownloadsModalOpen) {
-                    hideDownloadsManagerModal();
-                } else {
+                if (isSheetOpen) {
                     hideControlSheet();
+                } else if (isDownloadsModalOpen) {
+                    hideDownloadsManagerModal();
                 }
             });
 
@@ -9418,6 +9426,13 @@ public class MainActivity extends AppCompatActivity {
 
     public void openControlSheet() {
         isSheetOpen = true;
+
+        if (isDownloadsModalOpen) {
+            evaluateJavascriptInControlSheet("if (typeof window.revealCaspianMenu === 'function') window.revealCaspianMenu();");
+            playUiFeedbackSound("ta");
+            return;
+        }
+
         sheetOverlayContainer.setVisibility(View.VISIBLE);
         sheetOverlayContainer.setClickable(true);
         sheetOverlayContainer.setFocusable(true);
@@ -9516,6 +9531,12 @@ public class MainActivity extends AppCompatActivity {
 
     public void hideControlSheet(boolean playSound) {
         isSheetOpen = false;
+
+        if (isDownloadsModalOpen) {
+            evaluateJavascriptInControlSheet("if (typeof window.unrevealCaspianMenu === 'function') window.unrevealCaspianMenu();");
+            if (playSound) playUiFeedbackSound("close");
+            return;
+        }
 
         SharedPreferences prefs = getSharedPreferences(PREFS_NAME, MODE_PRIVATE);
         int closeDuration = 160;
@@ -9635,12 +9656,12 @@ public class MainActivity extends AppCompatActivity {
             exitFullscreenCustomView();
             return;
         }
-        if (isDownloadsModalOpen) {
-            hideDownloadsManagerModal();
-            return;
-        }
         if (isSheetOpen) {
             hideControlSheet();
+            return;
+        }
+        if (isDownloadsModalOpen) {
+            hideDownloadsManagerModal();
             return;
         }
         TabItem currentTab = getTabById(activeTabId);

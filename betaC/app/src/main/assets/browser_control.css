@@ -1813,7 +1813,15 @@ body.theme-flow .oneui-pill-btn.primary {
 
 /* Standalone Downloads Mode (Opened directly from Omnibox without Caspian Menu) */
 body.downloads-standalone-mode #bottom-sheet {
-  display: none !important;
+  transform: translate3d(0, 110vh, 0) !important;
+  transition: transform 0.28s cubic-bezier(0.16, 1, 0.3, 1) !important;
+  pointer-events: none !important;
+}
+
+body.downloads-standalone-mode.menu-revealed #bottom-sheet {
+  transform: translate3d(0, 0, 0) !important;
+  pointer-events: auto !important;
+  z-index: 25000000 !important;
 }
 
 body.downloads-standalone-mode #caspian-downloads-modal {
@@ -1821,6 +1829,7 @@ body.downloads-standalone-mode #caspian-downloads-modal {
   background: transparent !important;
   backdrop-filter: none !important;
   -webkit-backdrop-filter: none !important;
+  z-index: 20000000;
 }
 
 

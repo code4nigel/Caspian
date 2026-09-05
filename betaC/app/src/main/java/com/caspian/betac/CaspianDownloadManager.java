@@ -135,14 +135,20 @@ public class CaspianDownloadManager {
         final DownloadItem item;
         final String userAgent;
         final String contentDisposition;
+        final String referer;
         volatile boolean isPaused = false;
         volatile boolean isCancelled = false;
         HttpURLConnection connection;
 
         DownloadTask(DownloadItem item, String userAgent, String contentDisposition) {
+            this(item, userAgent, contentDisposition, null);
+        }
+
+        DownloadTask(DownloadItem item, String userAgent, String contentDisposition, String referer) {
             this.item = item;
             this.userAgent = userAgent;
             this.contentDisposition = contentDisposition;
+            this.referer = referer;
         }
 
         @Override
@@ -151,114 +157,248 @@ public class CaspianDownloadManager {
             notifyStarted(item);
             updateNotification(item);
 
-            InputStream in = null;
-            FileOutputStream out = null;
+            int retryCount = 0;
+            final int maxRetries = 5;
 
-            try {
-                URL currentUrl = new URL(item.url);
-                int redirectCount = 0;
-                boolean connected = false;
-
-                // Follow up to 10 redirects, preserving cookies across domains
-                while (redirectCount < 10) {
-                    if (isCancelled) break;
-                    connection = (HttpURLConnection) currentUrl.openConnection();
-                    connection.setInstanceFollowRedirects(false);
-                    connection.setConnectTimeout(15000);
-                    connection.setReadTimeout(30000);
-
-                    // Inject WebView session cookies
-                    try {
-                        String cookies = CookieManager.getInstance().getCookie(currentUrl.toString());
-                        if (cookies != null && !cookies.isEmpty()) {
-                            connection.setRequestProperty("Cookie", cookies);
-                        }
-                    } catch (Exception ignored) {}
-
-                    if (userAgent != null && !userAgent.isEmpty()) {
-                        connection.setRequestProperty("User-Agent", userAgent);
-                    } else {
-                        connection.setRequestProperty("User-Agent", "Mozilla/5.0 (Linux; Android 14; Mobile) CaspianFlow/1.2");
-                    }
-                    connection.setRequestProperty("Accept", "*/*");
-                    connection.setRequestProperty("Accept-Encoding", "identity");
-
-                    // Resume support if partial bytes exist
-                    if (item.downloadedBytes > 0) {
-                        connection.setRequestProperty("Range", "bytes=" + item.downloadedBytes + "-");
-                    }
-
-                    connection.connect();
-                    int code = connection.getResponseCode();
-
-                    if (code == HttpURLConnection.HTTP_MOVED_TEMP ||
-                        code == HttpURLConnection.HTTP_MOVED_PERM ||
-                        code == HttpURLConnection.HTTP_SEE_OTHER ||
-                        code == 307 || code == 308) {
-                        String loc = connection.getHeaderField("Location");
-                        connection.disconnect();
-                        if (loc != null && !loc.isEmpty()) {
-                            currentUrl = new URL(currentUrl, loc);
-                            redirectCount++;
-                            continue;
-                        }
-                    }
-
-                    if (code >= 200 && code < 300) {
-                        connected = true;
-                        break;
-                    } else if (code == 416) {
-                        // Range Not Satisfiable - file might already be complete
-                        item.downloadedBytes = 0;
-                        connection.disconnect();
-                        continue;
-                    } else {
-                        throw new Exception("HTTP Error: " + code + " " + connection.getResponseMessage());
-                    }
-                }
-
+            while (retryCount < maxRetries) {
                 if (isCancelled) {
                     handleCancelled(item);
                     return;
                 }
-
-                if (!connected) {
-                    throw new Exception("Failed to connect after redirects");
+                if (isPaused) {
+                    item.status = "PAUSED";
+                    notifyProgress(item);
+                    updateNotification(item);
+                    return;
                 }
 
-                // Resolve file name if not already set or guessed
-                long contentLength = connection.getContentLengthLong();
-                if (contentLength > 0 && item.totalBytes <= 0) {
-                    item.totalBytes = item.downloadedBytes > 0 ? (item.downloadedBytes + contentLength) : contentLength;
-                }
+                InputStream in = null;
+                FileOutputStream out = null;
 
-                String disposition = connection.getHeaderField("Content-Disposition");
-                if (disposition == null) disposition = this.contentDisposition;
-                String contentType = connection.getContentType();
-                if (contentType != null && (item.mimeType == null || item.mimeType.isEmpty())) {
-                    item.mimeType = contentType.split(";")[0].trim();
-                }
+                try {
+                    URL currentUrl = new URL(item.url);
+                    String currentReferer = this.referer;
+                    int redirectCount = 0;
+                    boolean connected = false;
 
-                if (item.fileName == null || item.fileName.isEmpty() || item.fileName.equals("downloadfile")) {
-                    item.fileName = resolveFileName(item.url, disposition, item.mimeType);
-                }
+                    // Follow up to 10 redirects, preserving cookies and updating referer across domains
+                    while (redirectCount < 10) {
+                        if (isCancelled) break;
+                        connection = (HttpURLConnection) currentUrl.openConnection();
+                        connection.setInstanceFollowRedirects(false);
+                        connection.setConnectTimeout(15000);
+                        connection.setReadTimeout(30000);
 
-                File destFile = getDestinationFile(item.fileName, item.downloadedBytes > 0);
-                item.filePath = destFile.getAbsolutePath();
-                item.fileName = destFile.getName();
+                        // Inject WebView session cookies from referer and download domain
+                        try {
+                            String cookies = null;
+                            if (currentReferer != null && !currentReferer.isEmpty()) {
+                                cookies = CookieManager.getInstance().getCookie(currentReferer);
+                            }
+                            if (cookies == null || cookies.isEmpty()) {
+                                cookies = CookieManager.getInstance().getCookie(currentUrl.toString());
+                            }
+                            if (cookies != null && !cookies.isEmpty()) {
+                                connection.setRequestProperty("Cookie", cookies);
+                            }
+                        } catch (Exception ignored) {}
 
-                in = connection.getInputStream();
-                out = new FileOutputStream(destFile, item.downloadedBytes > 0);
+                        // Standard modern browser headers so CDNs/Cloudflare don't drop the connection
+                        if (currentReferer != null && !currentReferer.isEmpty()) {
+                            connection.setRequestProperty("Referer", currentReferer);
+                        } else {
+                            try {
+                                URL u = new URL(item.url);
+                                connection.setRequestProperty("Referer", u.getProtocol() + "://" + u.getHost() + "/");
+                            } catch (Exception ignored) {}
+                        }
 
-                byte[] buffer = new byte[BUFFER_SIZE];
-                int bytesRead;
-                long lastSpeedCalcTime = System.currentTimeMillis();
-                long bytesSinceLastSpeedCalc = 0;
-                long lastProgressNotifyTime = 0;
+                        if (userAgent != null && !userAgent.isEmpty()) {
+                            connection.setRequestProperty("User-Agent", userAgent);
+                        } else {
+                            connection.setRequestProperty("User-Agent", "Mozilla/5.0 (Linux; Android 14; Mobile) CaspianFlow/1.2");
+                        }
+                        connection.setRequestProperty("Accept", "text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,application/vnd.android.package-archive,*/*;q=0.8");
+                        connection.setRequestProperty("Accept-Language", "en-US,en;q=0.9");
+                        connection.setRequestProperty("Accept-Encoding", "identity");
+                        connection.setRequestProperty("Connection", "keep-alive");
+                        connection.setRequestProperty("Sec-Fetch-Dest", "document");
+                        connection.setRequestProperty("Sec-Fetch-Mode", "navigate");
+                        connection.setRequestProperty("Sec-Fetch-Site", "same-origin");
+                        connection.setRequestProperty("Upgrade-Insecure-Requests", "1");
 
-                while (true) {
+                        // Resume support if partial bytes exist
+                        if (item.downloadedBytes > 0) {
+                            connection.setRequestProperty("Range", "bytes=" + item.downloadedBytes + "-");
+                        }
+
+                        connection.connect();
+                        int code = connection.getResponseCode();
+
+                        if (code == HttpURLConnection.HTTP_MOVED_TEMP ||
+                            code == HttpURLConnection.HTTP_MOVED_PERM ||
+                            code == HttpURLConnection.HTTP_SEE_OTHER ||
+                            code == 307 || code == 308) {
+                            String loc = connection.getHeaderField("Location");
+                            connection.disconnect();
+                            if (loc != null && !loc.isEmpty()) {
+                                currentReferer = currentUrl.toString();
+                                currentUrl = new URL(currentUrl, loc);
+                                redirectCount++;
+                                continue;
+                            }
+                        }
+
+                        if (code >= 200 && code < 300) {
+                            connected = true;
+                            break;
+                        } else if (code == 416) {
+                            // Range Not Satisfiable - reset to start
+                            item.downloadedBytes = 0;
+                            connection.disconnect();
+                            continue;
+                        } else {
+                            throw new Exception("HTTP Error: " + code + " " + connection.getResponseMessage());
+                        }
+                    }
+
                     if (isCancelled) {
-                        break;
+                        handleCancelled(item);
+                        return;
+                    }
+
+                    if (!connected) {
+                        throw new Exception("Failed to connect after redirects");
+                    }
+
+                    int responseCode = connection.getResponseCode();
+                    boolean isAppending = item.downloadedBytes > 0 && responseCode == 206;
+                    if (responseCode == 200) {
+                        item.downloadedBytes = 0;
+                        isAppending = false;
+                    }
+
+                    // Resolve file name if not already set or guessed
+                    long contentLength = connection.getContentLengthLong();
+                    if (contentLength > 0 && (item.totalBytes <= 0 || responseCode == 200)) {
+                        item.totalBytes = isAppending ? (item.downloadedBytes + contentLength) : contentLength;
+                    }
+
+                    String disposition = connection.getHeaderField("Content-Disposition");
+                    if (disposition == null) disposition = this.contentDisposition;
+                    String contentType = connection.getContentType();
+                    if (contentType != null && (item.mimeType == null || item.mimeType.isEmpty())) {
+                        item.mimeType = contentType.split(";")[0].trim();
+                    }
+
+                    if (item.fileName == null || item.fileName.isEmpty() || item.fileName.equals("downloadfile")) {
+                        item.fileName = resolveFileName(item.url, disposition, item.mimeType);
+                    }
+
+                    File destFile = getDestinationFile(item.fileName, isAppending);
+                    item.filePath = destFile.getAbsolutePath();
+                    item.fileName = destFile.getName();
+
+                    in = connection.getInputStream();
+                    out = new FileOutputStream(destFile, isAppending);
+
+                    byte[] buffer = new byte[BUFFER_SIZE];
+                    int bytesRead;
+                    long lastSpeedCalcTime = System.currentTimeMillis();
+                    long bytesSinceLastSpeedCalc = 0;
+                    long lastProgressNotifyTime = 0;
+
+                    while (true) {
+                        if (isCancelled) {
+                            break;
+                        }
+                        if (isPaused) {
+                            item.status = "PAUSED";
+                            notifyProgress(item);
+                            updateNotification(item);
+                            return;
+                        }
+
+                        // If total size is known and all bytes have already been fetched, complete immediately!
+                        if (item.totalBytes > 0 && item.downloadedBytes >= item.totalBytes) {
+                            break;
+                        }
+
+                        int toRead = BUFFER_SIZE;
+                        if (item.totalBytes > 0) {
+                            long remaining = item.totalBytes - item.downloadedBytes;
+                            if (remaining <= 0) break;
+                            if (remaining < BUFFER_SIZE) toRead = (int) remaining;
+                        }
+
+                        bytesRead = in.read(buffer, 0, toRead);
+                        if (bytesRead == -1) {
+                            if (item.totalBytes > 0 && item.downloadedBytes < item.totalBytes) {
+                                throw new java.io.IOException("Premature EOF: read " + item.downloadedBytes + " of " + item.totalBytes + " bytes");
+                            }
+                            break;
+                        }
+
+                        out.write(buffer, 0, bytesRead);
+                        item.downloadedBytes += bytesRead;
+                        bytesSinceLastSpeedCalc += bytesRead;
+
+                        long now = System.currentTimeMillis();
+                        if (now - lastSpeedCalcTime >= 500) {
+                            long deltaMs = now - lastSpeedCalcTime;
+                            if (deltaMs > 0) {
+                                item.speedBytesPerSec = (bytesSinceLastSpeedCalc * 1000) / deltaMs;
+                                if (item.speedBytesPerSec > 0 && item.totalBytes > item.downloadedBytes) {
+                                    item.etaSeconds = (item.totalBytes - item.downloadedBytes) / item.speedBytesPerSec;
+                                } else {
+                                    item.etaSeconds = -1;
+                                }
+                            }
+                            lastSpeedCalcTime = now;
+                            bytesSinceLastSpeedCalc = 0;
+                        }
+
+                        if (now - lastProgressNotifyTime >= 250 || (item.totalBytes > 0 && item.downloadedBytes >= item.totalBytes)) {
+                            lastProgressNotifyTime = now;
+                            notifyProgress(item);
+                            updateNotification(item);
+                        }
+
+                        if (item.totalBytes > 0 && item.downloadedBytes >= item.totalBytes) {
+                            break;
+                        }
+                    }
+
+                    out.flush();
+                    try {
+                        out.getFD().sync();
+                    } catch (Exception ignored) {}
+
+                    if (isCancelled) {
+                        handleCancelled(item);
+                        if (destFile.exists()) destFile.delete();
+                        return;
+                    }
+
+                    // Download completed successfully
+                    item.status = "COMPLETED";
+                    item.speedBytesPerSec = 0;
+                    item.etaSeconds = 0;
+                    if (item.totalBytes <= 0) item.totalBytes = item.downloadedBytes;
+
+                    // Register file in Android MediaStore / Downloads gallery
+                    MediaScannerConnection.scanFile(context, new String[]{destFile.getAbsolutePath()}, new String[]{item.mimeType}, null);
+
+                    activeTasks.remove(item.id);
+                    saveHistory();
+                    notifyCompleted(item);
+                    showCompletionNotification(item);
+                    return; // Success! Exit retry loop.
+
+                } catch (Exception e) {
+                    if (isCancelled) {
+                        handleCancelled(item);
+                        return;
                     }
                     if (isPaused) {
                         item.status = "PAUSED";
@@ -267,82 +407,13 @@ public class CaspianDownloadManager {
                         return;
                     }
 
-                    // If total size is known and all bytes have already been fetched, complete immediately!
-                    if (item.totalBytes > 0 && item.downloadedBytes >= item.totalBytes) {
-                        break;
+                    retryCount++;
+                    if (retryCount < maxRetries && (item.downloadedBytes > 0 || e instanceof java.io.IOException)) {
+                        Log.w(TAG, "Download interrupted for " + item.fileName + " (" + e.getMessage() + "), auto-resuming from " + item.downloadedBytes + " bytes (attempt " + retryCount + "/" + maxRetries + ")...");
+                        try { Thread.sleep(1000); } catch (Exception ignored) {}
+                        continue; // Reconnect and resume seamlessly!
                     }
 
-                    int toRead = BUFFER_SIZE;
-                    if (item.totalBytes > 0) {
-                        long remaining = item.totalBytes - item.downloadedBytes;
-                        if (remaining <= 0) break;
-                        if (remaining < BUFFER_SIZE) toRead = (int) remaining;
-                    }
-
-                    bytesRead = in.read(buffer, 0, toRead);
-                    if (bytesRead == -1) {
-                        break;
-                    }
-
-                    out.write(buffer, 0, bytesRead);
-                    item.downloadedBytes += bytesRead;
-                    bytesSinceLastSpeedCalc += bytesRead;
-
-                    long now = System.currentTimeMillis();
-                    if (now - lastSpeedCalcTime >= 500) {
-                        long deltaMs = now - lastSpeedCalcTime;
-                        if (deltaMs > 0) {
-                            item.speedBytesPerSec = (bytesSinceLastSpeedCalc * 1000) / deltaMs;
-                            if (item.speedBytesPerSec > 0 && item.totalBytes > item.downloadedBytes) {
-                                item.etaSeconds = (item.totalBytes - item.downloadedBytes) / item.speedBytesPerSec;
-                            } else {
-                                item.etaSeconds = -1;
-                            }
-                        }
-                        lastSpeedCalcTime = now;
-                        bytesSinceLastSpeedCalc = 0;
-                    }
-
-                    if (now - lastProgressNotifyTime >= 250 || (item.totalBytes > 0 && item.downloadedBytes >= item.totalBytes)) {
-                        lastProgressNotifyTime = now;
-                        notifyProgress(item);
-                        updateNotification(item);
-                    }
-
-                    if (item.totalBytes > 0 && item.downloadedBytes >= item.totalBytes) {
-                        break;
-                    }
-                }
-
-                out.flush();
-                try {
-                    out.getFD().sync();
-                } catch (Exception ignored) {}
-
-                if (isCancelled) {
-                    handleCancelled(item);
-                    if (destFile.exists()) destFile.delete();
-                    return;
-                }
-
-                // Download completed successfully
-                item.status = "COMPLETED";
-                item.speedBytesPerSec = 0;
-                item.etaSeconds = 0;
-                if (item.totalBytes <= 0) item.totalBytes = item.downloadedBytes;
-
-                // Register file in Android MediaStore / Downloads gallery
-                MediaScannerConnection.scanFile(context, new String[]{destFile.getAbsolutePath()}, new String[]{item.mimeType}, null);
-
-                activeTasks.remove(item.id);
-                saveHistory();
-                notifyCompleted(item);
-                showCompletionNotification(item);
-
-            } catch (Exception e) {
-                if (isCancelled) {
-                    handleCancelled(item);
-                } else {
                     Log.e(TAG, "Download failed for " + item.fileName, e);
                     item.status = "FAILED";
                     item.error = e.getMessage() != null ? e.getMessage() : "Network error";
@@ -350,13 +421,14 @@ public class CaspianDownloadManager {
                     saveHistory();
                     notifyFailed(item, item.error);
                     showFailedNotification(item);
+                    return;
+                } finally {
+                    try {
+                        if (in != null) in.close();
+                        if (out != null) out.close();
+                        if (connection != null) connection.disconnect();
+                    } catch (Exception ignored) {}
                 }
-            } finally {
-                try {
-                    if (in != null) in.close();
-                    if (out != null) out.close();
-                    if (connection != null) connection.disconnect();
-                } catch (Exception ignored) {}
             }
         }
 
@@ -394,6 +466,10 @@ public class CaspianDownloadManager {
      * Enqueue an HTTP/HTTPS download directly from WebView setDownloadListener or user click.
      */
     public String enqueueDownload(String url, String userAgent, String contentDisposition, String mimeType, long contentLength) {
+        return enqueueDownload(url, userAgent, contentDisposition, mimeType, contentLength, null);
+    }
+
+    public String enqueueDownload(String url, String userAgent, String contentDisposition, String mimeType, long contentLength, String referer) {
         if (url == null || url.isEmpty()) return null;
 
         String id = "dl_" + System.currentTimeMillis() + "_" + (int)(Math.random() * 1000);
@@ -406,11 +482,13 @@ public class CaspianDownloadManager {
         item.notificationId = (int) (System.currentTimeMillis() & 0xfffffff);
         item.fileName = resolveFileName(url, contentDisposition, mimeType);
 
-        DownloadTask task = new DownloadTask(item, userAgent, contentDisposition);
+        DownloadTask task = new DownloadTask(item, userAgent, contentDisposition, referer);
         activeTasks.put(id, task);
 
         // Prepend to history so it appears first
-        historyList.add(0, item);
+        synchronized (historyList) {
+            historyList.add(0, item);
+        }
         saveHistory();
 
         executor.execute(task);
@@ -511,40 +589,61 @@ public class CaspianDownloadManager {
     }
 
     public void cancelDownload(String id) {
-        DownloadTask task = activeTasks.get(id);
+        DownloadTask task = activeTasks.remove(id);
         if (task != null) {
             task.isCancelled = true;
+            if (task.connection != null) {
+                new Thread(() -> {
+                    try { task.connection.disconnect(); } catch (Exception ignored) {}
+                }).start();
+            }
+            task.handleCancelled(task.item);
         } else {
-            for (DownloadItem item : historyList) {
-                if (item.id.equals(id)) {
-                    item.status = "CANCELLED";
-                    cancelNotification(item);
-                    saveHistory();
-                    notifyCancelled(item);
-                    break;
+            synchronized (historyList) {
+                for (DownloadItem item : historyList) {
+                    if (item.id.equals(id)) {
+                        item.status = "CANCELLED";
+                        cancelNotification(item);
+                        saveHistory();
+                        notifyCancelled(item);
+                        break;
+                    }
                 }
             }
         }
     }
 
     public void deleteDownload(String id, boolean deleteFile) {
-        cancelDownload(id);
-        DownloadItem toRemove = null;
-        for (DownloadItem item : historyList) {
-            if (item.id.equals(id)) {
-                toRemove = item;
-                break;
+        DownloadTask task = activeTasks.remove(id);
+        if (task != null) {
+            task.isCancelled = true;
+            if (task.connection != null) {
+                new Thread(() -> {
+                    try { task.connection.disconnect(); } catch (Exception ignored) {}
+                }).start();
             }
+            cancelNotification(task.item);
         }
-        if (toRemove != null) {
-            if (deleteFile && toRemove.filePath != null) {
-                try {
-                    File file = new File(toRemove.filePath);
-                    if (file.exists()) file.delete();
-                } catch (Exception ignored) {}
+        DownloadItem toRemove = null;
+        synchronized (historyList) {
+            for (DownloadItem item : historyList) {
+                if (item.id.equals(id)) {
+                    toRemove = item;
+                    break;
+                }
             }
-            historyList.remove(toRemove);
-            saveHistory();
+            if (toRemove != null) {
+                if (deleteFile && toRemove.filePath != null) {
+                    try {
+                        File file = new File(toRemove.filePath);
+                        if (file.exists()) file.delete();
+                    } catch (Exception ignored) {}
+                }
+                cancelNotification(toRemove);
+                historyList.remove(toRemove);
+                saveHistory();
+                notifyCancelled(toRemove);
+            }
         }
     }
 

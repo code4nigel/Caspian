@@ -5727,13 +5727,27 @@
   window.openDownloadsModalStandalone = function() {
     try { if (window.playSFX) window.playSFX('tb_clicks'); } catch (e) {}
     document.body.classList.add('downloads-standalone-mode');
+    document.body.classList.remove('menu-revealed');
     const modal = document.getElementById('caspian-downloads-modal');
     if (modal) modal.style.display = 'flex';
     refreshDownloadsList();
   };
 
+  window.revealCaspianMenu = function() {
+    document.body.classList.add('menu-revealed');
+    if (typeof renderOpenTabs === 'function') renderOpenTabs();
+    if (typeof syncAppVersion === 'function') syncAppVersion();
+    if (typeof restoreSavedSettings === 'function') restoreSavedSettings();
+    if (typeof updateDevHudCounters === 'function') updateDevHudCounters();
+  };
+
+  window.unrevealCaspianMenu = function() {
+    document.body.classList.remove('menu-revealed');
+  };
+
   window.onDownloadsStandaloneClosed = function() {
     document.body.classList.remove('downloads-standalone-mode');
+    document.body.classList.remove('menu-revealed');
     const modal = document.getElementById('caspian-downloads-modal');
     if (modal) modal.style.display = 'none';
   };
@@ -6022,7 +6036,11 @@
   window.cancelDownloadItem = function(id) {
     try { if (window.playSFX) window.playSFX('tb_clicks'); } catch (e) {}
     if (window.CaspianBridge) {
-      window.CaspianBridge.cancelDownload(id);
+      if (typeof window.CaspianBridge.deleteDownload === 'function') {
+        window.CaspianBridge.deleteDownload(id, true);
+      } else {
+        window.CaspianBridge.cancelDownload(id);
+      }
       setTimeout(refreshDownloadsList, 150);
     }
   };
