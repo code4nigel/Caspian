@@ -189,10 +189,16 @@ public class WaveguardShield {
             }
             String combinedSelectors = cssBuilder.toString();
 
-            // 4. Build comprehensive client-side protection script (CSS + MutationObserver + Fetch/XHR Guard)
+            // 4. Build client-side cosmetic hiding script (Safe CSS injection + light MutationObserver)
             StringBuilder js = new StringBuilder();
             js.append("(function() {\n");
             js.append("  if (window.__caspian_waveguard_active) return;\n");
+            js.append("  try {\n");
+            js.append("    var curH = (window.location && window.location.hostname) ? window.location.hostname.toLowerCase() : '';\n");
+            js.append("    if (curH.indexOf('instagram.com') !== -1 || curH.indexOf('facebook.com') !== -1) {\n");
+            js.append("      return;\n");
+            js.append("    }\n");
+            js.append("  } catch(e) {}\n");
             js.append("  window.__caspian_waveguard_active = true;\n");
 
             if (!combinedSelectors.isEmpty()) {
@@ -209,7 +215,7 @@ public class WaveguardShield {
                 js.append("    function cleanNode(n) {\n");
                 js.append("      if (!n || n.nodeType !== 1) return;\n");
                 js.append("      try {\n");
-                js.append("        var curH = window.location.hostname.toLowerCase();\n");
+                js.append("        var curH = (window.location && window.location.hostname) ? window.location.hostname.toLowerCase() : '';\n");
                 js.append("        if (curH.indexOf('instagram.com') !== -1 || curH.indexOf('facebook.com') !== -1 || curH.indexOf('reddit.com') !== -1 || curH.indexOf('youtube.com') !== -1) return;\n");
                 js.append("        if (n.classList && n.classList.contains('aderasr-test-adsbox')) return;\n");
                 js.append("        if (n.matches && n.matches(sel)) { n.remove(); return; }\n");
@@ -228,72 +234,6 @@ public class WaveguardShield {
                 js.append("    obs.observe(document.documentElement || document.body, { childList: true, subtree: true });\n");
                 js.append("  } catch(e) {}\n");
             }
-
-            js.append("  try {\n");
-            js.append("    var blockedSet = new Set([").append(domainsJson.toString()).append("]);\n");
-            js.append("    var kwList = [").append(pathsJson.toString()).append("];\n");
-            js.append("    function isBlockedUrl(u) {\n");
-            js.append("      if (!u) return false;\n");
-            js.append("      try {\n");
-            js.append("        var s = String(u).toLowerCase();\n");
-            js.append("        var h = '';\n");
-            js.append("        var pIdx = s.indexOf('://');\n");
-            js.append("        if (pIdx !== -1) {\n");
-            js.append("          var p = pIdx + 3;\n");
-            js.append("          var sl = s.indexOf('/', p);\n");
-            js.append("          var q = s.indexOf('?', p);\n");
-            js.append("          var end = sl !== -1 ? sl : (q !== -1 ? q : s.length);\n");
-            js.append("          h = s.substring(p, end);\n");
-            js.append("          var col = h.indexOf(':');\n");
-            js.append("          if (col !== -1) h = h.substring(0, col);\n");
-            js.append("        } else {\n");
-            js.append("          h = s.split('/')[0].split('?')[0].split(':')[0];\n");
-            js.append("        }\n");
-            js.append("        if (h === 'instagram.com' || h.endsWith('.instagram.com') || h === 'cdninstagram.com' || h.endsWith('.cdninstagram.com') || h === 'fbcdn.net' || h.endsWith('.fbcdn.net') || h === 'facebook.com' || h.endsWith('.facebook.com') || h === 'google.com' || h.endsWith('.google.com') || h === 'youtube.com' || h.endsWith('.youtube.com') || h === 'reddit.com' || h.endsWith('.reddit.com') || h === 'redditstatic.com' || h.endsWith('.redditstatic.com') || h === 'redditmedia.com' || h.endsWith('.redditmedia.com') || h === 'redd.it' || h.endsWith('.redd.it') || h === 'wikipedia.org') return false;\n");
-            js.append("        for (var k = 0; k < kwList.length; k++) {\n");
-            js.append("          if (s.indexOf(kwList[k]) !== -1) return true;\n");
-            js.append("        }\n");
-            js.append("        if (blockedSet.has(h)) return true;\n");
-            js.append("        var dot = h.indexOf('.');\n");
-            js.append("        while (dot > 0 && dot < h.length - 1) {\n");
-            js.append("          if (blockedSet.has(h.substring(dot + 1))) return true;\n");
-            js.append("          dot = h.indexOf('.', dot + 1);\n");
-            js.append("        }\n");
-            js.append("      } catch(e) {}\n");
-            js.append("      return false;\n");
-            js.append("    }\n");
-            js.append("    if (window.fetch) {\n");
-            js.append("      var origFetch = window.fetch;\n");
-            js.append("      window.fetch = function(input, init) {\n");
-            js.append("        var url = typeof input === 'string' ? input : (input && input.url ? input.url : '');\n");
-            js.append("        if (isBlockedUrl(url)) {\n");
-            js.append("          return Promise.reject(new TypeError('Failed to fetch (net::ERR_BLOCKED_BY_CLIENT)'));\n");
-            js.append("        }\n");
-            js.append("        return origFetch.apply(this, arguments);\n");
-            js.append("      };\n");
-            js.append("    }\n");
-            js.append("    if (window.XMLHttpRequest) {\n");
-            js.append("      var origOpen = XMLHttpRequest.prototype.open;\n");
-            js.append("      var origSend = XMLHttpRequest.prototype.send;\n");
-            js.append("      XMLHttpRequest.prototype.open = function(m, url) {\n");
-            js.append("        this.__c_blocked = isBlockedUrl(url);\n");
-            js.append("        return origOpen.apply(this, arguments);\n");
-            js.append("      };\n");
-            js.append("      XMLHttpRequest.prototype.send = function() {\n");
-            js.append("        if (this.__c_blocked) {\n");
-            js.append("          var self = this;\n");
-            js.append("          setTimeout(function() {\n");
-            js.append("            try {\n");
-            js.append("              self.dispatchEvent(new ProgressEvent('error'));\n");
-            js.append("              if (typeof self.onerror === 'function') self.onerror(new ProgressEvent('error'));\n");
-            js.append("            } catch(e) {}\n");
-            js.append("          }, 0);\n");
-            js.append("          return;\n");
-            js.append("        }\n");
-            js.append("        return origSend.apply(this, arguments);\n");
-            js.append("      };\n");
-            js.append("    }\n");
-            js.append("  } catch(e) {}\n");
             js.append("})();");
 
             cosmeticCssInjection = js.toString();

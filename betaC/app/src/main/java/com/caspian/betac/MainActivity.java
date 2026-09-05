@@ -7610,6 +7610,7 @@ public class MainActivity extends AppCompatActivity {
         settings.setMediaPlaybackRequiresUserGesture(false);
 
         if (!isIncognito) {
+            settings.setCacheMode(WebSettings.LOAD_DEFAULT);
             CaskManager.applyProfileToWebView(webView, finalCaskId);
             CookieManager.getInstance().setAcceptCookie(true);
             CookieManager.getInstance().setAcceptThirdPartyCookies(webView, true);
@@ -7732,7 +7733,14 @@ public class MainActivity extends AppCompatActivity {
                             pageHost = Uri.parse(tabItem.url).getHost();
                         } catch (Exception ignored) {}
                     }
-                    if (waveguardShield != null && waveguardShield.isBlocked(request.getUrl().toString(), pageHost, tabItem != null ? tabItem.id : -1)) {
+                    if (pageHost != null) {
+                        String ph = pageHost.toLowerCase(java.util.Locale.ROOT);
+                        if (ph.equals("instagram.com") || ph.endsWith(".instagram.com")
+                                || ph.equals("facebook.com") || ph.endsWith(".facebook.com")) {
+                            return super.shouldInterceptRequest(view, request);
+                        }
+                    }
+                    if (waveguardShield != null && waveguardShield.isGlobalEnabled() && waveguardShield.isBlocked(request.getUrl().toString(), pageHost, tabItem != null ? tabItem.id : -1)) {
                         WebResourceResponse blockedResp = waveguardShield.getBlockedResponse(request.getUrl().toString());
                         if (blockedResp != null) return blockedResp;
                     }
@@ -7812,13 +7820,19 @@ public class MainActivity extends AppCompatActivity {
                     if (pageUrl != null) {
                         try { pageHost = Uri.parse(pageUrl).getHost(); } catch (Exception ignored) {}
                     }
-                    if (!waveguardShield.isSiteWhitelisted(pageHost)) {
-                        try {
-                            String cosmetic = waveguardShield.getCosmeticCssInjection();
-                            if (cosmetic != null && !cosmetic.isEmpty()) {
-                                view.evaluateJavascript(cosmetic, null);
-                            }
-                        } catch (Throwable ignored) {}
+                    if (pageHost != null) {
+                        String ph = pageHost.toLowerCase(java.util.Locale.ROOT);
+                        if (ph.equals("instagram.com") || ph.endsWith(".instagram.com")
+                                || ph.equals("facebook.com") || ph.endsWith(".facebook.com")) {
+                            // Never inject cosmetic CSS into Instagram or Facebook
+                        } else if (!waveguardShield.isSiteWhitelisted(pageHost)) {
+                            try {
+                                String cosmetic = waveguardShield.getCosmeticCssInjection();
+                                if (cosmetic != null && !cosmetic.isEmpty()) {
+                                    view.evaluateJavascript(cosmetic, null);
+                                }
+                            } catch (Throwable ignored) {}
+                        }
                     }
                 }
 
