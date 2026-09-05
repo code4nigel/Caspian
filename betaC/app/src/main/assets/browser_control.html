@@ -60,7 +60,7 @@
         </div>
         <div style="display: flex; flex-direction: column;">
           <span class="sheet-brand-name">CASPIAN FLOW</span>
-          <span class="sheet-brand-tag">V1.2.00-BetaC</span>
+          <span class="sheet-brand-tag">V1.2.01-BetaC</span>
         </div>
       </div>
       <div class="header-icon-actions">
@@ -735,9 +735,15 @@
               style="font-size: 10px; font-weight: 700; padding: 3px 8px; border-radius: 12px; border: none; background: transparent; color: var(--text-sub); cursor: pointer;">Single</button>
           </div>
 
-          <button id="close-all-tabs-btn" class="oneui-pill-btn secondary"
-            style="padding: 4px 10px; font-size: 11px; color: #ef4444; border-color: rgba(239,68,68,0.3);">Close
-            All</button>
+          <div style="display: flex; align-items: center; gap: 8px;">
+            <button id="close-all-tabs-btn" class="oneui-pill-btn secondary"
+              style="padding: 4px 10px; font-size: 11px; color: #ef4444; border-color: rgba(239,68,68,0.3); cursor: pointer;">Close
+              All</button>
+            <button id="undo-closed-tab-btn" class="oneui-pill-btn secondary"
+              style="display: none; padding: 4px 10px; font-size: 11px; color: #38bdf8; border-color: rgba(56,189,248,0.35); background: rgba(56,189,248,0.08); cursor: pointer; align-items: center; gap: 4px;">
+              <span>↺ Undo</span>
+            </button>
+          </div>
         </div>
         <!-- Inside Group Banner -->
         <div id="inside-group-header" class="inside-group-banner"
@@ -2048,8 +2054,8 @@
     </div>
   </div>
 
-  <!-- Tab Undo Toast Container (Separate Top-Level Toast) -->
-  <div id="undo-toast-container" class="undo-toast" style="display: none;">
+  <!-- Tab Undo Toast Container (Deprecated in favor of inline Active Tabs Undo button) -->
+  <div id="undo-toast-container" class="undo-toast" style="display: none !important; pointer-events: none !important; visibility: hidden !important;">
     <div class="undo-toast-content">
       <span>Tab closed</span>
       <button id="undo-toast-btn" class="oneui-pill-btn primary"
@@ -2114,12 +2120,15 @@
       </div>
 
       <div style="margin-top: 18px; display: flex; gap: 10px; align-items: center; justify-content: space-between;">
-        <button type="button" id="harbor-delete-btn" class="oneui-pill-btn danger" style="padding: 8px 14px; border-radius: 12px; font-weight: 700; font-size: 11px; color: #ef4444; border-color: rgba(239,68,68,0.3); cursor: pointer; pointer-events: auto;" style="padding: 8px 14px; border-radius: 12px; font-weight: 700; font-size: 11px; color: #ef4444; border-color: rgba(239,68,68,0.3);">
+        <button type="button" id="harbor-delete-btn" class="oneui-pill-btn danger"
+          style="padding: 8px 14px; border-radius: 12px; font-weight: 700; font-size: 11px; color: #ef4444; border-color: rgba(239,68,68,0.3); cursor: pointer; pointer-events: auto;">
           🗑️ Delete
         </button>
         <div style="display: flex; gap: 8px; margin-left: auto;">
-          <button type="button" id="harbor-editor-cancel-btn" class="oneui-pill-btn secondary" style="padding: 8px 14px; border-radius: 12px; font-size: 11px; cursor: pointer; pointer-events: auto;" style="padding: 8px 14px; border-radius: 12px; font-size: 11px;">Cancel</button>
-          <button type="button" id="harbor-editor-save-btn" class="oneui-pill-btn primary" style="padding: 8px 16px; border-radius: 12px; font-size: 11px; cursor: pointer; pointer-events: auto;">Save</button>
+          <button type="button" id="harbor-editor-cancel-btn" class="oneui-pill-btn secondary"
+            style="padding: 8px 14px; border-radius: 12px; font-size: 11px; cursor: pointer; pointer-events: auto;">Cancel</button>
+          <button type="button" id="harbor-editor-save-btn" class="oneui-pill-btn primary"
+            style="padding: 8px 16px; border-radius: 12px; font-size: 11px; cursor: pointer; pointer-events: auto;">Save</button>
         </div>
       </div>
     </div>

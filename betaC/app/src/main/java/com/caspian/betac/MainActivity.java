@@ -198,8 +198,31 @@ public class MainActivity extends AppCompatActivity {
 
     private final List<TabItem> tabsList = new ArrayList<>();
     private final List<TabGroup> tabGroupsList = new ArrayList<>();
-    private final List<TabItem> closedTabsHistory = new ArrayList<>();
     private final Set<Integer> selectedGridTabIds = new HashSet<>();
+
+    public static class ClosedTabRecord {
+        public String service;
+        public String pendingPrompt;
+        public String url;
+        public boolean isIncognito;
+        public String title;
+        public String caskId;
+        public boolean isFavorite;
+        public String faviconB64;
+
+        public ClosedTabRecord(TabItem tab) {
+            this.service = tab.service;
+            this.pendingPrompt = tab.pendingPrompt;
+            this.url = tab.url;
+            this.isIncognito = tab.isIncognito;
+            this.title = tab.title;
+            this.caskId = tab.caskId;
+            this.isFavorite = tab.isFavorite;
+            this.faviconB64 = tab.faviconB64;
+        }
+    }
+
+    private final List<List<ClosedTabRecord>> closedTabBatches = new ArrayList<>();
     private int activeTabId = 1;
     private int secondarySplitTabId = -1;
     private int nextTabId = 2;
@@ -3201,10 +3224,10 @@ public class MainActivity extends AppCompatActivity {
     public void applyScreenTouchLockState(boolean locked) {
         isScreenTouchLocked = locked;
         TabItem currentTab = getActiveOrDominantTab();
+        String curUrl = (currentTab != null && currentTab.url != null) ? currentTab.url : "";
         boolean isYt = currentTab != null && (
                 "youtube".equalsIgnoreCase(currentTab.service) ||
-                (currentTab.url != null && currentTab.url.toLowerCase().contains("youtube.com")) ||
-                (currentTab.webView != null && currentTab.webView.getUrl() != null && currentTab.webView.getUrl().toLowerCase().contains("youtube.com"))
+                curUrl.toLowerCase().contains("youtube.com")
         );
         boolean shouldLock = isScreenTouchLocked && isYt;
         if (videoTouchLockOverlay != null) {
@@ -8351,7 +8374,15 @@ public class MainActivity extends AppCompatActivity {
         saveOpenTabsState();
     }
 
+    public void notifyUndoStateChanged() {
+        evaluateJavascriptInControlSheet("if(typeof updateUndoButtonState === 'function') updateUndoButtonState(" + hasClosedTabsToUndo() + ");");
+    }
+
     public void closeTab(int tabId) {
+        closeTab(tabId, true);
+    }
+
+    public void closeTab(int tabId, boolean recordHistory) {
         TabItem toRemove = getTabById(tabId);
         if (toRemove != null && toRemove.isFavorite) {
             Toast.makeText(this, "⭐ Favorited tabs are locked. Unfavorite first to close.", Toast.LENGTH_SHORT).show();
@@ -8368,6 +8399,13 @@ public class MainActivity extends AppCompatActivity {
                 Toast.makeText(this, "⭐ Favorited tabs are locked. Unfavorite first to close.", Toast.LENGTH_SHORT).show();
                 return;
             }
+            if (last != null && recordHistory && !last.isIncognito && !"hub".equalsIgnoreCase(last.service)) {
+                List<ClosedTabRecord> batch = new ArrayList<>();
+                batch.add(new ClosedTabRecord(last));
+                closedTabBatches.add(batch);
+                if (closedTabBatches.size() > 30) closedTabBatches.remove(0);
+                notifyUndoStateChanged();
+            }
             last.url = "file:///android_asset/launch_hub.html";
             last.service = "hub";
             last.title = "Caspian Hub";
@@ -8380,9 +8418,14 @@ public class MainActivity extends AppCompatActivity {
             return;
         }
         if (toRemove != null) {
-            if (!toRemove.isIncognito) {
-                closedTabsHistory.add(toRemove);
-            } else {
+            if (recordHistory && !toRemove.isIncognito) {
+                List<ClosedTabRecord> batch = new ArrayList<>();
+                batch.add(new ClosedTabRecord(toRemove));
+                closedTabBatches.add(batch);
+                if (closedTabBatches.size() > 30) closedTabBatches.remove(0);
+                notifyUndoStateChanged();
+            }
+            if (toRemove.isIncognito) {
                 try {
                     toRemove.webView.clearCache(true);
                     toRemove.webView.clearHistory();
@@ -8418,8 +8461,21 @@ public class MainActivity extends AppCompatActivity {
     }
 
     public void closeMultipleTabs(List<Integer> ids) {
+        if (ids == null || ids.isEmpty()) return;
+        List<ClosedTabRecord> batch = new ArrayList<>();
         for (int id : ids) {
-            closeTab(id);
+            TabItem tab = getTabById(id);
+            if (tab != null && !tab.isIncognito && !tab.isFavorite) {
+                batch.add(new ClosedTabRecord(tab));
+            }
+        }
+        if (!batch.isEmpty()) {
+            closedTabBatches.add(batch);
+            if (closedTabBatches.size() > 30) closedTabBatches.remove(0);
+            notifyUndoStateChanged();
+        }
+        for (int id : ids) {
+            closeTab(id, false);
         }
         if (!hasAnyYouTubeTab()) {
             dismissMediaNotification();
@@ -8427,15 +8483,43 @@ public class MainActivity extends AppCompatActivity {
         saveOpenTabsState();
     }
 
-    public void restoreLastClosedTab() {
-        if (!closedTabsHistory.isEmpty()) {
-            TabItem restored = closedTabsHistory.remove(closedTabsHistory.size() - 1);
-            addNewTab(restored.service, restored.pendingPrompt, restored.url, restored.isIncognito);
+    public int restoreLastClosedBatch() {
+        if (!closedTabBatches.isEmpty()) {
+            List<ClosedTabRecord> batch = closedTabBatches.remove(closedTabBatches.size() - 1);
+            int lastRestoredId = -1;
+            for (ClosedTabRecord rec : batch) {
+                addNewTab(rec.service, rec.pendingPrompt, rec.url, rec.isIncognito);
+                if (!tabsList.isEmpty()) {
+                    TabItem restoredTab = tabsList.get(tabsList.size() - 1);
+                    if (restoredTab != null) {
+                        lastRestoredId = restoredTab.id;
+                        if (rec.title != null) restoredTab.title = rec.title;
+                        restoredTab.caskId = rec.caskId;
+                        restoredTab.isFavorite = rec.isFavorite;
+                        restoredTab.faviconB64 = rec.faviconB64;
+                    }
+                }
+            }
+            if (lastRestoredId != -1) {
+                switchToTab(lastRestoredId);
+            }
+            notifyUndoStateChanged();
+            evaluateJavascriptInControlSheet("if(typeof renderOpenTabs === 'function') renderOpenTabs();");
+            return batch.size();
         }
+        return 0;
+    }
+
+    public void restoreLastClosedTab() {
+        restoreLastClosedBatch();
     }
 
     public void restoreLastClosedGroupTabs() {
-        restoreLastClosedTab();
+        restoreLastClosedBatch();
+    }
+
+    public boolean hasClosedTabsToUndo() {
+        return !closedTabBatches.isEmpty();
     }
 
     public void setGroupTabsFavorite(List<Integer> ids, boolean isFav) {
@@ -8563,6 +8647,18 @@ public class MainActivity extends AppCompatActivity {
         if (nonFavorites.isEmpty()) {
             Toast.makeText(this, "⭐ All tabs are favorited and protected.", Toast.LENGTH_SHORT).show();
             return;
+        }
+
+        List<ClosedTabRecord> batch = new ArrayList<>();
+        for (TabItem item : nonFavorites) {
+            if (!item.isIncognito) {
+                batch.add(new ClosedTabRecord(item));
+            }
+        }
+        if (!batch.isEmpty()) {
+            closedTabBatches.add(batch);
+            if (closedTabBatches.size() > 30) closedTabBatches.remove(0);
+            notifyUndoStateChanged();
         }
 
         for (TabItem toRemove : nonFavorites) {
@@ -8706,11 +8802,19 @@ public class MainActivity extends AppCompatActivity {
             if (!omniboxEditText.hasFocus()) {
                 omniboxEditText.setText(cleanDisplayUrl(url));
             }
-            omniboxBackBtn.setEnabled(currentTab.webView.canGoBack());
-            omniboxBackBtn.setAlpha(currentTab.webView.canGoBack() ? 1.0f : 0.4f);
+            boolean canBack = false;
+            boolean canFwd = false;
+            try {
+                if (currentTab.webView != null) {
+                    canBack = currentTab.webView.canGoBack();
+                    canFwd = currentTab.webView.canGoForward();
+                }
+            } catch (Exception ignored) {}
+            omniboxBackBtn.setEnabled(canBack);
+            omniboxBackBtn.setAlpha(canBack ? 1.0f : 0.4f);
 
-            omniboxForwardBtn.setEnabled(currentTab.webView.canGoForward());
-            omniboxForwardBtn.setAlpha(currentTab.webView.canGoForward() ? 1.0f : 0.4f);
+            omniboxForwardBtn.setEnabled(canFwd);
+            omniboxForwardBtn.setAlpha(canFwd ? 1.0f : 0.4f);
 
             boolean isYtTab = url.toLowerCase().contains("youtube.com") || "youtube".equalsIgnoreCase(currentTab.service);
             if (ytFloatingRemoteContainer != null) {

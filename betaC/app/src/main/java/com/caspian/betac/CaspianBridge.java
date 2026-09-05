@@ -655,6 +655,14 @@ public class CaspianBridge {
     }
 
     @JavascriptInterface
+    public boolean hasClosedTabsToUndo() {
+        if (activity != null) {
+            return activity.hasClosedTabsToUndo();
+        }
+        return false;
+    }
+
+    @JavascriptInterface
     public void reorderTabs(String newIdsJson) {
         if (activity != null) {
             activity.runOnUiThread(() -> activity.reorderTabs(newIdsJson));
