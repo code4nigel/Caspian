@@ -1626,13 +1626,6 @@ body.theme-flow .oneui-pill-btn.primary {
   transform: scale(0.92) translateY(4px);
 }
 
-.harbor-locked-badge {
-  position: absolute;
-  top: 4px;
-  right: 4px;
-  font-size: 11px;
-  z-index: 10;
-}
 
 @keyframes violentLockedShake {
   0% { transform: translateX(0); }

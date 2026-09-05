@@ -2579,7 +2579,6 @@
 
       html += `
         <div class="app-icon-card harbor-tab-card ${editingClass}" data-harborid="${tab.id}" data-index="${index}">
-          ${isLocked ? `<span class="harbor-locked-badge" title="Locked Core Platform Tab">🔒</span>` : ''}
           ${iconMarkup}
           <span class="app-icon-label">${tab.name}</span>
         </div>
