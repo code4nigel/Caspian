@@ -17,6 +17,7 @@ import androidx.core.content.ContextCompat;
  */
 public class CaspianMediaService extends Service {
     public static final String ACTION_START_FOREGROUND = "com.caspian.betac.ACTION_START_MEDIA_FOREGROUND";
+    public static final String ACTION_PAUSE_FOREGROUND = "com.caspian.betac.ACTION_PAUSE_MEDIA_FOREGROUND";
     public static final String ACTION_STOP_FOREGROUND = "com.caspian.betac.ACTION_STOP_MEDIA_FOREGROUND";
     public static final String EXTRA_NOTIFICATION = "extra_notification";
     public static final int NOTIFICATION_ID_MEDIA = 7001;
@@ -34,6 +35,15 @@ public class CaspianMediaService extends Service {
             intent.setAction(ACTION_START_FOREGROUND);
             intent.putExtra(EXTRA_NOTIFICATION, notification);
             ContextCompat.startForegroundService(context, intent);
+        } catch (Exception ignored) {}
+    }
+
+    public static void pauseMediaForeground(Context context) {
+        if (context == null) return;
+        try {
+            Intent intent = new Intent(context, CaspianMediaService.class);
+            intent.setAction(ACTION_PAUSE_FOREGROUND);
+            context.startService(intent);
         } catch (Exception ignored) {}
     }
 
@@ -67,9 +77,21 @@ public class CaspianMediaService extends Service {
                         isServiceRunning = true;
                     } catch (Exception ignored) {}
                 }
+            } else if (ACTION_PAUSE_FOREGROUND.equals(action)) {
+                try {
+                    if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.N) {
+                        stopForeground(STOP_FOREGROUND_DETACH);
+                    } else {
+                        stopForeground(false);
+                    }
+                } catch (Exception ignored) {}
             } else if (ACTION_STOP_FOREGROUND.equals(action)) {
                 try {
-                    stopForeground(true);
+                    if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.N) {
+                        stopForeground(STOP_FOREGROUND_REMOVE);
+                    } else {
+                        stopForeground(true);
+                    }
                 } catch (Exception ignored) {}
                 isServiceRunning = false;
                 stopSelf();
