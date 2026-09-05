@@ -298,6 +298,13 @@ public class CaspianBridge {
     }
 
     @JavascriptInterface
+    public void showKeyboard() {
+        if (activity != null) {
+            activity.runOnUiThread(activity::showSoftKeyboardForCurrentTab);
+        }
+    }
+
+    @JavascriptInterface
     public void openUrl(String url) {
         if (activity != null) {
             activity.runOnUiThread(() -> activity.navigateUrl(url));

@@ -7822,6 +7822,35 @@ public class MainActivity extends AppCompatActivity {
                     }
                 }
 
+                if (pageUrl != null && (pageUrl.contains("google.com") || pageUrl.contains("google.co."))
+                        && !pageUrl.contains("/search?") && !pageUrl.contains("/maps") && !pageUrl.contains("accounts.google")) {
+                    String googleAutofocusJs =
+                            "(function() {\n" +
+                            "  var focused = false;\n" +
+                            "  function tryFocus() {\n" +
+                            "    if (focused) return true;\n" +
+                            "    var el = document.querySelector('textarea[name=\"q\"], input[name=\"q\"], input[type=\"search\"], div[role=\"combobox\"] input');\n" +
+                            "    if (el) {\n" +
+                            "      focused = true;\n" +
+                            "      try { el.focus(); el.click(); } catch(e) {}\n" +
+                            "      if (window.CaspianBridge && typeof window.CaspianBridge.showKeyboard === 'function') {\n" +
+                            "        window.CaspianBridge.showKeyboard();\n" +
+                            "      }\n" +
+                            "      return true;\n" +
+                            "    }\n" +
+                            "    return false;\n" +
+                            "  }\n" +
+                            "  if (!tryFocus()) {\n" +
+                            "    var count = 0;\n" +
+                            "    var intv = setInterval(function() {\n" +
+                            "      count++;\n" +
+                            "      if (tryFocus() || count >= 20) clearInterval(intv);\n" +
+                            "    }, 150);\n" +
+                            "  }\n" +
+                            "})();";
+                    view.evaluateJavascript(googleAutofocusJs, null);
+                }
+
                 if (tabItem.pendingPrompt != null && !tabItem.pendingPrompt.isEmpty()) {
                     if ("chatgpt".equalsIgnoreCase(tabItem.service) || "gemini".equalsIgnoreCase(tabItem.service)
                             || "claude".equalsIgnoreCase(tabItem.service) || "deepseek".equalsIgnoreCase(tabItem.service)) {
@@ -9083,6 +9112,17 @@ public class MainActivity extends AppCompatActivity {
         }
 
         playUiFeedbackSound("ta");
+    }
+
+    public void showSoftKeyboardForCurrentTab() {
+        TabItem current = getTabById(activeTabId);
+        if (current != null && current.webView != null) {
+            current.webView.requestFocus();
+            InputMethodManager imm = (InputMethodManager) getSystemService(Context.INPUT_METHOD_SERVICE);
+            if (imm != null) {
+                imm.showSoftInput(current.webView, InputMethodManager.SHOW_IMPLICIT);
+            }
+        }
     }
 
     public void hideControlSheet() {

@@ -2878,8 +2878,16 @@
           if (window.CaspianBridge && typeof window.CaspianBridge.openLaunchHubInNewTab === 'function') {
             window.CaspianBridge.openLaunchHubInNewTab();
           }
-        } else if (tab.service && ['chatgpt', 'gemini', 'google', 'youtube'].includes(tab.service)) {
-          handleCreateNewTab(tab.service);
+        } else if (tab.service === 'google') {
+          if (window.CaspianBridge && typeof window.CaspianBridge.openNewTab === 'function') {
+            window.CaspianBridge.openNewTab('https://www.google.com/');
+          }
+        } else if (tab.service && ['chatgpt', 'gemini', 'youtube'].includes(tab.service)) {
+          if (window.CaspianBridge && typeof window.CaspianBridge.createNewTab === 'function') {
+            window.CaspianBridge.createNewTab(tab.service);
+          } else if (window.CaspianBridge && typeof window.CaspianBridge.openNewTab === 'function') {
+            window.CaspianBridge.openNewTab(tab.url);
+          }
         } else {
           if (window.CaspianBridge && typeof window.CaspianBridge.openNewTab === 'function') {
             window.CaspianBridge.openNewTab(tab.url || 'https://google.com');

@@ -209,6 +209,8 @@ public class WaveguardShield {
                 js.append("    function cleanNode(n) {\n");
                 js.append("      if (!n || n.nodeType !== 1) return;\n");
                 js.append("      try {\n");
+                js.append("        var curH = window.location.hostname.toLowerCase();\n");
+                js.append("        if (curH.indexOf('instagram.com') !== -1 || curH.indexOf('facebook.com') !== -1 || curH.indexOf('reddit.com') !== -1 || curH.indexOf('youtube.com') !== -1) return;\n");
                 js.append("        if (n.classList && n.classList.contains('aderasr-test-adsbox')) return;\n");
                 js.append("        if (n.matches && n.matches(sel)) { n.remove(); return; }\n");
                 js.append("        var m = n.querySelectorAll(sel);\n");
@@ -234,9 +236,6 @@ public class WaveguardShield {
             js.append("      if (!u) return false;\n");
             js.append("      try {\n");
             js.append("        var s = String(u).toLowerCase();\n");
-            js.append("        for (var k = 0; k < kwList.length; k++) {\n");
-            js.append("          if (s.indexOf(kwList[k]) !== -1) return true;\n");
-            js.append("        }\n");
             js.append("        var h = '';\n");
             js.append("        var pIdx = s.indexOf('://');\n");
             js.append("        if (pIdx !== -1) {\n");
@@ -250,7 +249,10 @@ public class WaveguardShield {
             js.append("        } else {\n");
             js.append("          h = s.split('/')[0].split('?')[0].split(':')[0];\n");
             js.append("        }\n");
-            js.append("        if (h === 'google.com' || h === 'www.google.com' || h === 'youtube.com' || h === 'www.youtube.com' || h === 'facebook.com' || h === 'www.facebook.com' || h === 'linkedin.com' || h === 'www.linkedin.com' || h === 'tiktok.com' || h === 'www.tiktok.com' || h === 'reddit.com' || h === 'www.reddit.com' || h === 'redditstatic.com' || h === 'www.redditstatic.com' || h === 'redditmedia.com' || h === 'www.redditmedia.com' || h === 'redd.it' || h === 'wikipedia.org') return false;\n");
+            js.append("        if (h === 'instagram.com' || h.endsWith('.instagram.com') || h === 'cdninstagram.com' || h.endsWith('.cdninstagram.com') || h === 'fbcdn.net' || h.endsWith('.fbcdn.net') || h === 'facebook.com' || h.endsWith('.facebook.com') || h === 'google.com' || h.endsWith('.google.com') || h === 'youtube.com' || h.endsWith('.youtube.com') || h === 'reddit.com' || h.endsWith('.reddit.com') || h === 'redditstatic.com' || h.endsWith('.redditstatic.com') || h === 'redditmedia.com' || h.endsWith('.redditmedia.com') || h === 'redd.it' || h.endsWith('.redd.it') || h === 'wikipedia.org') return false;\n");
+            js.append("        for (var k = 0; k < kwList.length; k++) {\n");
+            js.append("          if (s.indexOf(kwList[k]) !== -1) return true;\n");
+            js.append("        }\n");
             js.append("        if (blockedSet.has(h)) return true;\n");
             js.append("        var dot = h.indexOf('.');\n");
             js.append("        while (dot > 0 && dot < h.length - 1) {\n");
@@ -391,10 +393,15 @@ public class WaveguardShield {
                 || "redd.it".equals(h) || h.endsWith(".redd.it")) {
             return !h.startsWith("alb.") && !h.startsWith("events.") && !h.startsWith("telemetry.");
         }
-        return "youtube.com".equals(h) || "m.youtube.com".equals(h)
-                || "facebook.com".equals(h) || "m.facebook.com".equals(h)
-                || "instagram.com".equals(h) || "linkedin.com".equals(h)
-                || "tiktok.com".equals(h)
+        if ("instagram.com".equals(h) || h.endsWith(".instagram.com")
+                || "cdninstagram.com".equals(h) || h.endsWith(".cdninstagram.com")
+                || "fbcdn.net".equals(h) || h.endsWith(".fbcdn.net")) {
+            return true;
+        }
+        return "youtube.com".equals(h) || "m.youtube.com".equals(h) || h.endsWith(".youtube.com")
+                || "facebook.com".equals(h) || "m.facebook.com".equals(h) || h.endsWith(".facebook.com")
+                || "linkedin.com".equals(h) || h.endsWith(".linkedin.com")
+                || "tiktok.com".equals(h) || h.endsWith(".tiktok.com")
                 || "twitter.com".equals(h) || "x.com".equals(h)
                 || "wikipedia.org".equals(h) || "github.com".equals(h);
     }
@@ -465,8 +472,8 @@ public class WaveguardShield {
                 return true;
             }
 
-            // Path & Telemetry matching
-            if (isEasyPrivacyEnabled) {
+            // Path & Telemetry matching (exempt essential hosts so native platform APIs are not broken)
+            if (isEasyPrivacyEnabled && !isEssentialHost(host)) {
                 String fullUrl = urlString.toLowerCase(java.util.Locale.ROOT);
                 for (String kw : pathKeywords) {
                     if (fullUrl.contains(kw)) {
