@@ -1091,13 +1091,19 @@ public class CaspianBridge {
     @JavascriptInterface
     public boolean openDownloadedFile(String downloadId) {
         if (activity == null || downloadId == null) return false;
-        return CaspianDownloadManager.getInstance(activity).openFile(downloadId);
+        activity.runOnUiThread(() -> {
+            CaspianDownloadManager.getInstance(activity).openFile(downloadId);
+        });
+        return true;
     }
 
     @JavascriptInterface
     public boolean shareDownloadedFile(String downloadId) {
         if (activity == null || downloadId == null) return false;
-        return CaspianDownloadManager.getInstance(activity).shareFile(downloadId);
+        activity.runOnUiThread(() -> {
+            CaspianDownloadManager.getInstance(activity).shareFile(downloadId);
+        });
+        return true;
     }
 
     @JavascriptInterface

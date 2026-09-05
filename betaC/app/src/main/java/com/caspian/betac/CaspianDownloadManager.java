@@ -12,10 +12,12 @@ import android.os.Environment;
 import android.os.Handler;
 import android.os.Looper;
 import android.util.Base64;
+import android.provider.Settings;
 import android.util.Log;
 import android.webkit.CookieManager;
 import android.webkit.MimeTypeMap;
 import android.webkit.URLUtil;
+import android.widget.Toast;
 
 import androidx.core.app.NotificationCompat;
 import androidx.core.content.FileProvider;
@@ -243,6 +245,7 @@ public class CaspianDownloadManager {
 
                 File destFile = getDestinationFile(item.fileName, item.downloadedBytes > 0);
                 item.filePath = destFile.getAbsolutePath();
+                item.fileName = destFile.getName();
 
                 in = connection.getInputStream();
                 out = new FileOutputStream(destFile, item.downloadedBytes > 0);
@@ -253,7 +256,7 @@ public class CaspianDownloadManager {
                 long bytesSinceLastSpeedCalc = 0;
                 long lastProgressNotifyTime = 0;
 
-                while ((bytesRead = in.read(buffer)) != -1) {
+                while (true) {
                     if (isCancelled) {
                         break;
                     }
@@ -262,6 +265,23 @@ public class CaspianDownloadManager {
                         notifyProgress(item);
                         updateNotification(item);
                         return;
+                    }
+
+                    // If total size is known and all bytes have already been fetched, complete immediately!
+                    if (item.totalBytes > 0 && item.downloadedBytes >= item.totalBytes) {
+                        break;
+                    }
+
+                    int toRead = BUFFER_SIZE;
+                    if (item.totalBytes > 0) {
+                        long remaining = item.totalBytes - item.downloadedBytes;
+                        if (remaining <= 0) break;
+                        if (remaining < BUFFER_SIZE) toRead = (int) remaining;
+                    }
+
+                    bytesRead = in.read(buffer, 0, toRead);
+                    if (bytesRead == -1) {
+                        break;
                     }
 
                     out.write(buffer, 0, bytesRead);
@@ -283,14 +303,21 @@ public class CaspianDownloadManager {
                         bytesSinceLastSpeedCalc = 0;
                     }
 
-                    if (now - lastProgressNotifyTime >= 250 || item.downloadedBytes == item.totalBytes) {
+                    if (now - lastProgressNotifyTime >= 250 || (item.totalBytes > 0 && item.downloadedBytes >= item.totalBytes)) {
                         lastProgressNotifyTime = now;
                         notifyProgress(item);
                         updateNotification(item);
                     }
+
+                    if (item.totalBytes > 0 && item.downloadedBytes >= item.totalBytes) {
+                        break;
+                    }
                 }
 
                 out.flush();
+                try {
+                    out.getFD().sync();
+                } catch (Exception ignored) {}
 
                 if (isCancelled) {
                     handleCancelled(item);
@@ -544,23 +571,56 @@ public class CaspianDownloadManager {
     }
 
     public boolean openFile(String id) {
-        DownloadItem target = null;
-        for (DownloadItem item : historyList) {
-            if (item.id.equals(id)) {
-                target = item;
-                break;
+        DownloadTask activeTask = activeTasks.get(id);
+        DownloadItem target = activeTask != null ? activeTask.item : null;
+        if (target == null) {
+            for (DownloadItem item : historyList) {
+                if (item.id.equals(id)) {
+                    target = item;
+                    break;
+                }
             }
         }
-        if (target == null || target.filePath == null) return false;
+        if (target == null || target.filePath == null) {
+            for (DownloadItem item : historyList) {
+                if (id.equals(item.filePath) || id.equals(item.fileName)) {
+                    target = item;
+                    break;
+                }
+            }
+        }
+        if (target == null || target.filePath == null) {
+            Toast.makeText(context, "Download record not found", Toast.LENGTH_SHORT).show();
+            return false;
+        }
 
         File file = new File(target.filePath);
-        if (!file.exists()) return false;
+        if (!file.exists()) {
+            Toast.makeText(context, "File not found on device storage", Toast.LENGTH_SHORT).show();
+            return false;
+        }
 
         try {
-            Uri contentUri = FileProvider.getUriForFile(context, context.getPackageName() + ".provider", file);
+            boolean isApk = file.getName().toLowerCase().endsWith(".apk");
+
+            // On Android 8.0+, check if Caspian is allowed to install unknown apps
+            if (isApk && Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+                if (!context.getPackageManager().canRequestPackageInstalls()) {
+                    Intent allowIntent = new Intent(Settings.ACTION_MANAGE_UNKNOWN_APP_SOURCES,
+                            Uri.parse("package:" + context.getPackageName()));
+                    allowIntent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
+                    context.startActivity(allowIntent);
+                    Toast.makeText(context, "Please allow Caspian to install unknown apps, then tap Install again", Toast.LENGTH_LONG).show();
+                    return false;
+                }
+            }
+
+            Uri contentUri = FileProvider.getUriForFile(context, context.getPackageName() + ".fileprovider", file);
             Intent intent = new Intent(Intent.ACTION_VIEW);
             String mime = target.mimeType;
-            if (mime == null || mime.isEmpty() || "*/*".equals(mime)) {
+            if (isApk) {
+                mime = "application/vnd.android.package-archive";
+            } else if (mime == null || mime.isEmpty() || "*/*".equals(mime)) {
                 mime = getMimeTypeFromExtension(file.getName());
             }
             intent.setDataAndType(contentUri, mime);
@@ -570,28 +630,56 @@ public class CaspianDownloadManager {
             return true;
         } catch (Exception e) {
             Log.e(TAG, "Error opening downloaded file", e);
-            return false;
+            try {
+                // Fallback to generic action view
+                Uri contentUri = FileProvider.getUriForFile(context, context.getPackageName() + ".fileprovider", file);
+                Intent fallback = new Intent(Intent.ACTION_VIEW);
+                fallback.setDataAndType(contentUri, "*/*");
+                fallback.addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION);
+                fallback.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
+                context.startActivity(fallback);
+                return true;
+            } catch (Exception e2) {
+                Toast.makeText(context, "Cannot open file: " + e.getMessage(), Toast.LENGTH_SHORT).show();
+                return false;
+            }
         }
     }
 
     public boolean shareFile(String id) {
-        DownloadItem target = null;
-        for (DownloadItem item : historyList) {
-            if (item.id.equals(id)) {
-                target = item;
-                break;
+        DownloadTask activeTask = activeTasks.get(id);
+        DownloadItem target = activeTask != null ? activeTask.item : null;
+        if (target == null) {
+            for (DownloadItem item : historyList) {
+                if (item.id.equals(id)) {
+                    target = item;
+                    break;
+                }
+            }
+        }
+        if (target == null || target.filePath == null) {
+            for (DownloadItem item : historyList) {
+                if (id.equals(item.filePath) || id.equals(item.fileName)) {
+                    target = item;
+                    break;
+                }
             }
         }
         if (target == null || target.filePath == null) return false;
 
         File file = new File(target.filePath);
-        if (!file.exists()) return false;
+        if (!file.exists()) {
+            Toast.makeText(context, "File not found", Toast.LENGTH_SHORT).show();
+            return false;
+        }
 
         try {
-            Uri contentUri = FileProvider.getUriForFile(context, context.getPackageName() + ".provider", file);
+            Uri contentUri = FileProvider.getUriForFile(context, context.getPackageName() + ".fileprovider", file);
             Intent intent = new Intent(Intent.ACTION_SEND);
             String mime = target.mimeType;
-            if (mime == null || mime.isEmpty()) {
+            if (file.getName().toLowerCase().endsWith(".apk")) {
+                mime = "application/vnd.android.package-archive";
+            } else if (mime == null || mime.isEmpty() || "*/*".equals(mime)) {
                 mime = getMimeTypeFromExtension(file.getName());
             }
             intent.setType(mime);
@@ -604,6 +692,7 @@ public class CaspianDownloadManager {
             return true;
         } catch (Exception e) {
             Log.e(TAG, "Error sharing file", e);
+            Toast.makeText(context, "Cannot share file: " + e.getMessage(), Toast.LENGTH_SHORT).show();
             return false;
         }
     }
@@ -760,13 +849,22 @@ public class CaspianDownloadManager {
 
     private void showCompletionNotification(DownloadItem item) {
         try {
+            cancelNotification(item);
+
             File file = new File(item.filePath != null ? item.filePath : "");
             PendingIntent openPending = null;
             if (file.exists()) {
-                Uri contentUri = FileProvider.getUriForFile(context, context.getPackageName() + ".provider", file);
+                Uri contentUri = FileProvider.getUriForFile(context, context.getPackageName() + ".fileprovider", file);
                 Intent openIntent = new Intent(Intent.ACTION_VIEW);
-                openIntent.setDataAndType(contentUri, item.mimeType != null ? item.mimeType : "*/*");
+                String mime = item.mimeType;
+                if (file.getName().toLowerCase().endsWith(".apk")) {
+                    mime = "application/vnd.android.package-archive";
+                } else if (mime == null || mime.isEmpty() || "*/*".equals(mime)) {
+                    mime = getMimeTypeFromExtension(file.getName());
+                }
+                openIntent.setDataAndType(contentUri, mime);
                 openIntent.addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION);
+                openIntent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
                 openPending = PendingIntent.getActivity(context, item.notificationId, openIntent,
                         PendingIntent.FLAG_UPDATE_CURRENT | (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M ? PendingIntent.FLAG_IMMUTABLE : 0));
             }
@@ -776,6 +874,7 @@ public class CaspianDownloadManager {
                     .setContentTitle("Download Complete")
                     .setContentText(item.fileName + " (" + formatBytes(item.downloadedBytes) + ")")
                     .setAutoCancel(true)
+                    .setOngoing(false)
                     .setPriority(NotificationCompat.PRIORITY_DEFAULT);
 
             if (openPending != null) {
@@ -785,7 +884,9 @@ public class CaspianDownloadManager {
             if (notificationManager != null) {
                 notificationManager.notify(item.notificationId, b.build());
             }
-        } catch (Exception ignored) {}
+        } catch (Exception e) {
+            Log.e(TAG, "Error showing completion notification", e);
+        }
     }
 
     private void showFailedNotification(DownloadItem item) {
