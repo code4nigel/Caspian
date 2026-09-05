@@ -81,10 +81,12 @@ import android.view.animation.OvershootInterpolator;
 import android.view.animation.PathInterpolator;
 import android.view.inputmethod.EditorInfo;
 import android.view.inputmethod.InputMethodManager;
+import android.webkit.ConsoleMessage;
 import android.webkit.CookieManager;
 import android.webkit.URLUtil;
 import android.webkit.ValueCallback;
 import android.webkit.WebChromeClient;
+import android.webkit.WebResourceError;
 import android.webkit.WebResourceRequest;
 import android.webkit.WebResourceResponse;
 import android.webkit.WebSettings;
@@ -502,6 +504,7 @@ public class MainActivity extends AppCompatActivity {
         }
 
         try { android.webkit.WebIconDatabase.getInstance().open(getDir("icons", MODE_PRIVATE).getPath()); } catch (Throwable ignored) {}
+        try { WebView.setWebContentsDebuggingEnabled(true); } catch (Throwable ignored) {}
         try { waveguardShield = new WaveguardShield(this); } catch (Throwable ignored) {}
         try { initSoundPool(); } catch (Throwable ignored) {}
         try { bindViews(); } catch (Throwable ignored) {}
@@ -7733,6 +7736,11 @@ public class MainActivity extends AppCompatActivity {
                             pageHost = Uri.parse(tabItem.url).getHost();
                         } catch (Exception ignored) {}
                     }
+                    if (isDebugRecording && request != null && request.getUrl() != null) {
+                        synchronized (debugLogBuffer) {
+                            debugLogBuffer.append("[NetRequest] ").append(request.getMethod()).append(" ").append(request.getUrl()).append("\n");
+                        }
+                    }
                     if (pageHost != null) {
                         String ph = pageHost.toLowerCase(java.util.Locale.ROOT);
                         if (ph.equals("instagram.com") || ph.endsWith(".instagram.com")
@@ -7748,6 +7756,34 @@ public class MainActivity extends AppCompatActivity {
                     Log.e(TAG, "Waveguard interception error: ", t);
                 }
                 return super.shouldInterceptRequest(view, request);
+            }
+
+            @Override
+            public void onReceivedError(WebView view, WebResourceRequest request, WebResourceError error) {
+                super.onReceivedError(view, request, error);
+                if (error != null && request != null) {
+                    String err = "[WebError] Code=" + error.getErrorCode() + " Desc=" + error.getDescription() + " URL=" + request.getUrl();
+                    Log.e("CaspianWebConsole", err);
+                    if (isDebugRecording) {
+                        synchronized (debugLogBuffer) {
+                            debugLogBuffer.append(err).append("\n");
+                        }
+                    }
+                }
+            }
+
+            @Override
+            public void onReceivedHttpError(WebView view, WebResourceRequest request, WebResourceResponse errorResponse) {
+                super.onReceivedHttpError(view, request, errorResponse);
+                if (errorResponse != null && request != null) {
+                    String err = "[HttpError] Status=" + errorResponse.getStatusCode() + " " + errorResponse.getReasonPhrase() + " URL=" + request.getUrl();
+                    Log.e("CaspianWebConsole", err);
+                    if (isDebugRecording) {
+                        synchronized (debugLogBuffer) {
+                            debugLogBuffer.append(err).append("\n");
+                        }
+                    }
+                }
             }
 
             @Override
@@ -7900,7 +7936,9 @@ public class MainActivity extends AppCompatActivity {
                         if (tabItem != null && tabItem.url != null) {
                             try { pageHost = Uri.parse(tabItem.url).getHost(); } catch (Exception ignored) {}
                         }
-                        if (!waveguardShield.isSiteWhitelisted(pageHost)) {
+                        if (pageHost != null && (pageHost.toLowerCase().contains("instagram.com") || pageHost.toLowerCase().contains("facebook.com"))) {
+                            // Skip cosmetic CSS injection on Instagram and Facebook
+                        } else if (!waveguardShield.isSiteWhitelisted(pageHost)) {
                             String cosmetic = waveguardShield.getCosmeticCssInjection();
                             if (cosmetic != null && !cosmetic.isEmpty()) {
                                 view.evaluateJavascript(cosmetic, null);
@@ -7908,6 +7946,22 @@ public class MainActivity extends AppCompatActivity {
                         }
                     }
                 }
+            }
+
+            @Override
+            public boolean onConsoleMessage(ConsoleMessage consoleMessage) {
+                if (consoleMessage != null) {
+                    String msg = "[WebConsole " + consoleMessage.messageLevel() + "] " + consoleMessage.message() 
+                            + " (" + consoleMessage.sourceId() + ":" + consoleMessage.lineNumber() + ")";
+                    Log.d("CaspianWebConsole", msg);
+                    if (isDebugRecording) {
+                        synchronized (debugLogBuffer) {
+                            debugLogBuffer.append(new java.text.SimpleDateFormat("HH:mm:ss.SSS", java.util.Locale.US).format(new java.util.Date()))
+                                    .append(" ").append(msg).append("\n");
+                        }
+                    }
+                }
+                return true;
             }
 
             @Override
