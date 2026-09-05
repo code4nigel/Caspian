@@ -162,6 +162,7 @@ public class MainActivity extends AppCompatActivity {
         public boolean isIncognito = false;
         public String pendingPrompt = null;
         public Bitmap snapshotBitmap = null;
+        public String faviconB64 = null;
         public String caskId = CaskManager.DEFAULT_CASK_ID;
         public String caskName = "Caspian Cask";
         public String caskIcon = "🌊";
@@ -500,6 +501,7 @@ public class MainActivity extends AppCompatActivity {
             Log.e(TAG, "setContentView error: ", t);
         }
 
+        try { android.webkit.WebIconDatabase.getInstance().open(getDir("icons", MODE_PRIVATE).getPath()); } catch (Throwable ignored) {}
         try { waveguardShield = new WaveguardShield(this); } catch (Throwable ignored) {}
         try { initSoundPool(); } catch (Throwable ignored) {}
         try { bindViews(); } catch (Throwable ignored) {}
@@ -7872,6 +7874,20 @@ public class MainActivity extends AppCompatActivity {
             }
 
             @Override
+            public void onReceivedIcon(WebView view, Bitmap icon) {
+                if (icon != null && tabItem != null) {
+                    try {
+                        ByteArrayOutputStream baos = new ByteArrayOutputStream();
+                        icon.compress(Bitmap.CompressFormat.PNG, 100, baos);
+                        byte[] b = baos.toByteArray();
+                        tabItem.faviconB64 = "data:image/png;base64," + android.util.Base64.encodeToString(b, android.util.Base64.NO_WRAP);
+                        evaluateJavascriptInControlSheet("if(window.onTabFaviconReceived) window.onTabFaviconReceived(" 
+                                + tabItem.id + ", " + JSONObject.quote(tabItem.faviconB64) + ");");
+                    } catch (Exception ignored) {}
+                }
+            }
+
+            @Override
             public void onShowCustomView(View view, CustomViewCallback callback) {
                 if (customView != null) {
                     callback.onCustomViewHidden();
@@ -8752,6 +8768,7 @@ public class MainActivity extends AppCompatActivity {
                 obj.put("nickname", tab.nickname);
                 obj.put("url", tab.url);
                 obj.put("service", tab.service);
+                obj.put("faviconB64", tab.faviconB64 != null ? tab.faviconB64 : "");
                 obj.put("active", tab.id == activeTabId);
                 obj.put("isActive", tab.id == activeTabId);
                 obj.put("isDesktop", tab.isDesktop);

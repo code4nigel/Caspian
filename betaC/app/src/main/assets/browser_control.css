@@ -1548,3 +1548,112 @@ body.theme-flow .oneui-pill-btn.primary {
   100% { transform: scale(1); opacity: 1; }
 }
 
+/* ==========================================================================
+   HARBOR TABS (EDITABLE PLATFORM TABS & FAVICONS)
+   ========================================================================== */
+
+.harbor-container-compact {
+  max-height: 228px !important;
+  overflow: hidden !important;
+}
+
+.harbor-container-expanded {
+  max-height: 480px !important;
+  overflow-y: auto !important;
+  scrollbar-width: thin;
+}
+
+.harbor-tab-card {
+  position: relative;
+  transition: transform 0.2s ease, box-shadow 0.2s ease, border-color 0.2s ease;
+  user-select: none;
+  -webkit-user-select: none;
+  -webkit-touch-callout: none;
+}
+
+.harbor-tab-card.editing-shake {
+  animation: harborWiggle 0.4s infinite ease-in-out;
+  border-color: rgba(0, 229, 255, 0.6) !important;
+  box-shadow: 0 0 14px rgba(0, 229, 255, 0.25) !important;
+}
+
+@keyframes harborWiggle {
+  0% { transform: rotate(-0.8deg); }
+  50% { transform: rotate(1deg); }
+  100% { transform: rotate(-0.8deg); }
+}
+
+.harbor-reorder-bar {
+  display: none;
+  position: absolute;
+  top: 4px;
+  left: 4px;
+  right: 4px;
+  justify-content: space-between;
+  align-items: center;
+  z-index: 10;
+  pointer-events: auto;
+}
+
+.harbor-tab-card.editing-shake .harbor-reorder-bar {
+  display: flex;
+}
+
+.harbor-move-btn {
+  width: 22px;
+  height: 22px;
+  border-radius: 6px;
+  background: rgba(0, 0, 0, 0.75);
+  color: #00e5ff;
+  border: 1px solid rgba(0, 229, 255, 0.4);
+  font-size: 11px;
+  font-weight: 800;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  padding: 0;
+  line-height: 1;
+}
+
+.harbor-move-btn:active {
+  background: #00e5ff;
+  color: #050811;
+}
+
+.harbor-edit-badge {
+  display: none;
+  position: absolute;
+  bottom: 4px;
+  right: 4px;
+  width: 22px;
+  height: 22px;
+  border-radius: 6px;
+  background: rgba(0, 0, 0, 0.75);
+  color: #eab308;
+  border: 1px solid rgba(234, 179, 8, 0.4);
+  font-size: 11px;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  z-index: 10;
+}
+
+.harbor-tab-card.editing-shake .harbor-edit-badge {
+  display: flex;
+}
+
+.harbor-locked-badge {
+  display: none;
+  position: absolute;
+  top: 4px;
+  right: 4px;
+  font-size: 11px;
+  z-index: 10;
+}
+
+.harbor-tab-card.editing-shake .harbor-locked-badge {
+  display: block;
+}
+
+
