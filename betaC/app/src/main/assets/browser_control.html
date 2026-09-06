@@ -320,7 +320,7 @@
             <div id="cc-status-dot" class="status-dot active"></div>
             <div>
               <div class="m3-card-title">Caspian Drift</div>
-              <div class="m3-card-sub">Long-press wave button to dictate speech. Tap to customize STT models & API keys.
+              <div class="m3-card-sub">Voice dictation engine for Omnibox, search & AI prompt bar. Tap to configure.
               </div>
             </div>
           </div>
@@ -331,20 +331,56 @@
         <!-- Accordion Body -->
         <div id="caspian-current-body"
           style="display: none; margin-top: 12px; border-top: 1px solid var(--border-glass); padding-top: 10px;">
-          <div class="limit-section-title" style="margin-bottom: 6px;">SELECT SPEECH-TO-TEXT MODEL</div>
+          <div class="limit-section-title" style="margin-bottom: 6px;">SELECT SPEECH-TO-TEXT ENGINE</div>
           <div class="pill-grid" style="grid-template-columns: repeat(3, 1fr); gap: 6px; margin-bottom: 10px;">
-            <button class="cc-stt-pill active" data-engine="deepgram">⚡ Deepgram</button>
-            <button class="cc-stt-pill" data-engine="huggingface">🤗 HuggingFace</button>
-            <button class="cc-stt-pill" data-engine="android_native">📱 Native Android</button>
+            <button class="cc-stt-pill active" data-engine="android_native">📱 Native Android<br><span style="font-size: 9px; opacity: 0.75;">0 MB • Instant</span></button>
+            <button class="cc-stt-pill" data-engine="whisper_on_device">🧠 Whisper AI<br><span style="font-size: 9px; opacity: 0.75;">31 MB • Offline</span></button>
+            <button class="cc-stt-pill" data-engine="huggingface">🤗 HuggingFace<br><span style="font-size: 9px; opacity: 0.75;">Cloud Token</span></button>
           </div>
 
-          <!-- STT API Key Row -->
-          <div class="limit-section-title" id="cc-api-key-label" style="margin-bottom: 6px;">DEEPGRAM API KEY</div>
-          <div id="cc-api-key-container" style="display: flex; gap: 6px; align-items: center; margin-bottom: 10px;">
-            <input type="password" id="whisper-api-key-input" placeholder="Paste your API key here..."
-              style="flex: 1; background: rgba(0,0,0,0.3); border: 1px solid var(--border-glass); border-radius: 8px; padding: 8px 10px; color: var(--text-main); font-size: 11px; outline: none;" />
-            <button id="save-whisper-api-key-btn" class="oneui-pill-btn primary"
-              style="font-size: 11px; padding: 8px 12px;">Save</button>
+          <!-- Whisper Model On-Demand Pack Info / Download Container -->
+          <div id="whisper-pack-container" style="display: none; background: rgba(255,255,255,0.03); border: 1px solid var(--border-glass); border-radius: 12px; padding: 10px; margin-bottom: 12px;">
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 6px;">
+              <div style="display: flex; align-items: center; gap: 6px;">
+                <span style="font-size: 13px;">📦</span>
+                <span style="font-size: 11.5px; font-weight: 700; color: var(--text-main);">Whisper Tiny English Pack</span>
+              </div>
+              <span id="whisper-pack-status-badge" style="font-size: 10px; font-weight: 700; padding: 2px 8px; border-radius: 8px; background: rgba(255,255,255,0.08); color: var(--text-muted);">
+                Checking...
+              </span>
+            </div>
+            <div style="font-size: 10px; color: var(--text-muted); line-height: 1.4; margin-bottom: 8px;">
+              Quantized GGUF/GGML model (~31 MB). Provides natural punctuation and context awareness without sending voice data to any cloud servers.
+            </div>
+            <!-- Progress Bar (hidden unless downloading) -->
+            <div id="whisper-download-progress-box" style="display: none; margin-bottom: 8px;">
+              <div style="display: flex; justify-content: space-between; font-size: 10px; margin-bottom: 3px;">
+                <span id="whisper-download-label" style="color: var(--accent);">Downloading model...</span>
+                <span id="whisper-download-percent" style="font-weight: 700; color: var(--text-main);">0%</span>
+              </div>
+              <div style="width: 100%; height: 6px; background: rgba(255,255,255,0.1); border-radius: 3px; overflow: hidden;">
+                <div id="whisper-download-bar" style="width: 0%; height: 100%; background: var(--accent); transition: width 0.2s ease;"></div>
+              </div>
+            </div>
+            <div style="display: flex; gap: 8px;">
+              <button type="button" id="whisper-action-download-btn" class="oneui-pill-btn primary" style="flex: 1; font-size: 11px; padding: 6px 12px;">
+                ⚡ Download Voice Pack (31 MB)
+              </button>
+              <button type="button" id="whisper-action-delete-btn" class="oneui-pill-btn danger" style="display: none; font-size: 11px; padding: 6px 10px; color: #ef4444; border-color: rgba(239,68,68,0.3);">
+                🗑️ Remove
+              </button>
+            </div>
+          </div>
+
+          <!-- STT API Key Row (for Hugging Face Cloud Fallback) -->
+          <div id="cc-api-key-container" style="display: none; margin-bottom: 10px;">
+            <div class="limit-section-title" id="cc-api-key-label" style="margin-bottom: 6px;">HUGGINGFACE API TOKEN</div>
+            <div style="display: flex; gap: 6px; align-items: center;">
+              <input type="password" id="whisper-api-key-input" placeholder="Paste Hugging Face Token (hf_...)..."
+                style="flex: 1; background: rgba(0,0,0,0.3); border: 1px solid var(--border-glass); border-radius: 8px; padding: 8px 10px; color: var(--text-main); font-size: 11px; outline: none;" />
+              <button id="save-whisper-api-key-btn" class="oneui-pill-btn primary"
+                style="font-size: 11px; padding: 8px 12px;">Save</button>
+            </div>
           </div>
 
           <!-- Accent / Language selector -->

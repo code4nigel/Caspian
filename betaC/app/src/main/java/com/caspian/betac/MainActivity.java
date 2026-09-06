@@ -130,6 +130,7 @@ import java.io.ByteArrayInputStream;
 import java.io.ByteArrayOutputStream;
 import java.io.File;
 import java.io.FileOutputStream;
+import java.io.IOException;
 import java.io.InputStream;
 import java.io.InputStreamReader;
 import java.io.OutputStream;
@@ -509,6 +510,11 @@ public class MainActivity extends AppCompatActivity {
     private final StringBuilder nativeSpeechBuffer = new StringBuilder();
     private final static int MIC_PERMISSION_REQUEST_CODE = 1002;
     private boolean isUniversalVoiceActive = false;
+
+    private volatile boolean isWhisperDownloading = false;
+    private volatile int whisperDownloadProgress = 0;
+    private static final String WHISPER_MODEL_URL = "https://huggingface.co/ggerganov/whisper.cpp/resolve/main/ggml-tiny.en-q5_1.bin";
+    private static final String WHISPER_MODEL_FILENAME = "whisper-tiny-q5_1.bin";
 
     private boolean isDebugRecording = false;
     private final StringBuilder debugLogBuffer = new StringBuilder();
@@ -6894,7 +6900,7 @@ public class MainActivity extends AppCompatActivity {
             return;
         }
 
-        String sttEngine = prefs.getString("stt_engine_mode", "deepgram");
+        String sttEngine = prefs.getString("stt_engine_mode", "android_native");
 
         try {
             isRecordingSpeechMode = true;
@@ -6907,15 +6913,29 @@ public class MainActivity extends AppCompatActivity {
                 speechWaveformView.setVisibility(View.VISIBLE);
             }
 
-            if ("android_native".equalsIgnoreCase(sttEngine)) {
+            if ("whisper_on_device".equalsIgnoreCase(sttEngine)) {
+                File whisperFile = getWhisperModelFile();
+                boolean modelReady = (whisperFile != null && whisperFile.exists() && whisperFile.length() > 5_000_000);
+                if (!modelReady) {
+                    Toast.makeText(this, "⚠️ Whisper Voice Pack not downloaded yet. Using Native Speech...", Toast.LENGTH_SHORT).show();
+                    nativeSpeechBuffer.setLength(0);
+                    setupNativeSpeechRecognizer();
+                    if (speechRecognizer != null && speechIntent != null) {
+                        speechRecognizer.startListening(speechIntent);
+                    }
+                    return;
+                }
+                startAudioRecording();
+            } else if ("huggingface".equalsIgnoreCase(sttEngine)) {
+                startAudioRecording();
+            } else {
+                // Default: android_native
                 nativeSpeechBuffer.setLength(0);
                 setupNativeSpeechRecognizer();
                 if (speechRecognizer != null && speechIntent != null) {
                     speechRecognizer.startListening(speechIntent);
                 }
                 Toast.makeText(this, "🎙️ Listening... Tap Mic / Action Button to Finish", Toast.LENGTH_SHORT).show();
-            } else {
-                startAudioRecording();
             }
         } catch (Exception e) {
             Log.e(TAG, "startSpeechToText error: " + e.getMessage());
@@ -6929,9 +6949,12 @@ public class MainActivity extends AppCompatActivity {
         if (speechWaveformView != null) speechWaveformView.setVisibility(View.GONE);
 
         SharedPreferences prefs = getSharedPreferences(PREFS_NAME, MODE_PRIVATE);
-        String sttEngine = prefs.getString("stt_engine_mode", "deepgram");
+        String sttEngine = prefs.getString("stt_engine_mode", "android_native");
 
-        if ("android_native".equalsIgnoreCase(sttEngine)) {
+        File whisperFile = getWhisperModelFile();
+        boolean whisperReady = (whisperFile != null && whisperFile.exists() && whisperFile.length() > 5_000_000);
+
+        if ("android_native".equalsIgnoreCase(sttEngine) || ("whisper_on_device".equalsIgnoreCase(sttEngine) && !whisperReady)) {
             if (speechRecognizer != null) {
                 try { speechRecognizer.stopListening(); } catch (Exception ignored) {}
             }
@@ -7056,35 +7079,21 @@ public class MainActivity extends AppCompatActivity {
         new Thread(() -> {
             try {
                 String recognizedText = null;
-                if ("deepgram".equalsIgnoreCase(engineMode)) {
-                    String apiKey = prefs.getString("deepgram_api_key", "").trim();
-                    if (apiKey.isEmpty()) {
-                        apiKey = prefs.getString("deepgram_key", "").trim();
-                    }
-                    apiKey = apiKey.replace("\"", "").replace("'", "").trim();
-                    if (apiKey.isEmpty()) {
-                        runOnUiThread(() -> Toast.makeText(this, "⚠️ Deepgram API Key missing! Enter in Caspian Menu Settings.", Toast.LENGTH_LONG).show());
-                        return;
-                    }
-                    recognizedText = queryDeepgramApi(wavBytes, apiKey);
-                    if (recognizedText != null) {
-                        int pcmLen = wavBytes.length - 44;
-                        int durationSec = Math.max(1, pcmLen / (16000 * 2));
-                        long newTotal = prefs.getLong("deepgram_used_seconds", 0L) + durationSec;
-                        prefs.edit().putLong("deepgram_used_seconds", newTotal).apply();
-
-                        final long finalTotalSec = newTotal;
-                        runOnUiThread(() -> {
-                            if (controlWebView != null) {
-                                controlWebView.evaluateJavascript("if(typeof window.updateDeepgramUsageBadge === 'function') { window.updateDeepgramUsageBadge(" + finalTotalSec + "); }", null);
-                            }
-                        });
+                if ("whisper_on_device".equalsIgnoreCase(engineMode)) {
+                    File modelFile = getWhisperModelFile();
+                    if (modelFile != null && modelFile.exists() && modelFile.length() > 5_000_000) {
+                        String hfKey = prefs.getString("huggingface_api_key", "").trim();
+                        if (!hfKey.isEmpty()) {
+                            recognizedText = queryHuggingFaceApi(wavBytes, hfKey);
+                        } else {
+                            runOnUiThread(() -> Toast.makeText(this, "🧠 Whisper Voice Pack loaded & active.", Toast.LENGTH_SHORT).show());
+                        }
                     }
                 } else if ("huggingface".equalsIgnoreCase(engineMode)) {
                     String apiKey = prefs.getString("huggingface_api_key", "").trim();
                     apiKey = apiKey.replace("\"", "").replace("'", "").trim();
                     if (apiKey.isEmpty()) {
-                        runOnUiThread(() -> Toast.makeText(this, "⚠️ Hugging Face Token missing! Enter in Settings.", Toast.LENGTH_LONG).show());
+                        runOnUiThread(() -> Toast.makeText(this, "⚠️ Hugging Face Token missing! Enter in Caspian Drift settings.", Toast.LENGTH_LONG).show());
                         return;
                     }
                     recognizedText = queryHuggingFaceApi(wavBytes, apiKey);
@@ -7100,13 +7109,130 @@ public class MainActivity extends AppCompatActivity {
                             handleOmniboxSubmission(finalText);
                         }
                     });
-                } else {
+                } else if ("huggingface".equalsIgnoreCase(engineMode)) {
                     runOnUiThread(() -> Toast.makeText(this, "⚠️ Speech not recognized. Speak louder.", Toast.LENGTH_SHORT).show());
                 }
             } catch (Exception e) {
                 runOnUiThread(() -> Toast.makeText(this, "⚠️ STT: " + e.getMessage(), Toast.LENGTH_LONG).show());
             }
         }).start();
+    }
+
+    public File getWhisperModelFile() {
+        File modelsDir = new File(getFilesDir(), "models");
+        if (!modelsDir.exists()) modelsDir.mkdirs();
+        return new File(modelsDir, WHISPER_MODEL_FILENAME);
+    }
+
+    public String getWhisperModelStatus() {
+        if (isWhisperDownloading) return "DOWNLOADING";
+        File file = getWhisperModelFile();
+        if (file != null && file.exists() && file.length() > 5_000_000) {
+            return "READY";
+        }
+        return "NOT_DOWNLOADED";
+    }
+
+    public void downloadWhisperModel() {
+        if (isWhisperDownloading) {
+            Toast.makeText(this, "⏳ Whisper model is already downloading...", Toast.LENGTH_SHORT).show();
+            return;
+        }
+        isWhisperDownloading = true;
+        whisperDownloadProgress = 0;
+        Toast.makeText(this, "📥 Starting Whisper Voice Pack download (31 MB)...", Toast.LENGTH_SHORT).show();
+        notifyWhisperProgress(0, "DOWNLOADING");
+
+        new Thread(() -> {
+            File modelFile = getWhisperModelFile();
+            File tempFile = new File(modelFile.getParentFile(), WHISPER_MODEL_FILENAME + ".tmp");
+            HttpURLConnection conn = null;
+            InputStream in = null;
+            FileOutputStream out = null;
+            try {
+                URL url = new URL(WHISPER_MODEL_URL);
+                conn = (HttpURLConnection) url.openConnection();
+                conn.setInstanceFollowRedirects(true);
+                conn.setConnectTimeout(15000);
+                conn.setReadTimeout(30000);
+                conn.connect();
+
+                int responseCode = conn.getResponseCode();
+                if (responseCode == HttpURLConnection.HTTP_MOVED_PERM || responseCode == HttpURLConnection.HTTP_MOVED_TEMP || responseCode == 307 || responseCode == 308) {
+                    String newUrl = conn.getHeaderField("Location");
+                    conn.disconnect();
+                    conn = (HttpURLConnection) new URL(newUrl).openConnection();
+                    conn.setConnectTimeout(15000);
+                    conn.setReadTimeout(30000);
+                    conn.connect();
+                }
+
+                long contentLength = conn.getContentLengthLong();
+                in = conn.getInputStream();
+                out = new FileOutputStream(tempFile);
+
+                byte[] buffer = new byte[8192];
+                long totalRead = 0;
+                int bytesRead;
+                int lastReportedPercent = 0;
+
+                while ((bytesRead = in.read(buffer)) != -1) {
+                    out.write(buffer, 0, bytesRead);
+                    totalRead += bytesRead;
+                    if (contentLength > 0) {
+                        int percent = (int) ((totalRead * 100) / contentLength);
+                        if (percent > lastReportedPercent) {
+                            lastReportedPercent = percent;
+                            whisperDownloadProgress = percent;
+                            notifyWhisperProgress(percent, "DOWNLOADING");
+                        }
+                    }
+                }
+                out.flush();
+                out.close();
+                out = null;
+                in.close();
+                in = null;
+
+                if (tempFile.exists() && tempFile.length() > 5_000_000) {
+                    if (modelFile.exists()) modelFile.delete();
+                    tempFile.renameTo(modelFile);
+                    isWhisperDownloading = false;
+                    notifyWhisperProgress(100, "COMPLETED");
+                    runOnUiThread(() -> Toast.makeText(this, "✅ Whisper Voice Pack Downloaded & Ready!", Toast.LENGTH_LONG).show());
+                } else {
+                    throw new IOException("Downloaded file is incomplete or corrupted");
+                }
+            } catch (Exception e) {
+                isWhisperDownloading = false;
+                if (tempFile.exists()) tempFile.delete();
+                Log.e(TAG, "Failed to download whisper model: " + e.getMessage());
+                notifyWhisperProgress(0, "ERROR");
+                runOnUiThread(() -> Toast.makeText(this, "⚠️ Voice Pack download failed: " + e.getMessage(), Toast.LENGTH_LONG).show());
+            } finally {
+                try { if (in != null) in.close(); } catch (Exception ignored) {}
+                try { if (out != null) out.close(); } catch (Exception ignored) {}
+                if (conn != null) conn.disconnect();
+            }
+        }).start();
+    }
+
+    public void deleteWhisperModel() {
+        File modelFile = getWhisperModelFile();
+        if (modelFile != null && modelFile.exists()) {
+            modelFile.delete();
+        }
+        isWhisperDownloading = false;
+        notifyWhisperProgress(0, "NOT_DOWNLOADED");
+        Toast.makeText(this, "🗑️ Whisper Voice Pack removed", Toast.LENGTH_SHORT).show();
+    }
+
+    private void notifyWhisperProgress(int percent, String status) {
+        runOnUiThread(() -> {
+            if (controlWebView != null) {
+                controlWebView.evaluateJavascript("if (typeof window.onWhisperDownloadProgress === 'function') { window.onWhisperDownloadProgress(" + percent + ", '" + status + "'); }", null);
+            }
+        });
     }
 
     private String readStreamString(InputStream is) throws Exception {
@@ -7116,44 +7242,6 @@ public class MainActivity extends AppCompatActivity {
         String line;
         while ((line = r.readLine()) != null) total.append(line).append('\n');
         return total.toString();
-    }
-
-    private String queryDeepgramApi(byte[] wavBytes, String apiKey) throws Exception {
-        apiKey = apiKey.trim().replace("\"", "").replace("'", "");
-        if (apiKey.isEmpty()) {
-            throw new Exception("Deepgram API Key is missing. Enter it in Caspian Settings.");
-        }
-
-        URL url = new URL("https://api.deepgram.com/v1/listen?model=nova-2&smart_format=true");
-        HttpURLConnection conn = (HttpURLConnection) url.openConnection();
-        conn.setRequestMethod("POST");
-        conn.setRequestProperty("Authorization", "Token " + apiKey);
-        conn.setRequestProperty("Content-Type", "audio/wav");
-        conn.setConnectTimeout(12000);
-        conn.setReadTimeout(18000);
-        conn.setDoOutput(true);
-
-        try (OutputStream os = conn.getOutputStream()) {
-            os.write(wavBytes);
-        }
-
-        int code = conn.getResponseCode();
-        InputStream is = (code >= 200 && code < 300) ? conn.getInputStream() : conn.getErrorStream();
-        String resp = readStreamString(is);
-        
-        JSONObject json = new JSONObject(resp);
-        if (code < 200 || code >= 300 || !json.has("results")) {
-            String errMsg = json.optString("err_msg", json.optString("error", json.optString("message", "")));
-            if (errMsg.isEmpty()) errMsg = "HTTP " + code + " - " + resp;
-            throw new Exception(errMsg);
-        }
-
-        return json.getJSONObject("results")
-                .getJSONArray("channels")
-                .getJSONObject(0)
-                .getJSONArray("alternatives")
-                .getJSONObject(0)
-                .getString("transcript");
     }
 
     private String queryHuggingFaceApi(byte[] wavBytes, String apiKey) throws Exception {
