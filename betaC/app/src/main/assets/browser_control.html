@@ -332,57 +332,33 @@
         <div id="caspian-current-body"
           style="display: none; margin-top: 12px; border-top: 1px solid var(--border-glass); padding-top: 10px;">
           <div class="limit-section-title" style="margin-bottom: 8px;">SELECT SPEECH-TO-TEXT ENGINE</div>
-          <div style="display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 6px; margin-bottom: 12px;">
-            <button type="button" class="cc-stt-pill active" data-engine="android_native" style="padding: 8px 4px;">
-              <span class="stt-pill-title" style="font-size: 11.5px;">📱 Native</span>
-              <span class="stt-pill-sub" style="font-size: 9.5px;">0 MB • Instant</span>
+          <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-bottom: 12px;">
+            <button type="button" class="cc-stt-pill active" data-engine="android_native" style="padding: 10px 8px;">
+              <span class="stt-pill-title" style="font-size: 12px;">📱 Native Android</span>
+              <span class="stt-pill-sub" style="font-size: 10px;">0 MB • Instant Speech</span>
             </button>
-            <button type="button" class="cc-stt-pill" data-engine="vosk_offline" style="padding: 8px 4px;">
-              <span class="stt-pill-title" style="font-size: 11.5px;">⚡ Vosk</span>
-              <span class="stt-pill-sub" style="font-size: 9.5px;">40 MB • Stream</span>
-            </button>
-            <button type="button" class="cc-stt-pill" data-engine="whisper_on_device" style="padding: 8px 4px;">
-              <span class="stt-pill-title" style="font-size: 11.5px;">🧠 Whisper</span>
-              <span class="stt-pill-sub" style="font-size: 9.5px;">High Accuracy</span>
+            <button type="button" class="cc-stt-pill" data-engine="whisper_on_device" style="padding: 10px 8px;">
+              <span class="stt-pill-title" style="font-size: 12px;">🧠 Whisper AI</span>
+              <span class="stt-pill-sub" style="font-size: 10px;">Offline • High Accuracy</span>
             </button>
           </div>
 
-          <!-- Vosk Model On-Demand Pack Info / Download Container -->
-          <div id="vosk-pack-container" style="display: none; background: rgba(255,255,255,0.03); border: 1px solid var(--border-glass); border-radius: 14px; padding: 12px; margin-bottom: 12px;">
-            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 6px;">
-              <div style="display: flex; align-items: center; gap: 6px;">
-                <span style="font-size: 14px;">⚡</span>
-                <span style="font-size: 12px; font-weight: 700; color: var(--text-main);">Vosk Real-Time US-English</span>
-              </div>
-              <span id="vosk-pack-status-badge" style="font-size: 10px; font-weight: 700; padding: 3px 8px; border-radius: 8px; background: rgba(255,255,255,0.08); color: var(--text-muted);">
-                Checking...
-              </span>
-            </div>
-            
-            <div style="font-size: 10.5px; color: var(--text-muted); line-height: 1.4; margin-bottom: 10px;">
-              Streaming Kaldi acoustic model (~40 MB). 100% offline real-time speech recognition with zero waiting time.
-            </div>
-
-            <!-- Progress Bar (hidden unless downloading) -->
-            <div id="vosk-download-progress-box" style="display: none; margin-bottom: 10px;">
-              <div style="display: flex; justify-content: space-between; font-size: 10px; margin-bottom: 4px;">
-                <span id="vosk-download-label" style="color: var(--accent); font-weight: 600;">Downloading Vosk model...</span>
-                <span id="vosk-download-percent" style="font-weight: 700; color: var(--text-main);">0%</span>
-              </div>
-              <div style="width: 100%; height: 6px; background: rgba(255,255,255,0.1); border-radius: 3px; overflow: hidden;">
-                <div id="vosk-download-bar" style="width: 0%; height: 100%; background: var(--accent-gradient); transition: width 0.2s ease;"></div>
+          <!-- Manage Voice Models Row (Always visible in Caspian Drift) -->
+          <div style="display: flex; justify-content: space-between; align-items: center; background: rgba(255,255,255,0.03); border: 1px solid var(--border-glass); border-radius: 12px; padding: 9px 12px; margin-bottom: 12px;">
+            <div style="display: flex; align-items: center; gap: 8px;">
+              <span style="font-size: 15px;">💾</span>
+              <div>
+                <div style="font-size: 11.5px; font-weight: 700; color: var(--text-main);">Downloaded Models</div>
+                <div id="cc-models-summary-text" style="font-size: 10px; color: var(--text-muted);">Manage offline voice packs & free storage</div>
               </div>
             </div>
-
-            <div style="display: flex; gap: 8px;">
-              <button type="button" id="vosk-action-download-btn" class="oneui-pill-btn primary" style="flex: 1; font-size: 11.5px; padding: 7px 12px;">
-                ⚡ Download Vosk Pack (~40 MB)
-              </button>
-              <button type="button" id="vosk-action-delete-btn" class="oneui-pill-btn danger" style="display: none; font-size: 11.5px; padding: 7px 12px; color: #ef4444; border-color: rgba(239,68,68,0.3);">
-                🗑️ Remove Vosk (~40 MB)
-              </button>
-            </div>
+            <button type="button" id="cc-open-manage-models-btn" class="oneui-pill-btn secondary" style="font-size: 11px; padding: 4px 12px; font-weight: 700; display: flex; align-items: center; gap: 4px;">
+              <span>⚙️ Manage</span>
+              <span id="cc-models-count-badge" style="font-size: 9px; padding: 1px 5px; border-radius: 6px; background: rgba(255,255,255,0.12); margin-left: 2px;">0</span>
+            </button>
           </div>
+
+          <!-- Whisper Voice Pack On-Demand Info / Download Container -->
           <div id="whisper-pack-container" style="display: none; background: rgba(255,255,255,0.03); border: 1px solid var(--border-glass); border-radius: 14px; padding: 12px; margin-bottom: 12px;">
             
             <!-- Model Tier Selector (Tiny ~39MB vs Base ~75MB) -->
@@ -2277,6 +2253,84 @@
           <button type="button" id="harbor-editor-save-btn" class="oneui-pill-btn primary"
             style="padding: 8px 16px; border-radius: 12px; font-size: 11px; cursor: pointer; pointer-events: auto;">Save</button>
         </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Modal: Manage Downloaded Voice Models -->
+  <div id="modal-manage-voice-models" class="modal-overlay" style="display: none; z-index: 100000000 !important; pointer-events: auto !important;">
+    <div class="modal-card" style="width: 100%; max-width: 380px; background: var(--card-bg); border: 1px solid var(--border-glass); border-radius: 20px; padding: 20px; box-shadow: 0 16px 40px rgba(0,0,0,0.5); position: relative; pointer-events: auto !important;">
+      <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 14px;">
+        <div class="modal-title" style="font-size: 14px; font-weight: 800; color: var(--text-main); display: flex; align-items: center; gap: 6px;">
+          <span>💾</span>
+          <span>Manage Voice Models</span>
+        </div>
+        <button type="button" id="modal-close-voice-models-btn" class="icon-btn" style="width: 26px; height: 26px; font-size: 12px; cursor: pointer; pointer-events: auto;">✕</button>
+      </div>
+
+      <div style="font-size: 11px; color: var(--text-muted); margin-bottom: 14px; line-height: 1.4;">
+        Manage on-device speech packs. Delete unused models to reclaim device storage anytime.
+      </div>
+
+      <!-- Models List -->
+      <div style="display: flex; flex-direction: column; gap: 10px; margin-bottom: 14px;">
+        <!-- Whisper Tiny Item -->
+        <div style="background: rgba(255,255,255,0.03); border: 1px solid var(--border-glass); border-radius: 14px; padding: 12px;">
+          <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 6px;">
+            <div style="font-size: 12.5px; font-weight: 700; color: var(--text-main);">
+              Whisper Tiny (English)
+            </div>
+            <span id="mvm-status-tiny" style="font-size: 10px; font-weight: 700; padding: 2px 7px; border-radius: 6px; background: rgba(255,255,255,0.08); color: var(--text-muted);">
+              Checking...
+            </span>
+          </div>
+          <div style="font-size: 10.5px; color: var(--text-muted); margin-bottom: 10px;">
+            Fast offline inference • Expected ~39 MB
+          </div>
+          <div style="display: flex; justify-content: flex-end; gap: 8px;">
+            <button type="button" id="mvm-download-tiny-btn" class="oneui-pill-btn primary" style="font-size: 11px; padding: 5px 12px;">
+              ⚡ Download (~39 MB)
+            </button>
+            <button type="button" id="mvm-delete-tiny-btn" class="oneui-pill-btn danger" style="display: none; font-size: 11px; padding: 5px 12px; color: #ef4444; border-color: rgba(239,68,68,0.3);">
+              🗑️ Delete Model
+            </button>
+          </div>
+        </div>
+
+        <!-- Whisper Base Item -->
+        <div style="background: rgba(255,255,255,0.03); border: 1px solid var(--border-glass); border-radius: 14px; padding: 12px;">
+          <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 6px;">
+            <div style="font-size: 12.5px; font-weight: 700; color: var(--text-main);">
+              Whisper Base (English)
+            </div>
+            <span id="mvm-status-base" style="font-size: 10px; font-weight: 700; padding: 2px 7px; border-radius: 6px; background: rgba(255,255,255,0.08); color: var(--text-muted);">
+              Checking...
+            </span>
+          </div>
+          <div style="font-size: 10.5px; color: var(--text-muted); margin-bottom: 10px;">
+            High accuracy offline • Expected ~75 MB
+          </div>
+          <div style="display: flex; justify-content: flex-end; gap: 8px;">
+            <button type="button" id="mvm-download-base-btn" class="oneui-pill-btn primary" style="font-size: 11px; padding: 5px 12px;">
+              ⚡ Download (~75 MB)
+            </button>
+            <button type="button" id="mvm-delete-base-btn" class="oneui-pill-btn danger" style="display: none; font-size: 11px; padding: 5px 12px; color: #ef4444; border-color: rgba(239,68,68,0.3);">
+              🗑️ Delete Model
+            </button>
+          </div>
+        </div>
+      </div>
+
+      <!-- Storage Total Footprint -->
+      <div style="display: flex; justify-content: space-between; align-items: center; padding: 10px 12px; background: rgba(0,0,0,0.25); border-radius: 12px; border: 1px solid var(--border-glass); margin-bottom: 16px;">
+        <span style="font-size: 11px; color: var(--text-muted);">Total Voice Storage Used:</span>
+        <span id="mvm-total-storage" style="font-size: 12px; font-weight: 800; color: var(--accent);">0 MB</span>
+      </div>
+
+      <div style="display: flex; justify-content: flex-end;">
+        <button type="button" id="modal-done-voice-models-btn" class="oneui-pill-btn primary" style="padding: 8px 18px; font-size: 11.5px; cursor: pointer;">
+          Done
+        </button>
       </div>
     </div>
   </div>

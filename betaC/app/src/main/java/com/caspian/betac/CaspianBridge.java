@@ -1158,6 +1158,12 @@ public class CaspianBridge {
     }
 
     @JavascriptInterface
+    public long getWhisperModelSize(String tier) {
+        if (activity == null) return 0;
+        return activity.getWhisperModelSize(tier);
+    }
+
+    @JavascriptInterface
     public void downloadWhisperModel(String tier) {
         if (activity == null) return;
         activity.runOnUiThread(() -> activity.downloadWhisperModel(tier));
@@ -1168,22 +1174,5 @@ public class CaspianBridge {
         if (activity == null) return;
         activity.runOnUiThread(() -> activity.deleteWhisperModel(tier));
     }
-
-    @JavascriptInterface
-    public String getVoskModelStatus() {
-        if (activity == null) return "NOT_DOWNLOADED";
-        return activity.getVoskModelStatus();
-    }
-
-    @JavascriptInterface
-    public void downloadVoskModel() {
-        if (activity == null) return;
-        activity.runOnUiThread(() -> activity.downloadVoskModel());
-    }
-
-    @JavascriptInterface
-    public void deleteVoskModel() {
-        if (activity == null) return;
-        activity.runOnUiThread(() -> activity.deleteVoskModel());
-    }
 }
+

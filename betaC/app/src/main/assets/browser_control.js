@@ -4430,17 +4430,8 @@
       });
     }
 
-    // Caspian Drift Settings Wiring (Native Android & On-Device Whisper/Vosk Tiers)
+    // Caspian Drift Settings Wiring (Native Android & On-Device Whisper Tiers)
     const sttPills = document.querySelectorAll('.cc-stt-pill');
-    const voskPackContainer = document.getElementById('vosk-pack-container');
-    const voskStatusBadge = document.getElementById('vosk-pack-status-badge');
-    const voskProgressBox = document.getElementById('vosk-download-progress-box');
-    const voskDownloadLabel = document.getElementById('vosk-download-label');
-    const voskDownloadPercent = document.getElementById('vosk-download-percent');
-    const voskDownloadBar = document.getElementById('vosk-download-bar');
-    const voskDownloadBtn = document.getElementById('vosk-action-download-btn');
-    const voskDeleteBtn = document.getElementById('vosk-action-delete-btn');
-
     const whisperPackContainer = document.getElementById('whisper-pack-container');
     const whisperStatusBadge = document.getElementById('whisper-pack-status-badge');
     const whisperTierTitle = document.getElementById('whisper-tier-title');
@@ -4452,6 +4443,23 @@
     const whisperDownloadBar = document.getElementById('whisper-download-bar');
     const whisperDownloadBtn = document.getElementById('whisper-action-download-btn');
     const whisperDeleteBtn = document.getElementById('whisper-action-delete-btn');
+
+    // Manage Downloaded Models Modal & Row Elements
+    const openManageModelsBtn = document.getElementById('cc-open-manage-models-btn');
+    const manageModelsModal = document.getElementById('modal-manage-voice-models');
+    const closeManageModelsBtn = document.getElementById('modal-close-voice-models-btn');
+    const doneManageModelsBtn = document.getElementById('modal-done-voice-models-btn');
+    const modelsCountBadge = document.getElementById('cc-models-count-badge');
+    const modelsSummaryText = document.getElementById('cc-models-summary-text');
+    const mvmTotalStorage = document.getElementById('mvm-total-storage');
+
+    const mvmStatusTiny = document.getElementById('mvm-status-tiny');
+    const mvmDownloadTinyBtn = document.getElementById('mvm-download-tiny-btn');
+    const mvmDeleteTinyBtn = document.getElementById('mvm-delete-tiny-btn');
+
+    const mvmStatusBase = document.getElementById('mvm-status-base');
+    const mvmDownloadBaseBtn = document.getElementById('mvm-download-base-btn');
+    const mvmDeleteBaseBtn = document.getElementById('mvm-delete-base-btn');
 
     const whisperTierMetadata = {
       tiny: {
@@ -4476,112 +4484,9 @@
       currentWhisperTier = window.CaspianBridge.getPref('whisper_selected_tier', currentWhisperTier);
     }
 
-    function syncVoskModelUI(status) {
-      if (!status && window.CaspianBridge && typeof window.CaspianBridge.getVoskModelStatus === 'function') {
-        try {
-          status = window.CaspianBridge.getVoskModelStatus();
-        } catch (e) {
-          status = 'NOT_DOWNLOADED';
-        }
-      }
-      status = status || 'NOT_DOWNLOADED';
-
-      if (status === 'READY' || status === 'COMPLETED') {
-        if (voskStatusBadge) {
-          voskStatusBadge.textContent = '✅ Ready (Offline)';
-          voskStatusBadge.style.background = 'rgba(34, 197, 94, 0.15)';
-          voskStatusBadge.style.color = '#4ade80';
-        }
-        if (voskProgressBox) voskProgressBox.style.display = 'none';
-        if (voskDownloadBtn) voskDownloadBtn.style.display = 'none';
-        if (voskDeleteBtn) voskDeleteBtn.style.display = 'block';
-      } else if (status === 'DOWNLOADING') {
-        if (voskStatusBadge) {
-          voskStatusBadge.textContent = '⏳ Downloading...';
-          voskStatusBadge.style.background = 'rgba(234, 179, 8, 0.15)';
-          voskStatusBadge.style.color = '#facc15';
-        }
-        if (voskProgressBox) voskProgressBox.style.display = 'block';
-        if (voskDownloadBtn) {
-          voskDownloadBtn.style.display = 'block';
-          voskDownloadBtn.disabled = true;
-          voskDownloadBtn.textContent = '⏳ Downloading Vosk...';
-        }
-        if (voskDeleteBtn) voskDeleteBtn.style.display = 'none';
-      } else {
-        if (voskStatusBadge) {
-          voskStatusBadge.textContent = '⚠️ Missing (~40 MB)';
-          voskStatusBadge.style.background = 'rgba(255, 255, 255, 0.08)';
-          voskStatusBadge.style.color = 'var(--text-muted)';
-        }
-        if (voskProgressBox) voskProgressBox.style.display = 'none';
-        if (voskDownloadBtn) {
-          voskDownloadBtn.style.display = 'block';
-          voskDownloadBtn.disabled = false;
-          voskDownloadBtn.textContent = '⚡ Download Vosk Pack (~40 MB)';
-        }
-        if (voskDeleteBtn) voskDeleteBtn.style.display = 'none';
-      }
-    }
-
-    window.onVoskDownloadProgress = function (percent, status) {
-      if (status === 'DOWNLOADING') {
-        if (voskProgressBox) voskProgressBox.style.display = 'block';
-        if (voskDownloadBar) voskDownloadBar.style.width = percent + '%';
-        if (voskDownloadPercent) voskDownloadPercent.textContent = percent + '%';
-        if (voskDownloadLabel) voskDownloadLabel.textContent = 'Downloading Vosk model pack...';
-        if (voskStatusBadge) {
-          voskStatusBadge.textContent = `⏳ ${percent}%`;
-          voskStatusBadge.style.background = 'rgba(234, 179, 8, 0.15)';
-          voskStatusBadge.style.color = '#facc15';
-        }
-        if (voskDownloadBtn) {
-          voskDownloadBtn.disabled = true;
-          voskDownloadBtn.textContent = `⏳ Downloading (${percent}%)...`;
-        }
-      } else if (status === 'COMPLETED' || status === 'READY') {
-        syncVoskModelUI('READY');
-      } else if (status === 'ERROR') {
-        if (voskProgressBox) voskProgressBox.style.display = 'none';
-        if (voskStatusBadge) {
-          voskStatusBadge.textContent = '❌ Download Failed';
-          voskStatusBadge.style.background = 'rgba(239, 68, 68, 0.15)';
-          voskStatusBadge.style.color = '#ef4444';
-        }
-        if (voskDownloadBtn) {
-          voskDownloadBtn.disabled = false;
-          voskDownloadBtn.style.display = 'block';
-          voskDownloadBtn.textContent = '🔄 Retry Download (~40 MB)';
-        }
-      } else {
-        syncVoskModelUI('NOT_DOWNLOADED');
-      }
-    };
-
-    if (voskDownloadBtn) {
-      voskDownloadBtn.addEventListener('click', (e) => {
-        e.stopPropagation();
-        if (typeof playSFX === 'function') playSFX('tb_clicks');
-        if (window.CaspianBridge && typeof window.CaspianBridge.downloadVoskModel === 'function') {
-          syncVoskModelUI('DOWNLOADING');
-          window.CaspianBridge.downloadVoskModel();
-        } else {
-          alert('Vosk model download is only supported inside the Caspian Flow Android app.');
-        }
-      });
-    }
-
-    if (voskDeleteBtn) {
-      voskDeleteBtn.addEventListener('click', (e) => {
-        e.stopPropagation();
-        if (typeof playSFX === 'function') playSFX('tb_clicks');
-        if (confirm('Delete on-device Vosk Model Pack (frees ~40 MB)?')) {
-          if (window.CaspianBridge && typeof window.CaspianBridge.deleteVoskModel === 'function') {
-            window.CaspianBridge.deleteVoskModel();
-          }
-          syncVoskModelUI('NOT_DOWNLOADED');
-        }
-      });
+    function formatVoiceBytes(bytes) {
+      if (!bytes || bytes <= 0) return '0 MB';
+      return (bytes / (1024 * 1024)).toFixed(1) + ' MB';
     }
 
     function syncWhisperModelUI(status, targetTier) {
@@ -4638,6 +4543,169 @@
       }
     }
 
+    function refreshAllVoiceModelsUI() {
+      let tinyStatus = 'NOT_DOWNLOADED';
+      let baseStatus = 'NOT_DOWNLOADED';
+      let tinySize = 0;
+      let baseSize = 0;
+
+      if (window.CaspianBridge) {
+        if (typeof window.CaspianBridge.getWhisperModelStatus === 'function') {
+          try { tinyStatus = window.CaspianBridge.getWhisperModelStatus('tiny') || 'NOT_DOWNLOADED'; } catch (e) {}
+          try { baseStatus = window.CaspianBridge.getWhisperModelStatus('base') || 'NOT_DOWNLOADED'; } catch (e) {}
+        }
+        if (typeof window.CaspianBridge.getWhisperModelSize === 'function') {
+          try { tinySize = window.CaspianBridge.getWhisperModelSize('tiny') || 0; } catch (e) {}
+          try { baseSize = window.CaspianBridge.getWhisperModelSize('base') || 0; } catch (e) {}
+        }
+      }
+
+      let downloadedCount = 0;
+      let totalBytes = 0;
+
+      // Update Tiny Item in Modal
+      if (mvmStatusTiny) {
+        if (tinyStatus === 'READY' || tinyStatus === 'COMPLETED') {
+          downloadedCount++;
+          totalBytes += (tinySize > 0 ? tinySize : 39 * 1024 * 1024);
+          const sizeStr = tinySize > 0 ? formatVoiceBytes(tinySize) : '~39 MB';
+          mvmStatusTiny.textContent = `✅ Ready (${sizeStr})`;
+          mvmStatusTiny.style.background = 'rgba(34, 197, 94, 0.15)';
+          mvmStatusTiny.style.color = '#4ade80';
+          if (mvmDownloadTinyBtn) mvmDownloadTinyBtn.style.display = 'none';
+          if (mvmDeleteTinyBtn) {
+            mvmDeleteTinyBtn.style.display = 'inline-block';
+            mvmDeleteTinyBtn.textContent = `🗑️ Delete Pack (${sizeStr})`;
+          }
+        } else if (tinyStatus === 'DOWNLOADING') {
+          mvmStatusTiny.textContent = '⏳ Downloading...';
+          mvmStatusTiny.style.background = 'rgba(234, 179, 8, 0.15)';
+          mvmStatusTiny.style.color = '#facc15';
+          if (mvmDownloadTinyBtn) {
+            mvmDownloadTinyBtn.style.display = 'inline-block';
+            mvmDownloadTinyBtn.disabled = true;
+            mvmDownloadTinyBtn.textContent = '⏳ Downloading...';
+          }
+          if (mvmDeleteTinyBtn) mvmDeleteTinyBtn.style.display = 'none';
+        } else {
+          mvmStatusTiny.textContent = '⚠️ Not Installed';
+          mvmStatusTiny.style.background = 'rgba(255, 255, 255, 0.08)';
+          mvmStatusTiny.style.color = 'var(--text-muted)';
+          if (mvmDownloadTinyBtn) {
+            mvmDownloadTinyBtn.style.display = 'inline-block';
+            mvmDownloadTinyBtn.disabled = false;
+            mvmDownloadTinyBtn.textContent = '⚡ Download (~39 MB)';
+          }
+          if (mvmDeleteTinyBtn) mvmDeleteTinyBtn.style.display = 'none';
+        }
+      }
+
+      // Update Base Item in Modal
+      if (mvmStatusBase) {
+        if (baseStatus === 'READY' || baseStatus === 'COMPLETED') {
+          downloadedCount++;
+          totalBytes += (baseSize > 0 ? baseSize : 75 * 1024 * 1024);
+          const sizeStr = baseSize > 0 ? formatVoiceBytes(baseSize) : '~75 MB';
+          mvmStatusBase.textContent = `✅ Ready (${sizeStr})`;
+          mvmStatusBase.style.background = 'rgba(34, 197, 94, 0.15)';
+          mvmStatusBase.style.color = '#4ade80';
+          if (mvmDownloadBaseBtn) mvmDownloadBaseBtn.style.display = 'none';
+          if (mvmDeleteBaseBtn) {
+            mvmDeleteBaseBtn.style.display = 'inline-block';
+            mvmDeleteBaseBtn.textContent = `🗑️ Delete Pack (${sizeStr})`;
+          }
+        } else if (baseStatus === 'DOWNLOADING') {
+          mvmStatusBase.textContent = '⏳ Downloading...';
+          mvmStatusBase.style.background = 'rgba(234, 179, 8, 0.15)';
+          mvmStatusBase.style.color = '#facc15';
+          if (mvmDownloadBaseBtn) {
+            mvmDownloadBaseBtn.style.display = 'inline-block';
+            mvmDownloadBaseBtn.disabled = true;
+            mvmDownloadBaseBtn.textContent = '⏳ Downloading...';
+          }
+          if (mvmDeleteBaseBtn) mvmDeleteBaseBtn.style.display = 'none';
+        } else {
+          mvmStatusBase.textContent = '⚠️ Not Installed';
+          mvmStatusBase.style.background = 'rgba(255, 255, 255, 0.08)';
+          mvmStatusBase.style.color = 'var(--text-muted)';
+          if (mvmDownloadBaseBtn) {
+            mvmDownloadBaseBtn.style.display = 'inline-block';
+            mvmDownloadBaseBtn.disabled = false;
+            mvmDownloadBaseBtn.textContent = '⚡ Download (~75 MB)';
+          }
+          if (mvmDeleteBaseBtn) mvmDeleteBaseBtn.style.display = 'none';
+        }
+      }
+
+      // Total storage footprint
+      if (mvmTotalStorage) {
+        mvmTotalStorage.textContent = formatVoiceBytes(totalBytes);
+      }
+
+      // Drift Card Badges & Summaries
+      if (modelsCountBadge) {
+        modelsCountBadge.textContent = downloadedCount;
+        modelsCountBadge.style.background = downloadedCount > 0 ? 'rgba(34, 197, 94, 0.2)' : 'rgba(255, 255, 255, 0.12)';
+        modelsCountBadge.style.color = downloadedCount > 0 ? '#4ade80' : 'var(--text-muted)';
+      }
+      if (modelsSummaryText) {
+        if (downloadedCount === 0) {
+          modelsSummaryText.textContent = '0 offline models • 0 MB used';
+        } else if (downloadedCount === 1) {
+          modelsSummaryText.textContent = `1 model installed (${formatVoiceBytes(totalBytes)})`;
+        } else {
+          modelsSummaryText.textContent = `2 models installed (${formatVoiceBytes(totalBytes)})`;
+        }
+      }
+
+      // Sync active tier card
+      syncWhisperModelUI(currentWhisperTier === 'base' ? baseStatus : tinyStatus, currentWhisperTier);
+    }
+
+    function handleDeleteModel(tier) {
+      const isBase = tier === 'base';
+      const meta = isBase ? whisperTierMetadata.base : whisperTierMetadata.tiny;
+      if (!confirm(`Delete ${meta.title} (${meta.size})? This will free offline device storage.`)) {
+        return;
+      }
+      if (window.CaspianBridge && typeof window.CaspianBridge.deleteWhisperModel === 'function') {
+        window.CaspianBridge.deleteWhisperModel(tier);
+      }
+      
+      const otherTier = isBase ? 'tiny' : 'base';
+      let otherStatus = 'NOT_DOWNLOADED';
+      if (window.CaspianBridge && typeof window.CaspianBridge.getWhisperModelStatus === 'function') {
+        try { otherStatus = window.CaspianBridge.getWhisperModelStatus(otherTier); } catch (e) {}
+      }
+
+      if (currentWhisperTier === tier) {
+        if (otherStatus === 'READY' || otherStatus === 'COMPLETED') {
+          // Switch to other available tier
+          currentWhisperTier = otherTier;
+          localStorage.setItem('whisper_selected_tier', otherTier);
+          if (window.CaspianBridge && typeof window.CaspianBridge.savePref === 'function') {
+            window.CaspianBridge.savePref('whisper_selected_tier', otherTier);
+          }
+          updateWhisperTierDisplay(otherTier);
+          if (window.CaspianBridge && typeof window.CaspianBridge.showToast === 'function') {
+            window.CaspianBridge.showToast(`Switched Whisper to ${otherTier === 'base' ? 'Base' : 'Tiny'} pack`);
+          }
+        } else if (currentSttEngine === 'whisper_on_device') {
+          // No whisper models left -> gracefully switch to Native Android
+          currentSttEngine = 'android_native';
+          localStorage.setItem('stt_engine_mode', 'android_native');
+          if (window.CaspianBridge && typeof window.CaspianBridge.savePref === 'function') {
+            window.CaspianBridge.savePref('stt_engine_mode', 'android_native');
+          }
+          updateSttEngineUI('android_native');
+          if (window.CaspianBridge && typeof window.CaspianBridge.showToast === 'function') {
+            window.CaspianBridge.showToast('Model removed. STT switched to Native Android.');
+          }
+        }
+      }
+      refreshAllVoiceModelsUI();
+    }
+
     function updateWhisperTierDisplay(tier) {
       currentWhisperTier = tier || 'tiny';
       whisperTierBtns.forEach(btn => {
@@ -4676,6 +4744,7 @@
           }
         } else if (status === 'COMPLETED' || status === 'READY') {
           syncWhisperModelUI('READY', activeTier);
+          refreshAllVoiceModelsUI();
         } else if (status === 'ERROR') {
           if (whisperProgressBox) whisperProgressBox.style.display = 'none';
           if (whisperStatusBadge) {
@@ -4686,12 +4755,15 @@
           if (whisperDownloadBtn) {
             whisperDownloadBtn.disabled = false;
             whisperDownloadBtn.style.display = 'block';
-            whisperDownloadBtn.textContent = `🔄 Retry Download (${whisperTierMetadata[activeTier].size})`;
+            whisperDownloadBtn.textContent = `🔄 Retry Download`;
           }
+          refreshAllVoiceModelsUI();
         } else {
           syncWhisperModelUI('NOT_DOWNLOADED', activeTier);
+          refreshAllVoiceModelsUI();
         }
       }
+      refreshAllVoiceModelsUI();
     };
 
     if (whisperDownloadBtn) {
@@ -4701,6 +4773,7 @@
         if (window.CaspianBridge && typeof window.CaspianBridge.downloadWhisperModel === 'function') {
           syncWhisperModelUI('DOWNLOADING', currentWhisperTier);
           window.CaspianBridge.downloadWhisperModel(currentWhisperTier);
+          refreshAllVoiceModelsUI();
         } else {
           alert('Whisper model download is only supported inside the Caspian Flow Android app.');
         }
@@ -4711,12 +4784,77 @@
       whisperDeleteBtn.addEventListener('click', (e) => {
         e.stopPropagation();
         if (typeof playSFX === 'function') playSFX('tb_clicks');
-        const meta = whisperTierMetadata[currentWhisperTier] || whisperTierMetadata.tiny;
-        if (confirm(`Delete on-device ${meta.title} (frees ${meta.size})?`)) {
-          if (window.CaspianBridge && typeof window.CaspianBridge.deleteWhisperModel === 'function') {
-            window.CaspianBridge.deleteWhisperModel(currentWhisperTier);
-          }
-          syncWhisperModelUI('NOT_DOWNLOADED', currentWhisperTier);
+        handleDeleteModel(currentWhisperTier);
+      });
+    }
+
+    // Modal Action Listeners
+    if (openManageModelsBtn && manageModelsModal) {
+      openManageModelsBtn.addEventListener('click', (e) => {
+        e.stopPropagation();
+        if (typeof playSFX === 'function') playSFX('tb_clicks');
+        refreshAllVoiceModelsUI();
+        manageModelsModal.style.display = 'flex';
+      });
+    }
+
+    if (closeManageModelsBtn && manageModelsModal) {
+      closeManageModelsBtn.addEventListener('click', (e) => {
+        e.stopPropagation();
+        manageModelsModal.style.display = 'none';
+      });
+    }
+
+    if (doneManageModelsBtn && manageModelsModal) {
+      doneManageModelsBtn.addEventListener('click', (e) => {
+        e.stopPropagation();
+        if (typeof playSFX === 'function') playSFX('tb_clicks');
+        manageModelsModal.style.display = 'none';
+      });
+    }
+
+    if (manageModelsModal) {
+      manageModelsModal.addEventListener('click', (e) => {
+        if (e.target === manageModelsModal) {
+          manageModelsModal.style.display = 'none';
+        }
+      });
+    }
+
+    if (mvmDeleteTinyBtn) {
+      mvmDeleteTinyBtn.addEventListener('click', (e) => {
+        e.stopPropagation();
+        if (typeof playSFX === 'function') playSFX('tb_clicks');
+        handleDeleteModel('tiny');
+      });
+    }
+
+    if (mvmDeleteBaseBtn) {
+      mvmDeleteBaseBtn.addEventListener('click', (e) => {
+        e.stopPropagation();
+        if (typeof playSFX === 'function') playSFX('tb_clicks');
+        handleDeleteModel('base');
+      });
+    }
+
+    if (mvmDownloadTinyBtn) {
+      mvmDownloadTinyBtn.addEventListener('click', (e) => {
+        e.stopPropagation();
+        if (typeof playSFX === 'function') playSFX('tb_clicks');
+        if (window.CaspianBridge && typeof window.CaspianBridge.downloadWhisperModel === 'function') {
+          window.CaspianBridge.downloadWhisperModel('tiny');
+          refreshAllVoiceModelsUI();
+        }
+      });
+    }
+
+    if (mvmDownloadBaseBtn) {
+      mvmDownloadBaseBtn.addEventListener('click', (e) => {
+        e.stopPropagation();
+        if (typeof playSFX === 'function') playSFX('tb_clicks');
+        if (window.CaspianBridge && typeof window.CaspianBridge.downloadWhisperModel === 'function') {
+          window.CaspianBridge.downloadWhisperModel('base');
+          refreshAllVoiceModelsUI();
         }
       });
     }
@@ -4734,6 +4872,7 @@
           window.CaspianBridge.saveSetting('whisper_selected_tier', tier);
         }
         updateWhisperTierDisplay(tier);
+        refreshAllVoiceModelsUI();
       });
     });
 
@@ -4744,18 +4883,13 @@
         else p.classList.remove('active');
       });
 
-      if (currentSttEngine === 'vosk_offline') {
-        if (voskPackContainer) voskPackContainer.style.display = 'block';
-        if (whisperPackContainer) whisperPackContainer.style.display = 'none';
-        syncVoskModelUI();
-      } else if (currentSttEngine === 'whisper_on_device') {
-        if (voskPackContainer) voskPackContainer.style.display = 'none';
+      if (currentSttEngine === 'whisper_on_device') {
         if (whisperPackContainer) whisperPackContainer.style.display = 'block';
         updateWhisperTierDisplay(currentWhisperTier);
       } else {
-        if (voskPackContainer) voskPackContainer.style.display = 'none';
         if (whisperPackContainer) whisperPackContainer.style.display = 'none';
       }
+      refreshAllVoiceModelsUI();
     }
     window.updateSttEngineUI = updateSttEngineUI;
 
@@ -4772,7 +4906,7 @@
         }
         updateSttEngineUI(selectedEngine);
         if (window.CaspianBridge && typeof window.CaspianBridge.showToast === 'function') {
-          const name = selectedEngine === 'vosk_offline' ? 'Vosk Real-Time' : (selectedEngine === 'whisper_on_device' ? 'Whisper AI' : 'Native Android');
+          const name = selectedEngine === 'whisper_on_device' ? 'Whisper AI' : 'Native Android';
           window.CaspianBridge.showToast(`STT Engine: ${name}`);
         }
       });

@@ -523,13 +523,6 @@ public class MainActivity extends AppCompatActivity {
     private static final String WHISPER_BASE_URL = "https://huggingface.co/ggerganov/whisper.cpp/resolve/main/ggml-base.en-q5_1.bin";
     private static final String WHISPER_BASE_FILENAME = "whisper-base-q5_1.bin";
 
-    private volatile boolean isVoskDownloading = false;
-    private volatile int voskDownloadProgress = 0;
-    private static final String VOSK_MODEL_URL = "https://alphacephei.com/vosk/models/vosk-model-small-en-us-0.15.zip";
-    private static final String VOSK_MODEL_DIR_NAME = "vosk-model-small-en-us-0.15";
-    private static org.vosk.Model sharedVoskModel = null;
-    private org.vosk.Recognizer activeVoskRecognizer = null;
-
     private boolean isDebugRecording = false;
     private final StringBuilder debugLogBuffer = new StringBuilder();
 
@@ -6927,26 +6920,7 @@ public class MainActivity extends AppCompatActivity {
                 speechWaveformView.setVisibility(View.VISIBLE);
             }
 
-            if ("vosk_offline".equalsIgnoreCase(sttEngine)) {
-                if (!isVoskModelReady()) {
-                    Toast.makeText(this, "⚠️ Vosk Voice Pack not downloaded yet. Using Native Speech...", Toast.LENGTH_SHORT).show();
-                    nativeSpeechBuffer.setLength(0);
-                    setupNativeSpeechRecognizer();
-                    if (speechRecognizer != null && speechIntent != null) {
-                        speechRecognizer.startListening(speechIntent);
-                    }
-                    return;
-                }
-                try {
-                    if (sharedVoskModel == null) {
-                        sharedVoskModel = new org.vosk.Model(getVoskModelDir().getAbsolutePath());
-                    }
-                    activeVoskRecognizer = new org.vosk.Recognizer(sharedVoskModel, 16000.0f);
-                } catch (Exception ve) {
-                    Log.e(TAG, "Failed to init Vosk recognizer: " + ve.getMessage(), ve);
-                }
-                startAudioRecording();
-            } else if ("whisper_on_device".equalsIgnoreCase(sttEngine)) {
+            if ("whisper_on_device".equalsIgnoreCase(sttEngine)) {
                 File whisperFile = getActiveWhisperModelFile();
                 boolean modelReady = (whisperFile != null && whisperFile.exists() && whisperFile.length() > 5_000_000);
                 if (!modelReady) {
@@ -6984,43 +6958,8 @@ public class MainActivity extends AppCompatActivity {
 
         File whisperFile = getActiveWhisperModelFile();
         boolean whisperReady = (whisperFile != null && whisperFile.exists() && whisperFile.length() > 5_000_000);
-        boolean voskReady = isVoskModelReady();
 
-        if ("vosk_offline".equalsIgnoreCase(sttEngine) && voskReady) {
-            stopAudioRecordingAndGetPcm();
-            String resultJson = "";
-            if (activeVoskRecognizer != null) {
-                try {
-                    resultJson = activeVoskRecognizer.getFinalResult();
-                    activeVoskRecognizer.close();
-                } catch (Exception ignored) {}
-                activeVoskRecognizer = null;
-            }
-            String recognizedText = "";
-            if (resultJson != null && !resultJson.isEmpty()) {
-                try {
-                    org.json.JSONObject obj = new org.json.JSONObject(resultJson);
-                    recognizedText = obj.optString("text", "").trim();
-                } catch (Exception e) {
-                    recognizedText = resultJson.trim();
-                }
-            }
-            if (!recognizedText.isEmpty()) {
-                final String finalText = recognizedText;
-                runOnUiThread(() -> {
-                    if (isUniversalVoiceActive) {
-                        handleUniversalSpeechText(finalText);
-                    } else {
-                        omniboxEditText.setText(finalText);
-                        handleOmniboxSubmission(finalText);
-                    }
-                });
-            } else {
-                runOnUiThread(() -> Toast.makeText(this, "⚠️ Vosk: No speech detected", Toast.LENGTH_SHORT).show());
-            }
-        } else if ("android_native".equalsIgnoreCase(sttEngine) || 
-                  ("whisper_on_device".equalsIgnoreCase(sttEngine) && !whisperReady) ||
-                  ("vosk_offline".equalsIgnoreCase(sttEngine) && !voskReady)) {
+        if ("android_native".equalsIgnoreCase(sttEngine) || !whisperReady) {
             if (speechRecognizer != null) {
                 try { speechRecognizer.stopListening(); } catch (Exception ignored) {}
             }
@@ -7061,12 +7000,6 @@ public class MainActivity extends AppCompatActivity {
                     int read = audioRecord.read(data, 0, data.length);
                     if (read > 0 && pcmAudioBuffer != null) {
                         pcmAudioBuffer.write(data, 0, read);
-
-                        if (activeVoskRecognizer != null) {
-                            try {
-                                activeVoskRecognizer.acceptWaveForm(data, read);
-                            } catch (Exception ignored) {}
-                        }
 
                         long sum = 0;
                         int samples = read / 2;
@@ -7221,6 +7154,15 @@ public class MainActivity extends AppCompatActivity {
         return "NOT_DOWNLOADED";
     }
 
+    public long getWhisperModelSize(String tier) {
+        final String selectedTier = ("base".equalsIgnoreCase(tier)) ? "base" : "tiny";
+        File file = getWhisperModelFile(selectedTier);
+        if (file != null && file.exists()) {
+            return file.length();
+        }
+        return 0;
+    }
+
     public void downloadWhisperModel(String tier) {
         if (isWhisperDownloading) {
             Toast.makeText(this, "⏳ Whisper model is already downloading...", Toast.LENGTH_SHORT).show();
@@ -7326,7 +7268,7 @@ public class MainActivity extends AppCompatActivity {
         isWhisperDownloading = false;
         notifyWhisperProgress(0, "NOT_DOWNLOADED", selectedTier);
         String tierLabel = "base".equalsIgnoreCase(selectedTier) ? "Base (~75 MB)" : "Tiny (~39 MB)";
-        Toast.makeText(this, "🗑️ Whisper " + tierLabel + " removed", Toast.LENGTH_SHORT).show();
+        runOnUiThread(() -> Toast.makeText(this, "🗑️ Whisper " + tierLabel + " removed", Toast.LENGTH_SHORT).show());
         return deleted;
     }
 
@@ -7341,173 +7283,6 @@ public class MainActivity extends AppCompatActivity {
                 controlWebView.evaluateJavascript("if (typeof window.onWhisperDownloadProgress === 'function') { window.onWhisperDownloadProgress(" + percent + ", '" + status + "', '" + safeTier + "'); }", null);
             }
         });
-    }
-
-    public File getVoskModelDir() {
-        File modelsDir = new File(getFilesDir(), "models");
-        if (!modelsDir.exists()) modelsDir.mkdirs();
-        return new File(modelsDir, VOSK_MODEL_DIR_NAME);
-    }
-
-    public boolean isVoskModelReady() {
-        File dir = getVoskModelDir();
-        if (dir == null || !dir.exists() || !dir.isDirectory()) return false;
-        File conf = new File(dir, "conf");
-        File am = new File(dir, "am");
-        return conf.exists() || am.exists();
-    }
-
-    public String getVoskModelStatus() {
-        if (isVoskDownloading) return "DOWNLOADING";
-        if (isVoskModelReady()) return "READY";
-        return "NOT_DOWNLOADED";
-    }
-
-    public void downloadVoskModel() {
-        if (isVoskDownloading) {
-            Toast.makeText(this, "⏳ Vosk model is already downloading...", Toast.LENGTH_SHORT).show();
-            return;
-        }
-        isVoskDownloading = true;
-        voskDownloadProgress = 0;
-        Toast.makeText(this, "📥 Starting Vosk (~40 MB) download...", Toast.LENGTH_SHORT).show();
-        notifyVoskProgress(0, "DOWNLOADING");
-
-        new Thread(() -> {
-            File tempZip = new File(getCacheDir(), "vosk_model_temp.zip");
-            java.io.InputStream in = null;
-            java.io.FileOutputStream out = null;
-            java.net.HttpURLConnection conn = null;
-            try {
-                java.net.URL url = new java.net.URL(VOSK_MODEL_URL);
-                conn = (java.net.HttpURLConnection) url.openConnection();
-                conn.setRequestProperty("User-Agent", "Mozilla/5.0 (CaspianFlow-Android)");
-                conn.setConnectTimeout(25000);
-                conn.setReadTimeout(35000);
-                conn.connect();
-
-                int responseCode = conn.getResponseCode();
-                if (responseCode != java.net.HttpURLConnection.HTTP_OK && responseCode != 206) {
-                    throw new java.io.IOException("HTTP error code: " + responseCode);
-                }
-
-                long totalBytes = conn.getContentLength();
-                if (totalBytes <= 0) totalBytes = 42_000_000L;
-
-                in = new java.io.BufferedInputStream(conn.getInputStream());
-                out = new java.io.FileOutputStream(tempZip);
-                byte[] buffer = new byte[16384];
-                long bytesRead = 0;
-                int count;
-                long lastNotifyTime = 0;
-
-                while ((count = in.read(buffer)) != -1) {
-                    out.write(buffer, 0, count);
-                    bytesRead += count;
-                    long now = System.currentTimeMillis();
-                    if (now - lastNotifyTime > 300) {
-                        lastNotifyTime = now;
-                        int percent = (int) Math.min(80, (bytesRead * 80L) / totalBytes);
-                        voskDownloadProgress = percent;
-                        notifyVoskProgress(percent, "DOWNLOADING");
-                    }
-                }
-                out.flush();
-                out.close();
-                out = null;
-                in.close();
-                in = null;
-
-                notifyVoskProgress(85, "DOWNLOADING");
-
-                // Unpack zip into models directory
-                File modelsDir = new File(getFilesDir(), "models");
-                if (!modelsDir.exists()) modelsDir.mkdirs();
-                unzip(tempZip, modelsDir);
-
-                if (tempZip.exists()) tempZip.delete();
-
-                if (isVoskModelReady()) {
-                    isVoskDownloading = false;
-                    voskDownloadProgress = 100;
-                    notifyVoskProgress(100, "READY");
-                    runOnUiThread(() -> Toast.makeText(this, "✅ Vosk Real-Time Voice Pack Ready!", Toast.LENGTH_SHORT).show());
-                } else {
-                    throw new java.io.IOException("Vosk unpack verification failed");
-                }
-            } catch (Exception e) {
-                Log.e(TAG, "Vosk download/unpack failed: " + e.getMessage(), e);
-                isVoskDownloading = false;
-                notifyVoskProgress(0, "ERROR");
-                runOnUiThread(() -> Toast.makeText(this, "❌ Vosk download failed: " + e.getMessage(), Toast.LENGTH_LONG).show());
-                if (tempZip.exists()) tempZip.delete();
-            } finally {
-                if (in != null) { try { in.close(); } catch (Exception ignored) {} }
-                if (out != null) { try { out.close(); } catch (Exception ignored) {} }
-                if (conn != null) conn.disconnect();
-            }
-        }).start();
-    }
-
-    public boolean deleteVoskModel() {
-        File dir = getVoskModelDir();
-        boolean deleted = false;
-        if (dir != null && dir.exists()) {
-            deleted = deleteDirectoryRecursive(dir);
-        }
-        sharedVoskModel = null;
-        isVoskDownloading = false;
-        notifyVoskProgress(0, "NOT_DOWNLOADED");
-        Toast.makeText(this, "🗑️ Vosk Voice Pack removed", Toast.LENGTH_SHORT).show();
-        return deleted;
-    }
-
-    private boolean deleteDirectoryRecursive(File fileOrDirectory) {
-        if (fileOrDirectory.isDirectory()) {
-            File[] children = fileOrDirectory.listFiles();
-            if (children != null) {
-                for (File child : children) {
-                    deleteDirectoryRecursive(child);
-                }
-            }
-        }
-        return fileOrDirectory.delete();
-    }
-
-    private void notifyVoskProgress(int percent, String status) {
-        runOnUiThread(() -> {
-            if (controlWebView != null) {
-                controlWebView.evaluateJavascript("if (typeof window.onVoskDownloadProgress === 'function') { window.onVoskDownloadProgress(" + percent + ", '" + status + "'); }", null);
-            }
-        });
-    }
-
-    private void unzip(File zipFile, File targetDirectory) throws java.io.IOException {
-        try (ZipInputStream zis = new ZipInputStream(new java.io.BufferedInputStream(new java.io.FileInputStream(zipFile)))) {
-            ZipEntry entry;
-            while ((entry = zis.getNextEntry()) != null) {
-                File file = new File(targetDirectory, entry.getName());
-                String canonicalDest = targetDirectory.getCanonicalPath();
-                String canonicalTarget = file.getCanonicalPath();
-                if (!canonicalTarget.startsWith(canonicalDest + File.separator) && !canonicalTarget.equals(canonicalDest)) {
-                    throw new SecurityException("Zip traversal attempt: " + entry.getName());
-                }
-                if (entry.isDirectory()) {
-                    file.mkdirs();
-                } else {
-                    File parent = file.getParentFile();
-                    if (parent != null && !parent.exists()) parent.mkdirs();
-                    try (java.io.BufferedOutputStream bos = new java.io.BufferedOutputStream(new java.io.FileOutputStream(file))) {
-                        byte[] buffer = new byte[8192];
-                        int count;
-                        while ((count = zis.read(buffer)) != -1) {
-                            bos.write(buffer, 0, count);
-                        }
-                    }
-                }
-                zis.closeEntry();
-            }
-        }
     }
 
     private void setupNativeSpeechRecognizer() {
