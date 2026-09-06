@@ -60,7 +60,7 @@
         </div>
         <div style="display: flex; flex-direction: column;">
           <span class="sheet-brand-name">CASPIAN FLOW</span>
-          <span class="sheet-brand-tag">V1.2.19-BetaC</span>
+          <span class="sheet-brand-tag">V1.2.20-BetaC</span>
         </div>
       </div>
       <div class="header-icon-actions">
@@ -332,18 +332,57 @@
         <div id="caspian-current-body"
           style="display: none; margin-top: 12px; border-top: 1px solid var(--border-glass); padding-top: 10px;">
           <div class="limit-section-title" style="margin-bottom: 8px;">SELECT SPEECH-TO-TEXT ENGINE</div>
-          <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-bottom: 12px;">
-            <button type="button" class="cc-stt-pill active" data-engine="android_native">
-              <span class="stt-pill-title">📱 Native Android</span>
-              <span class="stt-pill-sub">0 MB • Instant</span>
+          <div style="display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 6px; margin-bottom: 12px;">
+            <button type="button" class="cc-stt-pill active" data-engine="android_native" style="padding: 8px 4px;">
+              <span class="stt-pill-title" style="font-size: 11.5px;">📱 Native</span>
+              <span class="stt-pill-sub" style="font-size: 9.5px;">0 MB • Instant</span>
             </button>
-            <button type="button" class="cc-stt-pill" data-engine="whisper_on_device">
-              <span class="stt-pill-title">🧠 Whisper AI</span>
-              <span class="stt-pill-sub">On-Device Offline</span>
+            <button type="button" class="cc-stt-pill" data-engine="vosk_offline" style="padding: 8px 4px;">
+              <span class="stt-pill-title" style="font-size: 11.5px;">⚡ Vosk</span>
+              <span class="stt-pill-sub" style="font-size: 9.5px;">40 MB • Stream</span>
+            </button>
+            <button type="button" class="cc-stt-pill" data-engine="whisper_on_device" style="padding: 8px 4px;">
+              <span class="stt-pill-title" style="font-size: 11.5px;">🧠 Whisper</span>
+              <span class="stt-pill-sub" style="font-size: 9.5px;">High Accuracy</span>
             </button>
           </div>
 
-          <!-- Whisper Model On-Demand Pack Info / Download Container -->
+          <!-- Vosk Model On-Demand Pack Info / Download Container -->
+          <div id="vosk-pack-container" style="display: none; background: rgba(255,255,255,0.03); border: 1px solid var(--border-glass); border-radius: 14px; padding: 12px; margin-bottom: 12px;">
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 6px;">
+              <div style="display: flex; align-items: center; gap: 6px;">
+                <span style="font-size: 14px;">⚡</span>
+                <span style="font-size: 12px; font-weight: 700; color: var(--text-main);">Vosk Real-Time US-English</span>
+              </div>
+              <span id="vosk-pack-status-badge" style="font-size: 10px; font-weight: 700; padding: 3px 8px; border-radius: 8px; background: rgba(255,255,255,0.08); color: var(--text-muted);">
+                Checking...
+              </span>
+            </div>
+            
+            <div style="font-size: 10.5px; color: var(--text-muted); line-height: 1.4; margin-bottom: 10px;">
+              Streaming Kaldi acoustic model (~40 MB). 100% offline real-time speech recognition with zero waiting time.
+            </div>
+
+            <!-- Progress Bar (hidden unless downloading) -->
+            <div id="vosk-download-progress-box" style="display: none; margin-bottom: 10px;">
+              <div style="display: flex; justify-content: space-between; font-size: 10px; margin-bottom: 4px;">
+                <span id="vosk-download-label" style="color: var(--accent); font-weight: 600;">Downloading Vosk model...</span>
+                <span id="vosk-download-percent" style="font-weight: 700; color: var(--text-main);">0%</span>
+              </div>
+              <div style="width: 100%; height: 6px; background: rgba(255,255,255,0.1); border-radius: 3px; overflow: hidden;">
+                <div id="vosk-download-bar" style="width: 0%; height: 100%; background: var(--accent-gradient); transition: width 0.2s ease;"></div>
+              </div>
+            </div>
+
+            <div style="display: flex; gap: 8px;">
+              <button type="button" id="vosk-action-download-btn" class="oneui-pill-btn primary" style="flex: 1; font-size: 11.5px; padding: 7px 12px;">
+                ⚡ Download Vosk Pack (~40 MB)
+              </button>
+              <button type="button" id="vosk-action-delete-btn" class="oneui-pill-btn danger" style="display: none; font-size: 11.5px; padding: 7px 12px; color: #ef4444; border-color: rgba(239,68,68,0.3);">
+                🗑️ Remove Vosk (~40 MB)
+              </button>
+            </div>
+          </div>
           <div id="whisper-pack-container" style="display: none; background: rgba(255,255,255,0.03); border: 1px solid var(--border-glass); border-radius: 14px; padding: 12px; margin-bottom: 12px;">
             
             <!-- Model Tier Selector (Tiny ~39MB vs Base ~75MB) -->
