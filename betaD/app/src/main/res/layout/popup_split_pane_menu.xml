@@ -1,0 +1,319 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="270dp"
+    android:layout_height="wrap_content"
+    android:background="@drawable/bg_liquid_glass"
+    android:orientation="vertical"
+    android:padding="8dp"
+    android:elevation="80dp">
+
+    <!-- 1. Open in New Tab -->
+    <LinearLayout
+        android:id="@+id/split_menu_item_new_tab"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:minHeight="44dp"
+        android:orientation="horizontal"
+        android:gravity="center_vertical"
+        android:paddingStart="10dp"
+        android:paddingEnd="10dp"
+        android:paddingTop="6dp"
+        android:paddingBottom="6dp"
+        android:background="@drawable/bg_menu_item_row"
+        android:layout_marginBottom="4dp"
+        android:clickable="true"
+        android:focusable="true">
+
+        <TextView
+            android:layout_width="28dp"
+            android:layout_height="wrap_content"
+            android:text="↗️"
+            android:textSize="15sp"
+            android:gravity="center" />
+
+        <LinearLayout
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_weight="1"
+            android:layout_marginStart="8dp"
+            android:orientation="vertical">
+
+            <TextView
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="Open in New Tab"
+                android:textColor="#FFFFFF"
+                android:textSize="13sp"
+                android:textStyle="bold" />
+
+            <TextView
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="Open this page in a separate tab"
+                android:textColor="#849396"
+                android:textSize="10sp" />
+        </LinearLayout>
+    </LinearLayout>
+
+    <!-- 2. Switch Tab -->
+    <LinearLayout
+        android:id="@+id/split_menu_item_switch_tab"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:minHeight="44dp"
+        android:orientation="horizontal"
+        android:gravity="center_vertical"
+        android:paddingStart="10dp"
+        android:paddingEnd="10dp"
+        android:paddingTop="6dp"
+        android:paddingBottom="6dp"
+        android:background="@drawable/bg_menu_item_row"
+        android:layout_marginBottom="4dp"
+        android:clickable="true"
+        android:focusable="true">
+
+        <TextView
+            android:layout_width="28dp"
+            android:layout_height="wrap_content"
+            android:text="🔄"
+            android:textSize="15sp"
+            android:gravity="center" />
+
+        <LinearLayout
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_weight="1"
+            android:layout_marginStart="8dp"
+            android:orientation="vertical">
+
+            <TextView
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="Switch Tab..."
+                android:textColor="#FFFFFF"
+                android:textSize="13sp"
+                android:textStyle="bold" />
+
+            <TextView
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="Choose from open tabs"
+                android:textColor="#849396"
+                android:textSize="10sp" />
+        </LinearLayout>
+    </LinearLayout>
+
+    <!-- 3. Separate Tabs -->
+    <LinearLayout
+        android:id="@+id/split_menu_item_separate"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:minHeight="44dp"
+        android:orientation="horizontal"
+        android:gravity="center_vertical"
+        android:paddingStart="10dp"
+        android:paddingEnd="10dp"
+        android:paddingTop="6dp"
+        android:paddingBottom="6dp"
+        android:background="@drawable/bg_menu_item_row"
+        android:layout_marginBottom="4dp"
+        android:clickable="true"
+        android:focusable="true">
+
+        <TextView
+            android:layout_width="28dp"
+            android:layout_height="wrap_content"
+            android:text="⎘"
+            android:textSize="15sp"
+            android:textColor="#00E5FF"
+            android:gravity="center" />
+
+        <LinearLayout
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_weight="1"
+            android:layout_marginStart="8dp"
+            android:orientation="vertical">
+
+            <TextView
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="Separate Tabs"
+                android:textColor="#FFFFFF"
+                android:textSize="13sp"
+                android:textStyle="bold" />
+
+            <TextView
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="Exit split screen mode"
+                android:textColor="#849396"
+                android:textSize="10sp" />
+        </LinearLayout>
+    </LinearLayout>
+
+    <!-- 4. Swap Panes -->
+    <LinearLayout
+        android:id="@+id/split_menu_item_swap"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:minHeight="44dp"
+        android:orientation="horizontal"
+        android:gravity="center_vertical"
+        android:paddingStart="10dp"
+        android:paddingEnd="10dp"
+        android:paddingTop="6dp"
+        android:paddingBottom="6dp"
+        android:background="@drawable/bg_menu_item_row"
+        android:layout_marginBottom="4dp"
+        android:clickable="true"
+        android:focusable="true">
+
+        <TextView
+            android:layout_width="28dp"
+            android:layout_height="wrap_content"
+            android:text="⇄"
+            android:textSize="16sp"
+            android:textColor="#00E5FF"
+            android:gravity="center" />
+
+        <LinearLayout
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_weight="1"
+            android:layout_marginStart="8dp"
+            android:orientation="vertical">
+
+            <TextView
+                android:id="@+id/split_menu_swap_title"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="Swap Panes"
+                android:textColor="#FFFFFF"
+                android:textSize="13sp"
+                android:textStyle="bold" />
+
+            <TextView
+                android:id="@+id/split_menu_swap_sub"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="Invert left and right tabs"
+                android:textColor="#849396"
+                android:textSize="10sp" />
+        </LinearLayout>
+    </LinearLayout>
+
+    <!-- 5. Split Orientation -->
+    <LinearLayout
+        android:id="@+id/split_menu_item_orientation"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:minHeight="44dp"
+        android:orientation="horizontal"
+        android:gravity="center_vertical"
+        android:paddingStart="10dp"
+        android:paddingEnd="10dp"
+        android:paddingTop="6dp"
+        android:paddingBottom="6dp"
+        android:background="@drawable/bg_menu_item_row"
+        android:layout_marginBottom="4dp"
+        android:clickable="true"
+        android:focusable="true">
+
+        <TextView
+            android:layout_width="28dp"
+            android:layout_height="wrap_content"
+            android:text="▤"
+            android:textSize="15sp"
+            android:textColor="#00E5FF"
+            android:gravity="center" />
+
+        <LinearLayout
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_weight="1"
+            android:layout_marginStart="8dp"
+            android:orientation="vertical">
+
+            <TextView
+                android:id="@+id/split_menu_orientation_title"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="Switch to Vertical"
+                android:textColor="#FFFFFF"
+                android:textSize="13sp"
+                android:textStyle="bold" />
+
+            <TextView
+                android:id="@+id/split_menu_orientation_sub"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="Top and bottom layout"
+                android:textColor="#849396"
+                android:textSize="10sp" />
+        </LinearLayout>
+    </LinearLayout>
+
+    <!-- 6. Route Left Links to Right -->
+    <LinearLayout
+        android:id="@+id/split_menu_item_links"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:minHeight="44dp"
+        android:orientation="horizontal"
+        android:gravity="center_vertical"
+        android:paddingStart="10dp"
+        android:paddingEnd="10dp"
+        android:paddingTop="6dp"
+        android:paddingBottom="6dp"
+        android:background="@drawable/bg_menu_item_row"
+        android:clickable="true"
+        android:focusable="true">
+
+        <TextView
+            android:layout_width="28dp"
+            android:layout_height="wrap_content"
+            android:text="🔗"
+            android:textSize="14sp"
+            android:gravity="center" />
+
+        <LinearLayout
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_weight="1"
+            android:layout_marginStart="8dp"
+            android:orientation="vertical">
+
+            <TextView
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="Open Left Links in Right"
+                android:textColor="#FFFFFF"
+                android:textSize="13sp"
+                android:textStyle="bold" />
+
+            <TextView
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="Route clicked links to right pane"
+                android:textColor="#849396"
+                android:textSize="10sp" />
+        </LinearLayout>
+
+        <!-- ON/OFF Badge -->
+        <TextView
+            android:id="@+id/split_menu_links_badge"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:paddingStart="8dp"
+            android:paddingEnd="8dp"
+            android:paddingTop="2dp"
+            android:paddingBottom="2dp"
+            android:background="@drawable/bg_liquid_glass_pill"
+            android:text="OFF"
+            android:textColor="#849396"
+            android:textSize="10sp"
+            android:textStyle="bold" />
+    </LinearLayout>
+
+</LinearLayout>

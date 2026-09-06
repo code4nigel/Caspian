@@ -1,0 +1,29 @@
+<?xml version="1.0" encoding="utf-8"?>
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="108dp"
+    android:height="108dp"
+    android:viewportWidth="24"
+    android:viewportHeight="24">
+    
+    <!-- Caspian Waves (Transparent background, white strokes for crisp visibility) -->
+    <path
+        android:strokeColor="#E2E8F0"
+        android:strokeWidth="2.2"
+        android:strokeLineCap="round"
+        android:strokeLineJoin="round"
+        android:pathData="M5,8 C6,9 7,9.5 9,9.5 C12,9.5 12,7.5 15,7.5 C17,7.5 18,8 19,9" />
+
+    <path
+        android:strokeColor="#FFFFFF"
+        android:strokeWidth="2.2"
+        android:strokeLineCap="round"
+        android:strokeLineJoin="round"
+        android:pathData="M5,12 C6,13 7,13.5 9,13.5 C12,13.5 12,11.5 15,11.5 C17,11.5 18,12 19,13" />
+
+    <path
+        android:strokeColor="#E2E8F0"
+        android:strokeWidth="2.2"
+        android:strokeLineCap="round"
+        android:strokeLineJoin="round"
+        android:pathData="M5,16 C6,17 7,17.5 9,17.5 C12,17.5 12,15.5 15,15.5 C17,15.5 18,16 19,17" />
+</vector>

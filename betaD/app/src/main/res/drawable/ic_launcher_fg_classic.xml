@@ -1,0 +1,23 @@
+<?xml version="1.0" encoding="utf-8"?>
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="108dp"
+    android:height="108dp"
+    android:viewportWidth="108"
+    android:viewportHeight="108">
+
+    <!-- Subtle Depth Shadow beneath wave -->
+    <path
+        android:fillColor="#30000000"
+        android:pathData="M -8,35 C 10,39 20,67 34,67 C 48,67 58,27 76,27 C 92,27 104,47 116,49 L 116,67 C 104,65 92,45 76,45 C 58,45 48,85 34,85 C 20,85 10,57 -8,53 Z" />
+
+    <!-- Pure White Classic Horizontal Caspian Sine S-Curve Flow Wave -->
+    <path
+        android:fillColor="#FFFFFF"
+        android:pathData="M -8,32 C 10,36 20,64 34,64 C 48,64 58,24 76,24 C 92,24 104,44 116,46 L 116,64 C 104,62 92,42 76,42 C 58,42 48,82 34,82 C 20,82 10,54 -8,50 Z" />
+
+    <!-- Top Surface Highlight Edge -->
+    <path
+        android:strokeColor="#FFFFFF"
+        android:strokeWidth="1.2"
+        android:pathData="M -8,32 C 10,36 20,64 34,64 C 48,64 58,24 76,24 C 92,24 104,44 116,46" />
+</vector>

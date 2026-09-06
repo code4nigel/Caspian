@@ -1,0 +1,629 @@
+/* Caspian Flow Native PDF Study Viewer Styles */
+:root {
+  --bg-oled: #050811;
+  --bg-deep: #0a0f1d;
+  --bg-card: rgba(255, 255, 255, 0.04);
+  --border-glass: rgba(255, 255, 255, 0.08);
+  --border-glass-hover: rgba(255, 255, 255, 0.16);
+  --text-main: #f3f4f6;
+  --text-muted: #9ca3af;
+  --accent-emerald: #10b981;
+  --accent-chatgpt: #10a37f;
+  --accent-gemini: #7c3aed;
+  --accent-split: #0284c7;
+  --shadow-glass: 0 12px 40px rgba(0, 0, 0, 0.55);
+}
+
+* {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+  -webkit-tap-highlight-color: transparent;
+}
+
+body {
+  background-color: var(--bg-oled);
+  color: var(--text-main);
+  font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+  overflow: hidden;
+  height: 100vh;
+  width: 100vw;
+}
+
+/* Restrict unselectable state strictly to UI chrome, leaving document text fully selectable */
+.pdf-appbar,
+.pdf-search-bar,
+.pdf-bottom-dock,
+#pdf-ai-floating-menu,
+.pdf-outline-drawer,
+.pdf-modal-backdrop {
+  user-select: none;
+  -webkit-user-select: none;
+}
+
+/* =========================================================
+   TOP LIQUID GLASS APP BAR
+   ========================================================= */
+.pdf-appbar {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 52px;
+  background: rgba(5, 8, 17, 0.82);
+  backdrop-filter: blur(20px) saturate(180%);
+  -webkit-backdrop-filter: blur(20px) saturate(180%);
+  border-bottom: 1px solid var(--border-glass);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0 12px;
+  z-index: 1000;
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.4);
+}
+
+.pdf-appbar-left {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-width: 0;
+  flex: 1;
+}
+
+.pdf-title-box {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+}
+
+.pdf-doc-title {
+  font-size: 13px;
+  font-weight: 700;
+  color: var(--text-main);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  max-width: 140px;
+}
+
+.pdf-doc-sub {
+  font-size: 10px;
+  font-weight: 500;
+  color: var(--text-muted);
+}
+
+.pdf-page-chip {
+  background: rgba(255, 255, 255, 0.06);
+  border: 1px solid var(--border-glass);
+  border-radius: 9999px;
+  padding: 3px 8px;
+  font-size: 10.5px;
+  font-weight: 600;
+  color: var(--text-muted);
+  cursor: pointer;
+  white-space: nowrap;
+  transition: all 0.2s ease;
+  display: flex;
+  align-items: center;
+  gap: 3px;
+}
+
+.pdf-page-chip:active {
+  transform: scale(0.95);
+  background: rgba(255, 255, 255, 0.12);
+  color: var(--text-main);
+}
+
+.pdf-appbar-right {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  flex-shrink: 0;
+}
+
+.icon-btn {
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  background: rgba(255, 255, 255, 0.05);
+  border: 1px solid var(--border-glass);
+  color: var(--text-main);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  flex-shrink: 0;
+  transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.icon-btn:active {
+  transform: scale(0.90);
+  background: rgba(255, 255, 255, 0.12);
+}
+
+.icon-btn.active {
+  background: rgba(16, 185, 129, 0.2);
+  border-color: var(--accent-emerald);
+  color: var(--accent-emerald);
+}
+
+/* =========================================================
+   SEARCH BAR
+   ========================================================= */
+.pdf-search-bar {
+  position: fixed;
+  top: 52px;
+  left: 0;
+  right: 0;
+  background: rgba(10, 15, 29, 0.94);
+  backdrop-filter: blur(20px);
+  -webkit-backdrop-filter: blur(20px);
+  border-bottom: 1px solid var(--border-glass);
+  padding: 8px 12px;
+  display: none;
+  align-items: center;
+  gap: 8px;
+  z-index: 999;
+  animation: slideDownSearch 0.2s ease-out;
+}
+
+@keyframes slideDownSearch {
+  from { opacity: 0; transform: translateY(-10px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+.pdf-search-input-wrapper {
+  position: relative;
+  flex: 1;
+  display: flex;
+  align-items: center;
+}
+
+.pdf-search-input {
+  width: 100%;
+  height: 34px;
+  background: rgba(0, 0, 0, 0.4);
+  border: 1px solid var(--border-glass);
+  border-radius: 10px;
+  padding: 0 32px 0 10px;
+  font-size: 12.5px;
+  color: #ffffff;
+  outline: none;
+}
+
+.pdf-search-input:focus {
+  border-color: var(--accent-emerald);
+}
+
+.pdf-search-count {
+  font-size: 11px;
+  font-weight: 600;
+  color: var(--text-muted);
+  margin-right: 4px;
+  white-space: nowrap;
+}
+
+/* =========================================================
+   MAIN VIEWPORT & CONTINUOUS PAGES
+   ========================================================= */
+#pdf-viewport {
+  position: absolute;
+  top: 52px;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  overflow-y: auto;
+  overflow-x: auto;
+  -webkit-overflow-scrolling: touch;
+  padding: 16px 8px 70px 8px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 16px;
+}
+
+/* Page Card Container */
+.pdf-page-container {
+  position: relative;
+  background: #ffffff;
+  border-radius: 4px;
+  box-shadow: 0 4px 24px rgba(0, 0, 0, 0.45);
+  margin: 0 auto;
+  transition: filter 0.3s ease;
+  overflow: visible !important; /* Never clip selection handles */
+}
+
+/* Night Study Mode Canvas Inversion */
+body.night-mode .pdf-page-container {
+  filter: invert(0.90) hue-rotate(180deg) contrast(1.1) brightness(0.95);
+  box-shadow: 0 4px 24px rgba(0, 0, 0, 0.8);
+}
+
+/* The Canvas Layer */
+.pdf-page-canvas {
+  display: block;
+  width: 100%;
+  height: auto;
+  border-radius: 4px;
+  pointer-events: none; /* Let selection events pass directly into textLayer */
+}
+
+/* The Interactive Selectable Text Layer */
+.textLayer {
+  position: absolute;
+  inset: 0;
+  overflow: visible !important; /* CRITICAL: Allows both start and end selection handles to render */
+  opacity: 1;
+  line-height: 1.0;
+  user-select: text !important;
+  -webkit-user-select: text !important;
+  z-index: 2;
+  transform-origin: 0 0;
+  pointer-events: auto;
+}
+
+.textLayer > span {
+  color: transparent !important;
+  position: absolute;
+  white-space: pre;
+  cursor: text;
+  transform-origin: 0% 0%;
+}
+
+/* CRITICAL FIX: Selection highlight is soft and uniform, and text MUST be transparent */
+/* This prevents overlapping green blocks and prevents blurry double-text rendering */
+.textLayer ::selection {
+  background: rgba(16, 185, 129, 0.22) !important;
+  color: transparent !important;
+}
+
+.textLayer span::-moz-selection {
+  background: rgba(16, 185, 129, 0.22) !important;
+  color: transparent !important;
+}
+
+body.night-mode .textLayer ::selection {
+  background: rgba(56, 189, 248, 0.30) !important;
+  color: transparent !important;
+}
+
+body.night-mode .textLayer span::-moz-selection {
+  background: rgba(56, 189, 248, 0.30) !important;
+  color: transparent !important;
+}
+
+/* Search Highlight Layer */
+.textLayer .highlight {
+  background-color: rgba(245, 158, 11, 0.45);
+  border-radius: 2px;
+}
+
+.textLayer .highlight.selected {
+  background-color: rgba(16, 185, 129, 0.65);
+}
+
+/* =========================================================
+   CONTEXTUAL "ASK CASPIAN AI" FLOATING LIQUID GLASS MENU
+   ========================================================= */
+#pdf-ai-floating-menu {
+  position: fixed;
+  display: none;
+  align-items: center;
+  gap: 3px;
+  background: rgba(10, 15, 30, 0.94);
+  backdrop-filter: blur(24px) saturate(190%);
+  -webkit-backdrop-filter: blur(24px) saturate(190%);
+  border: 1px solid rgba(255, 255, 255, 0.16);
+  border-radius: 14px;
+  padding: 4px 6px;
+  box-shadow: 0 12px 36px rgba(0, 0, 0, 0.75), 0 0 0 1px rgba(255, 255, 255, 0.08) inset;
+  z-index: 2000;
+  transform: translate(-50%, 0); /* Permanent horizontal center */
+  max-width: calc(100vw - 20px);
+  box-sizing: border-box;
+  overflow-x: auto;
+  scrollbar-width: none;
+  white-space: nowrap;
+  animation: floatMenuEnter 0.18s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+#pdf-ai-floating-menu::-webkit-scrollbar {
+  display: none;
+}
+
+@keyframes floatMenuEnter {
+  from {
+    opacity: 0;
+    transform: translate(-50%, 6px) scale(0.96);
+  }
+  to {
+    opacity: 1;
+    transform: translate(-50%, 0) scale(1);
+  }
+}
+
+.ai-menu-item {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 5px 8px;
+  border-radius: 8px;
+  background: transparent;
+  border: none;
+  color: #f9fafb;
+  font-size: 11px;
+  font-weight: 600;
+  cursor: pointer;
+  white-space: nowrap;
+  flex-shrink: 0;
+  transition: all 0.18s ease;
+}
+
+.ai-menu-item svg {
+  width: 13px;
+  height: 13px;
+  flex-shrink: 0;
+}
+
+.ai-menu-item:active {
+  transform: scale(0.94);
+}
+
+.ai-menu-item.google {
+  color: #60a5fa;
+}
+.ai-menu-item.google:active {
+  background: rgba(59, 130, 246, 0.2);
+}
+
+.ai-menu-item.chatgpt {
+  color: #34d399;
+}
+.ai-menu-item.chatgpt:active {
+  background: rgba(16, 185, 129, 0.16);
+}
+
+.ai-menu-item.gemini {
+  color: #a78bfa;
+}
+.ai-menu-item.gemini:active {
+  background: rgba(124, 58, 237, 0.18);
+}
+
+.ai-menu-item.split {
+  color: #38bdf8;
+}
+.ai-menu-item.split:active {
+  background: rgba(2, 132, 199, 0.18);
+}
+
+.ai-menu-item.copy {
+  color: var(--text-muted);
+}
+.ai-menu-item.copy:active {
+  background: rgba(255, 255, 255, 0.1);
+  color: #ffffff;
+}
+
+.ai-menu-divider {
+  width: 1px;
+  height: 18px;
+  background: rgba(255, 255, 255, 0.1);
+  margin: 0 1px;
+}
+
+/* =========================================================
+   BOTTOM FLOATING ZOOM & ERGONOMIC PILL
+   ========================================================= */
+.pdf-bottom-dock {
+  position: fixed;
+  bottom: 14px;
+  left: 50%;
+  transform: translateX(-50%);
+  background: rgba(10, 15, 30, 0.88);
+  backdrop-filter: blur(20px) saturate(180%);
+  -webkit-backdrop-filter: blur(20px) saturate(180%);
+  border: 1px solid var(--border-glass);
+  border-radius: 9999px;
+  padding: 4px 8px;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.5);
+  z-index: 1000;
+}
+
+.pdf-bottom-dock button {
+  background: transparent;
+  border: none;
+  color: var(--text-main);
+  padding: 6px 8px;
+  border-radius: 9999px;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.18s ease;
+}
+
+.pdf-bottom-dock button:active {
+  background: rgba(255, 255, 255, 0.12);
+  transform: scale(0.92);
+}
+
+.pdf-zoom-label {
+  font-size: 11px;
+  font-weight: 700;
+  color: var(--text-muted);
+  min-width: 36px;
+  text-align: center;
+}
+
+/* =========================================================
+   TABLE OF CONTENTS / OUTLINE DRAWER
+   ========================================================= */
+.pdf-outline-drawer {
+  position: fixed;
+  top: 52px;
+  bottom: 0;
+  left: 0;
+  width: 280px;
+  background: rgba(5, 8, 17, 0.95);
+  backdrop-filter: blur(24px);
+  -webkit-backdrop-filter: blur(24px);
+  border-right: 1px solid var(--border-glass);
+  z-index: 1500;
+  transform: translateX(-100%);
+  transition: transform 0.28s cubic-bezier(0.16, 1, 0.3, 1);
+  display: flex;
+  flex-direction: column;
+}
+
+.pdf-outline-drawer.open {
+  transform: translateX(0);
+}
+
+.pdf-outline-header {
+  padding: 14px 16px;
+  border-bottom: 1px solid var(--border-glass);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.pdf-outline-title {
+  font-size: 13px;
+  font-weight: 700;
+  color: var(--text-main);
+}
+
+.pdf-outline-list {
+  flex: 1;
+  overflow-y: auto;
+  padding: 8px;
+}
+
+.pdf-outline-item {
+  padding: 10px 12px;
+  border-radius: 10px;
+  font-size: 12px;
+  font-weight: 500;
+  color: var(--text-muted);
+  cursor: pointer;
+  transition: all 0.18s ease;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.pdf-outline-item:active {
+  background: rgba(255, 255, 255, 0.08);
+  color: #ffffff;
+}
+
+/* =========================================================
+   MODAL DIALOG (JUMP TO PAGE)
+   ========================================================= */
+.pdf-modal-backdrop {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: rgba(0, 0, 0, 0.65);
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
+  display: none;
+  align-items: center;
+  justify-content: center;
+  z-index: 3000;
+}
+
+.pdf-modal-card {
+  width: 280px;
+  background: var(--bg-deep);
+  border: 1px solid var(--border-glass);
+  border-radius: 18px;
+  padding: 18px;
+  box-shadow: var(--shadow-glass);
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.pdf-modal-title {
+  font-size: 14px;
+  font-weight: 700;
+  color: var(--text-main);
+  text-align: center;
+}
+
+.pdf-page-input {
+  width: 100%;
+  height: 40px;
+  background: rgba(0, 0, 0, 0.4);
+  border: 1px solid var(--border-glass);
+  border-radius: 10px;
+  text-align: center;
+  font-size: 16px;
+  font-weight: 700;
+  color: #ffffff;
+  outline: none;
+}
+
+.pdf-page-input:focus {
+  border-color: var(--accent-emerald);
+}
+
+.pdf-modal-actions {
+  display: flex;
+  gap: 8px;
+}
+
+.pdf-modal-btn {
+  flex: 1;
+  padding: 10px 0;
+  border-radius: 10px;
+  font-size: 12.5px;
+  font-weight: 700;
+  border: none;
+  cursor: pointer;
+}
+
+.pdf-modal-btn.primary {
+  background: var(--accent-emerald);
+  color: #000000;
+}
+
+.pdf-modal-btn.secondary {
+  background: rgba(255, 255, 255, 0.08);
+  color: var(--text-main);
+}
+
+/* Loading Spinner */
+.pdf-loading-spinner {
+  width: 36px;
+  height: 36px;
+  border: 3px solid rgba(255, 255, 255, 0.1);
+  border-top-color: var(--accent-emerald);
+  border-radius: 50%;
+  animation: spin 0.8s linear infinite;
+  margin: 60px auto 16px auto;
+}
+
+@keyframes spin {
+  to { transform: rotate(360deg); }
+}
+
+/* =========================================================
+   CASPIAN WHIRLPOOL OVERLAY (CIRCLE-TO-SEARCH)
+   ========================================================= */
+.icon-btn.whirlpool-active {
+  background: rgba(56, 189, 248, 0.22) !important;
+  color: #38bdf8 !important;
+  border-color: rgba(56, 189, 248, 0.5) !important;
+  box-shadow: 0 0 14px rgba(56, 189, 248, 0.4);
+}
+
+}
+
