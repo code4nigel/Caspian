@@ -950,7 +950,7 @@ public class MainActivity extends AppCompatActivity {
     public void onWhirlpoolDismissed() {
         currentWhirlpoolOverlay = null;
         if (floatingCaspianCard != null) {
-            float highElevation = TypedValue.applyDimension(TypedValue.COMPLEX_UNIT_DIP, 200, getResources().getDisplayMetrics());
+            float highElevation = TypedValue.applyDimension(TypedValue.COMPLEX_UNIT_DIP, 600, getResources().getDisplayMetrics());
             floatingCaspianCard.setElevation(highElevation);
             floatingCaspianCard.setCardElevation(highElevation);
             floatingCaspianCard.bringToFront();
@@ -1088,7 +1088,7 @@ public class MainActivity extends AppCompatActivity {
             // Elevate CAB so it stays on top of Whirlpool and single-tapping it cancels Whirlpool
             if (floatingCaspianCard != null) {
                 floatingCaspianCard.bringToFront();
-                float highElevation = TypedValue.applyDimension(TypedValue.COMPLEX_UNIT_DIP, 200, getResources().getDisplayMetrics());
+                float highElevation = TypedValue.applyDimension(TypedValue.COMPLEX_UNIT_DIP, 600, getResources().getDisplayMetrics());
                 floatingCaspianCard.setElevation(highElevation);
                 floatingCaspianCard.setCardElevation(highElevation);
             }
@@ -6377,68 +6377,327 @@ public class MainActivity extends AppCompatActivity {
         setupDraggableSplitControl(splitRightControl);
     }
 
-    private void showSplitPaneMenu(View anchor, boolean isLeftPane) {
-        PopupMenu popup = new PopupMenu(this, anchor);
-        popup.getMenu().add(0, 1, 0, "↗️ Open this webpage in a new tab");
-        popup.getMenu().add(0, 2, 1, "🔄 Switch to another open tab...");
-        popup.getMenu().add(0, 3, 2, "⎘ Separate two tabs");
-        popup.getMenu().add(0, 4, 3, (splitModeState == 1 ? "⇄ Switch left and right tabs" : "⇄ Switch top and bottom tabs"));
-        popup.getMenu().add(0, 5, 4, (splitModeState == 1 ? "▤ Switch to vertical" : "▤ Switch to horizontal"));
-        popup.getMenu().add(0, 6, 5, (openLeftLinksToRight ? "🔗 Open left links to the right (ON)" : "🔗 Open left links to the right (OFF)"));
-
-        popup.setOnMenuItemClickListener(item -> {
-            TabItem targetTab = getTabById(isLeftPane ? activeTabId : secondarySplitTabId);
-            switch (item.getItemId()) {
-                case 1:
-                    if (targetTab != null) addNewTab(targetTab.service, "", targetTab.url, targetTab.isIncognito);
-                    return true;
-                case 2:
-                    showSwitchSplitTabDialog(isLeftPane);
-                    return true;
-                case 3:
-                    exitSplitView();
-                    return true;
-                case 4:
-                    swapSplitTabs();
-                    return true;
-                case 5:
-                    toggleSplitOrientation();
-                    return true;
-                case 6:
-                    openLeftLinksToRight = !openLeftLinksToRight;
-                    Toast.makeText(this, "Open left links to right: " + (openLeftLinksToRight ? "ENABLED" : "DISABLED"), Toast.LENGTH_SHORT).show();
-                    return true;
+    public Bitmap getTabFaviconBitmap(TabItem tab) {
+        if (tab == null) return null;
+        try {
+            if (tab.webView != null) {
+                Bitmap fav = tab.webView.getFavicon();
+                if (fav != null && !fav.isRecycled()) {
+                    return fav;
+                }
             }
-            return false;
-        });
-        popup.show();
+            String b64 = tab.favicon64 != null ? tab.favicon64 : tab.faviconB64;
+            if (b64 != null && b64.startsWith("data:image")) {
+                int commaIdx = b64.indexOf(",");
+                if (commaIdx != -1) {
+                    String clean = b64.substring(commaIdx + 1);
+                    byte[] bytes = android.util.Base64.decode(clean, android.util.Base64.DEFAULT);
+                    Bitmap decoded = BitmapFactory.decodeByteArray(bytes, 0, bytes.length);
+                    if (decoded != null) return decoded;
+                }
+            }
+        } catch (Exception ignored) {}
+        return null;
+    }
+
+    public int getTabServiceIconRes(TabItem tab) {
+        if (tab == null) return R.drawable.ic_tab_globe;
+        String s = tab.service != null ? tab.service.toLowerCase() : "";
+        String url = tab.url != null ? tab.url.toLowerCase() : "";
+        if (s.contains("chatgpt") || url.contains("chatgpt.com") || url.contains("openai.com")) {
+            return R.drawable.ic_platform_chatgpt;
+        } else if (s.contains("gemini") || url.contains("gemini.google.com")) {
+            return R.drawable.ic_platform_gemini;
+        } else if (s.contains("claude") || url.contains("claude.ai")) {
+            return R.drawable.ic_platform_claude;
+        } else if (s.contains("youtube") || url.contains("youtube.com")) {
+            return R.drawable.ic_platform_youtube;
+        } else if (url.contains("google.com")) {
+            return R.drawable.ic_platform_google;
+        }
+        return R.drawable.ic_tab_globe;
+    }
+
+    private void showSplitPaneMenu(View anchor, boolean isLeftPane) {
+        if (anchor == null) return;
+        View popupView = getLayoutInflater().inflate(R.layout.popup_split_pane_menu, null);
+
+        TextView swapTitle = popupView.findViewById(R.id.split_menu_swap_title);
+        TextView swapSub = popupView.findViewById(R.id.split_menu_swap_sub);
+        TextView orientTitle = popupView.findViewById(R.id.split_menu_orientation_title);
+        TextView orientSub = popupView.findViewById(R.id.split_menu_orientation_sub);
+        TextView linksBadge = popupView.findViewById(R.id.split_menu_links_badge);
+
+        if (splitModeState == 1) {
+            if (swapTitle != null) swapTitle.setText("Swap Left & Right");
+            if (swapSub != null) swapSub.setText("Invert left and right tabs");
+            if (orientTitle != null) orientTitle.setText("Switch to Vertical");
+            if (orientSub != null) orientSub.setText("Top and bottom layout");
+        } else {
+            if (swapTitle != null) swapTitle.setText("Swap Top & Bottom");
+            if (swapSub != null) swapSub.setText("Invert top and bottom tabs");
+            if (orientTitle != null) orientTitle.setText("Switch to Horizontal");
+            if (orientSub != null) orientSub.setText("Side-by-side layout");
+        }
+
+        if (linksBadge != null) {
+            if (openLeftLinksToRight) {
+                linksBadge.setText("ON");
+                linksBadge.setTextColor(Color.parseColor("#00E5FF"));
+                linksBadge.setBackgroundResource(R.drawable.bg_pill_accent);
+            } else {
+                linksBadge.setText("OFF");
+                linksBadge.setTextColor(Color.parseColor("#849396"));
+                linksBadge.setBackgroundResource(R.drawable.bg_liquid_glass_pill);
+            }
+        }
+
+        int targetWidth = dpToPx(270);
+        PopupWindow popupWindow = new PopupWindow(
+                popupView,
+                targetWidth,
+                ViewGroup.LayoutParams.WRAP_CONTENT,
+                true
+        );
+        popupWindow.setBackgroundDrawable(new ColorDrawable(Color.TRANSPARENT));
+        popupWindow.setElevation(dpToPx(80));
+
+        View itemNewTab = popupView.findViewById(R.id.split_menu_item_new_tab);
+        View itemSwitch = popupView.findViewById(R.id.split_menu_item_switch_tab);
+        View itemSeparate = popupView.findViewById(R.id.split_menu_item_separate);
+        View itemSwap = popupView.findViewById(R.id.split_menu_item_swap);
+        View itemOrient = popupView.findViewById(R.id.split_menu_item_orientation);
+        View itemLinks = popupView.findViewById(R.id.split_menu_item_links);
+
+        if (itemNewTab != null) {
+            itemNewTab.setOnClickListener(v -> {
+                playUiFeedbackSound("tap");
+                popupWindow.dismiss();
+                TabItem targetTab = getTabById(isLeftPane ? activeTabId : secondarySplitTabId);
+                if (targetTab != null) addNewTab(targetTab.service, "", targetTab.url, targetTab.isIncognito);
+            });
+        }
+
+        if (itemSwitch != null) {
+            itemSwitch.setOnClickListener(v -> {
+                playUiFeedbackSound("tap");
+                popupWindow.dismiss();
+                showSwitchSplitTabDialog(isLeftPane);
+            });
+        }
+
+        if (itemSeparate != null) {
+            itemSeparate.setOnClickListener(v -> {
+                playUiFeedbackSound("tap");
+                popupWindow.dismiss();
+                exitSplitView();
+            });
+        }
+
+        if (itemSwap != null) {
+            itemSwap.setOnClickListener(v -> {
+                playUiFeedbackSound("tap");
+                popupWindow.dismiss();
+                swapSplitTabs();
+            });
+        }
+
+        if (itemOrient != null) {
+            itemOrient.setOnClickListener(v -> {
+                playUiFeedbackSound("tap");
+                popupWindow.dismiss();
+                toggleSplitOrientation();
+            });
+        }
+
+        if (itemLinks != null) {
+            itemLinks.setOnClickListener(v -> {
+                playUiFeedbackSound("tap");
+                popupWindow.dismiss();
+                openLeftLinksToRight = !openLeftLinksToRight;
+                Toast.makeText(this, "Open left links to right: " + (openLeftLinksToRight ? "ENABLED" : "DISABLED"), Toast.LENGTH_SHORT).show();
+            });
+        }
+
+        int[] location = new int[2];
+        anchor.getLocationOnScreen(location);
+        int anchorX = location[0];
+        int screenWidth = getResources().getDisplayMetrics().widthPixels;
+        int xOffset = 0;
+        if (anchorX + targetWidth > screenWidth - dpToPx(12)) {
+            xOffset = -(targetWidth - anchor.getWidth());
+        }
+        popupWindow.showAsDropDown(anchor, xOffset, dpToPx(4));
     }
 
     private void showSwitchSplitTabDialog(boolean isLeftPane) {
         AlertDialog.Builder builder = new AlertDialog.Builder(this);
-        builder.setTitle("🔄 Switch Tab in " + (isLeftPane ? "Left" : "Right") + " Pane");
-
-        List<String> titles = new ArrayList<>();
-        List<Integer> tabIds = new ArrayList<>();
-
-        for (TabItem tab : tabsList) {
-            titles.add((tab.nickname != null && !tab.nickname.isEmpty() ? tab.nickname : tab.title) + " (" + cleanDisplayUrl(tab.url) + ")");
-            tabIds.add(tab.id);
+        View dialogView = getLayoutInflater().inflate(R.layout.dialog_switch_split_tab, null);
+        builder.setView(dialogView);
+        AlertDialog dialog = builder.create();
+        if (dialog.getWindow() != null) {
+            dialog.getWindow().setBackgroundDrawable(new ColorDrawable(Color.TRANSPARENT));
         }
 
-        builder.setItems(titles.toArray(new String[0]), (dialog, which) -> {
-            int selectedId = tabIds.get(which);
-            if (isLeftPane) {
-                activeTabId = selectedId;
-            } else {
-                secondarySplitTabId = selectedId;
-            }
-            applySplitViewLayout();
-            Toast.makeText(this, "Switched pane tab", Toast.LENGTH_SHORT).show();
-        });
+        TextView titleView = dialogView.findViewById(R.id.dialog_split_tab_title);
+        TextView subtitleView = dialogView.findViewById(R.id.dialog_split_tab_subtitle);
+        ImageButton closeBtn = dialogView.findViewById(R.id.dialog_split_tab_close);
+        EditText searchInput = dialogView.findViewById(R.id.dialog_split_tab_search);
+        LinearLayout listContainer = dialogView.findViewById(R.id.dialog_split_tab_list);
+        TextView emptyView = dialogView.findViewById(R.id.dialog_split_tab_empty);
+        Button cancelBtn = dialogView.findViewById(R.id.btn_dialog_split_tab_cancel);
 
-        builder.setNegativeButton("Cancel", null);
-        builder.show();
+        String paneName = isLeftPane ? (splitModeState == 2 ? "Top" : "Left") : (splitModeState == 2 ? "Bottom" : "Right");
+        if (titleView != null) {
+            titleView.setText("Switch " + paneName + " Pane Tab");
+        }
+        if (subtitleView != null) {
+            subtitleView.setText(tabsList.size() + " open tabs available");
+        }
+
+        int currentPaneTabId = isLeftPane ? activeTabId : secondarySplitTabId;
+        int otherPaneTabId = isLeftPane ? secondarySplitTabId : activeTabId;
+
+        Runnable populateList = () -> {
+            listContainer.removeAllViews();
+            String query = searchInput != null ? searchInput.getText().toString().trim().toLowerCase() : "";
+            int visibleCount = 0;
+
+            for (TabItem tab : tabsList) {
+                String title = (tab.nickname != null && !tab.nickname.isEmpty()) ? tab.nickname : tab.title;
+                if (title == null || title.isEmpty()) title = "Untitled Tab";
+                String url = tab.url != null ? tab.url : "";
+                String displayUrl = cleanDisplayUrl(url);
+
+                if (!query.isEmpty()) {
+                    boolean matches = title.toLowerCase().contains(query) || url.toLowerCase().contains(query) || displayUrl.toLowerCase().contains(query);
+                    if (!matches) continue;
+                }
+                visibleCount++;
+
+                boolean isCurrentPane = (tab.id == currentPaneTabId);
+                boolean isOtherPane = (tab.id == otherPaneTabId);
+
+                LinearLayout row = new LinearLayout(this);
+                LinearLayout.LayoutParams rowLp = new LinearLayout.LayoutParams(
+                        ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT);
+                rowLp.setMargins(0, 0, 0, dpToPx(8));
+                row.setLayoutParams(rowLp);
+                row.setOrientation(LinearLayout.HORIZONTAL);
+                row.setGravity(Gravity.CENTER_VERTICAL);
+                row.setPadding(dpToPx(12), dpToPx(10), dpToPx(12), dpToPx(10));
+                row.setBackgroundResource(isCurrentPane ? R.drawable.bg_caspian_card_active : R.drawable.bg_caspian_card);
+                row.setClickable(true);
+                row.setFocusable(true);
+
+                ImageView faviconView = new ImageView(this);
+                LinearLayout.LayoutParams favLp = new LinearLayout.LayoutParams(dpToPx(28), dpToPx(28));
+                favLp.setMarginEnd(dpToPx(10));
+                faviconView.setLayoutParams(favLp);
+                faviconView.setScaleType(ImageView.ScaleType.FIT_CENTER);
+
+                Bitmap favBmp = getTabFaviconBitmap(tab);
+                if (favBmp != null) {
+                    faviconView.setImageBitmap(favBmp);
+                } else {
+                    int serviceIcon = getTabServiceIconRes(tab);
+                    faviconView.setImageResource(serviceIcon);
+                    faviconView.setColorFilter(Color.parseColor("#00E5FF"));
+                }
+                row.addView(faviconView);
+
+                LinearLayout textCol = new LinearLayout(this);
+                LinearLayout.LayoutParams textLp = new LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.WRAP_CONTENT, 1f);
+                textCol.setLayoutParams(textLp);
+                textCol.setOrientation(LinearLayout.VERTICAL);
+
+                TextView tvTitle = new TextView(this);
+                tvTitle.setText(title);
+                tvTitle.setTextColor(isCurrentPane ? Color.parseColor("#00E5FF") : Color.parseColor("#DFE2F0"));
+                tvTitle.setTextSize(TypedValue.COMPLEX_UNIT_SP, 13);
+                tvTitle.setTypeface(null, Typeface.BOLD);
+                tvTitle.setSingleLine(true);
+                tvTitle.setEllipsize(TextUtils.TruncateAt.END);
+                textCol.addView(tvTitle);
+
+                TextView tvUrl = new TextView(this);
+                tvUrl.setText(displayUrl);
+                tvUrl.setTextColor(Color.parseColor("#849396"));
+                tvUrl.setTextSize(TypedValue.COMPLEX_UNIT_SP, 11);
+                tvUrl.setSingleLine(true);
+                tvUrl.setEllipsize(TextUtils.TruncateAt.END);
+                textCol.addView(tvUrl);
+
+                row.addView(textCol);
+
+                if (isCurrentPane || isOtherPane) {
+                    TextView badge = new TextView(this);
+                    badge.setText(isCurrentPane ? "ACTIVE" : "OTHER");
+                    badge.setTextColor(isCurrentPane ? Color.parseColor("#00E5FF") : Color.parseColor("#A855F7"));
+                    badge.setTextSize(TypedValue.COMPLEX_UNIT_SP, 9);
+                    badge.setTypeface(null, Typeface.BOLD);
+                    badge.setPadding(dpToPx(8), dpToPx(3), dpToPx(8), dpToPx(3));
+                    badge.setBackgroundResource(R.drawable.bg_liquid_glass_pill);
+                    LinearLayout.LayoutParams badgeLp = new LinearLayout.LayoutParams(
+                            ViewGroup.LayoutParams.WRAP_CONTENT, ViewGroup.LayoutParams.WRAP_CONTENT);
+                    badgeLp.setMarginStart(dpToPx(8));
+                    badge.setLayoutParams(badgeLp);
+                    row.addView(badge);
+                }
+
+                final int selectedId = tab.id;
+                row.setOnClickListener(v -> {
+                    playUiFeedbackSound("tap");
+                    dialog.dismiss();
+                    if (isLeftPane) {
+                        activeTabId = selectedId;
+                    } else {
+                        secondarySplitTabId = selectedId;
+                    }
+                    applySplitViewLayout();
+                    Toast.makeText(this, "Switched pane tab", Toast.LENGTH_SHORT).show();
+                });
+
+                listContainer.addView(row);
+            }
+
+            if (emptyView != null) {
+                emptyView.setVisibility(visibleCount == 0 ? View.VISIBLE : View.GONE);
+            }
+        };
+
+        populateList.run();
+
+        if (searchInput != null) {
+            searchInput.addTextChangedListener(new TextWatcher() {
+                @Override public void beforeTextChanged(CharSequence s, int start, int count, int after) {}
+                @Override public void onTextChanged(CharSequence s, int start, int before, int count) {
+                    populateList.run();
+                }
+                @Override public void afterTextChanged(Editable s) {}
+            });
+        }
+
+        if (closeBtn != null) {
+            closeBtn.setOnClickListener(v -> {
+                playUiFeedbackSound("tap");
+                dialog.dismiss();
+            });
+        }
+        if (cancelBtn != null) {
+            cancelBtn.setOnClickListener(v -> {
+                playUiFeedbackSound("tap");
+                dialog.dismiss();
+            });
+        }
+
+        dialog.show();
+        if (dialog.getWindow() != null) {
+            int dialogWidth = (int) (getResources().getDisplayMetrics().widthPixels * 0.92f);
+            int maxWidth = dpToPx(420);
+            if (dialogWidth > maxWidth) dialogWidth = maxWidth;
+            dialog.getWindow().setLayout(dialogWidth, ViewGroup.LayoutParams.WRAP_CONTENT);
+        }
     }
 
     public void openInOtherSplitPane(String url) {
@@ -9436,6 +9695,13 @@ public class MainActivity extends AppCompatActivity {
         sheetOverlayContainer.setVisibility(View.VISIBLE);
         sheetOverlayContainer.setClickable(true);
         sheetOverlayContainer.setFocusable(true);
+
+        if (floatingCaspianCard != null) {
+            floatingCaspianCard.bringToFront();
+            float topElevation = TypedValue.applyDimension(TypedValue.COMPLEX_UNIT_DIP, 600, getResources().getDisplayMetrics());
+            floatingCaspianCard.setElevation(topElevation);
+            floatingCaspianCard.setCardElevation(topElevation);
+        }
 
         if (ytFloatingRemoteContainer != null) ytFloatingRemoteContainer.setVisibility(View.GONE);
         if (searchNavContainer != null) searchNavContainer.setVisibility(View.GONE);

@@ -1093,10 +1093,10 @@
         android:layout_gravity="bottom|end"
         android:layout_marginBottom="80dp"
         android:layout_marginEnd="20dp"
-        android:elevation="450dp"
+        android:elevation="600dp"
         app:cardCornerRadius="26dp"
         app:cardBackgroundColor="#00E5FF"
-        app:cardElevation="450dp"
+        app:cardElevation="600dp"
         android:clickable="true"
         android:focusable="true">
 
