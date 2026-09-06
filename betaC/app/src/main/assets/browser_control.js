@@ -4430,14 +4430,12 @@
       });
     }
 
-    // Caspian Drift Settings Wiring (API Key, Speech Engine, Language Accent)
+    // Caspian Drift Settings Wiring (Native Android & On-Device Whisper Tiers)
     const sttPills = document.querySelectorAll('.cc-stt-pill');
-    const apiKeyLabel = document.getElementById('cc-api-key-label');
-    const apiKeyContainer = document.getElementById('cc-api-key-container');
-    const apiKeyInput = document.getElementById('whisper-api-key-input');
-    const saveApiKeyBtn = document.getElementById('save-whisper-api-key-btn');
-
     const whisperPackContainer = document.getElementById('whisper-pack-container');
+    const whisperTierBtns = document.querySelectorAll('.whisper-tier-btn');
+    const whisperTierTitle = document.getElementById('whisper-tier-title');
+    const whisperTierDesc = document.getElementById('whisper-tier-desc');
     const whisperStatusBadge = document.getElementById('whisper-pack-status-badge');
     const whisperProgressBox = document.getElementById('whisper-download-progress-box');
     const whisperDownloadLabel = document.getElementById('whisper-download-label');
@@ -4446,20 +4444,40 @@
     const whisperDownloadBtn = document.getElementById('whisper-action-download-btn');
     const whisperDeleteBtn = document.getElementById('whisper-action-delete-btn');
 
+    const whisperTierMetadata = {
+      tiny: {
+        title: 'Whisper Tiny English Pack',
+        size: '~39 MB',
+        desc: 'Quantized Tiny model (~39 MB). Ultra-fast offline inference with automatic punctuation & context awareness.'
+      },
+      base: {
+        title: 'Whisper Base English Pack',
+        size: '~75 MB',
+        desc: 'Quantized Base model (~75 MB). Higher transcription accuracy and enhanced speech context awareness.'
+      }
+    };
+
     let currentSttEngine = localStorage.getItem('stt_engine_mode') || 'android_native';
     if (window.CaspianBridge && typeof window.CaspianBridge.getPref === 'function') {
       currentSttEngine = window.CaspianBridge.getPref('stt_engine_mode', currentSttEngine);
     }
 
-    function syncWhisperModelUI(status) {
+    let currentWhisperTier = localStorage.getItem('whisper_selected_tier') || 'tiny';
+    if (window.CaspianBridge && typeof window.CaspianBridge.getPref === 'function') {
+      currentWhisperTier = window.CaspianBridge.getPref('whisper_selected_tier', currentWhisperTier);
+    }
+
+    function syncWhisperModelUI(status, targetTier) {
+      const activeTier = targetTier || currentWhisperTier || 'tiny';
       if (!status && window.CaspianBridge && typeof window.CaspianBridge.getWhisperModelStatus === 'function') {
         try {
-          status = window.CaspianBridge.getWhisperModelStatus();
+          status = window.CaspianBridge.getWhisperModelStatus(activeTier);
         } catch (e) {
           status = 'NOT_DOWNLOADED';
         }
       }
       status = status || 'NOT_DOWNLOADED';
+      const meta = whisperTierMetadata[activeTier] || whisperTierMetadata.tiny;
 
       if (status === 'READY' || status === 'COMPLETED') {
         if (whisperStatusBadge) {
@@ -4469,7 +4487,10 @@
         }
         if (whisperProgressBox) whisperProgressBox.style.display = 'none';
         if (whisperDownloadBtn) whisperDownloadBtn.style.display = 'none';
-        if (whisperDeleteBtn) whisperDeleteBtn.style.display = 'block';
+        if (whisperDeleteBtn) {
+          whisperDeleteBtn.style.display = 'block';
+          whisperDeleteBtn.textContent = `🗑️ Remove ${activeTier === 'base' ? 'Base' : 'Tiny'} (${meta.size})`;
+        }
       } else if (status === 'DOWNLOADING') {
         if (whisperStatusBadge) {
           whisperStatusBadge.textContent = '⏳ Downloading...';
@@ -4480,13 +4501,13 @@
         if (whisperDownloadBtn) {
           whisperDownloadBtn.style.display = 'block';
           whisperDownloadBtn.disabled = true;
-          whisperDownloadBtn.textContent = '⏳ Downloading Voice Pack...';
+          whisperDownloadBtn.textContent = `⏳ Downloading ${activeTier === 'base' ? 'Base' : 'Tiny'}...`;
         }
         if (whisperDeleteBtn) whisperDeleteBtn.style.display = 'none';
       } else {
         // NOT_DOWNLOADED
         if (whisperStatusBadge) {
-          whisperStatusBadge.textContent = '⚠️ Missing (31 MB)';
+          whisperStatusBadge.textContent = `⚠️ Missing (${meta.size})`;
           whisperStatusBadge.style.background = 'rgba(255, 255, 255, 0.08)';
           whisperStatusBadge.style.color = 'var(--text-muted)';
         }
@@ -4494,43 +4515,65 @@
         if (whisperDownloadBtn) {
           whisperDownloadBtn.style.display = 'block';
           whisperDownloadBtn.disabled = false;
-          whisperDownloadBtn.textContent = '⚡ Download Voice Pack (31 MB)';
+          whisperDownloadBtn.textContent = `⚡ Download Voice Pack (${meta.size})`;
         }
         if (whisperDeleteBtn) whisperDeleteBtn.style.display = 'none';
       }
     }
 
-    window.onWhisperDownloadProgress = function (percent, status) {
-      if (status === 'DOWNLOADING') {
-        if (whisperProgressBox) whisperProgressBox.style.display = 'block';
-        if (whisperDownloadBar) whisperDownloadBar.style.width = percent + '%';
-        if (whisperDownloadPercent) whisperDownloadPercent.textContent = percent + '%';
-        if (whisperDownloadLabel) whisperDownloadLabel.textContent = 'Downloading Whisper Tiny pack...';
-        if (whisperStatusBadge) {
-          whisperStatusBadge.textContent = `⏳ ${percent}%`;
-          whisperStatusBadge.style.background = 'rgba(234, 179, 8, 0.15)';
-          whisperStatusBadge.style.color = '#facc15';
+    function updateWhisperTierDisplay(tier) {
+      currentWhisperTier = tier || 'tiny';
+      whisperTierBtns.forEach(btn => {
+        if (btn.dataset.tier === currentWhisperTier) {
+          btn.classList.add('active');
+          btn.style.background = 'var(--accent-gradient)';
+          btn.style.color = '#fff';
+        } else {
+          btn.classList.remove('active');
+          btn.style.background = 'transparent';
+          btn.style.color = 'var(--text-muted)';
         }
-        if (whisperDownloadBtn) {
-          whisperDownloadBtn.disabled = true;
-          whisperDownloadBtn.textContent = `⏳ Downloading (${percent}%)...`;
+      });
+      const meta = whisperTierMetadata[currentWhisperTier] || whisperTierMetadata.tiny;
+      if (whisperTierTitle) whisperTierTitle.textContent = meta.title;
+      if (whisperTierDesc) whisperTierDesc.textContent = meta.desc;
+      syncWhisperModelUI(null, currentWhisperTier);
+    }
+
+    window.onWhisperDownloadProgress = function (percent, status, tier) {
+      const activeTier = tier || currentWhisperTier || 'tiny';
+      if (activeTier === currentWhisperTier) {
+        if (status === 'DOWNLOADING') {
+          if (whisperProgressBox) whisperProgressBox.style.display = 'block';
+          if (whisperDownloadBar) whisperDownloadBar.style.width = percent + '%';
+          if (whisperDownloadPercent) whisperDownloadPercent.textContent = percent + '%';
+          if (whisperDownloadLabel) whisperDownloadLabel.textContent = `Downloading Whisper ${activeTier === 'base' ? 'Base' : 'Tiny'} pack...`;
+          if (whisperStatusBadge) {
+            whisperStatusBadge.textContent = `⏳ ${percent}%`;
+            whisperStatusBadge.style.background = 'rgba(234, 179, 8, 0.15)';
+            whisperStatusBadge.style.color = '#facc15';
+          }
+          if (whisperDownloadBtn) {
+            whisperDownloadBtn.disabled = true;
+            whisperDownloadBtn.textContent = `⏳ Downloading (${percent}%)...`;
+          }
+        } else if (status === 'COMPLETED' || status === 'READY') {
+          syncWhisperModelUI('READY', activeTier);
+        } else if (status === 'ERROR') {
+          if (whisperProgressBox) whisperProgressBox.style.display = 'none';
+          if (whisperStatusBadge) {
+            whisperStatusBadge.textContent = '❌ Download Failed';
+            whisperStatusBadge.style.background = 'rgba(239, 68, 68, 0.15)';
+            whisperStatusBadge.style.color = '#ef4444';
+          }
+          if (whisperDownloadBtn) {
+            whisperDownloadBtn.disabled = false;
+            whisperDownloadBtn.style.display = 'block';
+            whisperDownloadBtn.textContent = `🔄 Retry Download (${whisperTierMetadata[activeTier].size})`;
+          }
+        } else {
+          syncWhisperModelUI('NOT_DOWNLOADED', activeTier);
         }
-      } else if (status === 'COMPLETED' || status === 'READY') {
-        syncWhisperModelUI('READY');
-      } else if (status === 'ERROR') {
-        if (whisperProgressBox) whisperProgressBox.style.display = 'none';
-        if (whisperStatusBadge) {
-          whisperStatusBadge.textContent = '❌ Download Failed';
-          whisperStatusBadge.style.background = 'rgba(239, 68, 68, 0.15)';
-          whisperStatusBadge.style.color = '#ef4444';
-        }
-        if (whisperDownloadBtn) {
-          whisperDownloadBtn.disabled = false;
-          whisperDownloadBtn.style.display = 'block';
-          whisperDownloadBtn.textContent = '🔄 Retry Download (31 MB)';
-        }
-      } else {
-        syncWhisperModelUI('NOT_DOWNLOADED');
       }
     };
 
@@ -4539,8 +4582,8 @@
         e.stopPropagation();
         if (typeof playSFX === 'function') playSFX('tb_clicks');
         if (window.CaspianBridge && typeof window.CaspianBridge.downloadWhisperModel === 'function') {
-          syncWhisperModelUI('DOWNLOADING');
-          window.CaspianBridge.downloadWhisperModel();
+          syncWhisperModelUI('DOWNLOADING', currentWhisperTier);
+          window.CaspianBridge.downloadWhisperModel(currentWhisperTier);
         } else {
           alert('Whisper model download is only supported inside the Caspian Flow Android app.');
         }
@@ -4551,42 +4594,44 @@
       whisperDeleteBtn.addEventListener('click', (e) => {
         e.stopPropagation();
         if (typeof playSFX === 'function') playSFX('tb_clicks');
-        if (confirm('Delete on-device Whisper voice pack (frees ~31 MB)?')) {
+        const meta = whisperTierMetadata[currentWhisperTier] || whisperTierMetadata.tiny;
+        if (confirm(`Delete on-device ${meta.title} (frees ${meta.size})?`)) {
           if (window.CaspianBridge && typeof window.CaspianBridge.deleteWhisperModel === 'function') {
-            window.CaspianBridge.deleteWhisperModel();
+            window.CaspianBridge.deleteWhisperModel(currentWhisperTier);
           }
-          syncWhisperModelUI('NOT_DOWNLOADED');
+          syncWhisperModelUI('NOT_DOWNLOADED', currentWhisperTier);
         }
       });
     }
 
+    whisperTierBtns.forEach(btn => {
+      btn.addEventListener('click', (e) => {
+        e.stopPropagation();
+        if (typeof playSFX === 'function') playSFX('tb_clicks');
+        const tier = btn.dataset.tier;
+        localStorage.setItem('whisper_selected_tier', tier);
+        if (window.CaspianBridge && typeof window.CaspianBridge.savePref === 'function') {
+          window.CaspianBridge.savePref('whisper_selected_tier', tier);
+        }
+        if (window.CaspianBridge && typeof window.CaspianBridge.saveSetting === 'function') {
+          window.CaspianBridge.saveSetting('whisper_selected_tier', tier);
+        }
+        updateWhisperTierDisplay(tier);
+      });
+    });
+
     function updateSttEngineUI(engine) {
-      currentSttEngine = engine;
+      currentSttEngine = engine || 'android_native';
       sttPills.forEach(p => {
-        if (p.dataset.engine === engine) p.classList.add('active');
+        if (p.dataset.engine === currentSttEngine) p.classList.add('active');
         else p.classList.remove('active');
       });
 
-      if (engine === 'whisper_on_device') {
+      if (currentSttEngine === 'whisper_on_device') {
         if (whisperPackContainer) whisperPackContainer.style.display = 'block';
-        if (apiKeyContainer) apiKeyContainer.style.display = 'none';
-        syncWhisperModelUI();
-      } else if (engine === 'huggingface') {
-        if (whisperPackContainer) whisperPackContainer.style.display = 'none';
-        if (apiKeyLabel) apiKeyLabel.textContent = 'HUGGINGFACE API TOKEN';
-        if (apiKeyContainer) apiKeyContainer.style.display = 'flex';
-        let savedKey = localStorage.getItem('huggingface_api_key') || '';
-        if (window.CaspianBridge && typeof window.CaspianBridge.getPref === 'function') {
-          savedKey = window.CaspianBridge.getPref('huggingface_api_key', savedKey);
-        }
-        if (apiKeyInput) {
-          apiKeyInput.placeholder = 'Paste Hugging Face Token (hf_...)...';
-          apiKeyInput.value = savedKey;
-        }
+        updateWhisperTierDisplay(currentWhisperTier);
       } else {
-        // default android_native
         if (whisperPackContainer) whisperPackContainer.style.display = 'none';
-        if (apiKeyContainer) apiKeyContainer.style.display = 'none';
       }
     }
     window.updateSttEngineUI = updateSttEngineUI;
@@ -4604,69 +4649,13 @@
         }
         updateSttEngineUI(selectedEngine);
         if (window.CaspianBridge && typeof window.CaspianBridge.showToast === 'function') {
-          window.CaspianBridge.showToast(`STT Model: ${pill.textContent.trim().split('\n')[0]}`);
+          const name = selectedEngine === 'whisper_on_device' ? 'Whisper AI' : 'Native Android';
+          window.CaspianBridge.showToast(`STT Engine: ${name}`);
         }
       });
     });
 
     updateSttEngineUI(currentSttEngine);
-
-    // Save API Key Handler
-    if (saveApiKeyBtn && apiKeyInput) {
-      const handleSaveKey = () => {
-        playSFX('tb_clicks');
-        const keyVal = (apiKeyInput.value || '').trim();
-        localStorage.setItem('huggingface_api_key', keyVal);
-        if (window.CaspianBridge && typeof window.CaspianBridge.savePref === 'function') {
-          window.CaspianBridge.savePref('huggingface_api_key', keyVal);
-        }
-        if (window.CaspianBridge && typeof window.CaspianBridge.saveSetting === 'function') {
-          window.CaspianBridge.saveSetting('huggingface_api_key', keyVal);
-        }
-        if (window.CaspianBridge && typeof window.CaspianBridge.showToast === 'function') {
-          window.CaspianBridge.showToast(keyVal ? '✅ HuggingFace Token Saved' : '⚠️ HuggingFace Token Cleared');
-        }
-        saveApiKeyBtn.textContent = '✓ Saved';
-        setTimeout(() => {
-          saveApiKeyBtn.textContent = 'Save';
-        }, 1500);
-      };
-
-      saveApiKeyBtn.addEventListener('click', handleSaveKey);
-      apiKeyInput.addEventListener('keydown', (e) => {
-        if (e.key === 'Enter') {
-          e.preventDefault();
-          handleSaveKey();
-        }
-      });
-    }
-
-    // Language Accent Pills
-    const langPills = document.querySelectorAll('.cc-lang-pill');
-    let savedLang = localStorage.getItem('caspian_drift_lang') || 'auto';
-    if (window.CaspianBridge && typeof window.CaspianBridge.getPref === 'function') {
-      savedLang = window.CaspianBridge.getPref('caspian_drift_lang', savedLang);
-    }
-    langPills.forEach(pill => {
-      if (pill.dataset.lang === savedLang) {
-        pill.classList.add('active');
-      } else {
-        pill.classList.remove('active');
-      }
-      pill.addEventListener('click', () => {
-        playSFX('tb_clicks');
-        langPills.forEach(p => p.classList.remove('active'));
-        pill.classList.add('active');
-        const selected = pill.dataset.lang;
-        localStorage.setItem('caspian_drift_lang', selected);
-        if (window.CaspianBridge && typeof window.CaspianBridge.savePref === 'function') {
-          window.CaspianBridge.savePref('caspian_drift_lang', selected);
-        }
-        if (window.CaspianBridge && typeof window.CaspianBridge.showToast === 'function') {
-          window.CaspianBridge.showToast(`Accent set to: ${pill.textContent.trim()}`);
-        }
-      });
-    });
 
     // 4. Waveguard AdBlocker Accordion & Toggle
     if (adblockHeader && adblockBody) {

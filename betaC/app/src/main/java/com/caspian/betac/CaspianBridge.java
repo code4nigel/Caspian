@@ -1158,14 +1158,32 @@ public class CaspianBridge {
     }
 
     @JavascriptInterface
+    public String getWhisperModelStatus(String tier) {
+        if (activity == null) return "NOT_DOWNLOADED";
+        return activity.getWhisperModelStatus(tier);
+    }
+
+    @JavascriptInterface
     public void downloadWhisperModel() {
         if (activity == null) return;
         activity.runOnUiThread(() -> activity.downloadWhisperModel());
     }
 
     @JavascriptInterface
+    public void downloadWhisperModel(String tier) {
+        if (activity == null) return;
+        activity.runOnUiThread(() -> activity.downloadWhisperModel(tier));
+    }
+
+    @JavascriptInterface
     public void deleteWhisperModel() {
         if (activity == null) return;
         activity.runOnUiThread(() -> activity.deleteWhisperModel());
+    }
+
+    @JavascriptInterface
+    public void deleteWhisperModel(String tier) {
+        if (activity == null) return;
+        activity.runOnUiThread(() -> activity.deleteWhisperModel(tier));
     }
 }

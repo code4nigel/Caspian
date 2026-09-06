@@ -513,8 +513,13 @@ public class MainActivity extends AppCompatActivity {
 
     private volatile boolean isWhisperDownloading = false;
     private volatile int whisperDownloadProgress = 0;
-    private static final String WHISPER_MODEL_URL = "https://huggingface.co/ggerganov/whisper.cpp/resolve/main/ggml-tiny.en-q5_1.bin";
-    private static final String WHISPER_MODEL_FILENAME = "whisper-tiny-q5_1.bin";
+    private volatile String currentlyDownloadingTier = "tiny";
+
+    private static final String WHISPER_TINY_URL = "https://huggingface.co/ggerganov/whisper.cpp/resolve/main/ggml-tiny.en-q5_1.bin";
+    private static final String WHISPER_TINY_FILENAME = "whisper-tiny-q5_1.bin";
+
+    private static final String WHISPER_BASE_URL = "https://huggingface.co/ggerganov/whisper.cpp/resolve/main/ggml-base.en-q5_1.bin";
+    private static final String WHISPER_BASE_FILENAME = "whisper-base-q5_1.bin";
 
     private boolean isDebugRecording = false;
     private final StringBuilder debugLogBuffer = new StringBuilder();
@@ -6914,7 +6919,7 @@ public class MainActivity extends AppCompatActivity {
             }
 
             if ("whisper_on_device".equalsIgnoreCase(sttEngine)) {
-                File whisperFile = getWhisperModelFile();
+                File whisperFile = getActiveWhisperModelFile();
                 boolean modelReady = (whisperFile != null && whisperFile.exists() && whisperFile.length() > 5_000_000);
                 if (!modelReady) {
                     Toast.makeText(this, "⚠️ Whisper Voice Pack not downloaded yet. Using Native Speech...", Toast.LENGTH_SHORT).show();
@@ -6925,8 +6930,6 @@ public class MainActivity extends AppCompatActivity {
                     }
                     return;
                 }
-                startAudioRecording();
-            } else if ("huggingface".equalsIgnoreCase(sttEngine)) {
                 startAudioRecording();
             } else {
                 // Default: android_native
@@ -6951,7 +6954,7 @@ public class MainActivity extends AppCompatActivity {
         SharedPreferences prefs = getSharedPreferences(PREFS_NAME, MODE_PRIVATE);
         String sttEngine = prefs.getString("stt_engine_mode", "android_native");
 
-        File whisperFile = getWhisperModelFile();
+        File whisperFile = getActiveWhisperModelFile();
         boolean whisperReady = (whisperFile != null && whisperFile.exists() && whisperFile.length() > 5_000_000);
 
         if ("android_native".equalsIgnoreCase(sttEngine) || ("whisper_on_device".equalsIgnoreCase(sttEngine) && !whisperReady)) {
@@ -7078,39 +7081,11 @@ public class MainActivity extends AppCompatActivity {
 
         new Thread(() -> {
             try {
-                String recognizedText = null;
                 if ("whisper_on_device".equalsIgnoreCase(engineMode)) {
-                    File modelFile = getWhisperModelFile();
+                    File modelFile = getActiveWhisperModelFile();
                     if (modelFile != null && modelFile.exists() && modelFile.length() > 5_000_000) {
-                        String hfKey = prefs.getString("huggingface_api_key", "").trim();
-                        if (!hfKey.isEmpty()) {
-                            recognizedText = queryHuggingFaceApi(wavBytes, hfKey);
-                        } else {
-                            runOnUiThread(() -> Toast.makeText(this, "🧠 Whisper Voice Pack loaded & active.", Toast.LENGTH_SHORT).show());
-                        }
+                        runOnUiThread(() -> Toast.makeText(this, "🎙️ Whispering...", Toast.LENGTH_SHORT).show());
                     }
-                } else if ("huggingface".equalsIgnoreCase(engineMode)) {
-                    String apiKey = prefs.getString("huggingface_api_key", "").trim();
-                    apiKey = apiKey.replace("\"", "").replace("'", "").trim();
-                    if (apiKey.isEmpty()) {
-                        runOnUiThread(() -> Toast.makeText(this, "⚠️ Hugging Face Token missing! Enter in Caspian Drift settings.", Toast.LENGTH_LONG).show());
-                        return;
-                    }
-                    recognizedText = queryHuggingFaceApi(wavBytes, apiKey);
-                }
-
-                final String finalText = recognizedText;
-                if (finalText != null && !finalText.trim().isEmpty()) {
-                    runOnUiThread(() -> {
-                        if (isUniversalVoiceActive) {
-                            handleUniversalSpeechText(finalText);
-                        } else {
-                            omniboxEditText.setText(finalText);
-                            handleOmniboxSubmission(finalText);
-                        }
-                    });
-                } else if ("huggingface".equalsIgnoreCase(engineMode)) {
-                    runOnUiThread(() -> Toast.makeText(this, "⚠️ Speech not recognized. Speak louder.", Toast.LENGTH_SHORT).show());
                 }
             } catch (Exception e) {
                 runOnUiThread(() -> Toast.makeText(this, "⚠️ STT: " + e.getMessage(), Toast.LENGTH_LONG).show());
@@ -7118,39 +7093,72 @@ public class MainActivity extends AppCompatActivity {
         }).start();
     }
 
-    public File getWhisperModelFile() {
+    public File getWhisperModelFile(String tier) {
         File modelsDir = new File(getFilesDir(), "models");
         if (!modelsDir.exists()) modelsDir.mkdirs();
-        return new File(modelsDir, WHISPER_MODEL_FILENAME);
+        String filename = "base".equalsIgnoreCase(tier) ? WHISPER_BASE_FILENAME : WHISPER_TINY_FILENAME;
+        return new File(modelsDir, filename);
+    }
+
+    public File getActiveWhisperModelFile() {
+        SharedPreferences prefs = getSharedPreferences(PREFS_NAME, MODE_PRIVATE);
+        String tier = prefs.getString("whisper_selected_tier", "tiny");
+        File file = getWhisperModelFile(tier);
+        long minExpected = "base".equalsIgnoreCase(tier) ? 40_000_000 : 5_000_000;
+        if (file.exists() && file.length() > minExpected) return file;
+        File fallback = getWhisperModelFile("tiny".equalsIgnoreCase(tier) ? "base" : "tiny");
+        long fallbackExpected = "tiny".equalsIgnoreCase(tier) ? 40_000_000 : 5_000_000;
+        if (fallback.exists() && fallback.length() > fallbackExpected) return fallback;
+        return file;
     }
 
     public String getWhisperModelStatus() {
-        if (isWhisperDownloading) return "DOWNLOADING";
-        File file = getWhisperModelFile();
-        if (file != null && file.exists() && file.length() > 5_000_000) {
+        SharedPreferences prefs = getSharedPreferences(PREFS_NAME, MODE_PRIVATE);
+        String tier = prefs.getString("whisper_selected_tier", "tiny");
+        return getWhisperModelStatus(tier);
+    }
+
+    public String getWhisperModelStatus(String tier) {
+        final String selectedTier = ("base".equalsIgnoreCase(tier)) ? "base" : "tiny";
+        if (isWhisperDownloading && selectedTier.equalsIgnoreCase(currentlyDownloadingTier)) {
+            return "DOWNLOADING";
+        }
+        File file = getWhisperModelFile(selectedTier);
+        long minExpected = "base".equalsIgnoreCase(selectedTier) ? 40_000_000 : 5_000_000;
+        if (file != null && file.exists() && file.length() > minExpected) {
             return "READY";
         }
         return "NOT_DOWNLOADED";
     }
 
     public void downloadWhisperModel() {
+        SharedPreferences prefs = getSharedPreferences(PREFS_NAME, MODE_PRIVATE);
+        String tier = prefs.getString("whisper_selected_tier", "tiny");
+        downloadWhisperModel(tier);
+    }
+
+    public void downloadWhisperModel(String tier) {
         if (isWhisperDownloading) {
             Toast.makeText(this, "⏳ Whisper model is already downloading...", Toast.LENGTH_SHORT).show();
             return;
         }
+        final String selectedTier = ("base".equalsIgnoreCase(tier)) ? "base" : "tiny";
+        currentlyDownloadingTier = selectedTier;
         isWhisperDownloading = true;
         whisperDownloadProgress = 0;
-        Toast.makeText(this, "📥 Starting Whisper Voice Pack download (31 MB)...", Toast.LENGTH_SHORT).show();
-        notifyWhisperProgress(0, "DOWNLOADING");
+        String tierLabel = "base".equalsIgnoreCase(selectedTier) ? "Base (~75 MB)" : "Tiny (~39 MB)";
+        Toast.makeText(this, "📥 Starting Whisper " + tierLabel + " download...", Toast.LENGTH_SHORT).show();
+        notifyWhisperProgress(0, "DOWNLOADING", selectedTier);
 
         new Thread(() -> {
-            File modelFile = getWhisperModelFile();
-            File tempFile = new File(modelFile.getParentFile(), WHISPER_MODEL_FILENAME + ".tmp");
+            File modelFile = getWhisperModelFile(selectedTier);
+            File tempFile = new File(modelFile.getParentFile(), modelFile.getName() + ".tmp");
             HttpURLConnection conn = null;
             InputStream in = null;
             FileOutputStream out = null;
             try {
-                URL url = new URL(WHISPER_MODEL_URL);
+                String downloadUrl = "base".equalsIgnoreCase(selectedTier) ? WHISPER_BASE_URL : WHISPER_TINY_URL;
+                URL url = new URL(downloadUrl);
                 conn = (HttpURLConnection) url.openConnection();
                 conn.setInstanceFollowRedirects(true);
                 conn.setConnectTimeout(15000);
@@ -7184,7 +7192,7 @@ public class MainActivity extends AppCompatActivity {
                         if (percent > lastReportedPercent) {
                             lastReportedPercent = percent;
                             whisperDownloadProgress = percent;
-                            notifyWhisperProgress(percent, "DOWNLOADING");
+                            notifyWhisperProgress(percent, "DOWNLOADING", selectedTier);
                         }
                     }
                 }
@@ -7194,20 +7202,21 @@ public class MainActivity extends AppCompatActivity {
                 in.close();
                 in = null;
 
-                if (tempFile.exists() && tempFile.length() > 5_000_000) {
+                long minExpected = "base".equalsIgnoreCase(selectedTier) ? 40_000_000 : 5_000_000;
+                if (tempFile.exists() && tempFile.length() > minExpected) {
                     if (modelFile.exists()) modelFile.delete();
                     tempFile.renameTo(modelFile);
                     isWhisperDownloading = false;
-                    notifyWhisperProgress(100, "COMPLETED");
-                    runOnUiThread(() -> Toast.makeText(this, "✅ Whisper Voice Pack Downloaded & Ready!", Toast.LENGTH_LONG).show());
+                    notifyWhisperProgress(100, "COMPLETED", selectedTier);
+                    runOnUiThread(() -> Toast.makeText(this, "✅ Whisper " + tierLabel + " Downloaded & Ready!", Toast.LENGTH_LONG).show());
                 } else {
                     throw new IOException("Downloaded file is incomplete or corrupted");
                 }
             } catch (Exception e) {
                 isWhisperDownloading = false;
                 if (tempFile.exists()) tempFile.delete();
-                Log.e(TAG, "Failed to download whisper model: " + e.getMessage());
-                notifyWhisperProgress(0, "ERROR");
+                Log.e(TAG, "Failed to download whisper model (" + selectedTier + "): " + e.getMessage());
+                notifyWhisperProgress(0, "ERROR", selectedTier);
                 runOnUiThread(() -> Toast.makeText(this, "⚠️ Voice Pack download failed: " + e.getMessage(), Toast.LENGTH_LONG).show());
             } finally {
                 try { if (in != null) in.close(); } catch (Exception ignored) {}
@@ -7218,52 +7227,34 @@ public class MainActivity extends AppCompatActivity {
     }
 
     public void deleteWhisperModel() {
-        File modelFile = getWhisperModelFile();
+        SharedPreferences prefs = getSharedPreferences(PREFS_NAME, MODE_PRIVATE);
+        String tier = prefs.getString("whisper_selected_tier", "tiny");
+        deleteWhisperModel(tier);
+    }
+
+    public void deleteWhisperModel(String tier) {
+        final String selectedTier = ("base".equalsIgnoreCase(tier)) ? "base" : "tiny";
+        File modelFile = getWhisperModelFile(selectedTier);
         if (modelFile != null && modelFile.exists()) {
             modelFile.delete();
         }
         isWhisperDownloading = false;
-        notifyWhisperProgress(0, "NOT_DOWNLOADED");
-        Toast.makeText(this, "🗑️ Whisper Voice Pack removed", Toast.LENGTH_SHORT).show();
+        notifyWhisperProgress(0, "NOT_DOWNLOADED", selectedTier);
+        String tierLabel = "base".equalsIgnoreCase(selectedTier) ? "Base (~75 MB)" : "Tiny (~39 MB)";
+        Toast.makeText(this, "🗑️ Whisper " + tierLabel + " removed", Toast.LENGTH_SHORT).show();
     }
 
     private void notifyWhisperProgress(int percent, String status) {
+        notifyWhisperProgress(percent, status, currentlyDownloadingTier);
+    }
+
+    private void notifyWhisperProgress(int percent, String status, String tier) {
+        final String safeTier = (tier != null) ? tier : "tiny";
         runOnUiThread(() -> {
             if (controlWebView != null) {
-                controlWebView.evaluateJavascript("if (typeof window.onWhisperDownloadProgress === 'function') { window.onWhisperDownloadProgress(" + percent + ", '" + status + "'); }", null);
+                controlWebView.evaluateJavascript("if (typeof window.onWhisperDownloadProgress === 'function') { window.onWhisperDownloadProgress(" + percent + ", '" + status + "', '" + safeTier + "'); }", null);
             }
         });
-    }
-
-    private String readStreamString(InputStream is) throws Exception {
-        if (is == null) return "";
-        BufferedReader r = new BufferedReader(new InputStreamReader(is, StandardCharsets.UTF_8));
-        StringBuilder total = new StringBuilder();
-        String line;
-        while ((line = r.readLine()) != null) total.append(line).append('\n');
-        return total.toString();
-    }
-
-    private String queryHuggingFaceApi(byte[] wavBytes, String apiKey) throws Exception {
-        apiKey = apiKey.trim().replace("\"", "").replace("'", "");
-        URL url = new URL("https://router.huggingface.co/hf-inference/models/openai/whisper-large-v3");
-        HttpURLConnection conn = (HttpURLConnection) url.openConnection();
-        conn.setRequestMethod("POST");
-        conn.setRequestProperty("Authorization", "Bearer " + apiKey);
-        conn.setRequestProperty("Content-Type", "audio/wav");
-        conn.setConnectTimeout(12000);
-        conn.setReadTimeout(20000);
-        conn.setDoOutput(true);
-
-        try (OutputStream os = conn.getOutputStream()) {
-            os.write(wavBytes);
-        }
-
-        int code = conn.getResponseCode();
-        InputStream is = (code >= 200 && code < 300) ? conn.getInputStream() : conn.getErrorStream();
-        String resp = readStreamString(is);
-        JSONObject json = new JSONObject(resp);
-        return json.optString("text", "");
     }
 
     private void setupNativeSpeechRecognizer() {
