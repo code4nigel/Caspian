@@ -1,7 +1,0 @@
-<resources>
-    <style name="Theme.CaspianFlow" parent="Theme.AppCompat.NoActionBar">
-        <item name="android:statusBarColor">#0D1524</item>
-        <item name="android:navigationBarColor">#050811</item>
-        <item name="android:windowBackground">#050811</item>
-    </style>
-</resources>
