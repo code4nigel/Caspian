@@ -25,12 +25,14 @@
         android:roundIcon="@mipmap/ic_launcher_round"
         android:label="Caspian Flow"
         android:supportsRtl="true"
+        android:hardwareAccelerated="true"
         android:theme="@style/Theme.CaspianFlow">
 
         <activity
             android:name=".MainActivity"
             android:configChanges="orientation|screenSize|keyboardHidden|smallestScreenSize|screenLayout"
             android:supportsPictureInPicture="true"
+            android:hardwareAccelerated="true"
             android:launchMode="singleTask"
             android:windowSoftInputMode="adjustResize"
             android:icon="@mipmap/ic_launcher"

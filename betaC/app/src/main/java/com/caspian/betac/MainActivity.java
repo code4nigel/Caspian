@@ -5625,6 +5625,9 @@ public class MainActivity extends AppCompatActivity {
             if (searchNavContainer != null) searchNavContainer.setVisibility(View.GONE);
             if (chatgptDockContainer != null) chatgptDockContainer.setVisibility(View.GONE);
 
+            // Instantly activate standalone downloads mode in controlWebView so bottom sheet never flashes
+            evaluateJavascriptInControlSheet("if (typeof window.openDownloadsModalStandalone === 'function') window.openDownloadsModalStandalone();");
+
             sheetBackdrop.animate().cancel();
             sheetBackdrop.setAlpha(0f);
             sheetBackdrop.animate().alpha(1f).setDuration(180).start();
@@ -5634,8 +5637,8 @@ public class MainActivity extends AppCompatActivity {
                     controlWebView.animate().cancel();
                     controlWebView.setPivotX(controlWebView.getWidth() / 2f);
                     controlWebView.setPivotY(controlWebView.getHeight() / 2f);
-                    controlWebView.setScaleX(0.92f);
-                    controlWebView.setScaleY(0.92f);
+                    controlWebView.setScaleX(0.95f);
+                    controlWebView.setScaleY(0.95f);
                     controlWebView.setAlpha(0f);
                     controlWebView.setTranslationY(0f);
 
@@ -5647,8 +5650,6 @@ public class MainActivity extends AppCompatActivity {
                             .setInterpolator(new DecelerateInterpolator(1.6f))
                             .start();
                 }
-
-                evaluateJavascriptInControlSheet("if (typeof window.openDownloadsModalStandalone === 'function') window.openDownloadsModalStandalone();");
             }
         });
     }
@@ -9854,6 +9855,10 @@ public class MainActivity extends AppCompatActivity {
 
             controlWebView.setLayerType(View.LAYER_TYPE_HARDWARE, null);
             controlWebView.setBackgroundColor(0x00000000);
+            controlWebView.setOverScrollMode(View.OVER_SCROLL_NEVER);
+            controlWebView.setVerticalScrollBarEnabled(false);
+            controlWebView.setHorizontalScrollBarEnabled(false);
+            settings.setCacheMode(WebSettings.LOAD_DEFAULT);
             controlWebView.addJavascriptInterface(new CaspianBridge(this), "CaspianBridge");
             controlWebView.loadUrl("file:///android_asset/browser_control.html");
 

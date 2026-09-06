@@ -2269,6 +2269,9 @@
     let startY, startHeight;
     let lastClientY = 0;
     let startTime = 0;
+    let isDragging = false;
+    let dragRafId = null;
+    let pendingHeightVh = null;
 
     targetDragArea.addEventListener('touchstart', (e) => {
       try { e.preventDefault(); } catch (err) { }
@@ -2277,22 +2280,38 @@
       lastClientY = touch.clientY;
       startHeight = bottomSheet.offsetHeight;
       startTime = Date.now();
+      isDragging = true;
       bottomSheet.style.transition = 'none';
+      bottomSheet.style.willChange = 'height, transform';
     }, { passive: false });
 
     targetDragArea.addEventListener('touchmove', (e) => {
       try { e.preventDefault(); } catch (err) { }
+      if (!isDragging) return;
       const touch = e.touches[0];
       lastClientY = touch.clientY;
       const deltaY = startY - touch.clientY;
       const newHeight = startHeight + deltaY;
-      const vhHeight = Math.max(20, Math.min(95, (newHeight / window.innerHeight) * 100));
-      bottomSheet.style.height = vhHeight + 'vh';
-      bottomSheet.style.maxHeight = '95vh';
+      pendingHeightVh = Math.max(20, Math.min(95, (newHeight / window.innerHeight) * 100));
+
+      if (!dragRafId) {
+        dragRafId = requestAnimationFrame(() => {
+          if (isDragging && pendingHeightVh !== null) {
+            bottomSheet.style.height = pendingHeightVh + 'vh';
+            bottomSheet.style.maxHeight = '95vh';
+          }
+          dragRafId = null;
+        });
+      }
     }, { passive: false });
 
     targetDragArea.addEventListener('touchend', () => {
-      bottomSheet.style.transition = 'transform 0.35s cubic-bezier(0.16, 1, 0.3, 1), height 0.3s ease';
+      isDragging = false;
+      if (dragRafId) {
+        cancelAnimationFrame(dragRafId);
+        dragRafId = null;
+      }
+      bottomSheet.style.transition = 'transform 0.3s cubic-bezier(0.16, 1, 0.3, 1), height 0.26s cubic-bezier(0.16, 1, 0.3, 1)';
       const displacementY = lastClientY - startY;
       const timeElapsed = Date.now() - startTime;
       const velocityY = displacementY / timeElapsed; // px/ms
@@ -2305,7 +2324,8 @@
         }
         setTimeout(() => {
           bottomSheet.style.height = localStorage.getItem('saved_sheet_height') || '88vh';
-        }, 350);
+          bottomSheet.style.willChange = 'auto';
+        }, 320);
       } else {
         // Snap to closest stable layout position (e.g. 50vh, 70vh, 88vh)
         let snapVh = 88;
@@ -2321,6 +2341,9 @@
         if (window.CaspianBridge && typeof window.CaspianBridge.saveSetting === 'function') {
           window.CaspianBridge.saveSetting('saved_sheet_height', snapVh + 'vh');
         }
+        setTimeout(() => {
+          bottomSheet.style.willChange = 'auto';
+        }, 300);
       }
     });
   }
@@ -6167,13 +6190,18 @@
     try { if (window.playSFX) window.playSFX('tb_clicks'); } catch (e) {}
     document.body.classList.add('downloads-standalone-mode');
     document.body.classList.remove('menu-revealed');
+    const bottomSheet = document.getElementById('bottom-sheet');
+    if (bottomSheet) bottomSheet.style.display = 'none';
     const modal = document.getElementById('caspian-downloads-modal');
     if (modal) modal.style.display = 'flex';
     refreshDownloadsList();
   };
 
   window.revealCaspianMenu = function() {
+    document.body.classList.remove('downloads-standalone-mode');
     document.body.classList.add('menu-revealed');
+    const bottomSheet = document.getElementById('bottom-sheet');
+    if (bottomSheet) bottomSheet.style.display = '';
     if (typeof renderOpenTabs === 'function') renderOpenTabs();
     if (typeof syncAppVersion === 'function') syncAppVersion();
     if (typeof restoreSavedSettings === 'function') restoreSavedSettings();
@@ -6187,6 +6215,8 @@
   window.onDownloadsStandaloneClosed = function() {
     document.body.classList.remove('downloads-standalone-mode');
     document.body.classList.remove('menu-revealed');
+    const bottomSheet = document.getElementById('bottom-sheet');
+    if (bottomSheet) bottomSheet.style.display = '';
     const modal = document.getElementById('caspian-downloads-modal');
     if (modal) modal.style.display = 'none';
   };
