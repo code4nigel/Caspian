@@ -6972,8 +6972,8 @@ public class MainActivity extends AppCompatActivity {
                 }
             }
         } else {
-            byte[] wavBytes = stopAudioRecordingAndGetWav();
-            sendAudioToCloudStt(wavBytes, sttEngine, prefs);
+            byte[] pcmData = stopAudioRecordingAndGetPcm();
+            processWhisperSpeech(pcmData);
         }
     }
 
@@ -7020,7 +7020,7 @@ public class MainActivity extends AppCompatActivity {
         }
     }
 
-    private byte[] stopAudioRecordingAndGetWav() {
+    private byte[] stopAudioRecordingAndGetPcm() {
         isRecordingPcmAudio = false;
         if (audioRecord != null) {
             try {
@@ -7033,62 +7033,72 @@ public class MainActivity extends AppCompatActivity {
             try { pcmRecordingThread.join(500); } catch (Exception ignored) {}
             pcmRecordingThread = null;
         }
-        byte[] pcmData = pcmAudioBuffer != null ? pcmAudioBuffer.toByteArray() : new byte[0];
-        return pcmToWav(pcmData, 16000, 1, 16);
+        return pcmAudioBuffer != null ? pcmAudioBuffer.toByteArray() : new byte[0];
     }
 
-    private byte[] pcmToWav(byte[] pcm, int sampleRate, int channels, int bitsPerSample) {
-        int totalDataLen = pcm.length + 36;
-        int byteRate = sampleRate * channels * bitsPerSample / 8;
-        byte[] header = new byte[44];
-        header[0] = 'R'; header[1] = 'I'; header[2] = 'F'; header[3] = 'F';
-        header[4] = (byte) (totalDataLen & 0xff);
-        header[5] = (byte) ((totalDataLen >> 8) & 0xff);
-        header[6] = (byte) ((totalDataLen >> 16) & 0xff);
-        header[7] = (byte) ((totalDataLen >> 24) & 0xff);
-        header[8] = 'W'; header[9] = 'A'; header[10] = 'V'; header[11] = 'E';
-        header[12] = 'f'; header[13] = 'm'; header[14] = 't'; header[15] = ' ';
-        header[16] = 16; header[17] = 0; header[18] = 0; header[19] = 0;
-        header[20] = 1; header[21] = 0;
-        header[22] = (byte) channels; header[23] = 0;
-        header[24] = (byte) (sampleRate & 0xff);
-        header[25] = (byte) ((sampleRate >> 8) & 0xff);
-        header[26] = (byte) ((sampleRate >> 16) & 0xff);
-        header[27] = (byte) ((sampleRate >> 24) & 0xff);
-        header[28] = (byte) (byteRate & 0xff);
-        header[29] = (byte) ((byteRate >> 8) & 0xff);
-        header[30] = (byte) ((byteRate >> 16) & 0xff);
-        header[31] = (byte) ((byteRate >> 24) & 0xff);
-        header[32] = (byte) (channels * bitsPerSample / 8); header[33] = 0;
-        header[34] = (byte) bitsPerSample; header[35] = 0;
-        header[36] = 'd'; header[37] = 'a'; header[38] = 't'; header[39] = 'a';
-        header[40] = (byte) (pcm.length & 0xff);
-        header[41] = (byte) ((pcm.length >> 8) & 0xff);
-        header[42] = (byte) ((pcm.length >> 16) & 0xff);
-        header[43] = (byte) ((pcm.length >> 24) & 0xff);
-
-        byte[] wav = new byte[header.length + pcm.length];
-        System.arraycopy(header, 0, wav, 0, header.length);
-        System.arraycopy(pcm, 0, wav, header.length, pcm.length);
-        return wav;
+    private float[] pcm16ToFloat(byte[] pcmData) {
+        if (pcmData == null || pcmData.length < 2) return new float[0];
+        int numSamples = pcmData.length / 2;
+        float[] floatSamples = new float[numSamples];
+        for (int i = 0; i < numSamples; i++) {
+            short sample = (short) ((pcmData[i * 2 + 1] << 8) | (pcmData[i * 2] & 0xff));
+            floatSamples[i] = sample / 32768.0f;
+        }
+        return floatSamples;
     }
 
-    private void sendAudioToCloudStt(byte[] wavBytes, String engineMode, SharedPreferences prefs) {
-        if (wavBytes == null || wavBytes.length <= 44) {
-            Toast.makeText(this, "⚠️ Audio buffer empty.", Toast.LENGTH_SHORT).show();
+    private void processWhisperSpeech(byte[] pcmData) {
+        if (pcmData == null || pcmData.length < 3200) {
+            runOnUiThread(() -> Toast.makeText(this, "⚠️ Audio too short.", Toast.LENGTH_SHORT).show());
             return;
         }
 
+        File modelFile = getActiveWhisperModelFile();
+        if (modelFile == null || !modelFile.exists() || modelFile.length() < 5_000_000) {
+            runOnUiThread(() -> Toast.makeText(this, "⚠️ Whisper model pack not ready.", Toast.LENGTH_SHORT).show());
+            return;
+        }
+
+        runOnUiThread(() -> Toast.makeText(this, "🧠 Whisper transcribing...", Toast.LENGTH_SHORT).show());
+
         new Thread(() -> {
+            long ctx = 0;
             try {
-                if ("whisper_on_device".equalsIgnoreCase(engineMode)) {
-                    File modelFile = getActiveWhisperModelFile();
-                    if (modelFile != null && modelFile.exists() && modelFile.length() > 5_000_000) {
-                        runOnUiThread(() -> Toast.makeText(this, "🎙️ Whispering...", Toast.LENGTH_SHORT).show());
+                if (!cz.vytvarenicher.whisper.WhisperLib.isAvailable()) {
+                    runOnUiThread(() -> Toast.makeText(this, "⚠️ Whisper native engine unavailable on this device", Toast.LENGTH_LONG).show());
+                    return;
+                }
+
+                float[] samples = pcm16ToFloat(pcmData);
+                ctx = cz.vytvarenicher.whisper.WhisperLib.initFromFile(modelFile.getAbsolutePath());
+                if (ctx == 0) {
+                    runOnUiThread(() -> Toast.makeText(this, "⚠️ Failed to initialize Whisper model", Toast.LENGTH_LONG).show());
+                    return;
+                }
+
+                String transcribed = cz.vytvarenicher.whisper.WhisperLib.transcribe(ctx, samples, "en");
+                if (transcribed != null) {
+                    final String finalText = transcribed.trim();
+                    if (!finalText.isEmpty()) {
+                        runOnUiThread(() -> {
+                            if (isUniversalVoiceActive) {
+                                handleUniversalSpeechText(finalText);
+                            } else {
+                                omniboxEditText.setText(finalText);
+                                handleOmniboxSubmission(finalText);
+                            }
+                        });
+                    } else {
+                        runOnUiThread(() -> Toast.makeText(this, "⚠️ Whisper: No speech detected", Toast.LENGTH_SHORT).show());
                     }
                 }
-            } catch (Exception e) {
-                runOnUiThread(() -> Toast.makeText(this, "⚠️ STT: " + e.getMessage(), Toast.LENGTH_LONG).show());
+            } catch (Throwable t) {
+                Log.e(TAG, "Whisper transcription failed: " + t.getMessage(), t);
+                runOnUiThread(() -> Toast.makeText(this, "⚠️ Whisper error: " + t.getMessage(), Toast.LENGTH_LONG).show());
+            } finally {
+                if (ctx != 0) {
+                    try { cz.vytvarenicher.whisper.WhisperLib.free(ctx); } catch (Exception ignored) {}
+                }
             }
         }).start();
     }
@@ -7112,12 +7122,6 @@ public class MainActivity extends AppCompatActivity {
         return file;
     }
 
-    public String getWhisperModelStatus() {
-        SharedPreferences prefs = getSharedPreferences(PREFS_NAME, MODE_PRIVATE);
-        String tier = prefs.getString("whisper_selected_tier", "tiny");
-        return getWhisperModelStatus(tier);
-    }
-
     public String getWhisperModelStatus(String tier) {
         final String selectedTier = ("base".equalsIgnoreCase(tier)) ? "base" : "tiny";
         if (isWhisperDownloading && selectedTier.equalsIgnoreCase(currentlyDownloadingTier)) {
@@ -7129,12 +7133,6 @@ public class MainActivity extends AppCompatActivity {
             return "READY";
         }
         return "NOT_DOWNLOADED";
-    }
-
-    public void downloadWhisperModel() {
-        SharedPreferences prefs = getSharedPreferences(PREFS_NAME, MODE_PRIVATE);
-        String tier = prefs.getString("whisper_selected_tier", "tiny");
-        downloadWhisperModel(tier);
     }
 
     public void downloadWhisperModel(String tier) {
@@ -7226,22 +7224,24 @@ public class MainActivity extends AppCompatActivity {
         }).start();
     }
 
-    public void deleteWhisperModel() {
-        SharedPreferences prefs = getSharedPreferences(PREFS_NAME, MODE_PRIVATE);
-        String tier = prefs.getString("whisper_selected_tier", "tiny");
-        deleteWhisperModel(tier);
-    }
-
-    public void deleteWhisperModel(String tier) {
+    public boolean deleteWhisperModel(String tier) {
         final String selectedTier = ("base".equalsIgnoreCase(tier)) ? "base" : "tiny";
         File modelFile = getWhisperModelFile(selectedTier);
+        boolean deleted = false;
         if (modelFile != null && modelFile.exists()) {
-            modelFile.delete();
+            deleted = modelFile.delete();
+        }
+        if (modelFile != null && modelFile.getParentFile() != null) {
+            File tempFile = new File(modelFile.getParentFile(), modelFile.getName() + ".tmp");
+            if (tempFile.exists()) {
+                tempFile.delete();
+            }
         }
         isWhisperDownloading = false;
         notifyWhisperProgress(0, "NOT_DOWNLOADED", selectedTier);
         String tierLabel = "base".equalsIgnoreCase(selectedTier) ? "Base (~75 MB)" : "Tiny (~39 MB)";
         Toast.makeText(this, "🗑️ Whisper " + tierLabel + " removed", Toast.LENGTH_SHORT).show();
+        return deleted;
     }
 
     private void notifyWhisperProgress(int percent, String status) {
