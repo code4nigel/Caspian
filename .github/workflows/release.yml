@@ -164,22 +164,39 @@ jobs:
                 const existing = release.assets.find(a => a.name === assetName);
                 if (existing) {
                   console.log(`  - Deleting existing asset ${assetName} (id: ${existing.id})...`);
-                  await github.rest.repos.deleteReleaseAsset({ owner, repo, asset_id: existing.id });
+                  try {
+                    await github.rest.repos.deleteReleaseAsset({ owner, repo, asset_id: existing.id });
+                    await new Promise(r => setTimeout(r, 2000));
+                  } catch (delErr) {
+                    console.log(`  - Note: asset deletion error (${delErr.message}), proceeding...`);
+                  }
                 }
               }
 
               console.log(`  - Uploading ${assetName} (${(fileData.length / 1024 / 1024).toFixed(2)} MB)...`);
-              await github.rest.repos.uploadReleaseAsset({
-                owner,
-                repo,
-                release_id: release.id,
-                name: assetName,
-                data: fileData,
-                headers: {
-                  'content-type': contentType,
-                  'content-length': fileData.length
+              for (let attempt = 1; attempt <= 3; attempt++) {
+                try {
+                  await github.rest.repos.uploadReleaseAsset({
+                    owner,
+                    repo,
+                    release_id: release.id,
+                    name: assetName,
+                    data: fileData,
+                    headers: {
+                      'content-type': contentType,
+                      'content-length': fileData.length
+                    }
+                  });
+                  break;
+                } catch (uploadErr) {
+                  console.log(`  - Upload attempt ${attempt} failed: ${uploadErr.message}`);
+                  if (attempt < 3) {
+                    await new Promise(r => setTimeout(r, 3000));
+                  } else {
+                    console.log(`  - Warning: asset upload for ${assetName} failed after 3 attempts.`);
+                  }
                 }
-              });
+              }
             }
 
             const matchedLatestFiles = [];

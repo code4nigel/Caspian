@@ -177,6 +177,7 @@ public class MainActivity extends AppCompatActivity {
         public int splitPartnerId = -1;
         public int splitOrientation = 1;
         public String splitRole = "";
+        public String splitName = "";
 
         public TabItem(int id, String title, String url, String service, WebView webView, boolean isIncognito) {
             this.id = id;
@@ -1206,6 +1207,7 @@ public class MainActivity extends AppCompatActivity {
                 obj.put("splitPartnerId", tab.splitPartnerId);
                 obj.put("splitRole", tab.splitRole != null ? tab.splitRole : "");
                 obj.put("splitOrientation", tab.splitOrientation);
+                obj.put("splitName", tab.splitName != null ? tab.splitName : "");
                 obj.put("caskId", tab.caskId != null ? tab.caskId : CaskManager.DEFAULT_CASK_ID);
                 obj.put("caskName", tab.caskName != null ? tab.caskName : "Caspian Cask");
                 obj.put("caskIcon", tab.caskIcon != null ? tab.caskIcon : "🌊");
@@ -1263,6 +1265,7 @@ public class MainActivity extends AppCompatActivity {
                         item.splitPartnerId = obj.optInt("splitPartnerId", -1);
                         item.splitRole = obj.optString("splitRole", "");
                         item.splitOrientation = obj.optInt("splitOrientation", 0);
+                        item.splitName = obj.optString("splitName", "");
                         item.caskId = caskId;
                         item.caskName = obj.optString("caskName", "Caspian Cask");
                         item.caskIcon = obj.optString("caskIcon", "🌊");
@@ -5914,6 +5917,17 @@ public class MainActivity extends AppCompatActivity {
             rightTab.splitPartnerId = leftTab.id;
             rightTab.splitRole = "secondary";
             rightTab.splitOrientation = splitModeState;
+
+            for (TabItem t : tabsList) {
+                if (t != leftTab && t != rightTab) {
+                    if (t.splitPartnerId == leftTab.id || t.splitPartnerId == rightTab.id) {
+                        t.splitPartnerId = -1;
+                        t.splitRole = "";
+                        t.splitOrientation = 0;
+                        t.splitName = "";
+                    }
+                }
+            }
         }
 
         if (splitModeState == 1) {
@@ -6668,12 +6682,34 @@ public class MainActivity extends AppCompatActivity {
                 row.setOnClickListener(v -> {
                     playUiFeedbackSound("tap");
                     dialog.dismiss();
+                    int oldPaneTabId = isLeftPane ? activeTabId : secondarySplitTabId;
+                    if (oldPaneTabId != selectedId) {
+                        TabItem oldTab = getTabById(oldPaneTabId);
+                        if (oldTab != null) {
+                            oldTab.splitPartnerId = -1;
+                            oldTab.splitRole = "";
+                            oldTab.splitOrientation = 0;
+                            oldTab.splitName = "";
+                        }
+                    }
+                    TabItem newlySelectedTab = getTabById(selectedId);
+                    if (newlySelectedTab != null && newlySelectedTab.splitPartnerId != -1) {
+                        TabItem oldPartner = getTabById(newlySelectedTab.splitPartnerId);
+                        if (oldPartner != null) {
+                            oldPartner.splitPartnerId = -1;
+                            oldPartner.splitRole = "";
+                            oldPartner.splitOrientation = 0;
+                            oldPartner.splitName = "";
+                        }
+                    }
                     if (isLeftPane) {
                         activeTabId = selectedId;
                     } else {
                         secondarySplitTabId = selectedId;
                     }
                     applySplitViewLayout();
+                    saveOpenTabsState();
+                    updateControlSheetTabs();
                     Toast.makeText(this, "Switched pane tab", Toast.LENGTH_SHORT).show();
                 });
 
@@ -6750,6 +6786,32 @@ public class MainActivity extends AppCompatActivity {
         exitSplitView();
     }
 
+    public void renameSplitTabs(int tabId, String newName) {
+        TabItem tab = getTabById(tabId);
+        if (tab == null) return;
+        String name = newName != null ? newName.trim() : "";
+        tab.splitName = name;
+        if (tab.splitPartnerId != -1) {
+            TabItem partner = getTabById(tab.splitPartnerId);
+            if (partner != null) {
+                partner.splitName = name;
+            }
+        }
+        saveOpenTabsState();
+        updateControlSheetTabs();
+    }
+
+    public void deleteSplitTabs(int tabId) {
+        TabItem tab = getTabById(tabId);
+        if (tab == null) return;
+        int partnerId = tab.splitPartnerId;
+        separateSplitTabs(tabId);
+        closeTab(tabId);
+        if (partnerId != -1 && partnerId != tabId) {
+            closeTab(partnerId);
+        }
+    }
+
     public void separateSplitTabs(int tabId) {
         TabItem tab = getTabById(tabId);
         if (tab == null) return;
@@ -6758,9 +6820,13 @@ public class MainActivity extends AppCompatActivity {
 
         tab.splitPartnerId = -1;
         tab.splitRole = "";
+        tab.splitOrientation = 0;
+        tab.splitName = "";
         if (partner != null) {
             partner.splitPartnerId = -1;
             partner.splitRole = "";
+            partner.splitOrientation = 0;
+            partner.splitName = "";
         }
 
         if (splitModeState > 0 && (activeTabId == tabId || secondarySplitTabId == tabId ||
@@ -6771,6 +6837,7 @@ public class MainActivity extends AppCompatActivity {
             switchToTab(tabId, false);
         }
         saveOpenTabsState();
+        updateControlSheetTabs();
     }
 
     public void exitSplitView() {
@@ -6779,10 +6846,14 @@ public class MainActivity extends AppCompatActivity {
         if (leftTab != null) {
             leftTab.splitPartnerId = -1;
             leftTab.splitRole = "";
+            leftTab.splitOrientation = 0;
+            leftTab.splitName = "";
         }
         if (rightTab != null) {
             rightTab.splitPartnerId = -1;
             rightTab.splitRole = "";
+            rightTab.splitOrientation = 0;
+            rightTab.splitName = "";
         }
         splitModeState = 0;
         secondarySplitTabId = -1;
@@ -8951,6 +9022,8 @@ public class MainActivity extends AppCompatActivity {
                 if (partner != null) {
                     partner.splitPartnerId = -1;
                     partner.splitRole = "";
+                    partner.splitOrientation = 0;
+                    partner.splitName = "";
                 }
                 if (splitModeState > 0 && (activeTabId == tabId || secondarySplitTabId == tabId)) {
                     splitModeState = 0;
@@ -9515,6 +9588,7 @@ public class MainActivity extends AppCompatActivity {
                 obj.put("splitPartnerId", tab.splitPartnerId);
                 obj.put("splitRole", tab.splitRole != null ? tab.splitRole : "none");
                 obj.put("splitOrientation", tab.splitOrientation);
+                obj.put("splitName", tab.splitName != null ? tab.splitName : "");
                 array.put(obj);
             } catch (Exception ignored) {}
         }
@@ -9712,6 +9786,10 @@ public class MainActivity extends AppCompatActivity {
                 controlWebView.evaluateJavascript(js, null);
             }
         });
+    }
+
+    public void updateControlSheetTabs() {
+        evaluateJavascriptInControlSheet("if (typeof renderOpenTabs === 'function') renderOpenTabs();");
     }
 
     private void initDownloadManager() {
