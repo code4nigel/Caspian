@@ -646,61 +646,47 @@
           processedSplitTabs.add(partnerTab.id);
 
           const isPairActive = tab.active || partnerTab.active || tab.isSplitActive || partnerTab.isSplitActive;
-          const isVert = tab.splitOrientation === 2;
-          const orientationText = isVert ? 'Top / Bottom' : 'Side-by-Side';
-          const orientationIcon = isVert ? '↕️' : '↔️';
+          const activeClass = isPairActive ? 'active' : '';
+          const isSelected = selectedTabIds.has(tab.id) || selectedTabIds.has(partnerTab.id);
+          const selectedClass = isSelected ? 'selected' : '';
+          const selectCheckbox = isMultiSelectMode ? `<span style="font-size: 14px; margin-right: 4px;">${isSelected ? '☑️' : '⏹️'}</span>` : '';
 
           const icon1 = resolveTabFavicon(tab);
           const icon2 = resolveTabFavicon(partnerTab);
 
-          const t1Nickname = tab.nickname ? `🏷️ <strong style="color: #10b981;">${tab.nickname}</strong>` : (tab.url || '');
-          const t2Nickname = partnerTab.nickname ? `🏷️ <strong style="color: #10b981;">${partnerTab.nickname}</strong>` : (partnerTab.url || '');
+          const activeBadge = isPairActive ? '<span style="font-size: 9px; font-weight: 800; color: #10b981; background: rgba(16,185,129,0.15); padding: 2px 6px; border-radius: 6px;">ACTIVE</span>' : '';
+          const splitBadge = `<span style="font-size: 9px; font-weight: 800; color: #00E5FF; background: rgba(0,229,255,0.18); border: 1px solid rgba(0,229,255,0.4); padding: 2px 6px; border-radius: 6px; margin-right: 4px;">🔀 SPLIT</span>`;
+
+          const t1Title = tab.title || 'Tab 1';
+          const t2Title = partnerTab.title || 'Tab 2';
+          const subText = `${t1Title} • ${t2Title}`;
+
+          const optionMenuBtn = `<button class="chrome-tab-menu-btn icon-btn" data-tabmenuid="${tab.id}" title="Tab Options" style="font-size: 14px; width: 22px; height: 22px; border: none; background: none; color: var(--text-sub); cursor: pointer; display: inline-flex; align-items: center; justify-content: center; margin-right: 2px;">⋮</button>`;
+
+          const splitBorderStyle = 'border: 1.5px solid rgba(0, 229, 255, 0.6); box-shadow: 0 0 10px rgba(0, 229, 255, 0.2);';
 
           html += `
-            <div class="chrome-tab-card split-bonded-card ${isPairActive ? 'active' : ''}" data-splittab1="${tab.id}" data-splittab2="${partnerTab.id}" style="grid-column: 1 / -1; border: 1.5px solid rgba(0, 229, 255, 0.6); background: linear-gradient(135deg, rgba(0, 229, 255, 0.08), rgba(0, 0, 0, 0.35)); box-shadow: 0 4px 18px rgba(0, 229, 255, 0.15); padding: 10px; border-radius: 14px; position: relative; margin-bottom: 4px;">
-              <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px; border-bottom: 1px solid rgba(0, 229, 255, 0.25); padding-bottom: 6px;">
-                <div style="display: flex; align-items: center; gap: 6px;">
-                  <span style="font-size: 13px;">🔗</span>
-                  <span style="font-size: 10.5px; font-weight: 800; color: #00E5FF; letter-spacing: 0.5px; text-transform: uppercase;">Bonded Split Pair</span>
-                  <span style="font-size: 9.5px; color: var(--text-sub); background: rgba(255,255,255,0.08); padding: 2px 7px; border-radius: 6px; font-weight: 600;">${orientationIcon} ${orientationText}</span>
+            <div class="chrome-tab-card ${activeClass} ${selectedClass} split-tab-active" data-tabid="${tab.id}" data-splittab1="${tab.id}" data-splittab2="${partnerTab.id}" style="${splitBorderStyle}">
+              <div class="chrome-tab-header">
+                <div style="display: flex; align-items: center; gap: 6px; overflow: hidden;">
+                  ${selectCheckbox}
+                  <div style="display: flex; align-items: center; gap: 3px; flex-shrink: 0;">
+                    ${icon1 ? `<img src="${icon1}" style="width: 14px; height: 14px; border-radius: 3px; object-fit: cover;" onerror="this.style.display='none'" />` : ''}
+                    ${icon2 ? `<img src="${icon2}" style="width: 14px; height: 14px; border-radius: 3px; object-fit: cover;" onerror="this.style.display='none'" />` : ''}
+                  </div>
+                  <span class="chrome-tab-title">Split Tabs</span>
                 </div>
-                <div>
-                  ${isPairActive ? '<span style="font-size: 9px; font-weight: 800; color: #10b981; background: rgba(16,185,129,0.15); border: 1px solid rgba(16,185,129,0.3); padding: 2px 7px; border-radius: 6px;">ACTIVE IN SPLIT</span>' : '<span style="font-size: 9px; font-weight: 700; color: #00E5FF; background: rgba(0,229,255,0.1); padding: 2px 7px; border-radius: 6px;">Tap to Open Pair</span>'}
+                <div style="display: flex; align-items: center; gap: 2px;">
+                  ${optionMenuBtn}
+                  <button class="chrome-tab-close" data-closeid="${tab.id}" title="Close Tab">&times;</button>
                 </div>
               </div>
-
-              <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 8px;">
-                <div class="split-pane-half" data-tabid="${tab.id}" style="background: rgba(255,255,255,0.05); border: 1px solid rgba(255,255,255,0.1); border-radius: 10px; padding: 8px; cursor: pointer;">
-                  <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 4px;">
-                    <div style="display: flex; align-items: center; gap: 5px; overflow: hidden;">
-                      ${icon1 ? `<img src="${icon1}" style="width: 14px; height: 14px; border-radius: 3px; object-fit: cover;" onerror="this.style.display='none'" />` : ''}
-                      <span style="font-size: 11px; font-weight: 700; color: var(--text-main); overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">${tab.title || 'Pane 1'}</span>
-                    </div>
-                    <div style="display: flex; align-items: center; gap: 2px;">
-                      <button class="chrome-tab-menu-btn icon-btn" data-tabmenuid="${tab.id}" title="Tab Options" style="font-size: 13px; width: 20px; height: 20px; border: none; background: none; color: var(--text-sub); cursor: pointer;">⋮</button>
-                      <button class="chrome-tab-close" data-closeid="${tab.id}" title="Close Tab" style="font-size: 14px; width: 18px; height: 18px; border: none; background: none; color: var(--text-sub); cursor: pointer;">&times;</button>
-                    </div>
-                  </div>
-                  <div style="font-size: 9.5px; color: var(--text-sub); overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">
-                    ${t1Nickname}
-                  </div>
-                </div>
-
-                <div class="split-pane-half" data-tabid="${partnerTab.id}" style="background: rgba(255,255,255,0.05); border: 1px solid rgba(255,255,255,0.1); border-radius: 10px; padding: 8px; cursor: pointer;">
-                  <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 4px;">
-                    <div style="display: flex; align-items: center; gap: 5px; overflow: hidden;">
-                      ${icon2 ? `<img src="${icon2}" style="width: 14px; height: 14px; border-radius: 3px; object-fit: cover;" onerror="this.style.display='none'" />` : ''}
-                      <span style="font-size: 11px; font-weight: 700; color: var(--text-main); overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">${partnerTab.title || 'Pane 2'}</span>
-                    </div>
-                    <div style="display: flex; align-items: center; gap: 2px;">
-                      <button class="chrome-tab-menu-btn icon-btn" data-tabmenuid="${partnerTab.id}" title="Tab Options" style="font-size: 13px; width: 20px; height: 20px; border: none; background: none; color: var(--text-sub); cursor: pointer;">⋮</button>
-                      <button class="chrome-tab-close" data-closeid="${partnerTab.id}" title="Close Tab" style="font-size: 14px; width: 18px; height: 18px; border: none; background: none; color: var(--text-sub); cursor: pointer;">&times;</button>
-                    </div>
-                  </div>
-                  <div style="font-size: 9.5px; color: var(--text-sub); overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">
-                    ${t2Nickname}
-                  </div>
-                </div>
+              <div class="chrome-tab-url" style="font-size: 10px; color: var(--text-sub); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; margin-top: 4px; display: flex; align-items: center; gap: 4px;">
+                <span>${subText}</span>
+              </div>
+              <div style="display: flex; justify-content: space-between; align-items: center; margin-top: 6px;">
+                <div style="display: flex; align-items: center; gap: 4px;"></div>
+                <div style="display: flex; align-items: center;">${splitBadge}${activeBadge}</div>
               </div>
             </div>
           `;
@@ -841,20 +827,6 @@
           openGroupOptionsMenu(group);
         });
       }
-    });
-
-    container.querySelectorAll('.split-bonded-card').forEach(card => {
-      card.addEventListener('click', (e) => {
-        if (e.target.closest('.chrome-tab-close') || e.target.closest('.chrome-tab-menu-btn')) return;
-        const tab1Id = parseInt(card.dataset.splittab1);
-        const half = e.target.closest('.split-pane-half');
-        const targetTabId = half ? parseInt(half.dataset.tabid) : tab1Id;
-        try { playSFX('tb_clicks'); } catch(e) {}
-        if (window.CaspianBridge && typeof window.CaspianBridge.switchTab === 'function') {
-          window.CaspianBridge.switchTab(targetTabId);
-          setTimeout(renderOpenTabs, 400);
-        }
-      });
     });
 
     container.querySelectorAll('.chrome-tab-menu-btn').forEach(btn => {
