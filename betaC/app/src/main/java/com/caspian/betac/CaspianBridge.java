@@ -334,6 +334,13 @@ public class CaspianBridge {
     }
 
     @JavascriptInterface
+    public void separateSplitTabs(int tabId) {
+        if (activity != null) {
+            activity.runOnUiThread(() -> activity.separateSplitTabs(tabId));
+        }
+    }
+
+    @JavascriptInterface
     public void closeSheet() {
         hideControlSheet();
     }

@@ -174,6 +174,9 @@ public class MainActivity extends AppCompatActivity {
         public String caskName = "Caspian Cask";
         public String caskIcon = "🌊";
         public String caskColor = "#1B4264";
+        public int splitPartnerId = -1;
+        public int splitOrientation = 1;
+        public String splitRole = "";
 
         public TabItem(int id, String title, String url, String service, WebView webView, boolean isIncognito) {
             this.id = id;
@@ -1200,6 +1203,9 @@ public class MainActivity extends AppCompatActivity {
                 obj.put("isIncognito", false);
                 obj.put("isMuted", tab.isMuted);
                 obj.put("isFavorite", tab.isFavorite);
+                obj.put("splitPartnerId", tab.splitPartnerId);
+                obj.put("splitRole", tab.splitRole != null ? tab.splitRole : "");
+                obj.put("splitOrientation", tab.splitOrientation);
                 obj.put("caskId", tab.caskId != null ? tab.caskId : CaskManager.DEFAULT_CASK_ID);
                 obj.put("caskName", tab.caskName != null ? tab.caskName : "Caspian Cask");
                 obj.put("caskIcon", tab.caskIcon != null ? tab.caskIcon : "🌊");
@@ -1254,6 +1260,9 @@ public class MainActivity extends AppCompatActivity {
                         item.isDesktop = isDesktop;
                         item.isMuted = isMuted;
                         item.isFavorite = isFavorite;
+                        item.splitPartnerId = obj.optInt("splitPartnerId", -1);
+                        item.splitRole = obj.optString("splitRole", "");
+                        item.splitOrientation = obj.optInt("splitOrientation", 0);
                         item.caskId = caskId;
                         item.caskName = obj.optString("caskName", "Caspian Cask");
                         item.caskIcon = obj.optString("caskIcon", "🌊");
@@ -5890,11 +5899,21 @@ public class MainActivity extends AppCompatActivity {
         splitLeftContainer.removeAllViews();
         splitRightContainer.removeAllViews();
 
-        if (leftTab != null && leftTab.webView.getParent() != null) {
+        if (leftTab != null && leftTab.webView != null && leftTab.webView.getParent() != null) {
             ((ViewGroup) leftTab.webView.getParent()).removeView(leftTab.webView);
         }
-        if (rightTab != null && rightTab.webView.getParent() != null) {
+        if (rightTab != null && rightTab.webView != null && rightTab.webView.getParent() != null) {
             ((ViewGroup) rightTab.webView.getParent()).removeView(rightTab.webView);
+        }
+
+        if (leftTab != null && rightTab != null) {
+            leftTab.splitPartnerId = rightTab.id;
+            leftTab.splitRole = "primary";
+            leftTab.splitOrientation = splitModeState;
+
+            rightTab.splitPartnerId = leftTab.id;
+            rightTab.splitRole = "secondary";
+            rightTab.splitOrientation = splitModeState;
         }
 
         if (splitModeState == 1) {
@@ -6731,8 +6750,42 @@ public class MainActivity extends AppCompatActivity {
         exitSplitView();
     }
 
-    private void exitSplitView() {
+    public void separateSplitTabs(int tabId) {
+        TabItem tab = getTabById(tabId);
+        if (tab == null) return;
+        int partnerId = tab.splitPartnerId;
+        TabItem partner = getTabById(partnerId);
+
+        tab.splitPartnerId = -1;
+        tab.splitRole = "";
+        if (partner != null) {
+            partner.splitPartnerId = -1;
+            partner.splitRole = "";
+        }
+
+        if (splitModeState > 0 && (activeTabId == tabId || secondarySplitTabId == tabId ||
+                (partner != null && (activeTabId == partner.id || secondarySplitTabId == partner.id)))) {
+            splitModeState = 0;
+            secondarySplitTabId = -1;
+            activeTabId = tabId;
+            switchToTab(tabId, false);
+        }
+        saveOpenTabsState();
+    }
+
+    public void exitSplitView() {
+        TabItem leftTab = getTabById(activeTabId);
+        TabItem rightTab = getTabById(secondarySplitTabId);
+        if (leftTab != null) {
+            leftTab.splitPartnerId = -1;
+            leftTab.splitRole = "";
+        }
+        if (rightTab != null) {
+            rightTab.splitPartnerId = -1;
+            rightTab.splitRole = "";
+        }
         splitModeState = 0;
+        secondarySplitTabId = -1;
         if (splitArenaBroadcastContainer != null) splitArenaBroadcastContainer.setVisibility(View.GONE);
         if (splitLeftContainer != null) splitLeftContainer.removeAllViews();
         if (splitRightContainer != null) splitRightContainer.removeAllViews();
@@ -8779,8 +8832,26 @@ public class MainActivity extends AppCompatActivity {
             cm.restoreCaskCookiesFromVault(tab.caskId);
         }
 
-        activeTabId = tabId;
-        if (splitModeState == 0) {
+        if (tab.splitPartnerId != -1 && getTabById(tab.splitPartnerId) != null) {
+            TabItem partner = getTabById(tab.splitPartnerId);
+            if ("secondary".equals(tab.splitRole)) {
+                activeTabId = partner.id;
+                secondarySplitTabId = tab.id;
+            } else {
+                activeTabId = tab.id;
+                secondarySplitTabId = partner.id;
+            }
+            splitModeState = tab.splitOrientation > 0 ? tab.splitOrientation : 1;
+            applySplitViewLayout();
+        } else {
+            splitModeState = 0;
+            activeTabId = tabId;
+
+            if (splitViewContainer != null) splitViewContainer.setVisibility(View.GONE);
+            if (splitLeftContainer != null) splitLeftContainer.removeAllViews();
+            if (splitRightContainer != null) splitRightContainer.removeAllViews();
+            if (webViewContainer != null) webViewContainer.setVisibility(View.VISIBLE);
+
             for (TabItem t : tabsList) {
                 if (t.webView != null) {
                     if (t.id == tabId) {
@@ -8800,8 +8871,6 @@ public class MainActivity extends AppCompatActivity {
                     }
                 }
             }
-        } else {
-            applySplitViewLayout();
         }
         updateOmniboxState();
         if (!hasAnyYouTubeTab()) {
@@ -8877,7 +8946,20 @@ public class MainActivity extends AppCompatActivity {
             if (toRemove.webView.getParent() != null) {
                 ((ViewGroup) toRemove.webView.getParent()).removeView(toRemove.webView);
             }
-            toRemove.webView.destroy();
+            if (toRemove.splitPartnerId != -1) {
+                TabItem partner = getTabById(toRemove.splitPartnerId);
+                if (partner != null) {
+                    partner.splitPartnerId = -1;
+                    partner.splitRole = "";
+                }
+                if (splitModeState > 0 && (activeTabId == tabId || secondarySplitTabId == tabId)) {
+                    splitModeState = 0;
+                    secondarySplitTabId = -1;
+                    if (partner != null) {
+                        activeTabId = partner.id;
+                    }
+                }
+            }
             tabsList.remove(toRemove);
 
             for (TabGroup g : tabGroupsList) {
@@ -9426,9 +9508,13 @@ public class MainActivity extends AppCompatActivity {
                 obj.put("caskName", tab.caskName != null ? tab.caskName : "Caspian Cask");
                 obj.put("caskIcon", tab.caskIcon != null ? tab.caskIcon : "🌊");
                 obj.put("caskColor", tab.caskColor != null ? tab.caskColor : "#1B4264");
-                boolean isSplitTab = (splitModeState > 0 && (tab.id == activeTabId || tab.id == secondarySplitTabId));
-                obj.put("isSplit", isSplitTab);
-                obj.put("splitRole", (tab.id == activeTabId) ? "primary" : ((tab.id == secondarySplitTabId) ? "secondary" : "none"));
+                boolean hasSplitBond = (tab.splitPartnerId != -1 && getTabById(tab.splitPartnerId) != null);
+                boolean isSplitActive = (splitModeState > 0 && (tab.id == activeTabId || tab.id == secondarySplitTabId));
+                obj.put("isSplit", isSplitActive || hasSplitBond);
+                obj.put("isSplitActive", isSplitActive);
+                obj.put("splitPartnerId", tab.splitPartnerId);
+                obj.put("splitRole", tab.splitRole != null ? tab.splitRole : "none");
+                obj.put("splitOrientation", tab.splitOrientation);
                 array.put(obj);
             } catch (Exception ignored) {}
         }

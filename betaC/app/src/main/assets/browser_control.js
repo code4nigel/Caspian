@@ -612,8 +612,100 @@
     // Render Single Tabs if filter allows single tabs
     if (activeGroupId || activeTabFilter === 'all' || activeTabFilter === 'single') {
       const displayTabs = activeGroupId ? tabs : tabs.filter(t => !tabGroups.some(g => g.tabIds.includes(t.id)));
+      const processedSplitTabs = new Set();
+
+      const resolveTabFavicon = (t) => {
+        let iconB64 = t.faviconB64 || '';
+        const urlLower = (t.url || '').toLowerCase();
+        const serviceLower = (t.service || '').toLowerCase();
+        if (!iconB64) {
+          if (serviceLower === 'gemini' || urlLower.includes('gemini.google.com')) iconB64 = window.GEMINI_ICON_B64 || '';
+          else if (serviceLower === 'chatgpt' || urlLower.includes('chatgpt.com') || urlLower.includes('openai.com')) iconB64 = window.GPT_ICON_B64 || '';
+          else if (serviceLower === 'google' || serviceLower === 'google_search' || urlLower.includes('google.com') || urlLower.includes('google.')) iconB64 = window.GOOGLE_ICON_B64 || '';
+          else if (serviceLower === 'youtube' || urlLower.includes('youtube.com') || urlLower.includes('youtu.be')) iconB64 = window.YOUTUBE_ICON_B64 || '';
+          else if (t.url && !t.url.startsWith('file:') && !t.url.startsWith('caspian:')) {
+            try {
+              const parsedHost = new URL(t.url).hostname;
+              if (parsedHost) {
+                iconB64 = `https://www.google.com/s2/favicons?domain=${parsedHost}&sz=64`;
+              }
+            } catch (e) {}
+          }
+        }
+        return iconB64;
+      };
 
       displayTabs.forEach(tab => {
+        if (processedSplitTabs.has(tab.id)) return;
+
+        const partnerId = tab.splitPartnerId;
+        const partnerTab = (partnerId && partnerId !== -1) ? tabs.find(t => t.id === partnerId) : null;
+
+        if (partnerTab && !activeGroupId) {
+          processedSplitTabs.add(tab.id);
+          processedSplitTabs.add(partnerTab.id);
+
+          const isPairActive = tab.active || partnerTab.active || tab.isSplitActive || partnerTab.isSplitActive;
+          const isVert = tab.splitOrientation === 2;
+          const orientationText = isVert ? 'Top / Bottom' : 'Side-by-Side';
+          const orientationIcon = isVert ? '↕️' : '↔️';
+
+          const icon1 = resolveTabFavicon(tab);
+          const icon2 = resolveTabFavicon(partnerTab);
+
+          const t1Nickname = tab.nickname ? `🏷️ <strong style="color: #10b981;">${tab.nickname}</strong>` : (tab.url || '');
+          const t2Nickname = partnerTab.nickname ? `🏷️ <strong style="color: #10b981;">${partnerTab.nickname}</strong>` : (partnerTab.url || '');
+
+          html += `
+            <div class="chrome-tab-card split-bonded-card ${isPairActive ? 'active' : ''}" data-splittab1="${tab.id}" data-splittab2="${partnerTab.id}" style="grid-column: 1 / -1; border: 1.5px solid rgba(0, 229, 255, 0.6); background: linear-gradient(135deg, rgba(0, 229, 255, 0.08), rgba(0, 0, 0, 0.35)); box-shadow: 0 4px 18px rgba(0, 229, 255, 0.15); padding: 10px; border-radius: 14px; position: relative; margin-bottom: 4px;">
+              <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px; border-bottom: 1px solid rgba(0, 229, 255, 0.25); padding-bottom: 6px;">
+                <div style="display: flex; align-items: center; gap: 6px;">
+                  <span style="font-size: 13px;">🔗</span>
+                  <span style="font-size: 10.5px; font-weight: 800; color: #00E5FF; letter-spacing: 0.5px; text-transform: uppercase;">Bonded Split Pair</span>
+                  <span style="font-size: 9.5px; color: var(--text-sub); background: rgba(255,255,255,0.08); padding: 2px 7px; border-radius: 6px; font-weight: 600;">${orientationIcon} ${orientationText}</span>
+                </div>
+                <div>
+                  ${isPairActive ? '<span style="font-size: 9px; font-weight: 800; color: #10b981; background: rgba(16,185,129,0.15); border: 1px solid rgba(16,185,129,0.3); padding: 2px 7px; border-radius: 6px;">ACTIVE IN SPLIT</span>' : '<span style="font-size: 9px; font-weight: 700; color: #00E5FF; background: rgba(0,229,255,0.1); padding: 2px 7px; border-radius: 6px;">Tap to Open Pair</span>'}
+                </div>
+              </div>
+
+              <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 8px;">
+                <div class="split-pane-half" data-tabid="${tab.id}" style="background: rgba(255,255,255,0.05); border: 1px solid rgba(255,255,255,0.1); border-radius: 10px; padding: 8px; cursor: pointer;">
+                  <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 4px;">
+                    <div style="display: flex; align-items: center; gap: 5px; overflow: hidden;">
+                      ${icon1 ? `<img src="${icon1}" style="width: 14px; height: 14px; border-radius: 3px; object-fit: cover;" onerror="this.style.display='none'" />` : ''}
+                      <span style="font-size: 11px; font-weight: 700; color: var(--text-main); overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">${tab.title || 'Pane 1'}</span>
+                    </div>
+                    <div style="display: flex; align-items: center; gap: 2px;">
+                      <button class="chrome-tab-menu-btn icon-btn" data-tabmenuid="${tab.id}" title="Tab Options" style="font-size: 13px; width: 20px; height: 20px; border: none; background: none; color: var(--text-sub); cursor: pointer;">⋮</button>
+                      <button class="chrome-tab-close" data-closeid="${tab.id}" title="Close Tab" style="font-size: 14px; width: 18px; height: 18px; border: none; background: none; color: var(--text-sub); cursor: pointer;">&times;</button>
+                    </div>
+                  </div>
+                  <div style="font-size: 9.5px; color: var(--text-sub); overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">
+                    ${t1Nickname}
+                  </div>
+                </div>
+
+                <div class="split-pane-half" data-tabid="${partnerTab.id}" style="background: rgba(255,255,255,0.05); border: 1px solid rgba(255,255,255,0.1); border-radius: 10px; padding: 8px; cursor: pointer;">
+                  <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 4px;">
+                    <div style="display: flex; align-items: center; gap: 5px; overflow: hidden;">
+                      ${icon2 ? `<img src="${icon2}" style="width: 14px; height: 14px; border-radius: 3px; object-fit: cover;" onerror="this.style.display='none'" />` : ''}
+                      <span style="font-size: 11px; font-weight: 700; color: var(--text-main); overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">${partnerTab.title || 'Pane 2'}</span>
+                    </div>
+                    <div style="display: flex; align-items: center; gap: 2px;">
+                      <button class="chrome-tab-menu-btn icon-btn" data-tabmenuid="${partnerTab.id}" title="Tab Options" style="font-size: 13px; width: 20px; height: 20px; border: none; background: none; color: var(--text-sub); cursor: pointer;">⋮</button>
+                      <button class="chrome-tab-close" data-closeid="${partnerTab.id}" title="Close Tab" style="font-size: 14px; width: 18px; height: 18px; border: none; background: none; color: var(--text-sub); cursor: pointer;">&times;</button>
+                    </div>
+                  </div>
+                  <div style="font-size: 9.5px; color: var(--text-sub); overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">
+                    ${t2Nickname}
+                  </div>
+                </div>
+              </div>
+            </div>
+          `;
+          return;
+        }
         let iconB64 = tab.faviconB64 || '';
         const urlLower = (tab.url || '').toLowerCase();
         const serviceLower = (tab.service || '').toLowerCase();
@@ -749,6 +841,20 @@
           openGroupOptionsMenu(group);
         });
       }
+    });
+
+    container.querySelectorAll('.split-bonded-card').forEach(card => {
+      card.addEventListener('click', (e) => {
+        if (e.target.closest('.chrome-tab-close') || e.target.closest('.chrome-tab-menu-btn')) return;
+        const tab1Id = parseInt(card.dataset.splittab1);
+        const half = e.target.closest('.split-pane-half');
+        const targetTabId = half ? parseInt(half.dataset.tabid) : tab1Id;
+        try { playSFX('tb_clicks'); } catch(e) {}
+        if (window.CaspianBridge && typeof window.CaspianBridge.switchTab === 'function') {
+          window.CaspianBridge.switchTab(targetTabId);
+          setTimeout(renderOpenTabs, 400);
+        }
+      });
     });
 
     container.querySelectorAll('.chrome-tab-menu-btn').forEach(btn => {
@@ -3774,10 +3880,34 @@
     const pinHarborBtn = document.getElementById('modal-pin-harbor-btn');
     if (pinHarborBtn) {
       pinHarborBtn.onclick = () => {
-        playSFX('tb_clicks');
+        try { playSFX('tb_clicks'); } catch(e) {}
         pinTabToHarbor(tab);
         modal.style.display = 'none';
       };
+    }
+
+    const separateSplitRow = document.getElementById('modal-separate-split-row');
+    const separateSplitBtn = document.getElementById('modal-separate-split-btn');
+    if (separateSplitRow) {
+      const isBonded = (tab.splitPartnerId && tab.splitPartnerId !== -1) || tab.isSplit;
+      if (isBonded) {
+        separateSplitRow.style.display = 'block';
+        if (separateSplitBtn) {
+          separateSplitBtn.onclick = () => {
+            try { playSFX('tb_modal'); } catch(e) {}
+            if (window.CaspianBridge && typeof window.CaspianBridge.separateSplitTabs === 'function') {
+              window.CaspianBridge.separateSplitTabs(tab.id);
+            }
+            modal.style.display = 'none';
+            if (window.CaspianBridge && typeof window.CaspianBridge.showToast === 'function') {
+              window.CaspianBridge.showToast('Tabs unbonded into standalone tabs');
+            }
+            setTimeout(renderOpenTabs, 100);
+          };
+        }
+      } else {
+        separateSplitRow.style.display = 'none';
+      }
     }
 
     const groupActionsRow = document.getElementById('modal-group-actions-row');
