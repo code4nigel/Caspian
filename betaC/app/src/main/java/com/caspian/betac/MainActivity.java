@@ -8571,7 +8571,6 @@ public class MainActivity extends AppCompatActivity {
         TabItem currentTab = getActiveOrDominantTab();
         if (currentTab != null && currentTab.webView != null) {
             currentTab.webView.getSettings().setTextZoom(currentTextZoom);
-            Toast.makeText(this, "Zoom: " + currentTextZoom + "%", Toast.LENGTH_SHORT).show();
         }
     }
 
@@ -10567,7 +10566,6 @@ public class MainActivity extends AppCompatActivity {
                     if (currentTab != null) {
                         changeTabCask(currentTab.id, cask.id);
                     }
-                    Toast.makeText(this, "🌊 Active Cask: " + cask.name + " (" + (cask.icon != null ? cask.icon : "") + ")", Toast.LENGTH_SHORT).show();
                 });
 
                 itemsLayout.addView(row);
