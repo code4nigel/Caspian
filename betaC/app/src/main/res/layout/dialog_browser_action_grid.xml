@@ -67,10 +67,12 @@
             android:paddingEnd="9dp"
             android:paddingTop="3dp"
             android:paddingBottom="3dp"
-            android:text="v1.2.30-BetaC"
+            android:text="v1.2.31-BetaC"
             android:textColor="#38BDF8"
             android:textSize="10.5sp"
-            android:textStyle="bold" />
+            android:textStyle="bold"
+            android:clickable="true"
+            android:focusable="true" />
     </RelativeLayout>
 
     <!-- 2-Page Swipeable ViewFlipper Carousel for Action Grid -->
@@ -79,12 +81,18 @@
         android:layout_width="match_parent"
         android:layout_height="wrap_content">
 
-        <!-- Page 1: Primary Essentials (5 Columns x 2 Rows) -->
-        <TableLayout
-            android:id="@+id/action_grid_page1"
+        <!-- Page 1: Primary Essentials (5 Columns x 2 Rows + Cask Pill Bar) -->
+        <LinearLayout
+            android:id="@+id/action_grid_page1_wrapper"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:stretchColumns="0,1,2,3,4">
+            android:orientation="vertical">
+
+            <TableLayout
+                android:id="@+id/action_grid_page1"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:stretchColumns="0,1,2,3,4">
 
             <!-- Row 1 -->
             <TableRow android:layout_marginBottom="12dp">
@@ -435,6 +443,90 @@
             </TableRow>
         </TableLayout>
 
+            <!-- Interactive Caspian Cask Pill Bar -->
+            <LinearLayout
+                android:id="@+id/widget_grid_cask_bar"
+                android:layout_width="match_parent"
+                android:layout_height="42dp"
+                android:layout_marginTop="10dp"
+                android:background="@drawable/bg_stitch_squircle"
+                android:gravity="center_vertical"
+                android:orientation="horizontal"
+                android:paddingStart="12dp"
+                android:paddingEnd="8dp"
+                android:clickable="true"
+                android:focusable="true">
+
+                <TextView
+                    android:id="@+id/icon_grid_cask"
+                    android:layout_width="22dp"
+                    android:layout_height="22dp"
+                    android:layout_marginEnd="8dp"
+                    android:gravity="center"
+                    android:text="🌊"
+                    android:textSize="15sp" />
+
+                <LinearLayout
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                    android:layout_weight="1"
+                    android:orientation="horizontal"
+                    android:gravity="center_vertical">
+
+                    <TextView
+                        android:id="@+id/text_grid_cask_label"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:text="Caspian Cask: "
+                        android:textColor="#94A3B8"
+                        android:textSize="11.5sp"
+                        android:textStyle="bold" />
+
+                    <TextView
+                        android:id="@+id/text_grid_cask_name"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:text="General"
+                        android:textColor="#00E5FF"
+                        android:textSize="11.5sp"
+                        android:textStyle="bold"
+                        android:singleLine="true"
+                        android:ellipsize="end" />
+                </LinearLayout>
+
+                <!-- Switch Button Pill -->
+                <LinearLayout
+                    android:id="@+id/btn_grid_cask_switch"
+                    android:layout_width="wrap_content"
+                    android:layout_height="30dp"
+                    android:background="@drawable/bg_stitch_zoom_stepper"
+                    android:gravity="center"
+                    android:orientation="horizontal"
+                    android:paddingStart="10dp"
+                    android:paddingEnd="10dp"
+                    android:clickable="true"
+                    android:focusable="true">
+
+                    <ImageView
+                        android:id="@+id/icon_grid_cask_switch"
+                        android:layout_width="14dp"
+                        android:layout_height="14dp"
+                        android:layout_marginEnd="5dp"
+                        android:src="@drawable/ic_tab_globe"
+                        android:tint="#00E5FF" />
+
+                    <TextView
+                        android:id="@+id/text_grid_cask_switch"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:text="Switch"
+                        android:textColor="#00E5FF"
+                        android:textSize="11sp"
+                        android:textStyle="bold" />
+                </LinearLayout>
+            </LinearLayout>
+        </LinearLayout>
+
         <!-- Page 2: Power Tools & Interactive Controls -->
         <LinearLayout
             android:id="@+id/action_grid_page2_wrapper"
@@ -446,9 +538,9 @@
                 android:id="@+id/action_grid_page2"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                android:stretchColumns="0,1,2,3,4">
+                android:stretchColumns="0,1,2,3">
 
-                <!-- Row 1: New Tab, Dual AI, Open PDF, Reload, Reader -->
+                <!-- Row 1: New Tab, Dual AI, Open PDF, Print & Export -->
                 <TableRow android:layout_marginBottom="12dp">
                     <!-- 1. New Tab -->
                     <LinearLayout
@@ -550,9 +642,9 @@
                             android:singleLine="true" />
                     </LinearLayout>
 
-                    <!-- 4. Reload -->
+                    <!-- 4. Print & Export -->
                     <LinearLayout
-                        android:id="@+id/tile_reload"
+                        android:id="@+id/tile_print"
                         android:layout_width="0dp"
                         android:layout_height="wrap_content"
                         android:gravity="center"
@@ -560,66 +652,33 @@
                         android:clickable="true"
                         android:focusable="true">
                         <FrameLayout
-                            android:id="@+id/squircle_reload"
+                            android:id="@+id/squircle_print"
                             android:layout_width="48dp"
                             android:layout_height="48dp"
                             android:background="@drawable/bg_stitch_squircle">
                             <ImageView
-                                android:id="@+id/icon_reload"
+                                android:id="@+id/icon_print"
                                 android:layout_width="22dp"
                                 android:layout_height="22dp"
                                 android:layout_gravity="center"
-                                android:src="@drawable/ic_pod_reload"
+                                android:src="@drawable/ic_menu_print"
                                 android:tint="#DFE2F0" />
                         </FrameLayout>
                         <TextView
-                            android:id="@+id/text_reload"
+                            android:id="@+id/text_print"
                             android:layout_width="wrap_content"
                             android:layout_height="wrap_content"
                             android:layout_marginTop="5dp"
-                            android:text="Reload"
-                            android:textColor="#DFE2F0"
-                            android:textSize="10.5sp"
-                            android:singleLine="true" />
-                    </LinearLayout>
-
-                    <!-- 5. Reader Mode -->
-                    <LinearLayout
-                        android:id="@+id/tile_reader"
-                        android:layout_width="0dp"
-                        android:layout_height="wrap_content"
-                        android:gravity="center"
-                        android:orientation="vertical"
-                        android:clickable="true"
-                        android:focusable="true">
-                        <FrameLayout
-                            android:id="@+id/squircle_reader"
-                            android:layout_width="48dp"
-                            android:layout_height="48dp"
-                            android:background="@drawable/bg_stitch_squircle">
-                            <ImageView
-                                android:id="@+id/icon_reader"
-                                android:layout_width="22dp"
-                                android:layout_height="22dp"
-                                android:layout_gravity="center"
-                                android:src="@drawable/ic_browser_reader"
-                                android:tint="#DFE2F0" />
-                        </FrameLayout>
-                        <TextView
-                            android:id="@+id/text_reader"
-                            android:layout_width="wrap_content"
-                            android:layout_height="wrap_content"
-                            android:layout_marginTop="5dp"
-                            android:text="Reader"
+                            android:text="Print &amp; Export"
                             android:textColor="#DFE2F0"
                             android:textSize="10.5sp"
                             android:singleLine="true" />
                     </LinearLayout>
                 </TableRow>
 
-                <!-- Row 2: Waveguard, Voice AI, Casks, Clear Data, Edit Menu -->
+                <!-- Row 2: Waveguard, Clear Data, Edit Menu -->
                 <TableRow>
-                    <!-- 6. Waveguard Shield -->
+                    <!-- 5. Waveguard Shield -->
                     <LinearLayout
                         android:id="@+id/tile_shield"
                         android:layout_width="0dp"
@@ -652,73 +711,7 @@
                             android:singleLine="true" />
                     </LinearLayout>
 
-                    <!-- 7. Voice AI -->
-                    <LinearLayout
-                        android:id="@+id/tile_voice_models"
-                        android:layout_width="0dp"
-                        android:layout_height="wrap_content"
-                        android:gravity="center"
-                        android:orientation="vertical"
-                        android:clickable="true"
-                        android:focusable="true">
-                        <FrameLayout
-                            android:id="@+id/squircle_voice_models"
-                            android:layout_width="48dp"
-                            android:layout_height="48dp"
-                            android:background="@drawable/bg_stitch_squircle">
-                            <ImageView
-                                android:id="@+id/icon_voice_models"
-                                android:layout_width="22dp"
-                                android:layout_height="22dp"
-                                android:layout_gravity="center"
-                                android:src="@drawable/ic_browser_voice"
-                                android:tint="#00E5FF" />
-                        </FrameLayout>
-                        <TextView
-                            android:id="@+id/text_voice_models"
-                            android:layout_width="wrap_content"
-                            android:layout_height="wrap_content"
-                            android:layout_marginTop="5dp"
-                            android:text="Voice AI"
-                            android:textColor="#DFE2F0"
-                            android:textSize="10.5sp"
-                            android:singleLine="true" />
-                    </LinearLayout>
-
-                    <!-- 8. Casks Vaults -->
-                    <LinearLayout
-                        android:id="@+id/tile_casks"
-                        android:layout_width="0dp"
-                        android:layout_height="wrap_content"
-                        android:gravity="center"
-                        android:orientation="vertical"
-                        android:clickable="true"
-                        android:focusable="true">
-                        <FrameLayout
-                            android:id="@+id/squircle_casks"
-                            android:layout_width="48dp"
-                            android:layout_height="48dp"
-                            android:background="@drawable/bg_stitch_squircle">
-                            <ImageView
-                                android:id="@+id/icon_casks"
-                                android:layout_width="22dp"
-                                android:layout_height="22dp"
-                                android:layout_gravity="center"
-                                android:src="@drawable/ic_tab_globe"
-                                android:tint="#DFE2F0" />
-                        </FrameLayout>
-                        <TextView
-                            android:id="@+id/text_casks"
-                            android:layout_width="wrap_content"
-                            android:layout_height="wrap_content"
-                            android:layout_marginTop="5dp"
-                            android:text="Casks"
-                            android:textColor="#DFE2F0"
-                            android:textSize="10.5sp"
-                            android:singleLine="true" />
-                    </LinearLayout>
-
-                    <!-- 9. Clear Data -->
+                    <!-- 6. Clear Data -->
                     <LinearLayout
                         android:id="@+id/tile_clear_data"
                         android:layout_width="0dp"
@@ -751,7 +744,7 @@
                             android:singleLine="true" />
                     </LinearLayout>
 
-                    <!-- 10. Edit Menu Layout -->
+                    <!-- 7. Edit Menu Layout -->
                     <LinearLayout
                         android:id="@+id/tile_edit_layout"
                         android:layout_width="0dp"

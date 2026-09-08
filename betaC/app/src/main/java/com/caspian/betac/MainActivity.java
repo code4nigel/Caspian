@@ -44,6 +44,7 @@ import java.util.zip.ZipEntry;
 import android.content.res.ColorStateList;
 import android.content.res.Configuration;
 import android.widget.PopupWindow;
+import android.widget.ScrollView;
 import android.media.AudioAttributes;
 import android.media.AudioFormat;
 import android.media.AudioRecord;
@@ -2865,6 +2866,15 @@ public class MainActivity extends AppCompatActivity {
 
     public void applyWebViewTheme(WebView webView, boolean isDark) {
         if (webView == null) return;
+        String currentUrl = webView.getUrl();
+        if (currentUrl != null && (currentUrl.contains("youtube.com") || currentUrl.contains("music.youtube.com"))) {
+            // User requested: light mode in mobile site of youtube is broken with custom theme injection, do not color switch in youtube or youtube music tabs
+            try {
+                webView.evaluateJavascript("(function(){ try { var s = document.getElementById('caspian-yt-theme-style'); if (s) s.remove(); } catch(e){} })();", null);
+            } catch (Throwable ignored) {}
+            return;
+        }
+
         try {
             if (WebViewFeature.isFeatureSupported(WebViewFeature.FORCE_DARK)) {
                 WebSettingsCompat.setForceDark(webView.getSettings(), isDark ? WebSettingsCompat.FORCE_DARK_ON : WebSettingsCompat.FORCE_DARK_OFF);
@@ -2886,6 +2896,12 @@ public class MainActivity extends AppCompatActivity {
                     "  var isDark = " + isDark + ";\n" +
                     "  try {\n" +
                     "    var host = (window.location && window.location.host) ? window.location.host : '';\n" +
+                    "    // YouTube & YouTube Music: Do NOT do color switch, preserve native YouTube styles\n" +
+                    "    if (host.includes('youtube.com') || host.includes('music.youtube.com')) {\n" +
+                    "      try { var s = document.getElementById('caspian-yt-theme-style'); if (s) s.remove(); } catch(e){}\n" +
+                    "      return;\n" +
+                    "    }\n" +
+                    "\n" +
                     "    // Universal HTML5 Color Scheme\n" +
                     "    if (document.documentElement) {\n" +
                     "      document.documentElement.style.colorScheme = isDark ? 'dark' : 'light';\n" +
@@ -2947,39 +2963,7 @@ public class MainActivity extends AppCompatActivity {
                     "      } catch(e) {}\n" +
                     "    }\n" +
                     "\n" +
-                    "    // 2. YouTube Theme Adaptation\n" +
-                    "    if (host.includes('youtube.com')) {\n" +
-                    "      if (document.documentElement) {\n" +
-                    "        if (isDark) {\n" +
-                    "          document.documentElement.setAttribute('dark', 'true');\n" +
-                    "          document.documentElement.setAttribute('theme', 'dark');\n" +
-                    "        } else {\n" +
-                    "          document.documentElement.removeAttribute('dark');\n" +
-                    "          document.documentElement.setAttribute('theme', 'light');\n" +
-                    "        }\n" +
-                    "      }\n" +
-                    "      if (document.body) {\n" +
-                    "        if (isDark) document.body.setAttribute('dark', 'true');\n" +
-                    "        else document.body.removeAttribute('dark');\n" +
-                    "      }\n" +
-                    "      try { localStorage.setItem('yt-theme', isDark ? 'dark' : 'light'); } catch(e){}\n" +
-                    "      try { document.cookie = 'PREF=f6=' + (isDark ? '400' : '0') + '; domain=.youtube.com; path=/'; } catch(e){}\n" +
-                    "      if (document.head) {\n" +
-                    "        var existingYtStyle = document.getElementById('caspian-yt-theme-style');\n" +
-                    "        if (!existingYtStyle) {\n" +
-                    "          existingYtStyle = document.createElement('style');\n" +
-                    "          existingYtStyle.id = 'caspian-yt-theme-style';\n" +
-                    "          document.head.appendChild(existingYtStyle);\n" +
-                    "        }\n" +
-                    "        if (isDark) {\n" +
-                    "          existingYtStyle.textContent = 'html, body, ytm-app, ytd-app, #content, .watch-page, #page-manager { background-color: #0f0f0f !important; color: #f1f1f1 !important; } .mobile-topbar-header, ytm-header-bar { background-color: #0f0f0f !important; }';\n" +
-                    "        } else {\n" +
-                    "          existingYtStyle.textContent = 'html, body, ytm-app, ytd-app, #content, .watch-page, #page-manager { background-color: #ffffff !important; color: #0f0f0f !important; } .mobile-topbar-header, ytm-header-bar { background-color: #ffffff !important; }';\n" +
-                    "        }\n" +
-                    "      }\n" +
-                    "    }\n" +
-                    "\n" +
-                    "    // 3. ChatGPT & AI Platforms Theme Adaptation\n" +
+                    "    // 2. ChatGPT & AI Platforms Theme Adaptation\n" +
                     "    if (host.includes('chatgpt.com') || host.includes('openai.com') || host.includes('claude.ai') || host.includes('deepseek.com')) {\n" +
                     "      if (document.documentElement) {\n" +
                     "        document.documentElement.classList.toggle('dark', isDark);\n" +
@@ -6213,7 +6197,42 @@ public class MainActivity extends AppCompatActivity {
             }
         });
 
-        // Collect all 20 action tile views
+        TextView badgeVersion = dialogView.findViewById(R.id.badge_app_version);
+        if (badgeVersion != null) {
+            badgeVersion.setOnClickListener(v -> {
+                dialog.dismiss();
+                playUiFeedbackSound("tap");
+                openCaspianUpdateMenu();
+            });
+        }
+
+        // Caspian Cask Interactive Pill on Page 1
+        View widgetCaskBar = dialogView.findViewById(R.id.widget_grid_cask_bar);
+        TextView iconCask = dialogView.findViewById(R.id.icon_grid_cask);
+        TextView textCaskName = dialogView.findViewById(R.id.text_grid_cask_name);
+        View btnCaskSwitch = dialogView.findViewById(R.id.btn_grid_cask_switch);
+
+        CaskManager cm = new CaskManager(this);
+        String activeCaskId = (currentTab != null && currentTab.caskId != null) ? currentTab.caskId : cm.getActiveCaskId();
+        CaskManager.CaskItem activeCask = cm.getCaskById(activeCaskId);
+        if (activeCask == null) activeCask = cm.getActiveCask();
+
+        if (iconCask != null && activeCask != null && activeCask.icon != null) {
+            iconCask.setText(activeCask.icon);
+        }
+        if (textCaskName != null && activeCask != null && activeCask.name != null) {
+            textCaskName.setText(activeCask.name);
+        }
+
+        View.OnClickListener caskSwitchListener = v -> {
+            dialog.dismiss();
+            playUiFeedbackSound("tap");
+            showCaskSwitcherDialog(currentTab);
+        };
+        if (btnCaskSwitch != null) btnCaskSwitch.setOnClickListener(caskSwitchListener);
+        if (widgetCaskBar != null) widgetCaskBar.setOnClickListener(caskSwitchListener);
+
+        // Collect action tile views
         Map<String, View> tileMap = new HashMap<>();
         tileMap.put("night_mode", dialogView.findViewById(R.id.tile_night_mode));
         tileMap.put("desktop_site", dialogView.findViewById(R.id.tile_desktop_site));
@@ -6229,11 +6248,8 @@ public class MainActivity extends AppCompatActivity {
         tileMap.put("new_tab", dialogView.findViewById(R.id.tile_new_tab));
         tileMap.put("dual_ai", dialogView.findViewById(R.id.tile_dual_ai));
         tileMap.put("pdf", dialogView.findViewById(R.id.tile_pdf));
-        tileMap.put("reload", dialogView.findViewById(R.id.tile_reload));
-        tileMap.put("reader", dialogView.findViewById(R.id.tile_reader));
+        tileMap.put("print", dialogView.findViewById(R.id.tile_print));
         tileMap.put("shield", dialogView.findViewById(R.id.tile_shield));
-        tileMap.put("voice_models", dialogView.findViewById(R.id.tile_voice_models));
-        tileMap.put("casks", dialogView.findViewById(R.id.tile_casks));
         tileMap.put("clear_data", dialogView.findViewById(R.id.tile_clear_data));
         tileMap.put("edit_layout", dialogView.findViewById(R.id.tile_edit_layout));
 
@@ -6309,7 +6325,16 @@ public class MainActivity extends AppCompatActivity {
         if (tileShare != null) {
             tileShare.setOnClickListener(v -> {
                 dialog.dismiss();
-                showExportOptions();
+                playUiFeedbackSound("tap");
+                if (currentTab != null) {
+                    Intent shareIntent = new Intent(Intent.ACTION_SEND);
+                    shareIntent.setType("text/plain");
+                    String shareUrl = (currentTab.url != null && !currentTab.url.isEmpty()) ? currentTab.url : (currentTab.webView != null ? currentTab.webView.getUrl() : "");
+                    String shareTitle = (currentTab.title != null && !currentTab.title.isEmpty()) ? currentTab.title : "Caspian Flow";
+                    shareIntent.putExtra(Intent.EXTRA_SUBJECT, shareTitle);
+                    shareIntent.putExtra(Intent.EXTRA_TEXT, (shareUrl != null && !shareUrl.isEmpty()) ? shareUrl : shareTitle);
+                    startActivity(Intent.createChooser(shareIntent, "Share Page via"));
+                }
             });
         }
         View tileSplit = tileMap.get("split");
@@ -6348,18 +6373,12 @@ public class MainActivity extends AppCompatActivity {
                 openPdfPicker();
             });
         }
-        View tileReload = tileMap.get("reload");
-        if (tileReload != null) {
-            tileReload.setOnClickListener(v -> {
+        View tilePrint = tileMap.get("print");
+        if (tilePrint != null) {
+            tilePrint.setOnClickListener(v -> {
                 dialog.dismiss();
-                reloadActiveTab();
-            });
-        }
-        View tileReader = tileMap.get("reader");
-        if (tileReader != null) {
-            tileReader.setOnClickListener(v -> {
-                dialog.dismiss();
-                toggleReaderMode();
+                playUiFeedbackSound("tap");
+                showPrintAndExportDialog(currentTab);
             });
         }
         View tileShield = tileMap.get("shield");
@@ -6377,20 +6396,6 @@ public class MainActivity extends AppCompatActivity {
                         currentTab.webView.reload();
                     }
                 }
-            });
-        }
-        View tileVoice = tileMap.get("voice_models");
-        if (tileVoice != null) {
-            tileVoice.setOnClickListener(v -> {
-                dialog.dismiss();
-                if (omniboxVoiceBtn != null) omniboxVoiceBtn.performClick();
-            });
-        }
-        View tileCasks = tileMap.get("casks");
-        if (tileCasks != null) {
-            tileCasks.setOnClickListener(v -> {
-                dialog.dismiss();
-                showHistoryDialog();
             });
         }
         View tileClearData = tileMap.get("clear_data");
@@ -6609,9 +6614,8 @@ public class MainActivity extends AppCompatActivity {
                         R.id.squircle_night_mode, R.id.squircle_desktop_site, R.id.squircle_bookmarks,
                         R.id.squircle_history, R.id.squircle_downloads, R.id.squircle_incognito,
                         R.id.squircle_find, R.id.squircle_share, R.id.squircle_split,
-                        R.id.squircle_pdf, R.id.squircle_casks,
-                        R.id.squircle_voice_models, R.id.squircle_new_tab, R.id.squircle_reload,
-                        R.id.squircle_reader, R.id.squircle_edit_layout
+                        R.id.squircle_pdf, R.id.squircle_print,
+                        R.id.squircle_new_tab, R.id.squircle_edit_layout
                 };
                 for (int id : squircles) {
                     View sq = root.findViewById(id);
@@ -6675,8 +6679,7 @@ public class MainActivity extends AppCompatActivity {
                         R.id.icon_desktop_site, R.id.icon_bookmarks, R.id.icon_history,
                         R.id.icon_downloads, R.id.icon_incognito, R.id.icon_find,
                         R.id.icon_share, R.id.icon_split,
-                        R.id.icon_casks, R.id.icon_voice_models, R.id.icon_new_tab,
-                        R.id.icon_reload, R.id.icon_reader
+                        R.id.icon_new_tab, R.id.icon_print
                 };
                 for (int id : tileIcons) {
                     ImageView iv = root.findViewById(id);
@@ -6707,9 +6710,8 @@ public class MainActivity extends AppCompatActivity {
                         R.id.text_night_mode, R.id.text_desktop_site, R.id.text_bookmarks,
                         R.id.text_history, R.id.text_downloads, R.id.text_incognito,
                         R.id.text_find, R.id.text_share, R.id.text_split,
-                        R.id.text_pdf, R.id.text_casks,
-                        R.id.text_voice_models, R.id.text_new_tab, R.id.text_reload,
-                        R.id.text_reader, R.id.text_edit_layout
+                        R.id.text_pdf, R.id.text_print,
+                        R.id.text_new_tab, R.id.text_edit_layout
                 };
                 for (int id : tileLabels) {
                     TextView tv = root.findViewById(id);
@@ -6745,6 +6747,33 @@ public class MainActivity extends AppCompatActivity {
                     TextView tvDesktop = root.findViewById(R.id.text_desktop_site);
                     if (tvDesktop != null) tvDesktop.setTextColor(0xFF0284C7);
                 }
+
+                // Interactive Cask Pill Bar Light Theme
+                View widgetCask = root.findViewById(R.id.widget_grid_cask_bar);
+                if (widgetCask != null) {
+                    GradientDrawable wcGd = new GradientDrawable();
+                    wcGd.setColor(0xFFF1F5F9);
+                    wcGd.setStroke(dpToPx(1), borderLight);
+                    wcGd.setCornerRadius(dpToPx(16));
+                    widgetCask.setBackground(wcGd);
+                }
+                TextView tvCaskLbl = root.findViewById(R.id.text_grid_cask_label);
+                if (tvCaskLbl != null) tvCaskLbl.setTextColor(0xFF64748B);
+                TextView tvCaskNm = root.findViewById(R.id.text_grid_cask_name);
+                if (tvCaskNm != null) tvCaskNm.setTextColor(0xFF0284C7);
+
+                View btnCaskSw = root.findViewById(R.id.btn_grid_cask_switch);
+                if (btnCaskSw != null) {
+                    GradientDrawable bcGd = new GradientDrawable();
+                    bcGd.setColor(0xFFE0F2FE);
+                    bcGd.setStroke(dpToPx(1), 0xFFCBD5E1);
+                    bcGd.setCornerRadius(dpToPx(14));
+                    btnCaskSw.setBackground(bcGd);
+                }
+                ImageView ivCaskSw = root.findViewById(R.id.icon_grid_cask_switch);
+                if (ivCaskSw != null) ivCaskSw.setColorFilter(0xFF0284C7);
+                TextView tvCaskSw = root.findViewById(R.id.text_grid_cask_switch);
+                if (tvCaskSw != null) tvCaskSw.setTextColor(0xFF0284C7);
 
                 // Interactive Zoom Stepper Light Theme
                 View widgetZoom = root.findViewById(R.id.widget_grid_zoom_stepper);
@@ -6838,9 +6867,8 @@ public class MainActivity extends AppCompatActivity {
                         R.id.squircle_night_mode, R.id.squircle_desktop_site, R.id.squircle_bookmarks,
                         R.id.squircle_history, R.id.squircle_downloads, R.id.squircle_incognito,
                         R.id.squircle_find, R.id.squircle_share, R.id.squircle_split,
-                        R.id.squircle_pdf, R.id.squircle_casks,
-                        R.id.squircle_voice_models, R.id.squircle_new_tab, R.id.squircle_reload,
-                        R.id.squircle_reader, R.id.squircle_shield, R.id.squircle_clear_data,
+                        R.id.squircle_pdf, R.id.squircle_print,
+                        R.id.squircle_new_tab, R.id.squircle_shield, R.id.squircle_clear_data,
                         R.id.squircle_edit_layout
                 };
                 for (int id : squircles) {
@@ -6859,8 +6887,7 @@ public class MainActivity extends AppCompatActivity {
                         R.id.icon_desktop_site, R.id.icon_bookmarks, R.id.icon_history,
                         R.id.icon_downloads, R.id.icon_incognito, R.id.icon_find,
                         R.id.icon_share, R.id.icon_split,
-                        R.id.icon_casks, R.id.icon_new_tab, R.id.icon_reload,
-                        R.id.icon_reader
+                        R.id.icon_new_tab, R.id.icon_print
                 };
                 for (int id : tileIcons) {
                     ImageView iv = root.findViewById(id);
@@ -6882,8 +6909,6 @@ public class MainActivity extends AppCompatActivity {
                 if (ivShield != null) ivShield.setColorFilter(0xFF10B981);
                 ImageView ivPdf = root.findViewById(R.id.icon_pdf);
                 if (ivPdf != null) ivPdf.setColorFilter(0xFFFB7185);
-                ImageView ivVoice = root.findViewById(R.id.icon_voice_models);
-                if (ivVoice != null) ivVoice.setColorFilter(0xFF00E5FF);
                 ImageView ivClear = root.findViewById(R.id.icon_clear_data);
                 if (ivClear != null) ivClear.setColorFilter(0xFFFF6B6B);
 
@@ -6891,9 +6916,8 @@ public class MainActivity extends AppCompatActivity {
                         R.id.text_night_mode, R.id.text_desktop_site, R.id.text_bookmarks,
                         R.id.text_history, R.id.text_downloads, R.id.text_incognito,
                         R.id.text_find, R.id.text_share, R.id.text_split,
-                        R.id.text_pdf, R.id.text_casks,
-                        R.id.text_voice_models, R.id.text_new_tab, R.id.text_reload,
-                        R.id.text_reader, R.id.text_shield, R.id.text_edit_layout
+                        R.id.text_pdf, R.id.text_print,
+                        R.id.text_new_tab, R.id.text_shield, R.id.text_edit_layout
                 };
                 for (int id : tileLabels) {
                     TextView tv = root.findViewById(id);
@@ -6919,6 +6943,33 @@ public class MainActivity extends AppCompatActivity {
                     TextView tvDesktop = root.findViewById(R.id.text_desktop_site);
                     if (tvDesktop != null) tvDesktop.setTextColor(0xFF00E5FF);
                 }
+
+                // Interactive Cask Pill Bar Dark Theme
+                View widgetCask = root.findViewById(R.id.widget_grid_cask_bar);
+                if (widgetCask != null) {
+                    GradientDrawable wcGd = new GradientDrawable();
+                    wcGd.setColor(0xFF161B22);
+                    wcGd.setStroke(dpToPx(1), 0xFF30363D);
+                    wcGd.setCornerRadius(dpToPx(16));
+                    widgetCask.setBackground(wcGd);
+                }
+                TextView tvCaskLbl = root.findViewById(R.id.text_grid_cask_label);
+                if (tvCaskLbl != null) tvCaskLbl.setTextColor(0xFF94A3B8);
+                TextView tvCaskNm = root.findViewById(R.id.text_grid_cask_name);
+                if (tvCaskNm != null) tvCaskNm.setTextColor(0xFF00E5FF);
+
+                View btnCaskSw = root.findViewById(R.id.btn_grid_cask_switch);
+                if (btnCaskSw != null) {
+                    GradientDrawable bcGd = new GradientDrawable();
+                    bcGd.setColor(0xFF0D1117);
+                    bcGd.setStroke(dpToPx(1), 0xFF30363D);
+                    bcGd.setCornerRadius(dpToPx(14));
+                    btnCaskSw.setBackground(bcGd);
+                }
+                ImageView ivCaskSw = root.findViewById(R.id.icon_grid_cask_switch);
+                if (ivCaskSw != null) ivCaskSw.setColorFilter(0xFF00E5FF);
+                TextView tvCaskSw = root.findViewById(R.id.text_grid_cask_switch);
+                if (tvCaskSw != null) tvCaskSw.setTextColor(0xFF00E5FF);
 
                 // Interactive Zoom Stepper Dark Theme
                 View widgetZoom = root.findViewById(R.id.widget_grid_zoom_stepper);
@@ -7158,8 +7209,7 @@ public class MainActivity extends AppCompatActivity {
             "incognito", "find", "share", "split", "settings"
     );
     private static final List<String> DEFAULT_P2_GRID_KEYS = Arrays.asList(
-            "new_tab", "dual_ai", "pdf", "reload", "reader",
-            "shield", "voice_models", "casks", "clear_data", "edit_layout"
+            "new_tab", "dual_ai", "pdf", "print", "shield", "clear_data", "edit_layout"
     );
 
     public void resetCardGridLayout() {
@@ -7183,9 +7233,13 @@ public class MainActivity extends AppCompatActivity {
             List<String> list = new ArrayList<>();
             for (String s : parts) {
                 String trimmed = s.trim();
-                if (!trimmed.isEmpty() && !list.contains(trimmed)) list.add(trimmed);
+                if (!trimmed.isEmpty() && !list.contains(trimmed)
+                        && !trimmed.equals("reload") && !trimmed.equals("reader")
+                        && !trimmed.equals("voice_models") && !trimmed.equals("casks")) {
+                    list.add(trimmed);
+                }
             }
-            if (list.size() == 10) return list;
+            if (list.size() == DEFAULT_P1_GRID_KEYS.size()) return list;
         }
         return new ArrayList<>(DEFAULT_P1_GRID_KEYS);
     }
@@ -7198,9 +7252,13 @@ public class MainActivity extends AppCompatActivity {
             List<String> list = new ArrayList<>();
             for (String s : parts) {
                 String trimmed = s.trim();
-                if (!trimmed.isEmpty() && !list.contains(trimmed)) list.add(trimmed);
+                if (!trimmed.isEmpty() && !list.contains(trimmed)
+                        && !trimmed.equals("reload") && !trimmed.equals("reader")
+                        && !trimmed.equals("voice_models") && !trimmed.equals("casks")) {
+                    list.add(trimmed);
+                }
             }
-            if (list.size() == 10) return list;
+            if (list.size() == DEFAULT_P2_GRID_KEYS.size()) return list;
         }
         return new ArrayList<>(DEFAULT_P2_GRID_KEYS);
     }
@@ -7225,10 +7283,12 @@ public class MainActivity extends AppCompatActivity {
 
     private void populateGridTable(TableLayout table, List<String> keys, Map<String, View> tileMap) {
         if (table == null || keys == null || tileMap == null) return;
+        table.setStretchAllColumns(true);
+        int columnsPerRow = keys.size() <= 8 ? 4 : 5;
         TableRow currentRow = null;
         int colCount = 0;
         for (int i = 0; i < keys.size(); i++) {
-            if (i % 5 == 0) {
+            if (i % columnsPerRow == 0) {
                 currentRow = new TableRow(this);
                 TableLayout.LayoutParams trLp = new TableLayout.LayoutParams(
                         TableLayout.LayoutParams.MATCH_PARENT, TableLayout.LayoutParams.WRAP_CONTENT);
@@ -7246,8 +7306,8 @@ public class MainActivity extends AppCompatActivity {
                 colCount++;
             }
         }
-        if (currentRow != null && colCount > 0 && colCount < 5) {
-            for (int p = colCount; p < 5; p++) {
+        if (currentRow != null && colCount > 0 && colCount < columnsPerRow) {
+            for (int p = colCount; p < columnsPerRow; p++) {
                 View dummy = new View(this);
                 TableRow.LayoutParams dLp = new TableRow.LayoutParams(0, TableRow.LayoutParams.WRAP_CONTENT, 1f);
                 dummy.setLayoutParams(dLp);
@@ -7512,11 +7572,8 @@ public class MainActivity extends AppCompatActivity {
             case "new_tab": return "➕ New tab";
             case "dual_ai": return "✨ Dual AI";
             case "pdf": return "📄 Open PDF";
-            case "reload": return "🔄 Reload";
-            case "reader": return "📖 Reader";
+            case "print": return "🖨️ Print & Export";
             case "shield": return "🛡️ Waveguard";
-            case "voice_models": return "🎙️ Voice AI";
-            case "casks": return "🗃️ Casks";
             case "clear_data": return "🗑️ Clear Data";
             case "edit_layout": return "✏️ Edit Menu";
             default: return key;
@@ -9678,18 +9735,306 @@ public class MainActivity extends AppCompatActivity {
         }
     }
 
-    private void showExportOptions() {
-        AlertDialog.Builder builder = new AlertDialog.Builder(this);
-        builder.setTitle("Share & Export");
-        String[] options = {"PDF Document (.pdf / Print)", "Markdown File (.md)", "Plain Text Transcript (.txt)", "Word Document (.doc)", "Convert Chat to Another AI"};
-        builder.setItems(options, (dialog, which) -> {
-            if (which == 0) performExportOnMainWebView("styledpdf");
-            else if (which == 1) performExportOnMainWebView("md");
-            else if (which == 2) performExportOnMainWebView("txt");
-            else if (which == 3) performExportOnMainWebView("doc");
-            else if (which == 4) performExportOnMainWebView("convert");
+    public void openCaspianUpdateMenu() {
+        runOnUiThread(() -> {
+            try {
+                openControlSheet();
+                new Handler(Looper.getMainLooper()).postDelayed(() -> {
+                    evaluateJavascriptInControlSheet(
+                            "try {" +
+                            "  var el = document.getElementById('card-app-updater');" +
+                            "  if (el) el.scrollIntoView({ behavior: 'smooth', block: 'center' });" +
+                            "  var btn = document.getElementById('check-updates-btn');" +
+                            "  if (btn) btn.click();" +
+                            "} catch(e) {}"
+                    );
+                }, 350);
+            } catch (Throwable t) {
+                Log.e(TAG, "openCaspianUpdateMenu error", t);
+            }
         });
-        builder.show();
+    }
+
+    public void showCaskSwitcherDialog(TabItem currentTab) {
+        try {
+            CaskManager cm = new CaskManager(this);
+            List<CaskManager.CaskItem> casks = cm.getAllCasks();
+            if (casks == null || casks.isEmpty()) return;
+
+            String activeCaskId = (currentTab != null && currentTab.caskId != null) ? currentTab.caskId : cm.getActiveCaskId();
+
+            com.google.android.material.bottomsheet.BottomSheetDialog caskDialog =
+                    new com.google.android.material.bottomsheet.BottomSheetDialog(this);
+            LinearLayout layout = new LinearLayout(this);
+            layout.setOrientation(LinearLayout.VERTICAL);
+            layout.setPadding(dpToPx(16), dpToPx(14), dpToPx(16), dpToPx(20));
+
+            GradientDrawable rootBg = new GradientDrawable();
+            rootBg.setColor(!isDarkTheme ? 0xFFFFFFFF : 0xFF0D1117);
+            rootBg.setCornerRadii(new float[]{dpToPx(24), dpToPx(24), dpToPx(24), dpToPx(24), 0, 0, 0, 0});
+            layout.setBackground(rootBg);
+
+            View handle = new View(this);
+            LinearLayout.LayoutParams hLp = new LinearLayout.LayoutParams(dpToPx(44), dpToPx(5));
+            hLp.gravity = Gravity.CENTER_HORIZONTAL;
+            hLp.bottomMargin = dpToPx(14);
+            handle.setLayoutParams(hLp);
+            GradientDrawable hBg = new GradientDrawable();
+            hBg.setColor(!isDarkTheme ? 0xFFCBD5E1 : 0xFF30363D);
+            hBg.setCornerRadius(dpToPx(3));
+            handle.setBackground(hBg);
+            layout.addView(handle);
+
+            TextView title = new TextView(this);
+            title.setText("Switch Caspian Cask");
+            title.setTextSize(TypedValue.COMPLEX_UNIT_SP, 15f);
+            title.setTypeface(Typeface.DEFAULT_BOLD);
+            title.setTextColor(!isDarkTheme ? 0xFF0F172A : 0xFFDFE2F0);
+            title.setPadding(dpToPx(4), 0, dpToPx(4), dpToPx(4));
+            layout.addView(title);
+
+            TextView sub = new TextView(this);
+            sub.setText("Each Cask maintains its own isolated cookie & session vault");
+            sub.setTextSize(TypedValue.COMPLEX_UNIT_SP, 11.5f);
+            sub.setTextColor(!isDarkTheme ? 0xFF64748B : 0xFF94A3B8);
+            sub.setPadding(dpToPx(4), 0, dpToPx(4), dpToPx(14));
+            layout.addView(sub);
+
+            ScrollView sv = new ScrollView(this);
+            LinearLayout itemsLayout = new LinearLayout(this);
+            itemsLayout.setOrientation(LinearLayout.VERTICAL);
+
+            for (CaskManager.CaskItem cask : casks) {
+                boolean isCurrent = cask.id.equals(activeCaskId);
+                LinearLayout row = new LinearLayout(this);
+                row.setOrientation(LinearLayout.HORIZONTAL);
+                row.setGravity(Gravity.CENTER_VERTICAL);
+                row.setPadding(dpToPx(14), dpToPx(12), dpToPx(14), dpToPx(12));
+                LinearLayout.LayoutParams rLp = new LinearLayout.LayoutParams(
+                        ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT);
+                rLp.bottomMargin = dpToPx(8);
+                row.setLayoutParams(rLp);
+
+                GradientDrawable rBg = new GradientDrawable();
+                if (isCurrent) {
+                    rBg.setColor(!isDarkTheme ? 0xFFE0F2FE : 0xFF0B293B);
+                    rBg.setStroke(dpToPx(2), !isDarkTheme ? 0xFF0284C7 : 0xFF00E5FF);
+                } else {
+                    rBg.setColor(!isDarkTheme ? 0xFFF8FAFC : 0xFF161B22);
+                    rBg.setStroke(dpToPx(1), !isDarkTheme ? 0xFFE2E8F0 : 0xFF21262D);
+                }
+                rBg.setCornerRadius(dpToPx(14));
+                row.setBackground(rBg);
+
+                TextView tvIcon = new TextView(this);
+                tvIcon.setText(cask.icon != null ? cask.icon : "🌊");
+                tvIcon.setTextSize(TypedValue.COMPLEX_UNIT_SP, 20f);
+                tvIcon.setPadding(0, 0, dpToPx(12), 0);
+                row.addView(tvIcon);
+
+                LinearLayout nameBox = new LinearLayout(this);
+                nameBox.setOrientation(LinearLayout.VERTICAL);
+                LinearLayout.LayoutParams nbLp = new LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.WRAP_CONTENT, 1f);
+                nameBox.setLayoutParams(nbLp);
+
+                TextView tvName = new TextView(this);
+                tvName.setText(cask.name);
+                tvName.setTextSize(TypedValue.COMPLEX_UNIT_SP, 13f);
+                tvName.setTypeface(Typeface.DEFAULT_BOLD);
+                tvName.setTextColor(!isDarkTheme ? (isCurrent ? 0xFF0284C7 : 0xFF0F172A) : (isCurrent ? 0xFF00E5FF : 0xFFDFE2F0));
+                nameBox.addView(tvName);
+
+                if (cask.isDefault) {
+                    TextView tvDef = new TextView(this);
+                    tvDef.setText("Default Vault");
+                    tvDef.setTextSize(TypedValue.COMPLEX_UNIT_SP, 10.5f);
+                    tvDef.setTextColor(!isDarkTheme ? 0xFF64748B : 0xFF94A3B8);
+                    nameBox.addView(tvDef);
+                }
+                row.addView(nameBox);
+
+                if (isCurrent) {
+                    TextView check = new TextView(this);
+                    check.setText("✓ ACTIVE");
+                    check.setTextSize(TypedValue.COMPLEX_UNIT_SP, 11f);
+                    check.setTypeface(Typeface.DEFAULT_BOLD);
+                    check.setTextColor(!isDarkTheme ? 0xFF0284C7 : 0xFF00E5FF);
+                    row.addView(check);
+                }
+
+                row.setOnClickListener(v -> {
+                    caskDialog.dismiss();
+                    playUiFeedbackSound("tap");
+                    cm.switchCask(cask.id, null);
+                    if (currentTab != null) {
+                        changeTabCask(currentTab.id, cask.id);
+                    }
+                    Toast.makeText(this, "🌊 Active Cask: " + cask.name + " (" + (cask.icon != null ? cask.icon : "") + ")", Toast.LENGTH_SHORT).show();
+                });
+
+                itemsLayout.addView(row);
+            }
+
+            sv.addView(itemsLayout);
+            layout.addView(sv);
+
+            caskDialog.setContentView(layout);
+            if (caskDialog.getWindow() != null) {
+                View bs = caskDialog.getWindow().findViewById(com.google.android.material.R.id.design_bottom_sheet);
+                if (bs != null) bs.setBackgroundResource(android.R.color.transparent);
+            }
+            caskDialog.show();
+        } catch (Throwable t) {
+            Log.e(TAG, "showCaskSwitcherDialog error", t);
+        }
+    }
+
+    public void showPrintAndExportDialog(TabItem currentTab) {
+        try {
+            com.google.android.material.bottomsheet.BottomSheetDialog printDialog =
+                    new com.google.android.material.bottomsheet.BottomSheetDialog(this);
+            LinearLayout layout = new LinearLayout(this);
+            layout.setOrientation(LinearLayout.VERTICAL);
+            layout.setPadding(dpToPx(16), dpToPx(14), dpToPx(16), dpToPx(20));
+
+            GradientDrawable rootBg = new GradientDrawable();
+            rootBg.setColor(!isDarkTheme ? 0xFFFFFFFF : 0xFF0D1117);
+            rootBg.setCornerRadii(new float[]{dpToPx(24), dpToPx(24), dpToPx(24), dpToPx(24), 0, 0, 0, 0});
+            layout.setBackground(rootBg);
+
+            View handle = new View(this);
+            LinearLayout.LayoutParams hLp = new LinearLayout.LayoutParams(dpToPx(44), dpToPx(5));
+            hLp.gravity = Gravity.CENTER_HORIZONTAL;
+            hLp.bottomMargin = dpToPx(14);
+            handle.setLayoutParams(hLp);
+            GradientDrawable hBg = new GradientDrawable();
+            hBg.setColor(!isDarkTheme ? 0xFFCBD5E1 : 0xFF30363D);
+            hBg.setCornerRadius(dpToPx(3));
+            handle.setBackground(hBg);
+            layout.addView(handle);
+
+            TextView title = new TextView(this);
+            title.setText("Print & Export");
+            title.setTextSize(TypedValue.COMPLEX_UNIT_SP, 15f);
+            title.setTypeface(Typeface.DEFAULT_BOLD);
+            title.setTextColor(!isDarkTheme ? 0xFF0F172A : 0xFFDFE2F0);
+            title.setPadding(dpToPx(4), 0, dpToPx(4), dpToPx(4));
+            layout.addView(title);
+
+            TextView sub = new TextView(this);
+            sub.setText("Print or export web pages and AI conversations in various formats");
+            sub.setTextSize(TypedValue.COMPLEX_UNIT_SP, 11.5f);
+            sub.setTextColor(!isDarkTheme ? 0xFF64748B : 0xFF94A3B8);
+            sub.setPadding(dpToPx(4), 0, dpToPx(4), dpToPx(14));
+            layout.addView(sub);
+
+            class ExportOpt {
+                String icon, title, desc, action;
+                ExportOpt(String icon, String title, String desc, String action) {
+                    this.icon = icon; this.title = title; this.desc = desc; this.action = action;
+                }
+            }
+
+            List<ExportOpt> options = Arrays.asList(
+                    new ExportOpt("🖨️", "Print Page (Android System Print)", "Send document to connected printers or save as system PDF", "print_system"),
+                    new ExportOpt("📄", "Save as PDF (.pdf)", "Clean, styled PDF document with reader formatting", "styledpdf"),
+                    new ExportOpt("📝", "Markdown File (.md)", "Universal Markdown file for notes, Obsidian, and Notion", "md"),
+                    new ExportOpt("📄", "Plain Text Transcript (.txt)", "Raw text without styling for lightweight sharing", "txt"),
+                    new ExportOpt("📑", "Word Document (.doc)", "Microsoft Word compatible formatted document", "doc"),
+                    new ExportOpt("🤖", "Convert Chat to Another AI", "Port conversation to ChatGPT, Claude, Gemini, or Grok", "convert")
+            );
+
+            for (ExportOpt opt : options) {
+                LinearLayout row = new LinearLayout(this);
+                row.setOrientation(LinearLayout.HORIZONTAL);
+                row.setGravity(Gravity.CENTER_VERTICAL);
+                row.setPadding(dpToPx(12), dpToPx(10), dpToPx(12), dpToPx(10));
+                LinearLayout.LayoutParams rLp = new LinearLayout.LayoutParams(
+                        ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT);
+                rLp.bottomMargin = dpToPx(6);
+                row.setLayoutParams(rLp);
+
+                GradientDrawable rBg = new GradientDrawable();
+                rBg.setColor(!isDarkTheme ? 0xFFF8FAFC : 0xFF161B22);
+                rBg.setStroke(dpToPx(1), !isDarkTheme ? 0xFFE2E8F0 : 0xFF21262D);
+                rBg.setCornerRadius(dpToPx(14));
+                row.setBackground(rBg);
+
+                TextView tvIcon = new TextView(this);
+                tvIcon.setText(opt.icon);
+                tvIcon.setTextSize(TypedValue.COMPLEX_UNIT_SP, 18f);
+                tvIcon.setPadding(0, 0, dpToPx(12), 0);
+                row.addView(tvIcon);
+
+                LinearLayout textBox = new LinearLayout(this);
+                textBox.setOrientation(LinearLayout.VERTICAL);
+                LinearLayout.LayoutParams tbLp = new LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.WRAP_CONTENT, 1f);
+                textBox.setLayoutParams(tbLp);
+
+                TextView tvT = new TextView(this);
+                tvT.setText(opt.title);
+                tvT.setTextSize(TypedValue.COMPLEX_UNIT_SP, 12.5f);
+                tvT.setTypeface(Typeface.DEFAULT_BOLD);
+                tvT.setTextColor(!isDarkTheme ? 0xFF0F172A : 0xFFDFE2F0);
+                textBox.addView(tvT);
+
+                TextView tvD = new TextView(this);
+                tvD.setText(opt.desc);
+                tvD.setTextSize(TypedValue.COMPLEX_UNIT_SP, 10.5f);
+                tvD.setTextColor(!isDarkTheme ? 0xFF64748B : 0xFF94A3B8);
+                textBox.addView(tvD);
+
+                row.addView(textBox);
+
+                row.setOnClickListener(v -> {
+                    printDialog.dismiss();
+                    playUiFeedbackSound("tap");
+                    if ("print_system".equals(opt.action)) {
+                        printActivePageViaSystem();
+                    } else {
+                        performExportOnMainWebView(opt.action);
+                    }
+                });
+
+                layout.addView(row);
+            }
+
+            printDialog.setContentView(layout);
+            if (printDialog.getWindow() != null) {
+                View bs = printDialog.getWindow().findViewById(com.google.android.material.R.id.design_bottom_sheet);
+                if (bs != null) bs.setBackgroundResource(android.R.color.transparent);
+            }
+            printDialog.show();
+        } catch (Throwable t) {
+            Log.e(TAG, "showPrintAndExportDialog error", t);
+        }
+    }
+
+    public void printActivePageViaSystem() {
+        runOnUiThread(() -> {
+            try {
+                TabItem currentTab = getActiveOrDominantTab();
+                if (currentTab != null && currentTab.webView != null) {
+                    PrintManager printManager = (PrintManager) getSystemService(Context.PRINT_SERVICE);
+                    String jobName = (currentTab.title != null && !currentTab.title.trim().isEmpty())
+                            ? currentTab.title
+                            : "Caspian Document";
+                    PrintDocumentAdapter printAdapter = currentTab.webView.createPrintDocumentAdapter(jobName);
+                    if (printManager != null) {
+                        printManager.print(jobName, printAdapter, new PrintAttributes.Builder().build());
+                    }
+                } else {
+                    Toast.makeText(this, "No active page to print", Toast.LENGTH_SHORT).show();
+                }
+            } catch (Throwable t) {
+                Log.e(TAG, "printActivePageViaSystem error", t);
+                Toast.makeText(this, "Print error: " + t.getMessage(), Toast.LENGTH_SHORT).show();
+            }
+        });
+    }
+
+    private void showExportOptions() {
+        showPrintAndExportDialog(getActiveOrDominantTab());
     }
 
     public void exportCurrentDocument(String format) {
