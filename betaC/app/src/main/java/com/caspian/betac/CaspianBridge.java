@@ -54,6 +54,9 @@ public class CaspianBridge {
                 if ("master_sfx_muted".equals(key) || "sound_muted".equals(key)) {
                     activity.runOnUiThread(() -> activity.setMasterSfxMuted("true".equalsIgnoreCase(val)));
                 }
+                if ("caspian_tab_groups".equals(key)) {
+                    activity.runOnUiThread(() -> activity.onTabGroupsSynced());
+                }
             });
         }
     }

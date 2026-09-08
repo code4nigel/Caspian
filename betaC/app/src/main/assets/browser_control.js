@@ -210,26 +210,26 @@
     // Headers
     html = html.replace(/^###\s+(.*$)/gim, '<div style="font-weight: 700; font-size: 12px; color: #00E5FF; margin: 8px 0 3px 0;">$1</div>');
     html = html.replace(/^##\s+(.*$)/gim, '<div style="font-weight: 800; font-size: 13px; color: #10B981; margin: 10px 0 4px 0;">$1</div>');
-    html = html.replace(/^#\s+(.*$)/gim, '<div style="font-weight: 900; font-size: 14px; color: #FFFFFF; margin: 12px 0 6px 0;">$1</div>');
+    html = html.replace(/^#\s+(.*$)/gim, '<div style="font-weight: 900; font-size: 14px; color: var(--text-main, #FFFFFF); margin: 12px 0 6px 0;">$1</div>');
 
     // Bold & Italics
     html = html.replace(/\*\*\*(.*?)\*\*\*/gim, '<strong><em>$1</em></strong>');
-    html = html.replace(/\*\*(.*?)\*\*/gim, '<strong style="color: #FFFFFF;">$1</strong>');
-    html = html.replace(/\*(.*?)\*/gim, '<em style="color: #DFE2F0;">$1</em>');
-    html = html.replace(/__(.*?)__/gim, '<strong style="color: #FFFFFF;">$1</strong>');
-    html = html.replace(/_(.*?)_/gim, '<em style="color: #DFE2F0;">$1</em>');
+    html = html.replace(/\*\*(.*?)\*\*/gim, '<strong style="color: var(--text-main, #FFFFFF); font-weight: 700;">$1</strong>');
+    html = html.replace(/\*(.*?)\*/gim, '<em style="color: var(--text-muted, #94A3B8);">$1</em>');
+    html = html.replace(/__(.*?)__/gim, '<strong style="color: var(--text-main, #FFFFFF); font-weight: 700;">$1</strong>');
+    html = html.replace(/_(.*?)_/gim, '<em style="color: var(--text-muted, #94A3B8);">$1</em>');
 
     // Inline code
-    html = html.replace(/`([^`]+)`/gim, '<code style="background: rgba(255,255,255,0.12); color: #00E5FF; padding: 2px 5px; border-radius: 4px; font-family: monospace; font-size: 10px;">$1</code>');
+    html = html.replace(/`([^`]+)`/gim, '<code style="background: rgba(128,128,128,0.15); color: var(--accent, #00E5FF); padding: 2px 5px; border-radius: 4px; font-family: monospace; font-size: 10px;">$1</code>');
 
     // Unordered lists (- item or * item)
-    html = html.replace(/^\s*[\-\*]\s+(.*$)/gim, '<div style="display: flex; gap: 6px; margin: 3px 0 3px 4px;"><span style="color: #00E5FF;">•</span><span>$1</span></div>');
+    html = html.replace(/^\s*[\-\*]\s+(.*$)/gim, '<div style="display: flex; gap: 6px; margin: 3px 0 3px 4px;"><span style="color: var(--accent, #00E5FF);">•</span><span>$1</span></div>');
 
     // Numbered lists (1. item)
     html = html.replace(/^\s*(\d+)\.\s+(.*$)/gim, '<div style="display: flex; gap: 6px; margin: 3px 0 3px 4px;"><span style="color: #10B981; font-weight: bold;">$1.</span><span>$2</span></div>');
 
     // Horizontal rules
-    html = html.replace(/^---$/gim, '<hr style="border: none; border-top: 1px solid rgba(255,255,255,0.12); margin: 8px 0;">');
+    html = html.replace(/^---$/gim, '<hr style="border: none; border-top: 1px solid var(--border-glass, rgba(128,128,128,0.2)); margin: 8px 0;">');
 
     // Paragraphs / line breaks
     html = html.replace(/\n\n/g, '<div style="height: 6px;"></div>');
@@ -507,12 +507,33 @@
     } catch (e) { }
   }
 
+  function reloadTabGroups() {
+    try {
+      if (window.CaspianBridge && typeof window.CaspianBridge.getPref === 'function') {
+        const prefGroups = window.CaspianBridge.getPref('caspian_tab_groups', null);
+        if (prefGroups) tabGroups = JSON.parse(prefGroups);
+      } else {
+        const savedGroupsStr = localStorage.getItem('caspian_tab_groups');
+        if (savedGroupsStr) tabGroups = JSON.parse(savedGroupsStr);
+      }
+    } catch (e) { }
+    renderOpenTabs();
+  }
+  window.reloadTabGroups = reloadTabGroups;
+
   function renderOpenTabs() {
     const container = document.getElementById('tabs-list-container');
     const countBadge = document.getElementById('tab-count-badge');
     const insideHeader = document.getElementById('inside-group-header');
     const groupToolbar = document.getElementById('floating-grouping-toolbar');
     if (!container) return;
+
+    try {
+      if (window.CaspianBridge && typeof window.CaspianBridge.getPref === 'function') {
+        const prefGroups = window.CaspianBridge.getPref('caspian_tab_groups', null);
+        if (prefGroups) tabGroups = JSON.parse(prefGroups);
+      }
+    } catch (e) { }
 
     let tabs = [];
     try {

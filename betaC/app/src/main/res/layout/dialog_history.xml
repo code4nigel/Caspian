@@ -326,7 +326,7 @@
         android:paddingEnd="16dp"
         android:paddingBottom="14dp"
         android:paddingTop="4dp"
-        android:background="#0A0E17">
+        android:background="@android:color/transparent">
 
         <!-- Matte Container Box -->
         <LinearLayout

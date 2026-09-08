@@ -1,0 +1,118 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:id="@+id/omnibox_split_tab_root"
+    android:layout_width="wrap_content"
+    android:layout_height="33dp"
+    android:layout_marginEnd="6dp"
+    android:orientation="horizontal"
+    android:gravity="center_vertical"
+    android:clickable="false"
+    android:focusable="false">
+
+    <!-- Left Split Half -->
+    <LinearLayout
+        android:id="@+id/omnibox_split_left_root"
+        android:layout_width="100dp"
+        android:layout_height="match_parent"
+        android:orientation="horizontal"
+        android:gravity="center_vertical"
+        android:paddingStart="8dp"
+        android:paddingEnd="3dp"
+        android:clickable="true"
+        android:focusable="true">
+
+        <ImageView
+            android:id="@+id/omnibox_split_left_icon"
+            android:layout_width="14dp"
+            android:layout_height="14dp"
+            android:layout_marginEnd="5dp"
+            android:scaleType="fitCenter"
+            android:src="@drawable/ic_stitch_globe"
+            android:contentDescription="Left Icon" />
+
+        <TextView
+            android:id="@+id/omnibox_split_left_title"
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_weight="1"
+            android:singleLine="true"
+            android:ellipsize="end"
+            android:textSize="11sp"
+            android:textColor="#FFFFFF"
+            android:text="Tab 1" />
+
+        <FrameLayout
+            android:id="@+id/omnibox_split_left_close"
+            android:layout_width="20dp"
+            android:layout_height="20dp"
+            android:background="?attr/selectableItemBackgroundBorderless"
+            android:clickable="true"
+            android:focusable="true">
+
+            <ImageView
+                android:id="@+id/omnibox_split_left_close_icon"
+                android:layout_width="9dp"
+                android:layout_height="9dp"
+                android:layout_gravity="center"
+                android:src="@drawable/ic_pod_close"
+                android:tint="#64748B" />
+        </FrameLayout>
+    </LinearLayout>
+
+    <!-- Center Interconnect Divider -->
+    <View
+        android:id="@+id/omnibox_split_divider"
+        android:layout_width="1dp"
+        android:layout_height="18dp"
+        android:background="#1E2533" />
+
+    <!-- Right Split Half -->
+    <LinearLayout
+        android:id="@+id/omnibox_split_right_root"
+        android:layout_width="100dp"
+        android:layout_height="match_parent"
+        android:orientation="horizontal"
+        android:gravity="center_vertical"
+        android:paddingStart="6dp"
+        android:paddingEnd="3dp"
+        android:clickable="true"
+        android:focusable="true">
+
+        <ImageView
+            android:id="@+id/omnibox_split_right_icon"
+            android:layout_width="14dp"
+            android:layout_height="14dp"
+            android:layout_marginEnd="5dp"
+            android:scaleType="fitCenter"
+            android:src="@drawable/ic_stitch_globe"
+            android:contentDescription="Right Icon" />
+
+        <TextView
+            android:id="@+id/omnibox_split_right_title"
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_weight="1"
+            android:singleLine="true"
+            android:ellipsize="end"
+            android:textSize="11sp"
+            android:textColor="#94A3B8"
+            android:text="Tab 2" />
+
+        <FrameLayout
+            android:id="@+id/omnibox_split_right_close"
+            android:layout_width="20dp"
+            android:layout_height="20dp"
+            android:background="?attr/selectableItemBackgroundBorderless"
+            android:clickable="true"
+            android:focusable="true">
+
+            <ImageView
+                android:id="@+id/omnibox_split_right_close_icon"
+                android:layout_width="9dp"
+                android:layout_height="9dp"
+                android:layout_gravity="center"
+                android:src="@drawable/ic_pod_close"
+                android:tint="#64748B" />
+        </FrameLayout>
+    </LinearLayout>
+</LinearLayout>

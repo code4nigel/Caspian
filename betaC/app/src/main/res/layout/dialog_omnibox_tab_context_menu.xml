@@ -168,6 +168,99 @@
             android:textSize="13sp" />
     </LinearLayout>
 
+    <!-- Action: Split Screen -->
+    <LinearLayout
+        android:id="@+id/ctx_action_split_screen"
+        android:layout_width="match_parent"
+        android:layout_height="44dp"
+        android:orientation="horizontal"
+        android:gravity="center_vertical"
+        android:background="@drawable/bg_menu_item_row"
+        android:paddingStart="8dp"
+        android:paddingEnd="8dp"
+        android:clickable="true"
+        android:focusable="true">
+
+        <ImageView
+            android:layout_width="18dp"
+            android:layout_height="18dp"
+            android:src="@drawable/ic_browser_split"
+            android:tint="#00E5FF"
+            android:layout_marginEnd="14dp"
+            android:contentDescription="Split Screen" />
+
+        <TextView
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_weight="1"
+            android:text="Open in Split Screen"
+            android:textColor="#E2E8F0"
+            android:textSize="13sp" />
+    </LinearLayout>
+
+    <!-- Action: Exit Split Screen -->
+    <LinearLayout
+        android:id="@+id/ctx_action_split_exit"
+        android:layout_width="match_parent"
+        android:layout_height="44dp"
+        android:orientation="horizontal"
+        android:gravity="center_vertical"
+        android:background="@drawable/bg_menu_item_row"
+        android:paddingStart="8dp"
+        android:paddingEnd="8dp"
+        android:visibility="gone"
+        android:clickable="true"
+        android:focusable="true">
+
+        <ImageView
+            android:layout_width="18dp"
+            android:layout_height="18dp"
+            android:src="@drawable/ic_pod_close"
+            android:tint="#F87171"
+            android:layout_marginEnd="14dp"
+            android:contentDescription="Exit Split" />
+
+        <TextView
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_weight="1"
+            android:text="Exit Split Screen"
+            android:textColor="#F87171"
+            android:textSize="13sp"
+            android:textStyle="bold" />
+    </LinearLayout>
+
+    <!-- Action: Swap Split Sides -->
+    <LinearLayout
+        android:id="@+id/ctx_action_split_swap"
+        android:layout_width="match_parent"
+        android:layout_height="44dp"
+        android:orientation="horizontal"
+        android:gravity="center_vertical"
+        android:background="@drawable/bg_menu_item_row"
+        android:paddingStart="8dp"
+        android:paddingEnd="8dp"
+        android:visibility="gone"
+        android:clickable="true"
+        android:focusable="true">
+
+        <ImageView
+            android:layout_width="18dp"
+            android:layout_height="18dp"
+            android:src="@drawable/ic_browser_split"
+            android:tint="#38BDF8"
+            android:layout_marginEnd="14dp"
+            android:contentDescription="Swap Split" />
+
+        <TextView
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_weight="1"
+            android:text="Swap Split Sides"
+            android:textColor="#E2E8F0"
+            android:textSize="13sp" />
+    </LinearLayout>
+
     <!-- Action: Move to Cask / Container -->
     <LinearLayout
         android:id="@+id/ctx_action_move_cask"

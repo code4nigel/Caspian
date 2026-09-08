@@ -1367,6 +1367,14 @@ public class MainActivity extends AppCompatActivity {
         }
     }
 
+    public void onTabGroupsSynced() {
+        loadTabGroups();
+        updateOmniboxTabStrip();
+        if (tabGridSearchInput != null) {
+            renderTabGridCards(tabGridSearchInput.getText().toString());
+        }
+    }
+
     public void saveTabGroups() {
         JSONArray arr = new JSONArray();
         for (TabGroup g : tabGroupsList) {
@@ -1386,6 +1394,10 @@ public class MainActivity extends AppCompatActivity {
         String jsonStr = arr.toString();
         SharedPreferences prefs = getSharedPreferences(PREFS_NAME, MODE_PRIVATE);
         prefs.edit().putString("caspian_tab_groups", jsonStr).apply();
+        if (controlWebView != null) {
+            controlWebView.post(() -> controlWebView.evaluateJavascript(
+                    "if (typeof reloadTabGroups === 'function') reloadTabGroups(); else if (typeof renderOpenTabs === 'function') renderOpenTabs();", null));
+        }
     }
 
     private void initCaspianBetaASplash() {
@@ -8552,12 +8564,27 @@ public class MainActivity extends AppCompatActivity {
             searchInput.setHintTextColor(isDarkTheme ? 0xFF64748B : 0xFF94A3B8);
         }
         if (btnSelect != null) {
+            GradientDrawable selBg = new GradientDrawable();
+            selBg.setCornerRadius(dpToPx(8));
+            selBg.setColor(isDarkTheme ? 0xFF162235 : 0xFFE0F2FE);
+            selBg.setStroke(dpToPx(1), isDarkTheme ? 0xFF00E5FF : 0xFFBAE6FD);
+            btnSelect.setBackground(selBg);
             btnSelect.setTextColor(isDarkTheme ? 0xFF00E5FF : 0xFF0284C7);
         }
         if (btnOptions != null) {
+            GradientDrawable optBg = new GradientDrawable();
+            optBg.setCornerRadius(dpToPx(8));
+            optBg.setColor(isDarkTheme ? 0xFF161B22 : 0xFFF1F5F9);
+            optBg.setStroke(dpToPx(1), isDarkTheme ? 0xFF21262D : 0xFFE2E8F0);
+            btnOptions.setBackground(optBg);
             btnOptions.setColorFilter(isDarkTheme ? 0xFF94A3B8 : 0xFF475569);
         }
         if (closeBtn != null) {
+            GradientDrawable clsBg = new GradientDrawable();
+            clsBg.setCornerRadius(dpToPx(8));
+            clsBg.setColor(isDarkTheme ? 0xFF161B22 : 0xFFF1F5F9);
+            clsBg.setStroke(dpToPx(1), isDarkTheme ? 0xFF21262D : 0xFFE2E8F0);
+            closeBtn.setBackground(clsBg);
             closeBtn.setColorFilter(isDarkTheme ? 0xFF94A3B8 : 0xFF475569);
         }
 
@@ -8569,6 +8596,10 @@ public class MainActivity extends AppCompatActivity {
         LinearLayout listContainer = dialogView.findViewById(R.id.history_list_container);
         TextView emptyView = dialogView.findViewById(R.id.history_empty_view);
 
+        View historyBottomToolbar = dialogView.findViewById(R.id.history_bottom_toolbar);
+        if (historyBottomToolbar != null) {
+            historyBottomToolbar.setBackgroundColor(isDarkTheme ? 0xFF0A0E17 : 0xFFF8FAFC);
+        }
         View historyBottomBarCard = dialogView.findViewById(R.id.history_bottom_bar_card);
         View bottomNormalBar = dialogView.findViewById(R.id.bottom_normal_bar);
         View bottomSelectBar = dialogView.findViewById(R.id.bottom_select_bar);
@@ -8599,10 +8630,10 @@ public class MainActivity extends AppCompatActivity {
             historyBottomBarCard.setBackground(bcBg);
         }
         if (bottomNormalBar != null) {
-            GradientDrawable bnb = new GradientDrawable();
-            bnb.setColor(isDarkTheme ? 0xFF0A0E17 : 0xFFFFFFFF);
-            bnb.setStroke(dpToPx(1), isDarkTheme ? 0xFF1E2433 : 0xFFE2E8F0);
-            bottomNormalBar.setBackground(bnb);
+            bottomNormalBar.setBackground(null);
+        }
+        if (bottomSelectBar != null) {
+            bottomSelectBar.setBackground(null);
         }
         if (pillTimeRangeDropdown != null) {
             GradientDrawable pillBg = new GradientDrawable();
@@ -8661,43 +8692,27 @@ public class MainActivity extends AppCompatActivity {
         java.text.SimpleDateFormat dayFormat = new java.text.SimpleDateFormat("MMM dd", java.util.Locale.getDefault());
 
         Runnable updateChipsVisuals = () -> {
-            if (chipAll != null) {
-                boolean act = "all".equals(activeFilter[0]);
+            TextView[] chips = new TextView[]{chipAll, chip1h, chip24h, chip1w};
+            String[] filterVals = new String[]{"all", "1h", "24h", "1w"};
+            for (int ci = 0; ci < chips.length; ci++) {
+                TextView cp = chips[ci];
+                if (cp == null) continue;
+                boolean act = filterVals[ci].equals(activeFilter[0]);
                 GradientDrawable cBg = new GradientDrawable();
                 cBg.setCornerRadius(dpToPx(14));
-                cBg.setColor(act ? (isDarkTheme ? 0xFFFFFFFF : 0xFF0F172A) : (isDarkTheme ? 0xFF0F1420 : 0xFFE2E8F0));
-                cBg.setStroke(dpToPx(1), act ? (isDarkTheme ? 0xFFFFFFFF : 0xFF0F172A) : (isDarkTheme ? 0xFF1E2537 : 0xFFCBD5E1));
-                chipAll.setBackground(cBg);
-                chipAll.setTextColor(act ? (isDarkTheme ? 0xFF0F172A : 0xFFFFFFFF) : (isDarkTheme ? 0xFF94A3B8 : 0xFF64748B));
-            }
-            if (chip1h != null) {
-                boolean act = "1h".equals(activeFilter[0]);
-                GradientDrawable cBg = new GradientDrawable();
-                cBg.setCornerRadius(dpToPx(14));
-                cBg.setColor(act ? (isDarkTheme ? 0xFFFFFFFF : 0xFF0F172A) : (isDarkTheme ? 0xFF0F1420 : 0xFFE2E8F0));
-                cBg.setStroke(dpToPx(1), act ? (isDarkTheme ? 0xFFFFFFFF : 0xFF0F172A) : (isDarkTheme ? 0xFF1E2537 : 0xFFCBD5E1));
-                chip1h.setBackground(cBg);
-                chip1h.setTextColor(act ? (isDarkTheme ? 0xFF0F172A : 0xFFFFFFFF) : (isDarkTheme ? 0xFF94A3B8 : 0xFF64748B));
-            }
-            if (chip24h != null) {
-                boolean act = "24h".equals(activeFilter[0]);
-                GradientDrawable cBg = new GradientDrawable();
-                cBg.setCornerRadius(dpToPx(14));
-                cBg.setColor(act ? (isDarkTheme ? 0xFFFFFFFF : 0xFF0F172A) : (isDarkTheme ? 0xFF0F1420 : 0xFFE2E8F0));
-                cBg.setStroke(dpToPx(1), act ? (isDarkTheme ? 0xFFFFFFFF : 0xFF0F172A) : (isDarkTheme ? 0xFF1E2537 : 0xFFCBD5E1));
-                chip24h.setBackground(cBg);
-                chip24h.setTextColor(act ? (isDarkTheme ? 0xFF0F172A : 0xFFFFFFFF) : (isDarkTheme ? 0xFF94A3B8 : 0xFF64748B));
-            }
-            if (chip1w != null) {
-                boolean act = "1w".equals(activeFilter[0]);
-                GradientDrawable cBg = new GradientDrawable();
-                cBg.setCornerRadius(dpToPx(14));
-                cBg.setColor(act ? (isDarkTheme ? 0xFFFFFFFF : 0xFF0F172A) : (isDarkTheme ? 0xFF0F1420 : 0xFFE2E8F0));
-                cBg.setStroke(dpToPx(1), act ? (isDarkTheme ? 0xFFFFFFFF : 0xFF0F172A) : (isDarkTheme ? 0xFF1E2537 : 0xFFCBD5E1));
-                chip1w.setBackground(cBg);
-                chip1w.setTextColor(act ? (isDarkTheme ? 0xFF0F172A : 0xFFFFFFFF) : (isDarkTheme ? 0xFF94A3B8 : 0xFF64748B));
+                if (act) {
+                    cBg.setColor(isDarkTheme ? 0xFF00E5FF : 0xFF0284C7);
+                    cBg.setStroke(dpToPx(1), isDarkTheme ? 0xFF00E5FF : 0xFF0284C7);
+                    cp.setTextColor(isDarkTheme ? 0xFF0A0E17 : 0xFFFFFFFF);
+                } else {
+                    cBg.setColor(isDarkTheme ? 0xFF121620 : 0xFFFFFFFF);
+                    cBg.setStroke(dpToPx(1), isDarkTheme ? 0xFF1E2537 : 0xFFCBD5E1);
+                    cp.setTextColor(isDarkTheme ? 0xFF94A3B8 : 0xFF475569);
+                }
+                cp.setBackground(cBg);
             }
         };
+        updateChipsVisuals.run();
 
         final Runnable[] refreshList = new Runnable[1];
         refreshList[0] = () -> {
@@ -8887,8 +8902,11 @@ public class MainActivity extends AppCompatActivity {
                         moreBtn.setLayoutParams(mbLp);
                         moreBtn.setImageResource(R.drawable.ic_stitch_more_vert);
                         moreBtn.setColorFilter(isDarkTheme ? 0xFF94A3B8 : 0xFF64748B);
-                        moreBtn.setPadding(dpToPx(5), dpToPx(5), dpToPx(5), dpToPx(5));
-                        moreBtn.setBackgroundResource(R.drawable.bg_stitch_round_button);
+                        GradientDrawable mbBg = new GradientDrawable();
+                        mbBg.setShape(GradientDrawable.OVAL);
+                        mbBg.setColor(isDarkTheme ? 0xFF161B22 : 0xFFF1F5F9);
+                        mbBg.setStroke(dpToPx(1), isDarkTheme ? 0xFF21262D : 0xFFE2E8F0);
+                        moreBtn.setBackground(mbBg);
                         moreBtn.setClickable(true);
                         moreBtn.setFocusable(true);
                         moreBtn.setOnClickListener(v -> {
@@ -13820,7 +13838,137 @@ public class MainActivity extends AppCompatActivity {
                     }
                 }
 
-                // 2. Render Ungrouped Tabs
+                // 2. Render Interconnected Dual Split Capsule
+                if (splitModeState > 0 && secondarySplitTabId != -1) {
+                    TabItem sLeft = getTabById(activeTabId);
+                    TabItem sRight = getTabById(secondarySplitTabId);
+                    if (sLeft != null && sRight != null) {
+                        renderedTabIds.add(sLeft.id);
+                        renderedTabIds.add(sRight.id);
+
+                        View splitView = LayoutInflater.from(this).inflate(R.layout.item_omnibox_split_tab_chip, omniboxTabStripTabs, false);
+                        LinearLayout splitRoot = splitView.findViewById(R.id.omnibox_split_tab_root);
+                        View leftHalf = splitView.findViewById(R.id.omnibox_split_left_root);
+                        ImageView leftIcon = splitView.findViewById(R.id.omnibox_split_left_icon);
+                        TextView leftTitle = splitView.findViewById(R.id.omnibox_split_left_title);
+                        View leftClose = splitView.findViewById(R.id.omnibox_split_left_close);
+                        ImageView leftCloseIcon = splitView.findViewById(R.id.omnibox_split_left_close_icon);
+
+                        View divider = splitView.findViewById(R.id.omnibox_split_divider);
+
+                        View rightHalf = splitView.findViewById(R.id.omnibox_split_right_root);
+                        ImageView rightIcon = splitView.findViewById(R.id.omnibox_split_right_icon);
+                        TextView rightTitle = splitView.findViewById(R.id.omnibox_split_right_title);
+                        View rightClose = splitView.findViewById(R.id.omnibox_split_right_close);
+                        ImageView rightCloseIcon = splitView.findViewById(R.id.omnibox_split_right_close_icon);
+
+                        // Compound outer capsule background
+                        GradientDrawable compoundBg = new GradientDrawable();
+                        compoundBg.setCornerRadius(dpToPx(17));
+                        compoundBg.setColor(isDarkTheme ? 0xFF0F1420 : 0xFFE2E8F0);
+                        compoundBg.setStroke(dpToPx(2), isDarkTheme ? 0xFF00E5FF : 0xFF0284C7);
+                        splitRoot.setBackground(compoundBg);
+
+                        if (divider != null) {
+                            divider.setBackgroundColor(isDarkTheme ? 0x4400E5FF : 0x440284C7);
+                        }
+
+                        // Left Half styling
+                        if (leftHalf != null) {
+                            GradientDrawable lBg = new GradientDrawable();
+                            lBg.setCornerRadii(new float[]{dpToPx(15), dpToPx(15), 0, 0, 0, 0, dpToPx(15), dpToPx(15)});
+                            lBg.setColor(isDarkTheme ? 0xFF1E2838 : 0xFFFFFFFF);
+                            leftHalf.setBackground(lBg);
+                        }
+                        if (leftIcon != null) {
+                            Bitmap fav = getTabFaviconBitmap(sLeft);
+                            if (fav != null) {
+                                leftIcon.setImageBitmap(fav);
+                                leftIcon.clearColorFilter();
+                            } else {
+                                leftIcon.setImageResource(getTabServiceIconRes(sLeft));
+                                leftIcon.setColorFilter(isDarkTheme ? 0xFF00E5FF : 0xFF0284C7);
+                            }
+                        }
+                        if (leftTitle != null) {
+                            String t = sLeft.title != null && !sLeft.title.trim().isEmpty() ? sLeft.title : "Tab 1";
+                            leftTitle.setText(t);
+                            leftTitle.setTextColor(isDarkTheme ? 0xFFFFFFFF : 0xFF0F172A);
+                            leftTitle.setTypeface(null, Typeface.BOLD);
+                        }
+                        if (leftCloseIcon != null) {
+                            leftCloseIcon.setColorFilter(isDarkTheme ? 0xFF94A3B8 : 0xFF64748B);
+                        }
+                        if (leftClose != null) {
+                            leftClose.setOnClickListener(v -> {
+                                playUiFeedbackSound("tap");
+                                closeSplitPane(true);
+                                updateOmniboxTabStrip();
+                            });
+                        }
+                        if (leftHalf != null) {
+                            leftHalf.setOnClickListener(v -> {
+                                playUiFeedbackSound("tap");
+                                checkAndFocusSplitPane(true);
+                            });
+                            leftHalf.setOnLongClickListener(v -> {
+                                playUiFeedbackSound("tap");
+                                showOmniboxTabContextMenu(sLeft);
+                                return true;
+                            });
+                        }
+
+                        // Right Half styling
+                        if (rightHalf != null) {
+                            GradientDrawable rBg = new GradientDrawable();
+                            rBg.setCornerRadii(new float[]{0, 0, dpToPx(15), dpToPx(15), dpToPx(15), dpToPx(15), 0, 0});
+                            rBg.setColor(isDarkTheme ? 0xFF162030 : 0xFFF8FAFC);
+                            rightHalf.setBackground(rBg);
+                        }
+                        if (rightIcon != null) {
+                            Bitmap fav = getTabFaviconBitmap(sRight);
+                            if (fav != null) {
+                                rightIcon.setImageBitmap(fav);
+                                rightIcon.clearColorFilter();
+                            } else {
+                                rightIcon.setImageResource(getTabServiceIconRes(sRight));
+                                rightIcon.setColorFilter(isDarkTheme ? 0xFF38BDF8 : 0xFF0284C7);
+                            }
+                        }
+                        if (rightTitle != null) {
+                            String t = sRight.title != null && !sRight.title.trim().isEmpty() ? sRight.title : "Tab 2";
+                            rightTitle.setText(t);
+                            rightTitle.setTextColor(isDarkTheme ? 0xFFE2E8F0 : 0xFF1E293B);
+                            rightTitle.setTypeface(null, Typeface.BOLD);
+                        }
+                        if (rightCloseIcon != null) {
+                            rightCloseIcon.setColorFilter(isDarkTheme ? 0xFF94A3B8 : 0xFF64748B);
+                        }
+                        if (rightClose != null) {
+                            rightClose.setOnClickListener(v -> {
+                                playUiFeedbackSound("tap");
+                                closeSplitPane(false);
+                                updateOmniboxTabStrip();
+                            });
+                        }
+                        if (rightHalf != null) {
+                            rightHalf.setOnClickListener(v -> {
+                                playUiFeedbackSound("tap");
+                                checkAndFocusSplitPane(false);
+                            });
+                            rightHalf.setOnLongClickListener(v -> {
+                                playUiFeedbackSound("tap");
+                                showOmniboxTabContextMenu(sRight);
+                                return true;
+                            });
+                        }
+
+                        activeTabView = splitView;
+                        omniboxTabStripTabs.addView(splitView);
+                    }
+                }
+
+                // 3. Render Ungrouped Tabs
                 for (int i = 0; i < tabsList.size(); i++) {
                     TabItem tab = tabsList.get(i);
                     if (renderedTabIds.contains(tab.id)) continue;
@@ -13972,6 +14120,9 @@ public class MainActivity extends AppCompatActivity {
         int[] actionIds = new int[]{
                 R.id.ctx_action_close_others,
                 R.id.ctx_action_duplicate,
+                R.id.ctx_action_split_screen,
+                R.id.ctx_action_split_exit,
+                R.id.ctx_action_split_swap,
                 R.id.ctx_action_move_cask,
                 R.id.ctx_action_move_tab_group,
                 R.id.ctx_action_make_tab_group,
@@ -14024,6 +14175,40 @@ public class MainActivity extends AppCompatActivity {
                 dialog.dismiss();
                 playUiFeedbackSound("tap");
                 addNewTab(tab.service, tab.pendingPrompt, tab.url, tab.isIncognito, tab.caskId, true);
+            });
+        }
+
+        // Split Screen Actions
+        boolean isTabInSplit = (splitModeState > 0 && (tab.id == activeTabId || tab.id == secondarySplitTabId));
+        View actionSplit = dialogView.findViewById(R.id.ctx_action_split_screen);
+        View actionSplitExit = dialogView.findViewById(R.id.ctx_action_split_exit);
+        View actionSplitSwap = dialogView.findViewById(R.id.ctx_action_split_swap);
+
+        if (actionSplit != null) {
+            actionSplit.setVisibility(isTabInSplit ? View.GONE : View.VISIBLE);
+            actionSplit.setOnClickListener(v -> {
+                dialog.dismiss();
+                playUiFeedbackSound("tap");
+                showSplitPickerForTab(tab);
+            });
+        }
+        if (actionSplitExit != null) {
+            actionSplitExit.setVisibility(isTabInSplit ? View.VISIBLE : View.GONE);
+            actionSplitExit.setOnClickListener(v -> {
+                dialog.dismiss();
+                playUiFeedbackSound("tap");
+                exitSplitView();
+                updateOmniboxTabStrip();
+                Toast.makeText(this, "Exited Split Screen", Toast.LENGTH_SHORT).show();
+            });
+        }
+        if (actionSplitSwap != null) {
+            actionSplitSwap.setVisibility(isTabInSplit ? View.VISIBLE : View.GONE);
+            actionSplitSwap.setOnClickListener(v -> {
+                dialog.dismiss();
+                playUiFeedbackSound("tap");
+                swapSplitTabs();
+                updateOmniboxTabStrip();
             });
         }
 
@@ -14087,6 +14272,177 @@ public class MainActivity extends AppCompatActivity {
             });
         }
 
+        dialog.show();
+    }
+
+    public void enterSplitMode(int tabId1, int tabId2) {
+        activeTabId = tabId1;
+        secondarySplitTabId = tabId2;
+        splitModeState = 1; // Horizontal Split
+        splitRatio = 0.5f;
+        applySplitViewLayout();
+        updateOmniboxState();
+        updateOmniboxTabStrip();
+        Toast.makeText(this, "🔀 Split Screen Active", Toast.LENGTH_SHORT).show();
+    }
+
+    public void showSplitPickerForTab(TabItem primaryTab) {
+        if (primaryTab == null) return;
+        playUiFeedbackSound("tap");
+        com.google.android.material.bottomsheet.BottomSheetDialog dialog =
+                new com.google.android.material.bottomsheet.BottomSheetDialog(this);
+
+        LinearLayout root = new LinearLayout(this);
+        root.setOrientation(LinearLayout.VERTICAL);
+        root.setPadding(dpToPx(20), dpToPx(16), dpToPx(20), dpToPx(24));
+
+        GradientDrawable rootBg = new GradientDrawable();
+        rootBg.setCornerRadii(new float[]{dpToPx(20), dpToPx(20), dpToPx(20), dpToPx(20), 0, 0, 0, 0});
+        rootBg.setColor(isDarkTheme ? 0xFF0A0E17 : 0xFFFFFFFF);
+        rootBg.setStroke(dpToPx(1), isDarkTheme ? 0xFF1E2433 : 0xFFE2E8F0);
+        root.setBackground(rootBg);
+
+        // Header Handle
+        View handle = new View(this);
+        LinearLayout.LayoutParams handleLp = new LinearLayout.LayoutParams(dpToPx(36), dpToPx(4));
+        handleLp.gravity = Gravity.CENTER_HORIZONTAL;
+        handleLp.bottomMargin = dpToPx(14);
+        handle.setLayoutParams(handleLp);
+        GradientDrawable hBg = new GradientDrawable();
+        hBg.setColor(isDarkTheme ? 0xFF30363D : 0xFFCBD5E1);
+        hBg.setCornerRadius(dpToPx(2));
+        handle.setBackground(hBg);
+        root.addView(handle);
+
+        TextView titleTv = new TextView(this);
+        titleTv.setText("🔀 Split Screen with...");
+        titleTv.setTextColor(isDarkTheme ? 0xFFFFFFFF : 0xFF0F172A);
+        titleTv.setTextSize(TypedValue.COMPLEX_UNIT_SP, 16f);
+        titleTv.setTypeface(null, Typeface.BOLD);
+        root.addView(titleTv);
+
+        TextView subTv = new TextView(this);
+        subTv.setText("Select a tab to view side-by-side with \"" + (primaryTab.title != null ? primaryTab.title : "Tab") + "\"");
+        subTv.setTextColor(isDarkTheme ? 0xFF94A3B8 : 0xFF64748B);
+        subTv.setTextSize(TypedValue.COMPLEX_UNIT_SP, 12f);
+        subTv.setPadding(0, dpToPx(2), 0, dpToPx(14));
+        root.addView(subTv);
+
+        // Option 1: New Blank Tab
+        LinearLayout newTabRow = new LinearLayout(this);
+        newTabRow.setOrientation(LinearLayout.HORIZONTAL);
+        newTabRow.setGravity(Gravity.CENTER_VERTICAL);
+        newTabRow.setPadding(dpToPx(14), dpToPx(12), dpToPx(14), dpToPx(12));
+        GradientDrawable ntb = new GradientDrawable();
+        ntb.setCornerRadius(dpToPx(12));
+        ntb.setColor(isDarkTheme ? 0xFF162235 : 0xFFE0F2FE);
+        ntb.setStroke(dpToPx(1), isDarkTheme ? 0xFF00E5FF : 0xFF0284C7);
+        newTabRow.setBackground(ntb);
+        LinearLayout.LayoutParams ntLp = new LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT);
+        ntLp.bottomMargin = dpToPx(10);
+        newTabRow.setLayoutParams(ntLp);
+
+        TextView ntIcon = new TextView(this);
+        ntIcon.setText("➕");
+        ntIcon.setTextSize(TypedValue.COMPLEX_UNIT_SP, 15f);
+        ntIcon.setPadding(0, 0, dpToPx(10), 0);
+        newTabRow.addView(ntIcon);
+
+        TextView ntText = new TextView(this);
+        ntText.setText("Open New Search Tab in Split Screen");
+        ntText.setTextColor(isDarkTheme ? 0xFF00E5FF : 0xFF0284C7);
+        ntText.setTextSize(TypedValue.COMPLEX_UNIT_SP, 13f);
+        ntText.setTypeface(null, Typeface.BOLD);
+        newTabRow.addView(ntText);
+
+        newTabRow.setOnClickListener(v -> {
+            dialog.dismiss();
+            playUiFeedbackSound("tap");
+            int id = nextTabId++;
+            TabItem secondTab = createNewTabInstance(id, "https://google.com", "google", null, false);
+            tabsList.add(secondTab);
+            enterSplitMode(primaryTab.id, secondTab.id);
+        });
+        root.addView(newTabRow);
+
+        ScrollView scroll = new ScrollView(this);
+        LinearLayout.LayoutParams scrollLp = new LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, dpToPx(200));
+        scroll.setLayoutParams(scrollLp);
+        LinearLayout listLayout = new LinearLayout(this);
+        listLayout.setOrientation(LinearLayout.VERTICAL);
+
+        for (TabItem t : tabsList) {
+            if (t.id == primaryTab.id) continue;
+
+            LinearLayout tRow = new LinearLayout(this);
+            tRow.setOrientation(LinearLayout.HORIZONTAL);
+            tRow.setGravity(Gravity.CENTER_VERTICAL);
+            tRow.setPadding(dpToPx(12), dpToPx(10), dpToPx(12), dpToPx(10));
+
+            GradientDrawable rowBg = new GradientDrawable();
+            rowBg.setCornerRadius(dpToPx(12));
+            rowBg.setColor(isDarkTheme ? 0xFF121620 : 0xFFF8FAFC);
+            rowBg.setStroke(dpToPx(1), isDarkTheme ? 0xFF1E2433 : 0xFFE2E8F0);
+            tRow.setBackground(rowBg);
+
+            LinearLayout.LayoutParams rowLp = new LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT);
+            rowLp.bottomMargin = dpToPx(6);
+            tRow.setLayoutParams(rowLp);
+
+            ImageView iv = new ImageView(this);
+            LinearLayout.LayoutParams ivLp = new LinearLayout.LayoutParams(dpToPx(18), dpToPx(18));
+            ivLp.setMarginEnd(dpToPx(10));
+            iv.setLayoutParams(ivLp);
+            Bitmap fav = getTabFaviconBitmap(t);
+            if (fav != null) {
+                iv.setImageBitmap(fav);
+            } else {
+                iv.setImageResource(getTabServiceIconRes(t));
+                iv.setColorFilter(isDarkTheme ? 0xFF00E5FF : 0xFF0284C7);
+            }
+            tRow.addView(iv);
+
+            LinearLayout textCol = new LinearLayout(this);
+            textCol.setOrientation(LinearLayout.VERTICAL);
+            LinearLayout.LayoutParams tcLp = new LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.WRAP_CONTENT, 1f);
+            textCol.setLayoutParams(tcLp);
+
+            TextView nameTv = new TextView(this);
+            nameTv.setText(t.title != null && !t.title.isEmpty() ? t.title : ("Tab " + t.id));
+            nameTv.setTextColor(isDarkTheme ? 0xFFFFFFFF : 0xFF0F172A);
+            nameTv.setTextSize(TypedValue.COMPLEX_UNIT_SP, 13f);
+            nameTv.setTypeface(null, Typeface.BOLD);
+            nameTv.setSingleLine(true);
+            nameTv.setEllipsize(android.text.TextUtils.TruncateAt.END);
+            textCol.addView(nameTv);
+
+            TextView urlTv = new TextView(this);
+            urlTv.setText(cleanDisplayUrl(t.url != null ? t.url : ""));
+            urlTv.setTextColor(isDarkTheme ? 0xFF94A3B8 : 0xFF64748B);
+            urlTv.setTextSize(TypedValue.COMPLEX_UNIT_SP, 11f);
+            urlTv.setSingleLine(true);
+            urlTv.setEllipsize(android.text.TextUtils.TruncateAt.END);
+            textCol.addView(urlTv);
+
+            tRow.addView(textCol);
+
+            tRow.setOnClickListener(v -> {
+                dialog.dismiss();
+                playUiFeedbackSound("tap");
+                enterSplitMode(primaryTab.id, t.id);
+            });
+
+            listLayout.addView(tRow);
+        }
+
+        scroll.addView(listLayout);
+        root.addView(scroll);
+
+        dialog.setContentView(root);
+        if (dialog.getWindow() != null) {
+            View bs = dialog.getWindow().findViewById(com.google.android.material.R.id.design_bottom_sheet);
+            if (bs != null) bs.setBackgroundResource(android.R.color.transparent);
+        }
         dialog.show();
     }
 
