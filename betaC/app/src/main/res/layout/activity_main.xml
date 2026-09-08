@@ -322,7 +322,7 @@
                 <LinearLayout
                     android:id="@+id/omnibox_tab_strip_bar"
                     android:layout_width="match_parent"
-                    android:layout_height="32dp"
+                    android:layout_height="38dp"
                     android:layout_marginBottom="4dp"
                     android:orientation="horizontal"
                     android:gravity="center_vertical">
@@ -344,17 +344,19 @@
                             android:gravity="center_vertical" />
                     </HorizontalScrollView>
 
-                    <!-- Add New Tab Button at Far Right (matching Samsung Internet) -->
+                    <!-- Add New Tab Button at Far Right (Circular pill) -->
                     <FrameLayout
                         android:id="@+id/btn_omnibox_add_tab"
                         android:layout_width="32dp"
-                        android:layout_height="28dp"
+                        android:layout_height="32dp"
                         android:layout_marginStart="6dp"
+                        android:layout_marginEnd="2dp"
                         android:background="@drawable/bg_stitch_action_chip"
                         android:clickable="true"
                         android:focusable="true">
 
                         <ImageView
+                            android:id="@+id/btn_omnibox_add_icon"
                             android:layout_width="14dp"
                             android:layout_height="14dp"
                             android:layout_gravity="center"

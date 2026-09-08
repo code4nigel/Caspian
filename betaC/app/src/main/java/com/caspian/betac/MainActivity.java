@@ -2878,6 +2878,8 @@ public class MainActivity extends AppCompatActivity {
         if (omniboxFinderClose != null) omniboxFinderClose.setColorFilter(defaultIconTint);
         if (omniboxFinderPrev != null) omniboxFinderPrev.setColorFilter(defaultIconTint);
         if (omniboxFinderNext != null) omniboxFinderNext.setColorFilter(defaultIconTint);
+
+        updateOmniboxTabStrip();
     }
 
     public void applyWebViewTheme(WebView webView, boolean isDark) {
@@ -8328,10 +8330,10 @@ public class MainActivity extends AppCompatActivity {
                         wpLp = new FrameLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.MATCH_PARENT);
                     }
                     if (isBottom) {
-                        wpLp.bottomMargin = dpToPx(94);
+                        wpLp.bottomMargin = dpToPx(100);
                         wpLp.topMargin = 0;
                     } else {
-                        wpLp.topMargin = dpToPx(94);
+                        wpLp.topMargin = dpToPx(100);
                         wpLp.bottomMargin = 0;
                     }
                     webviewsParentContainer.setLayoutParams(wpLp);
@@ -8344,10 +8346,10 @@ public class MainActivity extends AppCompatActivity {
                     }
                     pbLp.gravity = isBottom ? Gravity.BOTTOM : Gravity.TOP;
                     if (isBottom) {
-                        pbLp.bottomMargin = dpToPx(94);
+                        pbLp.bottomMargin = dpToPx(100);
                         pbLp.topMargin = 0;
                     } else {
-                        pbLp.topMargin = dpToPx(94);
+                        pbLp.topMargin = dpToPx(100);
                         pbLp.bottomMargin = 0;
                     }
                     browserProgressBar.setLayoutParams(pbLp);
@@ -8360,10 +8362,10 @@ public class MainActivity extends AppCompatActivity {
                     }
                     sugLp.gravity = isBottom ? Gravity.BOTTOM : Gravity.TOP;
                     if (isBottom) {
-                        sugLp.bottomMargin = dpToPx(94);
+                        sugLp.bottomMargin = dpToPx(100);
                         sugLp.topMargin = 0;
                     } else {
-                        sugLp.topMargin = dpToPx(94);
+                        sugLp.topMargin = dpToPx(100);
                         sugLp.bottomMargin = 0;
                     }
                     omniboxSuggestionsContainer.setLayoutParams(sugLp);
@@ -8442,8 +8444,9 @@ public class MainActivity extends AppCompatActivity {
         builder.setView(dialogView);
         AlertDialog dialog = builder.create();
         if (dialog.getWindow() != null) {
-            dialog.getWindow().setBackgroundDrawable(new ColorDrawable(0xFF0A0E17));
+            dialog.getWindow().setBackgroundDrawable(new ColorDrawable(isDarkTheme ? 0xFF0A0E17 : 0xFFF8FAFC));
         }
+        dialogView.setBackgroundColor(isDarkTheme ? 0xFF0A0E17 : 0xFFF8FAFC);
 
         TextView badgeCount = dialogView.findViewById(R.id.badge_history_count);
         TextView tabBookmarks = dialogView.findViewById(R.id.tab_header_bookmarks);
@@ -8452,6 +8455,19 @@ public class MainActivity extends AppCompatActivity {
         TextView btnSelect = dialogView.findViewById(R.id.btn_history_select);
         ImageView btnOptions = dialogView.findViewById(R.id.btn_history_options);
         ImageView closeBtn = dialogView.findViewById(R.id.history_close_btn);
+
+        if (searchInput != null) {
+            searchInput.setTextColor(isDarkTheme ? 0xFFFFFFFF : 0xFF0F172A);
+            searchInput.setHintTextColor(isDarkTheme ? 0xFF64748B : 0xFF94A3B8);
+            if (searchInput.getParent() instanceof View) {
+                View sBox = (View) searchInput.getParent();
+                GradientDrawable sb = new GradientDrawable();
+                sb.setCornerRadius(dpToPx(14));
+                sb.setColor(isDarkTheme ? 0xFF0E131E : 0xFFFFFFFF);
+                sb.setStroke(dpToPx(1), isDarkTheme ? 0xFF1E2537 : 0xFFE2E8F0);
+                sBox.setBackground(sb);
+            }
+        }
 
         TextView chipAll = dialogView.findViewById(R.id.chip_filter_all);
         TextView chip1h = dialogView.findViewById(R.id.chip_filter_1h);
@@ -8465,6 +8481,16 @@ public class MainActivity extends AppCompatActivity {
         View bottomSelectBar = dialogView.findViewById(R.id.bottom_select_bar);
         View timeRangeSelector = dialogView.findViewById(R.id.layout_time_range_selector);
         TextView textSelectedTimeRange = dialogView.findViewById(R.id.text_selected_time_range);
+
+        if (bottomNormalBar != null) {
+            GradientDrawable bnb = new GradientDrawable();
+            bnb.setColor(isDarkTheme ? 0xFF0A0E17 : 0xFFFFFFFF);
+            bnb.setStroke(dpToPx(1), isDarkTheme ? 0xFF1E2433 : 0xFFE2E8F0);
+            bottomNormalBar.setBackground(bnb);
+        }
+        if (textSelectedTimeRange != null) {
+            textSelectedTimeRange.setTextColor(isDarkTheme ? 0xFFE2E8F0 : 0xFF0F172A);
+        }
 
         View btnClearCookies = dialogView.findViewById(R.id.btn_clear_cookies);
         View btnClearData = dialogView.findViewById(R.id.btn_clear_data);
@@ -8487,23 +8513,39 @@ public class MainActivity extends AppCompatActivity {
         Runnable updateChipsVisuals = () -> {
             if (chipAll != null) {
                 boolean act = "all".equals(activeFilter[0]);
-                chipAll.setBackgroundResource(act ? R.drawable.bg_stitch_chip_active : R.drawable.bg_stitch_chip_inactive);
-                chipAll.setTextColor(act ? 0xFF0F172A : 0xFF94A3B8);
+                GradientDrawable cBg = new GradientDrawable();
+                cBg.setCornerRadius(dpToPx(14));
+                cBg.setColor(act ? (isDarkTheme ? 0xFFFFFFFF : 0xFF0F172A) : (isDarkTheme ? 0xFF0F1420 : 0xFFE2E8F0));
+                cBg.setStroke(dpToPx(1), act ? (isDarkTheme ? 0xFFFFFFFF : 0xFF0F172A) : (isDarkTheme ? 0xFF1E2537 : 0xFFCBD5E1));
+                chipAll.setBackground(cBg);
+                chipAll.setTextColor(act ? (isDarkTheme ? 0xFF0F172A : 0xFFFFFFFF) : (isDarkTheme ? 0xFF94A3B8 : 0xFF64748B));
             }
             if (chip1h != null) {
                 boolean act = "1h".equals(activeFilter[0]);
-                chip1h.setBackgroundResource(act ? R.drawable.bg_stitch_chip_active : R.drawable.bg_stitch_chip_inactive);
-                chip1h.setTextColor(act ? 0xFF0F172A : 0xFF94A3B8);
+                GradientDrawable cBg = new GradientDrawable();
+                cBg.setCornerRadius(dpToPx(14));
+                cBg.setColor(act ? (isDarkTheme ? 0xFFFFFFFF : 0xFF0F172A) : (isDarkTheme ? 0xFF0F1420 : 0xFFE2E8F0));
+                cBg.setStroke(dpToPx(1), act ? (isDarkTheme ? 0xFFFFFFFF : 0xFF0F172A) : (isDarkTheme ? 0xFF1E2537 : 0xFFCBD5E1));
+                chip1h.setBackground(cBg);
+                chip1h.setTextColor(act ? (isDarkTheme ? 0xFF0F172A : 0xFFFFFFFF) : (isDarkTheme ? 0xFF94A3B8 : 0xFF64748B));
             }
             if (chip24h != null) {
                 boolean act = "24h".equals(activeFilter[0]);
-                chip24h.setBackgroundResource(act ? R.drawable.bg_stitch_chip_active : R.drawable.bg_stitch_chip_inactive);
-                chip24h.setTextColor(act ? 0xFF0F172A : 0xFF94A3B8);
+                GradientDrawable cBg = new GradientDrawable();
+                cBg.setCornerRadius(dpToPx(14));
+                cBg.setColor(act ? (isDarkTheme ? 0xFFFFFFFF : 0xFF0F172A) : (isDarkTheme ? 0xFF0F1420 : 0xFFE2E8F0));
+                cBg.setStroke(dpToPx(1), act ? (isDarkTheme ? 0xFFFFFFFF : 0xFF0F172A) : (isDarkTheme ? 0xFF1E2537 : 0xFFCBD5E1));
+                chip24h.setBackground(cBg);
+                chip24h.setTextColor(act ? (isDarkTheme ? 0xFF0F172A : 0xFFFFFFFF) : (isDarkTheme ? 0xFF94A3B8 : 0xFF64748B));
             }
             if (chip1w != null) {
                 boolean act = "1w".equals(activeFilter[0]);
-                chip1w.setBackgroundResource(act ? R.drawable.bg_stitch_chip_active : R.drawable.bg_stitch_chip_inactive);
-                chip1w.setTextColor(act ? 0xFF0F172A : 0xFF94A3B8);
+                GradientDrawable cBg = new GradientDrawable();
+                cBg.setCornerRadius(dpToPx(14));
+                cBg.setColor(act ? (isDarkTheme ? 0xFFFFFFFF : 0xFF0F172A) : (isDarkTheme ? 0xFF0F1420 : 0xFFE2E8F0));
+                cBg.setStroke(dpToPx(1), act ? (isDarkTheme ? 0xFFFFFFFF : 0xFF0F172A) : (isDarkTheme ? 0xFF1E2537 : 0xFFCBD5E1));
+                chip1w.setBackground(cBg);
+                chip1w.setTextColor(act ? (isDarkTheme ? 0xFF0F172A : 0xFFFFFFFF) : (isDarkTheme ? 0xFF94A3B8 : 0xFF64748B));
             }
         };
 
@@ -8574,14 +8616,14 @@ public class MainActivity extends AppCompatActivity {
                     TextView secTitle = new TextView(this);
                     secTitle.setLayoutParams(new LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.WRAP_CONTENT, 1f));
                     secTitle.setText(dateKey);
-                    secTitle.setTextColor(0xFF94A3B8);
+                    secTitle.setTextColor(isDarkTheme ? 0xFF94A3B8 : 0xFF475569);
                     secTitle.setTextSize(TypedValue.COMPLEX_UNIT_SP, 11f);
                     secTitle.setTypeface(Typeface.MONOSPACE, Typeface.BOLD);
                     secHeader.addView(secTitle);
 
                     TextView secDelete = new TextView(this);
                     secDelete.setText(dateKey.startsWith("TODAY") ? "Delete Today" : (dateKey.startsWith("YESTERDAY") ? "Delete Yesterday" : "Delete Day"));
-                    secDelete.setTextColor(0xFF64748B);
+                    secDelete.setTextColor(isDarkTheme ? 0xFF64748B : 0xFF94A3B8);
                     secDelete.setTextSize(TypedValue.COMPLEX_UNIT_SP, 10.5f);
                     secDelete.setClickable(true);
                     secDelete.setFocusable(true);
@@ -8602,7 +8644,12 @@ public class MainActivity extends AppCompatActivity {
                         card.setOrientation(LinearLayout.HORIZONTAL);
                         card.setGravity(Gravity.CENTER_VERTICAL);
                         card.setPadding(dpToPx(12), dpToPx(10), dpToPx(10), dpToPx(10));
-                        card.setBackgroundResource(R.drawable.bg_stitch_history_entry);
+
+                        GradientDrawable cardBg = new GradientDrawable();
+                        cardBg.setCornerRadius(dpToPx(14));
+                        cardBg.setColor(isDarkTheme ? 0xFF121620 : 0xFFFFFFFF);
+                        cardBg.setStroke(dpToPx(1), isDarkTheme ? 0xFF1E2433 : 0xFFE2E8F0);
+                        card.setBackground(cardBg);
 
                         LinearLayout.LayoutParams cardLp = new LinearLayout.LayoutParams(
                                 ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT);
@@ -8628,9 +8675,9 @@ public class MainActivity extends AppCompatActivity {
                         iconBox.setLayoutParams(ibLp);
 
                         GradientDrawable ibGd = new GradientDrawable();
-                        ibGd.setColor(0xFF0D1117);
+                        ibGd.setColor(isDarkTheme ? 0xFF0D1117 : 0xFFF1F5F9);
                         ibGd.setCornerRadius(dpToPx(8));
-                        ibGd.setStroke(dpToPx(1), 0xFF1E2433);
+                        ibGd.setStroke(dpToPx(1), isDarkTheme ? 0xFF1E2433 : 0xFFE2E8F0);
                         iconBox.setBackground(ibGd);
 
                         ImageView iv = new ImageView(this);
@@ -8654,7 +8701,7 @@ public class MainActivity extends AppCompatActivity {
 
                         TextView titleTv = new TextView(this);
                         titleTv.setText(entry.title != null && !entry.title.isEmpty() ? entry.title : entry.url);
-                        titleTv.setTextColor(0xFFF1F5F9);
+                        titleTv.setTextColor(isDarkTheme ? 0xFFF1F5F9 : 0xFF0F172A);
                         titleTv.setTextSize(TypedValue.COMPLEX_UNIT_SP, 12.5f);
                         titleTv.setTypeface(null, Typeface.BOLD);
                         titleTv.setSingleLine(true);
@@ -8662,7 +8709,7 @@ public class MainActivity extends AppCompatActivity {
 
                         TextView urlTv = new TextView(this);
                         urlTv.setText(cleanDisplayUrl(entry.url));
-                        urlTv.setTextColor(0xFF94A3B8);
+                        urlTv.setTextColor(isDarkTheme ? 0xFF94A3B8 : 0xFF64748B);
                         urlTv.setTextSize(TypedValue.COMPLEX_UNIT_SP, 11f);
                         urlTv.setSingleLine(true);
                         urlTv.setEllipsize(android.text.TextUtils.TruncateAt.END);
@@ -8679,7 +8726,7 @@ public class MainActivity extends AppCompatActivity {
 
                         TextView timeTv = new TextView(this);
                         timeTv.setText(timeSdf.format(new Date(entry.timestamp)));
-                        timeTv.setTextColor(0xFF64748B);
+                        timeTv.setTextColor(isDarkTheme ? 0xFF64748B : 0xFF94A3B8);
                         timeTv.setTextSize(TypedValue.COMPLEX_UNIT_SP, 10.5f);
                         timeTv.setTypeface(Typeface.MONOSPACE);
                         rightCol.addView(timeTv);
@@ -8689,7 +8736,7 @@ public class MainActivity extends AppCompatActivity {
                         mbLp.setMarginStart(dpToPx(4));
                         moreBtn.setLayoutParams(mbLp);
                         moreBtn.setImageResource(R.drawable.ic_stitch_more_vert);
-                        moreBtn.setColorFilter(0xFF94A3B8);
+                        moreBtn.setColorFilter(isDarkTheme ? 0xFF94A3B8 : 0xFF64748B);
                         moreBtn.setPadding(dpToPx(5), dpToPx(5), dpToPx(5), dpToPx(5));
                         moreBtn.setBackgroundResource(R.drawable.bg_stitch_round_button);
                         moreBtn.setClickable(true);
@@ -8876,6 +8923,39 @@ public class MainActivity extends AppCompatActivity {
             com.google.android.material.bottomsheet.BottomSheetDialog pickerDialog =
                     new com.google.android.material.bottomsheet.BottomSheetDialog(this);
             View pickerView = LayoutInflater.from(this).inflate(R.layout.dialog_stitch_time_range_picker, null);
+            GradientDrawable pickerBg = new GradientDrawable();
+            pickerBg.setCornerRadii(new float[]{dpToPx(20), dpToPx(20), dpToPx(20), dpToPx(20), 0, 0, 0, 0});
+            pickerBg.setColor(isDarkTheme ? 0xFF0A0E17 : 0xFFFFFFFF);
+            pickerBg.setStroke(dpToPx(1), isDarkTheme ? 0xFF1E2433 : 0xFFE2E8F0);
+            pickerView.setBackground(pickerBg);
+
+            if (!isDarkTheme) {
+                int[] optIds = new int[]{R.id.range_opt_1h, R.id.range_opt_24h, R.id.range_opt_1w, R.id.range_opt_all};
+                for (int optId : optIds) {
+                    View row = pickerView.findViewById(optId);
+                    if (row instanceof ViewGroup) {
+                        ViewGroup vg = (ViewGroup) row;
+                        for (int c = 0; c < vg.getChildCount(); c++) {
+                            View child = vg.getChildAt(c);
+                            if (child instanceof ViewGroup) {
+                                ViewGroup childVg = (ViewGroup) child;
+                                for (int gc = 0; gc < childVg.getChildCount(); gc++) {
+                                    View gChild = childVg.getChildAt(gc);
+                                    if (gChild instanceof TextView) {
+                                        TextView tv = (TextView) gChild;
+                                        if (tv.getTextSize() > dpToPx(12)) {
+                                            tv.setTextColor(0xFF0F172A);
+                                        } else {
+                                            tv.setTextColor(0xFF64748B);
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+
             pickerDialog.setContentView(pickerView);
             if (pickerDialog.getWindow() != null) {
                 View bs = pickerDialog.getWindow().findViewById(com.google.android.material.R.id.design_bottom_sheet);
@@ -12372,7 +12452,11 @@ public class MainActivity extends AppCompatActivity {
             @Override
             public void onReceivedTitle(WebView view, String title) {
                 tabItem.title = title;
-                if (tabItem.id == activeTabId) updateOmniboxState();
+                if (tabItem.id == activeTabId) {
+                    updateOmniboxState();
+                } else {
+                    runOnUiThread(MainActivity.this::updateOmniboxTabStrip);
+                }
             }
 
             @Override
@@ -12394,6 +12478,7 @@ public class MainActivity extends AppCompatActivity {
 
                         evaluateJavascriptInControlSheet("if(window.onTabFaviconReceived) window.onTabFaviconReceived(" 
                                 + tabItem.id + ", " + JSONObject.quote(tabItem.faviconB64) + ");");
+                        runOnUiThread(MainActivity.this::updateOmniboxTabStrip);
                     } catch (Exception ignored) {}
                 }
             }
@@ -13418,6 +13503,24 @@ public class MainActivity extends AppCompatActivity {
                 }
                 if (omniboxTabStripBar != null) omniboxTabStripBar.setVisibility(View.VISIBLE);
 
+                // Circular Add Tab Button
+                if (btnOmniboxAddTab != null) {
+                    GradientDrawable addBg = new GradientDrawable();
+                    addBg.setShape(GradientDrawable.OVAL);
+                    if (isDarkTheme) {
+                        addBg.setColor(0xFF1E2838);
+                        addBg.setStroke(dpToPx(1), 0xFF2A374A);
+                    } else {
+                        addBg.setColor(0xFFE2E8F0);
+                        addBg.setStroke(dpToPx(1), 0xFFCBD5E1);
+                    }
+                    btnOmniboxAddTab.setBackground(addBg);
+                    ImageView addIcon = findViewById(R.id.btn_omnibox_add_icon);
+                    if (addIcon != null) {
+                        addIcon.setColorFilter(isDarkTheme ? 0xFFCBD5E1 : 0xFF1E293B);
+                    }
+                }
+
                 int activeId = activeTabId;
                 View activeTabView = null;
 
@@ -13431,36 +13534,66 @@ public class MainActivity extends AppCompatActivity {
                     View closeBtn = tabView.findViewById(R.id.omnibox_tab_close_btn);
                     ImageView closeIcon = tabView.findViewById(R.id.omnibox_tab_close_icon);
 
+                    // Pill Shape capsule background (Radius = 17dp for 33dp height)
                     GradientDrawable bg = new GradientDrawable();
-                    bg.setCornerRadius(dpToPx(8));
-                    if (isActive) {
-                        bg.setColor(0xFF1E2838);
-                        bg.setStroke(dpToPx(1), 0xFF00E5FF);
-                        activeTabView = tabView;
+                    bg.setCornerRadius(dpToPx(17));
+                    if (isDarkTheme) {
+                        if (isActive) {
+                            bg.setColor(0xFF1E2838);
+                            bg.setStroke(dpToPx(1), 0xFF00E5FF);
+                            activeTabView = tabView;
+                        } else {
+                            bg.setColor(0xFF0F1420);
+                            bg.setStroke(dpToPx(1), 0xFF1E2533);
+                        }
                     } else {
-                        bg.setColor(0xFF0F1420);
-                        bg.setStroke(dpToPx(1), 0xFF1E2533);
+                        // Light Theme
+                        if (isActive) {
+                            bg.setColor(0xFFFFFFFF);
+                            bg.setStroke(dpToPx(1), 0xFF0284C7);
+                            activeTabView = tabView;
+                        } else {
+                            bg.setColor(0xFFE8EDF5);
+                            bg.setStroke(dpToPx(1), 0xFFCBD5E1);
+                        }
                     }
                     tabView.setBackground(bg);
 
+                    // Real Favicons with fallback to platform service icon
                     if (iconView != null) {
-                        iconView.setImageResource(getTabServiceIconRes(tab));
-                        if (isActive) {
-                            iconView.setColorFilter(0xFF00E5FF);
+                        Bitmap favBmp = getTabFaviconBitmap(tab);
+                        if (favBmp != null) {
+                            iconView.setImageBitmap(favBmp);
+                            iconView.clearColorFilter();
                         } else {
-                            iconView.setColorFilter(0xFF64748B);
+                            iconView.setImageResource(getTabServiceIconRes(tab));
+                            if (isDarkTheme) {
+                                iconView.setColorFilter(isActive ? 0xFF00E5FF : 0xFF64748B);
+                            } else {
+                                iconView.setColorFilter(isActive ? 0xFF0284C7 : 0xFF64748B);
+                            }
                         }
                     }
 
+                    // Tab Title
                     if (titleView != null) {
                         String t = tab.title != null && !tab.title.trim().isEmpty() ? tab.title : ("Tab " + (i + 1));
                         titleView.setText(t);
-                        titleView.setTextColor(isActive ? 0xFFFFFFFF : 0xFF94A3B8);
+                        if (isDarkTheme) {
+                            titleView.setTextColor(isActive ? 0xFFFFFFFF : 0xFF94A3B8);
+                        } else {
+                            titleView.setTextColor(isActive ? 0xFF0F172A : 0xFF64748B);
+                        }
                         titleView.setTypeface(null, isActive ? Typeface.BOLD : Typeface.NORMAL);
                     }
 
+                    // Close Button Icon
                     if (closeIcon != null) {
-                        closeIcon.setColorFilter(isActive ? 0xFF94A3B8 : 0xFF64748B);
+                        if (isDarkTheme) {
+                            closeIcon.setColorFilter(isActive ? 0xFF94A3B8 : 0xFF64748B);
+                        } else {
+                            closeIcon.setColorFilter(isActive ? 0xFF64748B : 0xFF94A3B8);
+                        }
                     }
 
                     if (closeBtn != null) {
@@ -13507,13 +13640,56 @@ public class MainActivity extends AppCompatActivity {
             if (bs != null) bs.setBackgroundResource(android.R.color.transparent);
         }
 
+        // Apply Light vs Dark theme to Tab Context Menu BottomSheet
+        GradientDrawable rootBg = new GradientDrawable();
+        rootBg.setCornerRadii(new float[]{dpToPx(20), dpToPx(20), dpToPx(20), dpToPx(20), 0, 0, 0, 0});
+        rootBg.setColor(isDarkTheme ? 0xFF0A0E17 : 0xFFFFFFFF);
+        rootBg.setStroke(dpToPx(1), isDarkTheme ? 0xFF1E2433 : 0xFFE2E8F0);
+        dialogView.setBackground(rootBg);
+
         ImageView iconView = dialogView.findViewById(R.id.ctx_tab_icon);
         TextView titleView = dialogView.findViewById(R.id.ctx_tab_title);
         TextView urlView = dialogView.findViewById(R.id.ctx_tab_url);
 
-        if (iconView != null) iconView.setImageResource(getTabServiceIconRes(tab));
-        if (titleView != null) titleView.setText(tab.title != null && !tab.title.isEmpty() ? tab.title : "Untitled Tab");
-        if (urlView != null) urlView.setText(cleanDisplayUrl(tab.url != null ? tab.url : ""));
+        Bitmap favBmp = getTabFaviconBitmap(tab);
+        if (iconView != null) {
+            if (favBmp != null) {
+                iconView.setImageBitmap(favBmp);
+                iconView.clearColorFilter();
+            } else {
+                iconView.setImageResource(getTabServiceIconRes(tab));
+                iconView.setColorFilter(isDarkTheme ? 0xFF00E5FF : 0xFF0284C7);
+            }
+        }
+        if (titleView != null) {
+            titleView.setText(tab.title != null && !tab.title.isEmpty() ? tab.title : "Untitled Tab");
+            titleView.setTextColor(isDarkTheme ? 0xFFFFFFFF : 0xFF0F172A);
+        }
+        if (urlView != null) {
+            urlView.setText(cleanDisplayUrl(tab.url != null ? tab.url : ""));
+            urlView.setTextColor(0xFF64748B);
+        }
+
+        int actionTextColor = isDarkTheme ? 0xFFE2E8F0 : 0xFF1E293B;
+        int[] actionIds = new int[]{
+                R.id.ctx_action_close_others,
+                R.id.ctx_action_duplicate,
+                R.id.ctx_action_move_cask,
+                R.id.ctx_action_share,
+                R.id.ctx_action_copy_url
+        };
+        for (int id : actionIds) {
+            View row = dialogView.findViewById(id);
+            if (row instanceof ViewGroup) {
+                ViewGroup vg = (ViewGroup) row;
+                for (int c = 0; c < vg.getChildCount(); c++) {
+                    View child = vg.getChildAt(c);
+                    if (child instanceof TextView) {
+                        ((TextView) child).setTextColor(actionTextColor);
+                    }
+                }
+            }
+        }
 
         // 1. Close Tab
         View actionClose = dialogView.findViewById(R.id.ctx_action_close_tab);
@@ -13604,7 +13780,12 @@ public class MainActivity extends AppCompatActivity {
                 new com.google.android.material.bottomsheet.BottomSheetDialog(this);
         LinearLayout root = new LinearLayout(this);
         root.setOrientation(LinearLayout.VERTICAL);
-        root.setBackgroundResource(R.drawable.bg_caspian_dialog);
+
+        GradientDrawable rootBg = new GradientDrawable();
+        rootBg.setCornerRadii(new float[]{dpToPx(20), dpToPx(20), dpToPx(20), dpToPx(20), 0, 0, 0, 0});
+        rootBg.setColor(isDarkTheme ? 0xFF0A0E17 : 0xFFFFFFFF);
+        rootBg.setStroke(dpToPx(1), isDarkTheme ? 0xFF1E2433 : 0xFFE2E8F0);
+        root.setBackground(rootBg);
         root.setPadding(dpToPx(18), dpToPx(12), dpToPx(18), dpToPx(24));
 
         View bar = new View(this);
@@ -13617,7 +13798,7 @@ public class MainActivity extends AppCompatActivity {
 
         TextView title = new TextView(this);
         title.setText("MOVE TAB TO CASK");
-        title.setTextColor(0xFF94A3B8);
+        title.setTextColor(isDarkTheme ? 0xFF94A3B8 : 0xFF64748B);
         title.setTextSize(TypedValue.COMPLEX_UNIT_SP, 11f);
         title.setTypeface(Typeface.MONOSPACE, Typeface.BOLD);
         title.setPadding(0, 0, 0, dpToPx(8));
@@ -13639,15 +13820,16 @@ public class MainActivity extends AppCompatActivity {
             TextView nameTv = new TextView(this);
             nameTv.setLayoutParams(new LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.WRAP_CONTENT, 1f));
             nameTv.setText(cask.name);
-            nameTv.setTextColor(cask.id.equals(tab.caskId) ? 0xFF00E5FF : 0xFFE2E8F0);
+            boolean isCurCask = cask.id.equals(tab.caskId);
+            nameTv.setTextColor(isCurCask ? (isDarkTheme ? 0xFF00E5FF : 0xFF0284C7) : (isDarkTheme ? 0xFFE2E8F0 : 0xFF0F172A));
             nameTv.setTextSize(TypedValue.COMPLEX_UNIT_SP, 13f);
-            nameTv.setTypeface(null, cask.id.equals(tab.caskId) ? Typeface.BOLD : Typeface.NORMAL);
+            nameTv.setTypeface(null, isCurCask ? Typeface.BOLD : Typeface.NORMAL);
             row.addView(nameTv);
 
-            if (cask.id.equals(tab.caskId)) {
+            if (isCurCask) {
                 TextView check = new TextView(this);
                 check.setText("✓");
-                check.setTextColor(0xFF00E5FF);
+                check.setTextColor(isDarkTheme ? 0xFF00E5FF : 0xFF0284C7);
                 check.setTextSize(TypedValue.COMPLEX_UNIT_SP, 15f);
                 check.setTypeface(null, Typeface.BOLD);
                 row.addView(check);
