@@ -254,7 +254,7 @@
                     android:focusable="true" />
 
                 <TextView
-                    android:id="@+id/chip_filter_domains"
+                    android:id="@+id/chip_filter_1w"
                     android:layout_width="wrap_content"
                     android:layout_height="28dp"
                     android:layout_marginStart="8dp"
@@ -262,7 +262,7 @@
                     android:paddingStart="12dp"
                     android:paddingEnd="12dp"
                     android:gravity="center"
-                    android:text="Domains"
+                    android:text="Last 1 Week"
                     android:textColor="#94A3B8"
                     android:textSize="11.5sp"
                     android:clickable="true"

@@ -1,0 +1,262 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="match_parent"
+    android:layout_height="wrap_content"
+    android:orientation="vertical"
+    android:background="@drawable/bg_caspian_dialog"
+    android:paddingStart="18dp"
+    android:paddingEnd="18dp"
+    android:paddingTop="12dp"
+    android:paddingBottom="24dp">
+
+    <!-- Top Handle Bar -->
+    <View
+        android:layout_width="36dp"
+        android:layout_height="4dp"
+        android:layout_gravity="center_horizontal"
+        android:background="@drawable/bg_stitch_handle_bar"
+        android:layout_marginBottom="14dp" />
+
+    <!-- Header -->
+    <TextView
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:text="TIME RANGE"
+        android:textColor="#94A3B8"
+        android:textSize="11sp"
+        android:textStyle="bold"
+        android:fontFamily="monospace"
+        android:letterSpacing="0.08" />
+
+    <TextView
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:text="Filter history records &amp; data clearance window"
+        android:textColor="#64748B"
+        android:textSize="11.5sp"
+        android:layout_marginTop="2dp" />
+
+    <View
+        android:layout_width="match_parent"
+        android:layout_height="1dp"
+        android:background="#1A2333"
+        android:layout_marginTop="12dp"
+        android:layout_marginBottom="6dp" />
+
+    <!-- 1. Last 1 Hour -->
+    <LinearLayout
+        android:id="@+id/range_opt_1h"
+        android:layout_width="match_parent"
+        android:layout_height="48dp"
+        android:orientation="horizontal"
+        android:gravity="center_vertical"
+        android:background="@drawable/bg_menu_item_row"
+        android:paddingStart="10dp"
+        android:paddingEnd="10dp"
+        android:clickable="true"
+        android:focusable="true">
+
+        <ImageView
+            android:layout_width="18dp"
+            android:layout_height="18dp"
+            android:src="@drawable/ic_stitch_clock"
+            android:tint="#38BDF8"
+            android:layout_marginEnd="14dp"
+            android:contentDescription="1 Hour" />
+
+        <LinearLayout
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_weight="1"
+            android:orientation="vertical">
+
+            <TextView
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="Last 1 Hour"
+                android:textColor="#F1F5F9"
+                android:textSize="13sp"
+                android:textStyle="bold" />
+
+            <TextView
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="Entries from the past 60 minutes"
+                android:textColor="#64748B"
+                android:textSize="10.5sp" />
+        </LinearLayout>
+
+        <TextView
+            android:id="@+id/check_range_1h"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="✓"
+            android:textColor="#00E5FF"
+            android:textSize="16sp"
+            android:textStyle="bold"
+            android:visibility="gone" />
+    </LinearLayout>
+
+    <!-- 2. Last 24 Hours -->
+    <LinearLayout
+        android:id="@+id/range_opt_24h"
+        android:layout_width="match_parent"
+        android:layout_height="48dp"
+        android:orientation="horizontal"
+        android:gravity="center_vertical"
+        android:background="@drawable/bg_menu_item_row"
+        android:paddingStart="10dp"
+        android:paddingEnd="10dp"
+        android:clickable="true"
+        android:focusable="true">
+
+        <ImageView
+            android:layout_width="18dp"
+            android:layout_height="18dp"
+            android:src="@drawable/ic_stitch_clock"
+            android:tint="#38BDF8"
+            android:layout_marginEnd="14dp"
+            android:contentDescription="24 Hours" />
+
+        <LinearLayout
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_weight="1"
+            android:orientation="vertical">
+
+            <TextView
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="Last 24 Hours"
+                android:textColor="#F1F5F9"
+                android:textSize="13sp"
+                android:textStyle="bold" />
+
+            <TextView
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="Entries from yesterday and today"
+                android:textColor="#64748B"
+                android:textSize="10.5sp" />
+        </LinearLayout>
+
+        <TextView
+            android:id="@+id/check_range_24h"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="✓"
+            android:textColor="#00E5FF"
+            android:textSize="16sp"
+            android:textStyle="bold"
+            android:visibility="gone" />
+    </LinearLayout>
+
+    <!-- 3. Last 1 Week -->
+    <LinearLayout
+        android:id="@+id/range_opt_1w"
+        android:layout_width="match_parent"
+        android:layout_height="48dp"
+        android:orientation="horizontal"
+        android:gravity="center_vertical"
+        android:background="@drawable/bg_menu_item_row"
+        android:paddingStart="10dp"
+        android:paddingEnd="10dp"
+        android:clickable="true"
+        android:focusable="true">
+
+        <ImageView
+            android:layout_width="18dp"
+            android:layout_height="18dp"
+            android:src="@drawable/ic_stitch_clock"
+            android:tint="#38BDF8"
+            android:layout_marginEnd="14dp"
+            android:contentDescription="1 Week" />
+
+        <LinearLayout
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_weight="1"
+            android:orientation="vertical">
+
+            <TextView
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="Last 1 Week"
+                android:textColor="#F1F5F9"
+                android:textSize="13sp"
+                android:textStyle="bold" />
+
+            <TextView
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="Entries from the past 7 days"
+                android:textColor="#64748B"
+                android:textSize="10.5sp" />
+        </LinearLayout>
+
+        <TextView
+            android:id="@+id/check_range_1w"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="✓"
+            android:textColor="#00E5FF"
+            android:textSize="16sp"
+            android:textStyle="bold"
+            android:visibility="gone" />
+    </LinearLayout>
+
+    <!-- 4. All Entries (Entire History) -->
+    <LinearLayout
+        android:id="@+id/range_opt_all"
+        android:layout_width="match_parent"
+        android:layout_height="48dp"
+        android:orientation="horizontal"
+        android:gravity="center_vertical"
+        android:background="@drawable/bg_menu_item_row"
+        android:paddingStart="10dp"
+        android:paddingEnd="10dp"
+        android:clickable="true"
+        android:focusable="true">
+
+        <ImageView
+            android:layout_width="18dp"
+            android:layout_height="18dp"
+            android:src="@drawable/ic_stitch_globe"
+            android:tint="#00E5FF"
+            android:layout_marginEnd="14dp"
+            android:contentDescription="All Entries" />
+
+        <LinearLayout
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_weight="1"
+            android:orientation="vertical">
+
+            <TextView
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="All Entries"
+                android:textColor="#F1F5F9"
+                android:textSize="13sp"
+                android:textStyle="bold" />
+
+            <TextView
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="View and manage entire history log"
+                android:textColor="#64748B"
+                android:textSize="10.5sp" />
+        </LinearLayout>
+
+        <TextView
+            android:id="@+id/check_range_all"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="✓"
+            android:textColor="#00E5FF"
+            android:textSize="16sp"
+            android:textStyle="bold"
+            android:visibility="gone" />
+    </LinearLayout>
+
+</LinearLayout>

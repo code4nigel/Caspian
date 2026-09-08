@@ -265,6 +265,10 @@ public class MainActivity extends AppCompatActivity {
     private FrameLayout rootContainer;
     private FrameLayout browserContentLayout;
     private FrameLayout omniboxHeaderWrapper;
+    private View omniboxTabStripBar;
+    private HorizontalScrollView omniboxTabStripScroll;
+    private LinearLayout omniboxTabStripTabs;
+    private View btnOmniboxAddTab;
     private LinearLayout omniboxHeader;
     private FrameLayout omniboxCapsule;
     private ImageButton omniboxBackBtn;
@@ -1593,6 +1597,16 @@ public class MainActivity extends AppCompatActivity {
             rootContainer = findViewById(R.id.root_container);
             browserContentLayout = findViewById(R.id.browser_content_layout);
             omniboxHeaderWrapper = findViewById(R.id.omnibox_header_wrapper);
+            omniboxTabStripBar = findViewById(R.id.omnibox_tab_strip_bar);
+            omniboxTabStripScroll = findViewById(R.id.omnibox_tab_strip_scroll);
+            omniboxTabStripTabs = findViewById(R.id.omnibox_tab_strip_tabs);
+            btnOmniboxAddTab = findViewById(R.id.btn_omnibox_add_tab);
+            if (btnOmniboxAddTab != null) {
+                btnOmniboxAddTab.setOnClickListener(v -> {
+                    playUiFeedbackSound("tap");
+                    addNewTab("hub", null);
+                });
+            }
             omniboxPosition = getSharedPreferences(PREFS_NAME, MODE_PRIVATE).getString("omnibox_position", "bottom");
             omniboxMenuStyle = getSharedPreferences(PREFS_NAME, MODE_PRIVATE).getString("omnibox_menu_style", "grid");
             omniboxHeader = findViewById(R.id.omnibox_header);
@@ -8314,10 +8328,10 @@ public class MainActivity extends AppCompatActivity {
                         wpLp = new FrameLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.MATCH_PARENT);
                     }
                     if (isBottom) {
-                        wpLp.bottomMargin = dpToPx(58);
+                        wpLp.bottomMargin = dpToPx(94);
                         wpLp.topMargin = 0;
                     } else {
-                        wpLp.topMargin = dpToPx(58);
+                        wpLp.topMargin = dpToPx(94);
                         wpLp.bottomMargin = 0;
                     }
                     webviewsParentContainer.setLayoutParams(wpLp);
@@ -8330,10 +8344,10 @@ public class MainActivity extends AppCompatActivity {
                     }
                     pbLp.gravity = isBottom ? Gravity.BOTTOM : Gravity.TOP;
                     if (isBottom) {
-                        pbLp.bottomMargin = dpToPx(58);
+                        pbLp.bottomMargin = dpToPx(94);
                         pbLp.topMargin = 0;
                     } else {
-                        pbLp.topMargin = dpToPx(58);
+                        pbLp.topMargin = dpToPx(94);
                         pbLp.bottomMargin = 0;
                     }
                     browserProgressBar.setLayoutParams(pbLp);
@@ -8346,10 +8360,10 @@ public class MainActivity extends AppCompatActivity {
                     }
                     sugLp.gravity = isBottom ? Gravity.BOTTOM : Gravity.TOP;
                     if (isBottom) {
-                        sugLp.bottomMargin = dpToPx(58);
+                        sugLp.bottomMargin = dpToPx(94);
                         sugLp.topMargin = 0;
                     } else {
-                        sugLp.topMargin = dpToPx(58);
+                        sugLp.topMargin = dpToPx(94);
                         sugLp.bottomMargin = 0;
                     }
                     omniboxSuggestionsContainer.setLayoutParams(sugLp);
@@ -8442,7 +8456,7 @@ public class MainActivity extends AppCompatActivity {
         TextView chipAll = dialogView.findViewById(R.id.chip_filter_all);
         TextView chip1h = dialogView.findViewById(R.id.chip_filter_1h);
         TextView chip24h = dialogView.findViewById(R.id.chip_filter_24h);
-        TextView chipDomains = dialogView.findViewById(R.id.chip_filter_domains);
+        TextView chip1w = dialogView.findViewById(R.id.chip_filter_1w);
 
         LinearLayout listContainer = dialogView.findViewById(R.id.history_list_container);
         TextView emptyView = dialogView.findViewById(R.id.history_empty_view);
@@ -8486,10 +8500,10 @@ public class MainActivity extends AppCompatActivity {
                 chip24h.setBackgroundResource(act ? R.drawable.bg_stitch_chip_active : R.drawable.bg_stitch_chip_inactive);
                 chip24h.setTextColor(act ? 0xFF0F172A : 0xFF94A3B8);
             }
-            if (chipDomains != null) {
-                boolean act = "domains".equals(activeFilter[0]);
-                chipDomains.setBackgroundResource(act ? R.drawable.bg_stitch_chip_active : R.drawable.bg_stitch_chip_inactive);
-                chipDomains.setTextColor(act ? 0xFF0F172A : 0xFF94A3B8);
+            if (chip1w != null) {
+                boolean act = "1w".equals(activeFilter[0]);
+                chip1w.setBackgroundResource(act ? R.drawable.bg_stitch_chip_active : R.drawable.bg_stitch_chip_inactive);
+                chip1w.setTextColor(act ? 0xFF0F172A : 0xFF94A3B8);
             }
         };
 
@@ -8509,6 +8523,8 @@ public class MainActivity extends AppCompatActivity {
                     if (e.timestamp < now - (3600L * 1000L)) continue;
                 } else if ("24h".equals(activeFilter[0])) {
                     if (e.timestamp < now - (24L * 3600L * 1000L)) continue;
+                } else if ("1w".equals(activeFilter[0])) {
+                    if (e.timestamp < now - (7L * 24L * 3600L * 1000L)) continue;
                 }
                 currentVisibleEntries.add(e);
             }
@@ -8767,17 +8783,30 @@ public class MainActivity extends AppCompatActivity {
         // Filter Chips Click Listeners
         View.OnClickListener chipListener = v -> {
             playUiFeedbackSound("tap");
-            if (v == chipAll) activeFilter[0] = "all";
-            else if (v == chip1h) activeFilter[0] = "1h";
-            else if (v == chip24h) activeFilter[0] = "24h";
-            else if (v == chipDomains) activeFilter[0] = "domains";
+            if (v == chipAll) {
+                activeFilter[0] = "all";
+                selectedTimeRange[0] = "all";
+                if (textSelectedTimeRange != null) textSelectedTimeRange.setText("All Entries");
+            } else if (v == chip1h) {
+                activeFilter[0] = "1h";
+                selectedTimeRange[0] = "1h";
+                if (textSelectedTimeRange != null) textSelectedTimeRange.setText("Last 1 Hour");
+            } else if (v == chip24h) {
+                activeFilter[0] = "24h";
+                selectedTimeRange[0] = "24h";
+                if (textSelectedTimeRange != null) textSelectedTimeRange.setText("Last 24 Hours");
+            } else if (v == chip1w) {
+                activeFilter[0] = "1w";
+                selectedTimeRange[0] = "1w";
+                if (textSelectedTimeRange != null) textSelectedTimeRange.setText("Last 1 Week");
+            }
             updateChipsVisuals.run();
             refreshList[0].run();
         };
         if (chipAll != null) chipAll.setOnClickListener(chipListener);
         if (chip1h != null) chip1h.setOnClickListener(chipListener);
         if (chip24h != null) chip24h.setOnClickListener(chipListener);
-        if (chipDomains != null) chipDomains.setOnClickListener(chipListener);
+        if (chip1w != null) chip1w.setOnClickListener(chipListener);
 
         // Select Mode Toggle
         if (btnSelect != null) {
@@ -8841,20 +8870,64 @@ public class MainActivity extends AppCompatActivity {
             });
         }
 
-        // Bottom Time Range Dropdown Selector
+        // Bottom Time Range Dropdown Selector (Custom Stitch Obsidian UI)
         View.OnClickListener timeRangePicker = v -> {
             playUiFeedbackSound("tap");
-            String[] ranges = new String[]{"Last 1 hour", "Last 24 Hours", "Last 1 week", "Entire history"};
-            new AlertDialog.Builder(this)
-                    .setTitle("Select Time Range")
-                    .setItems(ranges, (d, which) -> {
-                        if (which == 0) selectedTimeRange[0] = "1h";
-                        else if (which == 1) selectedTimeRange[0] = "24h";
-                        else if (which == 2) selectedTimeRange[0] = "1w";
-                        else selectedTimeRange[0] = "all";
-                        if (textSelectedTimeRange != null) textSelectedTimeRange.setText(ranges[which]);
-                    })
-                    .show();
+            com.google.android.material.bottomsheet.BottomSheetDialog pickerDialog =
+                    new com.google.android.material.bottomsheet.BottomSheetDialog(this);
+            View pickerView = LayoutInflater.from(this).inflate(R.layout.dialog_stitch_time_range_picker, null);
+            pickerDialog.setContentView(pickerView);
+            if (pickerDialog.getWindow() != null) {
+                View bs = pickerDialog.getWindow().findViewById(com.google.android.material.R.id.design_bottom_sheet);
+                if (bs != null) bs.setBackgroundResource(android.R.color.transparent);
+            }
+
+            View check1h = pickerView.findViewById(R.id.check_range_1h);
+            View check24h = pickerView.findViewById(R.id.check_range_24h);
+            View check1w = pickerView.findViewById(R.id.check_range_1w);
+            View checkAll = pickerView.findViewById(R.id.check_range_all);
+
+            String cur = activeFilter[0];
+            if (check1h != null) check1h.setVisibility("1h".equals(cur) ? View.VISIBLE : View.GONE);
+            if (check24h != null) check24h.setVisibility("24h".equals(cur) ? View.VISIBLE : View.GONE);
+            if (check1w != null) check1w.setVisibility("1w".equals(cur) ? View.VISIBLE : View.GONE);
+            if (checkAll != null) checkAll.setVisibility("all".equals(cur) ? View.VISIBLE : View.GONE);
+
+            View opt1h = pickerView.findViewById(R.id.range_opt_1h);
+            View opt24h = pickerView.findViewById(R.id.range_opt_24h);
+            View opt1w = pickerView.findViewById(R.id.range_opt_1w);
+            View optAll = pickerView.findViewById(R.id.range_opt_all);
+
+            View.OnClickListener optClick = optV -> {
+                playUiFeedbackSound("tap");
+                if (optV == opt1h) {
+                    activeFilter[0] = "1h";
+                    selectedTimeRange[0] = "1h";
+                    if (textSelectedTimeRange != null) textSelectedTimeRange.setText("Last 1 Hour");
+                } else if (optV == opt24h) {
+                    activeFilter[0] = "24h";
+                    selectedTimeRange[0] = "24h";
+                    if (textSelectedTimeRange != null) textSelectedTimeRange.setText("Last 24 Hours");
+                } else if (optV == opt1w) {
+                    activeFilter[0] = "1w";
+                    selectedTimeRange[0] = "1w";
+                    if (textSelectedTimeRange != null) textSelectedTimeRange.setText("Last 1 Week");
+                } else {
+                    activeFilter[0] = "all";
+                    selectedTimeRange[0] = "all";
+                    if (textSelectedTimeRange != null) textSelectedTimeRange.setText("All Entries");
+                }
+                updateChipsVisuals.run();
+                refreshList[0].run();
+                pickerDialog.dismiss();
+            };
+
+            if (opt1h != null) opt1h.setOnClickListener(optClick);
+            if (opt24h != null) opt24h.setOnClickListener(optClick);
+            if (opt1w != null) opt1w.setOnClickListener(optClick);
+            if (optAll != null) optAll.setOnClickListener(optClick);
+
+            pickerDialog.show();
         };
         if (timeRangeSelector != null) timeRangeSelector.setOnClickListener(timeRangePicker);
 
@@ -12612,6 +12685,7 @@ public class MainActivity extends AppCompatActivity {
                 webViewContainer.addView(tab.webView);
             }
         }
+        updateOmniboxTabStrip();
         saveOpenTabsState();
     }
 
@@ -12986,6 +13060,7 @@ public class MainActivity extends AppCompatActivity {
                 tab.webView.loadUrl(url);
             }
             Toast.makeText(this, "Tab Details Updated", Toast.LENGTH_SHORT).show();
+            updateOmniboxTabStrip();
             saveOpenTabsState();
         }
     }
@@ -13010,6 +13085,7 @@ public class MainActivity extends AppCompatActivity {
             if (reordered.size() == tabsList.size()) {
                 tabsList.clear();
                 tabsList.addAll(reordered);
+                updateOmniboxTabStrip();
                 saveOpenTabsState();
             }
         } catch (Exception ignored) {}
@@ -13326,6 +13402,273 @@ public class MainActivity extends AppCompatActivity {
         if (omniboxVoiceBtn != null) {
             omniboxVoiceBtn.setColorFilter(isRecordingSpeechMode ? 0xFFFF3366 : themeAccent);
         }
+
+        updateOmniboxTabStrip();
+    }
+
+    public void updateOmniboxTabStrip() {
+        runOnUiThread(() -> {
+            try {
+                if (omniboxTabStripTabs == null || omniboxTabStripScroll == null) return;
+                omniboxTabStripTabs.removeAllViews();
+
+                if (tabsList.isEmpty()) {
+                    if (omniboxTabStripBar != null) omniboxTabStripBar.setVisibility(View.GONE);
+                    return;
+                }
+                if (omniboxTabStripBar != null) omniboxTabStripBar.setVisibility(View.VISIBLE);
+
+                int activeId = activeTabId;
+                View activeTabView = null;
+
+                for (int i = 0; i < tabsList.size(); i++) {
+                    TabItem tab = tabsList.get(i);
+                    boolean isActive = (tab.id == activeId);
+
+                    View tabView = LayoutInflater.from(this).inflate(R.layout.item_omnibox_tab_chip, omniboxTabStripTabs, false);
+                    ImageView iconView = tabView.findViewById(R.id.omnibox_tab_icon);
+                    TextView titleView = tabView.findViewById(R.id.omnibox_tab_title);
+                    View closeBtn = tabView.findViewById(R.id.omnibox_tab_close_btn);
+                    ImageView closeIcon = tabView.findViewById(R.id.omnibox_tab_close_icon);
+
+                    GradientDrawable bg = new GradientDrawable();
+                    bg.setCornerRadius(dpToPx(8));
+                    if (isActive) {
+                        bg.setColor(0xFF1E2838);
+                        bg.setStroke(dpToPx(1), 0xFF00E5FF);
+                        activeTabView = tabView;
+                    } else {
+                        bg.setColor(0xFF0F1420);
+                        bg.setStroke(dpToPx(1), 0xFF1E2533);
+                    }
+                    tabView.setBackground(bg);
+
+                    if (iconView != null) {
+                        iconView.setImageResource(getTabServiceIconRes(tab));
+                        if (isActive) {
+                            iconView.setColorFilter(0xFF00E5FF);
+                        } else {
+                            iconView.setColorFilter(0xFF64748B);
+                        }
+                    }
+
+                    if (titleView != null) {
+                        String t = tab.title != null && !tab.title.trim().isEmpty() ? tab.title : ("Tab " + (i + 1));
+                        titleView.setText(t);
+                        titleView.setTextColor(isActive ? 0xFFFFFFFF : 0xFF94A3B8);
+                        titleView.setTypeface(null, isActive ? Typeface.BOLD : Typeface.NORMAL);
+                    }
+
+                    if (closeIcon != null) {
+                        closeIcon.setColorFilter(isActive ? 0xFF94A3B8 : 0xFF64748B);
+                    }
+
+                    if (closeBtn != null) {
+                        closeBtn.setOnClickListener(v -> {
+                            playUiFeedbackSound("tap");
+                            closeTab(tab.id);
+                        });
+                    }
+
+                    tabView.setOnClickListener(v -> {
+                        playUiFeedbackSound("tap");
+                        switchToTab(tab.id);
+                    });
+
+                    tabView.setOnLongClickListener(v -> {
+                        playUiFeedbackSound("tap");
+                        showOmniboxTabContextMenu(tab);
+                        return true;
+                    });
+
+                    omniboxTabStripTabs.addView(tabView);
+                }
+
+                if (activeTabView != null) {
+                    final View target = activeTabView;
+                    omniboxTabStripScroll.post(() -> {
+                        int scrollX = target.getLeft() - (omniboxTabStripScroll.getWidth() / 2) + (target.getWidth() / 2);
+                        omniboxTabStripScroll.smoothScrollTo(Math.max(0, scrollX), 0);
+                    });
+                }
+            } catch (Throwable ignored) {}
+        });
+    }
+
+    public void showOmniboxTabContextMenu(TabItem tab) {
+        if (tab == null) return;
+        playUiFeedbackSound("tap");
+        com.google.android.material.bottomsheet.BottomSheetDialog dialog =
+                new com.google.android.material.bottomsheet.BottomSheetDialog(this);
+        View dialogView = LayoutInflater.from(this).inflate(R.layout.dialog_omnibox_tab_context_menu, null);
+        dialog.setContentView(dialogView);
+        if (dialog.getWindow() != null) {
+            View bs = dialog.getWindow().findViewById(com.google.android.material.R.id.design_bottom_sheet);
+            if (bs != null) bs.setBackgroundResource(android.R.color.transparent);
+        }
+
+        ImageView iconView = dialogView.findViewById(R.id.ctx_tab_icon);
+        TextView titleView = dialogView.findViewById(R.id.ctx_tab_title);
+        TextView urlView = dialogView.findViewById(R.id.ctx_tab_url);
+
+        if (iconView != null) iconView.setImageResource(getTabServiceIconRes(tab));
+        if (titleView != null) titleView.setText(tab.title != null && !tab.title.isEmpty() ? tab.title : "Untitled Tab");
+        if (urlView != null) urlView.setText(cleanDisplayUrl(tab.url != null ? tab.url : ""));
+
+        // 1. Close Tab
+        View actionClose = dialogView.findViewById(R.id.ctx_action_close_tab);
+        if (actionClose != null) {
+            actionClose.setOnClickListener(v -> {
+                dialog.dismiss();
+                playUiFeedbackSound("tap");
+                closeTab(tab.id);
+            });
+        }
+
+        // 2. Close Other Tabs
+        View actionCloseOthers = dialogView.findViewById(R.id.ctx_action_close_others);
+        if (actionCloseOthers != null) {
+            actionCloseOthers.setOnClickListener(v -> {
+                dialog.dismiss();
+                playUiFeedbackSound("tap");
+                List<Integer> idsToClose = new ArrayList<>();
+                for (TabItem t : tabsList) {
+                    if (t.id != tab.id) idsToClose.add(t.id);
+                }
+                for (int id : idsToClose) {
+                    closeTab(id);
+                }
+            });
+        }
+
+        // 3. Duplicate Tab
+        View actionDuplicate = dialogView.findViewById(R.id.ctx_action_duplicate);
+        if (actionDuplicate != null) {
+            actionDuplicate.setOnClickListener(v -> {
+                dialog.dismiss();
+                playUiFeedbackSound("tap");
+                addNewTab(tab.service, tab.pendingPrompt, tab.url, tab.isIncognito, tab.caskId, true);
+            });
+        }
+
+        // 4. Move to Cask
+        View actionMoveCask = dialogView.findViewById(R.id.ctx_action_move_cask);
+        if (actionMoveCask != null) {
+            actionMoveCask.setOnClickListener(v -> {
+                dialog.dismiss();
+                playUiFeedbackSound("tap");
+                showMoveTabToCaskDialog(tab);
+            });
+        }
+
+        // 5. Share Tab
+        View actionShare = dialogView.findViewById(R.id.ctx_action_share);
+        if (actionShare != null) {
+            actionShare.setOnClickListener(v -> {
+                dialog.dismiss();
+                playUiFeedbackSound("tap");
+                try {
+                    Intent shareIntent = new Intent(Intent.ACTION_SEND);
+                    shareIntent.setType("text/plain");
+                    shareIntent.putExtra(Intent.EXTRA_SUBJECT, tab.title);
+                    shareIntent.putExtra(Intent.EXTRA_TEXT, tab.url);
+                    startActivity(Intent.createChooser(shareIntent, "Share Tab via"));
+                } catch (Throwable ignored) {}
+            });
+        }
+
+        // 6. Copy URL
+        View actionCopy = dialogView.findViewById(R.id.ctx_action_copy_url);
+        if (actionCopy != null) {
+            actionCopy.setOnClickListener(v -> {
+                dialog.dismiss();
+                playUiFeedbackSound("tap");
+                try {
+                    ClipboardManager cm = (ClipboardManager) getSystemService(Context.CLIPBOARD_SERVICE);
+                    cm.setPrimaryClip(ClipData.newPlainText("URL", tab.url));
+                    Toast.makeText(this, "Copied URL to clipboard", Toast.LENGTH_SHORT).show();
+                } catch (Throwable ignored) {}
+            });
+        }
+
+        dialog.show();
+    }
+
+    public void showMoveTabToCaskDialog(TabItem tab) {
+        if (tab == null) return;
+        CaskManager cm = new CaskManager(this);
+        List<CaskManager.CaskItem> casks = cm.getAllCasks();
+        if (casks == null || casks.isEmpty()) return;
+
+        com.google.android.material.bottomsheet.BottomSheetDialog caskDialog =
+                new com.google.android.material.bottomsheet.BottomSheetDialog(this);
+        LinearLayout root = new LinearLayout(this);
+        root.setOrientation(LinearLayout.VERTICAL);
+        root.setBackgroundResource(R.drawable.bg_caspian_dialog);
+        root.setPadding(dpToPx(18), dpToPx(12), dpToPx(18), dpToPx(24));
+
+        View bar = new View(this);
+        LinearLayout.LayoutParams barLp = new LinearLayout.LayoutParams(dpToPx(36), dpToPx(4));
+        barLp.gravity = Gravity.CENTER_HORIZONTAL;
+        barLp.bottomMargin = dpToPx(14);
+        bar.setLayoutParams(barLp);
+        bar.setBackgroundResource(R.drawable.bg_stitch_handle_bar);
+        root.addView(bar);
+
+        TextView title = new TextView(this);
+        title.setText("MOVE TAB TO CASK");
+        title.setTextColor(0xFF94A3B8);
+        title.setTextSize(TypedValue.COMPLEX_UNIT_SP, 11f);
+        title.setTypeface(Typeface.MONOSPACE, Typeface.BOLD);
+        title.setPadding(0, 0, 0, dpToPx(8));
+        root.addView(title);
+
+        for (CaskManager.CaskItem cask : casks) {
+            LinearLayout row = new LinearLayout(this);
+            row.setOrientation(LinearLayout.HORIZONTAL);
+            row.setGravity(Gravity.CENTER_VERTICAL);
+            row.setPadding(dpToPx(10), dpToPx(10), dpToPx(10), dpToPx(10));
+            row.setBackgroundResource(R.drawable.bg_menu_item_row);
+
+            TextView iconTv = new TextView(this);
+            iconTv.setText(cask.icon != null ? cask.icon : "🌊");
+            iconTv.setTextSize(TypedValue.COMPLEX_UNIT_SP, 16f);
+            iconTv.setPadding(0, 0, dpToPx(12), 0);
+            row.addView(iconTv);
+
+            TextView nameTv = new TextView(this);
+            nameTv.setLayoutParams(new LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.WRAP_CONTENT, 1f));
+            nameTv.setText(cask.name);
+            nameTv.setTextColor(cask.id.equals(tab.caskId) ? 0xFF00E5FF : 0xFFE2E8F0);
+            nameTv.setTextSize(TypedValue.COMPLEX_UNIT_SP, 13f);
+            nameTv.setTypeface(null, cask.id.equals(tab.caskId) ? Typeface.BOLD : Typeface.NORMAL);
+            row.addView(nameTv);
+
+            if (cask.id.equals(tab.caskId)) {
+                TextView check = new TextView(this);
+                check.setText("✓");
+                check.setTextColor(0xFF00E5FF);
+                check.setTextSize(TypedValue.COMPLEX_UNIT_SP, 15f);
+                check.setTypeface(null, Typeface.BOLD);
+                row.addView(check);
+            }
+
+            row.setOnClickListener(v -> {
+                playUiFeedbackSound("tap");
+                changeTabCask(tab.id, cask.id);
+                updateOmniboxTabStrip();
+                caskDialog.dismiss();
+            });
+
+            root.addView(row);
+        }
+
+        caskDialog.setContentView(root);
+        if (caskDialog.getWindow() != null) {
+            View bs = caskDialog.getWindow().findViewById(com.google.android.material.R.id.design_bottom_sheet);
+            if (bs != null) bs.setBackgroundResource(android.R.color.transparent);
+        }
+        caskDialog.show();
     }
 
     private String extractQueryFromUrl(String url) {

@@ -313,16 +313,67 @@
             android:layout_gravity="top"
             android:elevation="350dp">
 
-            <!-- Liquid Glass Capsule Bar -->
             <LinearLayout
-                android:id="@+id/omnibox_header"
                 android:layout_width="match_parent"
-                android:layout_height="46dp"
-                android:background="@drawable/bg_liquid_glass"
-                android:orientation="horizontal"
-                android:gravity="center_vertical"
-                android:paddingStart="4dp"
-                android:paddingEnd="4dp">
+                android:layout_height="wrap_content"
+                android:orientation="vertical">
+
+                <!-- Horizontal Tab Strip Bar directly above Omnibox Bar -->
+                <LinearLayout
+                    android:id="@+id/omnibox_tab_strip_bar"
+                    android:layout_width="match_parent"
+                    android:layout_height="32dp"
+                    android:layout_marginBottom="4dp"
+                    android:orientation="horizontal"
+                    android:gravity="center_vertical">
+
+                    <!-- Horizontal Scrollable Tabs Container -->
+                    <HorizontalScrollView
+                        android:id="@+id/omnibox_tab_strip_scroll"
+                        android:layout_width="0dp"
+                        android:layout_height="match_parent"
+                        android:layout_weight="1"
+                        android:scrollbars="none"
+                        android:overScrollMode="never">
+
+                        <LinearLayout
+                            android:id="@+id/omnibox_tab_strip_tabs"
+                            android:layout_width="wrap_content"
+                            android:layout_height="match_parent"
+                            android:orientation="horizontal"
+                            android:gravity="center_vertical" />
+                    </HorizontalScrollView>
+
+                    <!-- Add New Tab Button at Far Right (matching Samsung Internet) -->
+                    <FrameLayout
+                        android:id="@+id/btn_omnibox_add_tab"
+                        android:layout_width="32dp"
+                        android:layout_height="28dp"
+                        android:layout_marginStart="6dp"
+                        android:background="@drawable/bg_stitch_action_chip"
+                        android:clickable="true"
+                        android:focusable="true">
+
+                        <ImageView
+                            android:layout_width="14dp"
+                            android:layout_height="14dp"
+                            android:layout_gravity="center"
+                            android:src="@drawable/ic_arena_plus"
+                            android:tint="#CBD5E1"
+                            android:contentDescription="New Tab" />
+                    </FrameLayout>
+                </LinearLayout>
+
+                <!-- Liquid Glass Capsule Bar -->
+                <LinearLayout
+                    android:id="@+id/omnibox_header"
+                    android:layout_width="match_parent"
+                    android:layout_height="46dp"
+                    android:background="@drawable/bg_liquid_glass"
+                    android:orientation="horizontal"
+                    android:gravity="center_vertical"
+                    android:paddingStart="4dp"
+                    android:paddingEnd="4dp">
 
                 <!-- Nav Back Button -->
                 <ImageButton
@@ -579,6 +630,7 @@
                     android:src="@drawable/ic_browser_menu"
                     android:tint="#FFFFFF"
                     android:contentDescription="More Options" />
+            </LinearLayout>
             </LinearLayout>
         </FrameLayout>
     </FrameLayout>
