@@ -109,6 +109,8 @@ import android.widget.ImageButton;
 import android.widget.ImageView;
 import android.widget.LinearLayout;
 import android.widget.PopupMenu;
+import android.widget.PopupWindow;
+import android.widget.ScrollView;
 import android.widget.RelativeLayout;
 import android.media.AudioManager;
 import android.widget.ProgressBar;
@@ -220,6 +222,15 @@ public class MainActivity extends AppCompatActivity {
     private final List<TabGroup> tabGroupsList = new ArrayList<>();
     private final Set<String> collapsedStripGroupIds = new HashSet<>();
     private final Set<Integer> selectedGridTabIds = new HashSet<>();
+
+    public static class MultiTabDragState {
+        public final List<Integer> tabIds = new ArrayList<>();
+        public final int anchorTabId;
+        public MultiTabDragState(java.util.Collection<Integer> ids, int anchor) {
+            this.tabIds.addAll(ids);
+            this.anchorTabId = anchor;
+        }
+    }
 
     public static class ClosedTabRecord {
         public String service;
@@ -334,9 +345,16 @@ public class MainActivity extends AppCompatActivity {
     private ImageButton splitRightCloseBtn;
 
     private FrameLayout tabGridOverlay;
+    private View tabGridHeaderRow;
+    private View tabGridHeaderCapsule;
     private TextView tabGridCountBadge;
     private ImageButton tabGridIncognitoBtn;
     private ImageButton tabGridCloseViewBtn;
+    private LinearLayout tabGridTopActions;
+    private TextView btnTabGridTopDeselect;
+    private TextView btnTabGridTopDelete;
+    private LinearLayout tabGridSearchBox;
+    private ImageView tabGridSearchIcon;
     private EditText tabGridSearchInput;
     private LinearLayout tabGridGroupBanner;
     private ImageButton btnTabGridGroupBack;
@@ -344,7 +362,11 @@ public class MainActivity extends AppCompatActivity {
     private Button btnTabGridGroupUngroup;
     private LinearLayout tabGridContentLayout;
     private GridLayout tabGridContainer;
+    private LinearLayout tabGridBottomDock;
+    private TextView btnTabDockMakeGroup;
     private FrameLayout tabGridFabAdd;
+    private TextView btnTabDockSelect;
+    private boolean isGridSelectionMode = false;
     private LinearLayout tabGridSplitActionBar;
     private Button btnTabGridSplitSelected;
     private Button btnTabGridGroupSelected;
@@ -1686,8 +1708,15 @@ public class MainActivity extends AppCompatActivity {
             splitRightCloseBtn = findViewById(R.id.split_right_close_btn);
 
             tabGridOverlay = findViewById(R.id.tab_grid_overlay);
+            tabGridHeaderRow = findViewById(R.id.tab_grid_header_row);
+            tabGridHeaderCapsule = findViewById(R.id.tab_grid_header_capsule);
             tabGridCountBadge = findViewById(R.id.tab_grid_count_badge);
             tabGridCloseViewBtn = findViewById(R.id.tab_grid_close_view_btn);
+            tabGridTopActions = findViewById(R.id.tab_grid_top_actions);
+            btnTabGridTopDeselect = findViewById(R.id.btn_tab_grid_top_deselect);
+            btnTabGridTopDelete = findViewById(R.id.btn_tab_grid_top_delete);
+            tabGridSearchBox = findViewById(R.id.tab_grid_search_box);
+            tabGridSearchIcon = findViewById(R.id.tab_grid_search_icon);
             tabGridSearchInput = findViewById(R.id.tab_grid_search_input);
             tabGridGroupBanner = findViewById(R.id.tab_grid_group_banner);
             btnTabGridGroupBack = findViewById(R.id.btn_tab_grid_group_back);
@@ -1695,7 +1724,10 @@ public class MainActivity extends AppCompatActivity {
             btnTabGridGroupUngroup = findViewById(R.id.btn_tab_grid_group_ungroup);
             tabGridContentLayout = findViewById(R.id.tab_grid_content_layout);
             tabGridContainer = findViewById(R.id.tab_grid_container);
+            tabGridBottomDock = findViewById(R.id.tab_grid_bottom_dock);
+            btnTabDockMakeGroup = findViewById(R.id.btn_tab_dock_make_group);
             tabGridFabAdd = findViewById(R.id.tab_grid_fab_add);
+            btnTabDockSelect = findViewById(R.id.btn_tab_dock_select);
             tabGridSplitActionBar = findViewById(R.id.tab_grid_split_action_bar);
             btnTabGridSplitSelected = findViewById(R.id.btn_tab_grid_split_selected);
             btnTabGridGroupSelected = findViewById(R.id.btn_tab_grid_group_selected);
@@ -1882,7 +1914,7 @@ public class MainActivity extends AppCompatActivity {
             btnTabGridGroupBack.setOnClickListener(v -> {
                 playUiFeedbackSound("tap");
                 currentGridGroupId = null;
-                renderTabGridCards(tabGridSearchInput.getText().toString());
+                renderTabGridCards(tabGridSearchInput != null ? tabGridSearchInput.getText().toString() : "");
             });
         }
 
@@ -1892,13 +1924,15 @@ public class MainActivity extends AppCompatActivity {
                 if (currentGridGroupId != null) {
                     tabGroupsList.removeIf(g -> g.id.equals(currentGridGroupId));
                     saveTabGroups();
+                    updateOmniboxTabStrip();
                     currentGridGroupId = null;
-                    renderTabGridCards(tabGridSearchInput.getText().toString());
+                    renderTabGridCards(tabGridSearchInput != null ? tabGridSearchInput.getText().toString() : "");
                     Toast.makeText(this, "Group dissolved", Toast.LENGTH_SHORT).show();
                 }
             });
         }
 
+        // Center Yellow Circular '+' Button (Opens New Tab modal)
         tabGridFabAdd.setOnClickListener(v -> {
             playUiFeedbackSound("tap");
             if (modalNewTabPlatform != null) {
@@ -1907,11 +1941,82 @@ public class MainActivity extends AppCompatActivity {
             }
         });
 
+        // Bottom Dock: "Make Group" Button
+        if (btnTabDockMakeGroup != null) {
+            btnTabDockMakeGroup.setOnClickListener(v -> {
+                playUiFeedbackSound("tap");
+                if (selectedGridTabIds.isEmpty()) {
+                    isGridSelectionMode = true;
+                    if (getTabById(activeTabId) != null) {
+                        selectedGridTabIds.add(activeTabId);
+                    }
+                    updateTabGridSelectionUi();
+                    renderTabGridCards(tabGridSearchInput != null ? tabGridSearchInput.getText().toString() : "");
+                    Toast.makeText(this, "Tap tabs to select, then tap Make Group", Toast.LENGTH_SHORT).show();
+                } else {
+                    promptCreateTabGroup();
+                }
+            });
+        }
+
+        // Bottom Dock: "Select" Button
+        if (btnTabDockSelect != null) {
+            btnTabDockSelect.setOnClickListener(v -> {
+                playUiFeedbackSound("tap");
+                isGridSelectionMode = !isGridSelectionMode;
+                if (!isGridSelectionMode) {
+                    selectedGridTabIds.clear();
+                } else {
+                    if (selectedGridTabIds.isEmpty() && getTabById(activeTabId) != null) {
+                        selectedGridTabIds.add(activeTabId);
+                    }
+                }
+                updateTabGridSelectionUi();
+                renderTabGridCards(tabGridSearchInput != null ? tabGridSearchInput.getText().toString() : "");
+            });
+        }
+
+        // Top Right Action: Deselect
+        if (btnTabGridTopDeselect != null) {
+            btnTabGridTopDeselect.setOnClickListener(v -> {
+                playUiFeedbackSound("tap");
+                selectedGridTabIds.clear();
+                isGridSelectionMode = false;
+                updateTabGridSelectionUi();
+                renderTabGridCards(tabGridSearchInput != null ? tabGridSearchInput.getText().toString() : "");
+            });
+        }
+
+        // Top Right Action: Delete (multi-selected tabs)
+        if (btnTabGridTopDelete != null) {
+            btnTabGridTopDelete.setOnClickListener(v -> {
+                playUiFeedbackSound("tap");
+                if (selectedGridTabIds.isEmpty()) return;
+                int count = selectedGridTabIds.size();
+                new AlertDialog.Builder(this)
+                        .setTitle("Close Selected Tabs")
+                        .setMessage("Close " + count + " selected tab(s)?")
+                        .setPositiveButton("Close Tabs", (dialog, which) -> {
+                            for (int id : new ArrayList<>(selectedGridTabIds)) {
+                                closeTab(id);
+                            }
+                            selectedGridTabIds.clear();
+                            isGridSelectionMode = false;
+                            updateTabGridSelectionUi();
+                            renderTabGridCards(tabGridSearchInput != null ? tabGridSearchInput.getText().toString() : "");
+                            Toast.makeText(this, count + " tabs closed", Toast.LENGTH_SHORT).show();
+                        })
+                        .setNegativeButton("Cancel", null)
+                        .show();
+            });
+        }
+
         btnTabGridDeselect.setOnClickListener(v -> {
             playUiFeedbackSound("tap");
             selectedGridTabIds.clear();
-            tabGridSplitActionBar.setVisibility(View.GONE);
-            renderTabGridCards(tabGridSearchInput.getText().toString());
+            isGridSelectionMode = false;
+            updateTabGridSelectionUi();
+            renderTabGridCards(tabGridSearchInput != null ? tabGridSearchInput.getText().toString() : "");
         });
 
         btnTabGridSplitSelected.setOnClickListener(v -> {
@@ -1921,7 +2026,8 @@ public class MainActivity extends AppCompatActivity {
                 activeTabId = ids.get(0);
                 secondarySplitTabId = ids.get(1);
                 selectedGridTabIds.clear();
-                tabGridSplitActionBar.setVisibility(View.GONE);
+                isGridSelectionMode = false;
+                updateTabGridSelectionUi();
                 hideTabGridView();
                 splitModeState = 1;
                 applySplitViewLayout();
@@ -1940,8 +2046,9 @@ public class MainActivity extends AppCompatActivity {
                 closeTab(id);
             }
             selectedGridTabIds.clear();
-            tabGridSplitActionBar.setVisibility(View.GONE);
-            renderTabGridCards(tabGridSearchInput.getText().toString());
+            isGridSelectionMode = false;
+            updateTabGridSelectionUi();
+            renderTabGridCards(tabGridSearchInput != null ? tabGridSearchInput.getText().toString() : "");
             Toast.makeText(this, "Selected tabs closed", Toast.LENGTH_SHORT).show();
         });
 
@@ -1959,34 +2066,164 @@ public class MainActivity extends AppCompatActivity {
         });
     }
 
+    private void updateTabGridSelectionUi() {
+        int selCount = selectedGridTabIds.size();
+        if (tabGridTopActions != null) {
+            tabGridTopActions.setVisibility(selCount > 0 ? View.VISIBLE : View.GONE);
+        }
+        if (btnTabGridTopDelete != null) {
+            btnTabGridTopDelete.setText("🗑️ Delete (" + selCount + ")");
+        }
+        if (btnTabDockSelect != null) {
+            btnTabDockSelect.setText(selCount > 0 || isGridSelectionMode ? "Done (" + selCount + ")" : "Select");
+            btnTabDockSelect.setTextColor(selCount > 0 ? (isDarkTheme ? 0xFF00E5FF : 0xFF0284C7) : (isDarkTheme ? 0xFFDFE2F0 : 0xFF334155));
+        }
+        if (btnTabDockMakeGroup != null) {
+            btnTabDockMakeGroup.setTextColor(selCount > 0 ? (isDarkTheme ? 0xFFFFCC00 : 0xFFD97706) : (isDarkTheme ? 0xFFDFE2F0 : 0xFF334155));
+        }
+        if (tabGridSplitActionBar != null) {
+            tabGridSplitActionBar.setVisibility(selCount == 2 ? View.VISIBLE : View.GONE);
+            btnTabGridSplitSelected.setEnabled(selCount == 2);
+            btnTabGridSplitSelected.setAlpha(selCount == 2 ? 1.0f : 0.4f);
+            btnTabGridSplitSelected.setText("🔀 Split (" + selCount + ")");
+            btnTabGridGroupSelected.setText("📁 Group (" + selCount + ")");
+            btnTabGridCloseSelected.setText("🗑️ Close (" + selCount + ")");
+        }
+    }
+
+    public void applyTabGridTheme() {
+        if (tabGridOverlay == null) return;
+        boolean isLight = !isDarkTheme;
+        tabGridOverlay.setBackgroundColor(isLight ? 0xFFF1F5F9 : 0xFF050811);
+
+        // Header Capsule
+        if (tabGridHeaderCapsule != null) {
+            GradientDrawable hGd = new GradientDrawable();
+            hGd.setColor(isLight ? 0xFFFFFFFF : 0xE60F131D);
+            hGd.setCornerRadius(dpToPx(22));
+            hGd.setStroke(dpToPx(1.2f), isLight ? 0xFFCBD5E1 : 0x26FFFFFF);
+            tabGridHeaderCapsule.setBackground(hGd);
+        }
+
+        if (tabGridCountBadge != null) {
+            tabGridCountBadge.setTextColor(isLight ? 0xFF0284C7 : 0xFF00E5FF);
+            GradientDrawable bGd = new GradientDrawable();
+            bGd.setColor(isLight ? 0xFFE0F2FE : 0x3300E5FF);
+            bGd.setCornerRadius(dpToPx(12));
+            tabGridCountBadge.setBackground(bGd);
+        }
+
+        if (tabGridCloseViewBtn != null) {
+            tabGridCloseViewBtn.setColorFilter(isLight ? 0xFF475569 : 0xFFA2A9A9);
+        }
+
+        // Top actions
+        if (btnTabGridTopDeselect != null) {
+            GradientDrawable dGd = new GradientDrawable();
+            dGd.setColor(isLight ? 0xFFFFFFFF : 0xE6181B25);
+            dGd.setCornerRadius(dpToPx(16));
+            dGd.setStroke(dpToPx(1), isLight ? 0xFFCBD5E1 : 0x33FFFFFF);
+            btnTabGridTopDeselect.setBackground(dGd);
+            btnTabGridTopDeselect.setTextColor(isLight ? 0xFF475569 : 0xFFA2A9A9);
+        }
+
+        if (btnTabGridTopDelete != null) {
+            GradientDrawable delGd = new GradientDrawable();
+            delGd.setColor(isLight ? 0xFFFEE2E2 : 0x33FF4444);
+            delGd.setCornerRadius(dpToPx(16));
+            delGd.setStroke(dpToPx(1), isLight ? 0xFFFCA5A5 : 0x66FF4444);
+            btnTabGridTopDelete.setBackground(delGd);
+            btnTabGridTopDelete.setTextColor(isLight ? 0xFFDC2626 : 0xFFFF5555);
+        }
+
+        // Search Box
+        if (tabGridSearchBox != null) {
+            GradientDrawable sGd = new GradientDrawable();
+            sGd.setColor(isLight ? 0xFFFFFFFF : 0xE60F131D);
+            sGd.setCornerRadius(dpToPx(21));
+            sGd.setStroke(dpToPx(1.2f), isLight ? 0xFFCBD5E1 : 0x26FFFFFF);
+            tabGridSearchBox.setBackground(sGd);
+        }
+        if (tabGridSearchInput != null) {
+            tabGridSearchInput.setTextColor(isLight ? 0xFF0F172A : 0xFFFFFFFF);
+            tabGridSearchInput.setHintTextColor(isLight ? 0xFF94A3B8 : 0x88A2A9A9);
+        }
+        if (tabGridSearchIcon != null) {
+            tabGridSearchIcon.setColorFilter(isLight ? 0xFF64748B : 0x88A2A9A9);
+        }
+
+        // Inside Group Header Banner
+        if (tabGridGroupBanner != null) {
+            GradientDrawable gGd = new GradientDrawable();
+            gGd.setColor(isLight ? 0xFFFFFFFF : 0xE60F131D);
+            gGd.setCornerRadius(dpToPx(19));
+            gGd.setStroke(dpToPx(1), isLight ? 0xFFCBD5E1 : 0x26FFFFFF);
+            tabGridGroupBanner.setBackground(gGd);
+        }
+        if (tabGridGroupBannerTitle != null) {
+            tabGridGroupBannerTitle.setTextColor(isLight ? 0xFF0F172A : 0xFFFFFFFF);
+        }
+        if (btnTabGridGroupUngroup != null) {
+            GradientDrawable ugGd = new GradientDrawable();
+            ugGd.setColor(isLight ? 0xFFF1F5F9 : 0x33FFFFFF);
+            ugGd.setCornerRadius(dpToPx(13));
+            ugGd.setStroke(dpToPx(1), isLight ? 0xFFCBD5E1 : 0x22FFFFFF);
+            btnTabGridGroupUngroup.setBackground(ugGd);
+            btnTabGridGroupUngroup.setTextColor(isLight ? 0xFF475569 : 0xFFA2A9A9);
+        }
+
+        // Bottom Dock Capsule (Image 2)
+        if (tabGridBottomDock != null) {
+            GradientDrawable dockGd = new GradientDrawable();
+            dockGd.setColor(isLight ? 0xFFFFFFFF : 0xF0181B25);
+            dockGd.setCornerRadius(dpToPx(26));
+            dockGd.setStroke(dpToPx(1.5f), isLight ? 0xFFCBD5E1 : 0x33FFFFFF);
+            tabGridBottomDock.setBackground(dockGd);
+        }
+        if (btnTabDockMakeGroup != null) {
+            btnTabDockMakeGroup.setTextColor(isLight ? 0xFF334155 : 0xFFDFE2F0);
+        }
+        if (btnTabDockSelect != null) {
+            btnTabDockSelect.setTextColor(isLight ? 0xFF334155 : 0xFFDFE2F0);
+        }
+    }
+
     private void promptCreateTabGroup() {
         AlertDialog.Builder builder = new AlertDialog.Builder(this);
         builder.setTitle("📁 Create Tab Group");
         final EditText input = new EditText(this);
         input.setHint("Group Name (e.g., Research, AI, Work)");
-        input.setTextColor(Color.WHITE);
-        input.setHintTextColor(0x88A2A9A9);
-        input.setBackgroundColor(0xFF0D1524);
-        input.setPadding(24, 20, 24, 20);
+        input.setTextColor(isDarkTheme ? Color.WHITE : 0xFF0F172A);
+        input.setHintTextColor(isDarkTheme ? 0x88A2A9A9 : 0xFF94A3B8);
+        input.setBackgroundColor(isDarkTheme ? 0xFF0D1524 : 0xFFF1F5F9);
+        input.setPadding(dpToPx(16), dpToPx(12), dpToPx(16), dpToPx(12));
         builder.setView(input);
 
         builder.setPositiveButton("Create", (dialog, which) -> {
             String name = input.getText().toString().trim();
             if (name.isEmpty()) name = "Group " + (tabGroupsList.size() + 1);
 
-            TabGroup newGroup = new TabGroup("group_" + System.currentTimeMillis(), name, "#3b82f6", "📁");
-            newGroup.tabIds.addAll(selectedGridTabIds);
-
-            for (TabGroup g : tabGroupsList) {
-                g.tabIds.removeAll(selectedGridTabIds);
+            TabGroup newGroup = new TabGroup("group_" + System.currentTimeMillis(), name, "#00E5FF", "📁");
+            if (!selectedGridTabIds.isEmpty()) {
+                newGroup.tabIds.addAll(selectedGridTabIds);
+                for (TabGroup g : tabGroupsList) {
+                    g.tabIds.removeAll(selectedGridTabIds);
+                }
+            } else if (getTabById(activeTabId) != null) {
+                newGroup.tabIds.add(activeTabId);
+                for (TabGroup g : tabGroupsList) {
+                    g.tabIds.remove((Integer) activeTabId);
+                }
             }
             tabGroupsList.removeIf(g -> g.tabIds.isEmpty());
             tabGroupsList.add(newGroup);
             saveTabGroups();
+            updateOmniboxTabStrip();
 
             selectedGridTabIds.clear();
-            tabGridSplitActionBar.setVisibility(View.GONE);
-            renderTabGridCards(tabGridSearchInput.getText().toString());
+            isGridSelectionMode = false;
+            updateTabGridSelectionUi();
+            renderTabGridCards(tabGridSearchInput != null ? tabGridSearchInput.getText().toString() : "");
             Toast.makeText(this, "📁 Tab Group '" + name + "' Created", Toast.LENGTH_SHORT).show();
         });
         builder.setNegativeButton("Cancel", null);
@@ -2004,8 +2241,10 @@ public class MainActivity extends AppCompatActivity {
         if (floatingCaspianCard != null) floatingCaspianCard.bringToFront();
         tabGridCountBadge.setText(String.valueOf(tabsList.size()));
         selectedGridTabIds.clear();
+        isGridSelectionMode = false;
         currentGridGroupId = null;
-        tabGridSplitActionBar.setVisibility(View.GONE);
+        applyTabGridTheme();
+        updateTabGridSelectionUi();
         renderTabGridCards("");
         playAssetSound("sfx/pop_click.mp3");
     }
@@ -2014,8 +2253,9 @@ public class MainActivity extends AppCompatActivity {
         if (tabGridOverlay != null) {
             tabGridOverlay.setVisibility(View.GONE);
             selectedGridTabIds.clear();
+            isGridSelectionMode = false;
             currentGridGroupId = null;
-            tabGridSplitActionBar.setVisibility(View.GONE);
+            updateTabGridSelectionUi();
             if (modalNewTabPlatform != null) modalNewTabPlatform.setVisibility(View.GONE);
             hideKeyboard();
         }
@@ -2026,7 +2266,6 @@ public class MainActivity extends AppCompatActivity {
         tabGridContentLayout.removeAllViews();
 
         int screenWidth = getResources().getDisplayMetrics().widthPixels;
-        // Total horizontal inset = 14dp padding left + 14dp padding right + 6dp margin * 4 = 52dp
         int totalHorizontalPaddingPx = dpToPx(14 * 2 + 6 * 4);
         int cardWidth = (screenWidth - totalHorizontalPaddingPx) / 2;
 
@@ -2076,8 +2315,19 @@ public class MainActivity extends AppCompatActivity {
         grid.setColumnOrderPreserved(false);
         grid.setUseDefaultMargins(false);
 
+        Set<Integer> handledSplitTabIds = new HashSet<>();
         for (TabItem tab : tabsList) {
-            if (!groupedTabIds.contains(tab.id)) {
+            if (groupedTabIds.contains(tab.id) || handledSplitTabIds.contains(tab.id)) continue;
+
+            // Check if this tab is part of an active split pair
+            if (tab.splitPartnerId != -1 && getTabById(tab.splitPartnerId) != null && !groupedTabIds.contains(tab.splitPartnerId)) {
+                TabItem partner = getTabById(tab.splitPartnerId);
+                handledSplitTabIds.add(tab.id);
+                handledSplitTabIds.add(partner.id);
+                TabItem leftTab = "secondary".equals(tab.splitRole) ? partner : tab;
+                TabItem rightTab = leftTab == tab ? partner : tab;
+                grid.addView(createSplitTabCard(leftTab, rightTab, cardWidth, filterQuery));
+            } else {
                 grid.addView(createSingleTabCard(tab, cardWidth, filterQuery));
             }
         }
@@ -2087,21 +2337,43 @@ public class MainActivity extends AppCompatActivity {
             grid.addView(createEdgeTabGroupCard(group, cardWidth, filterQuery));
         }
 
+        // Multi-tab and single-tab drop onto empty space in the grid
         grid.setOnDragListener((v, event) -> {
             if (event.getAction() == DragEvent.ACTION_DROP) {
-                if (event.getLocalState() instanceof TabItem) {
-                    TabItem sourceTab = (TabItem) event.getLocalState();
-                    float dropX = event.getX();
-                    float dropY = event.getY();
-                    int targetIdx = -1;
-                    for (int i = 0; i < grid.getChildCount(); i++) {
-                        View child = grid.getChildAt(i);
-                        if (dropY >= child.getTop() && dropY <= child.getBottom() &&
-                            dropX >= child.getLeft() && dropX <= child.getRight()) {
-                            targetIdx = i;
-                            break;
+                float dropX = event.getX();
+                float dropY = event.getY();
+                int targetIdx = -1;
+                for (int i = 0; i < grid.getChildCount(); i++) {
+                    View child = grid.getChildAt(i);
+                    if (dropY >= child.getTop() && dropY <= child.getBottom() &&
+                        dropX >= child.getLeft() && dropX <= child.getRight()) {
+                        targetIdx = i;
+                        break;
+                    }
+                }
+
+                if (event.getLocalState() instanceof MultiTabDragState) {
+                    MultiTabDragState multiState = (MultiTabDragState) event.getLocalState();
+                    List<TabItem> tabsToMove = new ArrayList<>();
+                    for (TabItem t : tabsList) {
+                        if (multiState.tabIds.contains(t.id)) {
+                            tabsToMove.add(t);
                         }
                     }
+                    if (!tabsToMove.isEmpty()) {
+                        TabItem targetTab = (targetIdx >= 0 && targetIdx < tabsList.size()) ? tabsList.get(targetIdx) : null;
+                        tabsList.removeAll(tabsToMove);
+                        int insertIdx = targetTab != null ? tabsList.indexOf(targetTab) : tabsList.size();
+                        if (insertIdx < 0) insertIdx = tabsList.size();
+                        tabsList.addAll(insertIdx, tabsToMove);
+                        saveOpenTabsState();
+                        renderTabGridCards(tabGridSearchInput != null ? tabGridSearchInput.getText().toString() : "");
+                        playAssetSound("sfx/pop_click.mp3");
+                        Toast.makeText(this, "Moved " + tabsToMove.size() + " tabs", Toast.LENGTH_SHORT).show();
+                        return true;
+                    }
+                } else if (event.getLocalState() instanceof TabItem) {
+                    TabItem sourceTab = (TabItem) event.getLocalState();
                     if (targetIdx != -1 && targetIdx < tabsList.size()) {
                         int fromIdx = tabsList.indexOf(sourceTab);
                         if (fromIdx != -1 && fromIdx != targetIdx) {
@@ -2121,7 +2393,238 @@ public class MainActivity extends AppCompatActivity {
         tabGridContentLayout.addView(grid);
     }
 
+    private void showGroupColorPickerPopup(View anchor, TabGroup group) {
+        final String[] colors = {"#00E5FF", "#3B82F6", "#10B981", "#F59E0B", "#EF4444", "#EC4899", "#8B5CF6", "#64748B"};
+        LinearLayout layout = new LinearLayout(this);
+        layout.setOrientation(LinearLayout.HORIZONTAL);
+        layout.setPadding(dpToPx(10), dpToPx(8), dpToPx(10), dpToPx(8));
+        GradientDrawable bg = new GradientDrawable();
+        bg.setColor(isDarkTheme ? 0xF0181B25 : 0xFFFFFFFF);
+        bg.setCornerRadius(dpToPx(20));
+        bg.setStroke(dpToPx(1.2f), isDarkTheme ? 0x44FFFFFF : 0xFFCBD5E1);
+        layout.setBackground(bg);
+
+        PopupWindow popup = new PopupWindow(layout, ViewGroup.LayoutParams.WRAP_CONTENT, ViewGroup.LayoutParams.WRAP_CONTENT, true);
+        popup.setElevation(dpToPx(12));
+
+        for (String c : colors) {
+            FrameLayout dotContainer = new FrameLayout(this);
+            LinearLayout.LayoutParams lp = new LinearLayout.LayoutParams(dpToPx(28), dpToPx(28));
+            lp.setMargins(dpToPx(4), 0, dpToPx(4), 0);
+            dotContainer.setLayoutParams(lp);
+
+            View dot = new View(this);
+            FrameLayout.LayoutParams dotLp = new FrameLayout.LayoutParams(dpToPx(20), dpToPx(20), Gravity.CENTER);
+            dot.setLayoutParams(dotLp);
+            GradientDrawable dotGd = new GradientDrawable();
+            dotGd.setShape(GradientDrawable.OVAL);
+            dotGd.setColor(Color.parseColor(c));
+            if (c.equalsIgnoreCase(group.color)) {
+                dotGd.setStroke(dpToPx(2), isDarkTheme ? 0xFFFFFFFF : 0xFF0F172A);
+            }
+            dot.setBackground(dotGd);
+            dotContainer.addView(dot);
+
+            dotContainer.setOnClickListener(v -> {
+                playUiFeedbackSound("tap");
+                group.color = c;
+                saveTabGroups();
+                updateOmniboxTabStrip();
+                renderTabGridCards(tabGridSearchInput != null ? tabGridSearchInput.getText().toString() : "");
+                popup.dismiss();
+            });
+            layout.addView(dotContainer);
+        }
+
+        popup.showAsDropDown(anchor, -dpToPx(60), dpToPx(4));
+    }
+
+    private void showEditTabGroupDialog(TabGroup group) {
+        AlertDialog.Builder builder = new AlertDialog.Builder(this);
+
+        ScrollView scroll = new ScrollView(this);
+        LinearLayout container = new LinearLayout(this);
+        container.setOrientation(LinearLayout.VERTICAL);
+        container.setPadding(dpToPx(20), dpToPx(16), dpToPx(20), dpToPx(16));
+        scroll.addView(container);
+
+        TextView titleTv = new TextView(this);
+        titleTv.setText("✏️ Edit Tab Group");
+        titleTv.setTextSize(TypedValue.COMPLEX_UNIT_SP, 16);
+        titleTv.setTypeface(null, android.graphics.Typeface.BOLD);
+        titleTv.setTextColor(isDarkTheme ? 0xFFFFFFFF : 0xFF0F172A);
+        container.addView(titleTv);
+
+        TextView nameLbl = new TextView(this);
+        nameLbl.setText("Group Name");
+        nameLbl.setTextSize(TypedValue.COMPLEX_UNIT_SP, 11);
+        nameLbl.setTextColor(isDarkTheme ? 0xFFA2A9A9 : 0xFF64748B);
+        nameLbl.setPadding(0, dpToPx(12), 0, dpToPx(4));
+        container.addView(nameLbl);
+
+        EditText nameInput = new EditText(this);
+        nameInput.setText(group.title != null ? group.title : "");
+        nameInput.setTextColor(isDarkTheme ? 0xFFFFFFFF : 0xFF0F172A);
+        nameInput.setHintTextColor(isDarkTheme ? 0x88A2A9A9 : 0xFF94A3B8);
+        GradientDrawable inputGd = new GradientDrawable();
+        inputGd.setColor(isDarkTheme ? 0xFF0D1524 : 0xFFF1F5F9);
+        inputGd.setCornerRadius(dpToPx(10));
+        inputGd.setStroke(dpToPx(1), isDarkTheme ? 0x33FFFFFF : 0xFFCBD5E1);
+        nameInput.setBackground(inputGd);
+        nameInput.setPadding(dpToPx(12), dpToPx(10), dpToPx(12), dpToPx(10));
+        container.addView(nameInput);
+
+        TextView emojiLbl = new TextView(this);
+        emojiLbl.setText("Group Icon");
+        emojiLbl.setTextSize(TypedValue.COMPLEX_UNIT_SP, 11);
+        emojiLbl.setTextColor(isDarkTheme ? 0xFFA2A9A9 : 0xFF64748B);
+        emojiLbl.setPadding(0, dpToPx(12), 0, dpToPx(4));
+        container.addView(emojiLbl);
+
+        final String[] emojis = {"📁", "🚀", "🤖", "🌐", "📚", "🎬", "💼", "🔬", "💡", "⚡", "🎯", "🔥"};
+        final String[] selectedEmoji = {group.icon != null ? group.icon : "📁"};
+
+        HorizontalScrollView emojiScroll = new HorizontalScrollView(this);
+        emojiScroll.setOverScrollMode(View.OVER_SCROLL_NEVER);
+        LinearLayout emojiRow = new LinearLayout(this);
+        emojiRow.setOrientation(LinearLayout.HORIZONTAL);
+        emojiScroll.addView(emojiRow);
+
+        List<TextView> emojiViews = new ArrayList<>();
+        for (String em : emojis) {
+            TextView emTv = new TextView(this);
+            emTv.setText(em);
+            emTv.setTextSize(TypedValue.COMPLEX_UNIT_SP, 18);
+            emTv.setGravity(Gravity.CENTER);
+            LinearLayout.LayoutParams lp = new LinearLayout.LayoutParams(dpToPx(38), dpToPx(38));
+            lp.setMargins(dpToPx(3), dpToPx(2), dpToPx(3), dpToPx(2));
+            emTv.setLayoutParams(lp);
+
+            GradientDrawable emGd = new GradientDrawable();
+            emGd.setCornerRadius(dpToPx(10));
+            if (em.equals(selectedEmoji[0])) {
+                emGd.setColor(isDarkTheme ? 0x4400E5FF : 0xFFE0F2FE);
+                emGd.setStroke(dpToPx(1.5f), isDarkTheme ? 0xFF00E5FF : 0xFF0284C7);
+            } else {
+                emGd.setColor(isDarkTheme ? 0xFF141824 : 0xFFF1F5F9);
+                emGd.setStroke(dpToPx(1), isDarkTheme ? 0x22FFFFFF : 0xFFCBD5E1);
+            }
+            emTv.setBackground(emGd);
+
+            emTv.setOnClickListener(v -> {
+                selectedEmoji[0] = em;
+                for (int i = 0; i < emojis.length; i++) {
+                    TextView tv = emojiViews.get(i);
+                    GradientDrawable g = new GradientDrawable();
+                    g.setCornerRadius(dpToPx(10));
+                    if (emojis[i].equals(em)) {
+                        g.setColor(isDarkTheme ? 0x4400E5FF : 0xFFE0F2FE);
+                        g.setStroke(dpToPx(1.5f), isDarkTheme ? 0xFF00E5FF : 0xFF0284C7);
+                    } else {
+                        g.setColor(isDarkTheme ? 0xFF141824 : 0xFFF1F5F9);
+                        g.setStroke(dpToPx(1), isDarkTheme ? 0x22FFFFFF : 0xFFCBD5E1);
+                    }
+                    tv.setBackground(g);
+                }
+            });
+            emojiViews.add(emTv);
+            emojiRow.addView(emTv);
+        }
+        container.addView(emojiScroll);
+
+        TextView colorLbl = new TextView(this);
+        colorLbl.setText("Group Color");
+        colorLbl.setTextSize(TypedValue.COMPLEX_UNIT_SP, 11);
+        colorLbl.setTextColor(isDarkTheme ? 0xFFA2A9A9 : 0xFF64748B);
+        colorLbl.setPadding(0, dpToPx(12), 0, dpToPx(4));
+        container.addView(colorLbl);
+
+        final String[] colors = {"#00E5FF", "#3B82F6", "#10B981", "#F59E0B", "#EF4444", "#EC4899", "#8B5CF6", "#64748B"};
+        final String[] selectedColor = {group.color != null ? group.color : "#00E5FF"};
+
+        LinearLayout colorRow = new LinearLayout(this);
+        colorRow.setOrientation(LinearLayout.HORIZONTAL);
+        List<FrameLayout> colorViews = new ArrayList<>();
+        for (String col : colors) {
+            FrameLayout cContainer = new FrameLayout(this);
+            LinearLayout.LayoutParams lp = new LinearLayout.LayoutParams(dpToPx(34), dpToPx(34));
+            lp.setMargins(dpToPx(3), dpToPx(2), dpToPx(3), dpToPx(2));
+            cContainer.setLayoutParams(lp);
+
+            View cDot = new View(this);
+            FrameLayout.LayoutParams dotLp = new FrameLayout.LayoutParams(dpToPx(24), dpToPx(24), Gravity.CENTER);
+            cDot.setLayoutParams(dotLp);
+            GradientDrawable cGd = new GradientDrawable();
+            cGd.setShape(GradientDrawable.OVAL);
+            cGd.setColor(Color.parseColor(col));
+            if (col.equalsIgnoreCase(selectedColor[0])) {
+                cGd.setStroke(dpToPx(2.5f), isDarkTheme ? 0xFFFFFFFF : 0xFF0F172A);
+            }
+            cDot.setBackground(cGd);
+            cContainer.addView(cDot);
+
+            cContainer.setOnClickListener(v -> {
+                selectedColor[0] = col;
+                for (int i = 0; i < colors.length; i++) {
+                    FrameLayout fc = colorViews.get(i);
+                    View dot = fc.getChildAt(0);
+                    GradientDrawable g = new GradientDrawable();
+                    g.setShape(GradientDrawable.OVAL);
+                    g.setColor(Color.parseColor(colors[i]));
+                    if (colors[i].equalsIgnoreCase(col)) {
+                        g.setStroke(dpToPx(2.5f), isDarkTheme ? 0xFFFFFFFF : 0xFF0F172A);
+                    }
+                    dot.setBackground(g);
+                }
+            });
+            colorViews.add(cContainer);
+            colorRow.addView(cContainer);
+        }
+        container.addView(colorRow);
+
+        builder.setView(scroll);
+        builder.setPositiveButton("Save", (d, w) -> {
+            String newName = nameInput.getText().toString().trim();
+            if (!newName.isEmpty()) group.title = newName;
+            group.icon = selectedEmoji[0];
+            group.color = selectedColor[0];
+            saveTabGroups();
+            updateOmniboxTabStrip();
+            renderTabGridCards(tabGridSearchInput != null ? tabGridSearchInput.getText().toString() : "");
+            Toast.makeText(this, "Tab Group updated", Toast.LENGTH_SHORT).show();
+        });
+        builder.setNeutralButton("Ungroup", (d, w) -> {
+            tabGroupsList.remove(group);
+            if (group.id.equals(currentGridGroupId)) currentGridGroupId = null;
+            saveTabGroups();
+            updateOmniboxTabStrip();
+            renderTabGridCards(tabGridSearchInput != null ? tabGridSearchInput.getText().toString() : "");
+            Toast.makeText(this, "Group dissolved", Toast.LENGTH_SHORT).show();
+        });
+        builder.setNegativeButton("Delete Group", (d, w) -> {
+            for (int tid : new ArrayList<>(group.tabIds)) {
+                closeTab(tid);
+            }
+            tabGroupsList.remove(group);
+            if (group.id.equals(currentGridGroupId)) currentGridGroupId = null;
+            saveTabGroups();
+            updateOmniboxTabStrip();
+            renderTabGridCards(tabGridSearchInput != null ? tabGridSearchInput.getText().toString() : "");
+            Toast.makeText(this, "Group deleted", Toast.LENGTH_SHORT).show();
+        });
+        AlertDialog dialog = builder.create();
+        dialog.show();
+
+        if (dialog.getWindow() != null) {
+            GradientDrawable dialogBg = new GradientDrawable();
+            dialogBg.setColor(isDarkTheme ? 0xFF0D1524 : 0xFFFFFFFF);
+            dialogBg.setCornerRadius(dpToPx(20));
+            dialog.getWindow().setBackgroundDrawable(dialogBg);
+        }
+    }
+
     private View createEdgeTabGroupCard(TabGroup group, int cardWidth, String filterQuery) {
+        boolean isLight = !isDarkTheme;
         LinearLayout card = new LinearLayout(this);
         card.setOrientation(LinearLayout.VERTICAL);
         GridLayout.LayoutParams lp = new GridLayout.LayoutParams();
@@ -2131,9 +2634,11 @@ public class MainActivity extends AppCompatActivity {
         card.setLayoutParams(lp);
 
         GradientDrawable gd = new GradientDrawable();
-        gd.setColor(0xFF181B25); // Stitch Obsidian surface-container-low
+        gd.setColor(isLight ? 0xFFFFFFFF : 0xFF181B25);
         gd.setCornerRadius(dpToPx(18));
-        gd.setStroke(dpToPx(2), Color.parseColor(group.color != null ? group.color : "#00E5FF"));
+        String groupColorHex = group.color != null && !group.color.isEmpty() ? group.color : "#00E5FF";
+        int groupColor = Color.parseColor(groupColorHex);
+        gd.setStroke(dpToPx(2.5f), groupColor);
         card.setBackground(gd);
         card.setPadding(dpToPx(10), dpToPx(10), dpToPx(10), dpToPx(10));
 
@@ -2141,29 +2646,84 @@ public class MainActivity extends AppCompatActivity {
         header.setOrientation(LinearLayout.HORIZONTAL);
         header.setGravity(Gravity.CENTER_VERTICAL);
 
-        View colorDot = new View(this);
-        LinearLayout.LayoutParams dotLp = new LinearLayout.LayoutParams(dpToPx(10), dpToPx(10));
-        colorDot.setLayoutParams(dotLp);
-        GradientDrawable dotGd = new GradientDrawable();
-        dotGd.setShape(GradientDrawable.OVAL);
-        dotGd.setColor(Color.parseColor(group.color != null ? group.color : "#00E5FF"));
-        colorDot.setBackground(dotGd);
+        TextView emojiView = new TextView(this);
+        emojiView.setText(group.icon != null && !group.icon.isEmpty() ? group.icon : "📁");
+        emojiView.setTextSize(TypedValue.COMPLEX_UNIT_SP, 13);
+        emojiView.setGravity(Gravity.CENTER);
+        header.addView(emojiView);
 
         TextView titleView = new TextView(this);
         LinearLayout.LayoutParams titleLp = new LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.WRAP_CONTENT, 1f);
-        titleLp.setMarginStart(dpToPx(8));
+        titleLp.setMarginStart(dpToPx(6));
         titleView.setLayoutParams(titleLp);
-        titleView.setText(group.title + " (" + group.tabIds.size() + ")");
-        titleView.setTextColor(0xFFDFE2F0);
+        titleView.setText(group.title != null ? group.title : "Tab Group");
+        titleView.setTextColor(isLight ? 0xFF0F172A : 0xFFDFE2F0);
         titleView.setTextSize(TypedValue.COMPLEX_UNIT_SP, 12);
         titleView.setTypeface(null, android.graphics.Typeface.BOLD);
         titleView.setSingleLine(true);
         titleView.setEllipsize(android.text.TextUtils.TruncateAt.END);
-
-        header.addView(colorDot);
         header.addView(titleView);
+
+        LinearLayout rightControls = new LinearLayout(this);
+        rightControls.setOrientation(LinearLayout.HORIZONTAL);
+        rightControls.setGravity(Gravity.CENTER_VERTICAL);
+
+        // 1. Number count tab badge
+        TextView countBadge = new TextView(this);
+        countBadge.setText(String.valueOf(group.tabIds.size()));
+        countBadge.setTextSize(TypedValue.COMPLEX_UNIT_SP, 10);
+        countBadge.setTypeface(null, android.graphics.Typeface.BOLD);
+        countBadge.setTextColor(groupColor);
+        countBadge.setPadding(dpToPx(6), dpToPx(2), dpToPx(6), dpToPx(2));
+        GradientDrawable badgeGd = new GradientDrawable();
+        badgeGd.setColor(isLight ? 0xFFF1F5F9 : 0x3300E5FF);
+        badgeGd.setCornerRadius(dpToPx(8));
+        countBadge.setBackground(badgeGd);
+        rightControls.addView(countBadge);
+
+        // 2. Color Swatch Circle (taps open color picker popup)
+        FrameLayout colorPickerBtn = new FrameLayout(this);
+        LinearLayout.LayoutParams cpLp = new LinearLayout.LayoutParams(dpToPx(22), dpToPx(22));
+        cpLp.setMarginStart(dpToPx(4));
+        colorPickerBtn.setLayoutParams(cpLp);
+        View colorDot = new View(this);
+        FrameLayout.LayoutParams dotLp = new FrameLayout.LayoutParams(dpToPx(14), dpToPx(14), Gravity.CENTER);
+        colorDot.setLayoutParams(dotLp);
+        GradientDrawable dotGd = new GradientDrawable();
+        dotGd.setShape(GradientDrawable.OVAL);
+        dotGd.setColor(groupColor);
+        dotGd.setStroke(dpToPx(1.5f), isLight ? 0xFFCBD5E1 : 0xFFFFFFFF);
+        colorDot.setBackground(dotGd);
+        colorPickerBtn.addView(colorDot);
+        colorPickerBtn.setOnClickListener(v -> {
+            playUiFeedbackSound("tap");
+            showGroupColorPickerPopup(colorPickerBtn, group);
+        });
+        rightControls.addView(colorPickerBtn);
+
+        // 3. Edit Button (⋮)
+        FrameLayout editBtnFrame = new FrameLayout(this);
+        LinearLayout.LayoutParams editLp = new LinearLayout.LayoutParams(dpToPx(22), dpToPx(22));
+        editLp.setMarginStart(dpToPx(2));
+        editBtnFrame.setLayoutParams(editLp);
+        TextView editIcon = new TextView(this);
+        editIcon.setLayoutParams(new FrameLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.MATCH_PARENT));
+        editIcon.setGravity(Gravity.CENTER);
+        editIcon.setText("⋮");
+        editIcon.setTextColor(isLight ? 0xFF64748B : 0xFFBAC9CC);
+        editIcon.setTextSize(TypedValue.COMPLEX_UNIT_SP, 14);
+        editIcon.setTypeface(null, android.graphics.Typeface.BOLD);
+        editBtnFrame.addView(editIcon);
+        editBtnFrame.setOnClickListener(v -> {
+            playUiFeedbackSound("tap");
+            showEditTabGroupDialog(group);
+        });
+        rightControls.addView(editBtnFrame);
+
+        header.addView(rightControls);
         card.addView(header);
 
+        // 2x2 Grid of 4 Mini Tabs inside
         GridLayout miniGrid = new GridLayout(this);
         LinearLayout.LayoutParams gridLp = new LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, 0, 1f);
         gridLp.topMargin = dpToPx(8);
@@ -2187,7 +2747,7 @@ public class MainActivity extends AppCompatActivity {
             miniTile.setLayoutParams(tileLp);
 
             GradientDrawable tileGd = new GradientDrawable();
-            tileGd.setColor(0xFF0A0E17);
+            tileGd.setColor(isLight ? 0xFFF1F5F9 : 0xFF0A0E17);
             tileGd.setCornerRadius(dpToPx(8));
             miniTile.setBackground(tileGd);
             miniTile.setClipToOutline(true);
@@ -2219,7 +2779,7 @@ public class MainActivity extends AppCompatActivity {
             emptyTile.setLayoutParams(tileLp);
 
             GradientDrawable emptyGd = new GradientDrawable();
-            emptyGd.setColor(0xFF0F131D);
+            emptyGd.setColor(isLight ? 0xFFE2E8F0 : 0xFF0F131D);
             emptyGd.setCornerRadius(dpToPx(8));
             emptyTile.setBackground(emptyGd);
 
@@ -2232,33 +2792,34 @@ public class MainActivity extends AppCompatActivity {
         card.setOnClickListener(v -> {
             playUiFeedbackSound("tap");
             currentGridGroupId = group.id;
-            renderTabGridCards(tabGridSearchInput.getText().toString());
+            renderTabGridCards(tabGridSearchInput != null ? tabGridSearchInput.getText().toString() : "");
         });
 
         card.setOnDragListener((v, event) -> {
             switch (event.getAction()) {
                 case DragEvent.ACTION_DRAG_STARTED:
-                    return event.getLocalState() instanceof TabItem;
+                    return (event.getLocalState() instanceof TabItem) || (event.getLocalState() instanceof MultiTabDragState);
 
                 case DragEvent.ACTION_DRAG_ENTERED:
-                    if (event.getLocalState() instanceof TabItem) {
-                        TabItem sourceTab = (TabItem) event.getLocalState();
-                        if (!group.tabIds.contains(sourceTab.id)) {
-                            gd.setStroke(dpToPx(3), 0xFF00E5FF);
-                            v.animate().scaleX(1.05f).scaleY(1.05f).setDuration(120).start();
-                        }
-                    }
+                    gd.setStroke(dpToPx(3.5f), 0xFF00E5FF);
+                    v.animate().scaleX(1.05f).scaleY(1.05f).setDuration(120).start();
                     return true;
 
                 case DragEvent.ACTION_DRAG_EXITED:
-                    gd.setStroke(dpToPx(2), Color.parseColor(group.color != null ? group.color : "#00E5FF"));
+                    gd.setStroke(dpToPx(2.5f), groupColor);
                     v.animate().scaleX(1.0f).scaleY(1.0f).setDuration(120).start();
                     return true;
 
                 case DragEvent.ACTION_DROP:
-                    if (event.getLocalState() instanceof TabItem) {
+                    v.animate().scaleX(1.0f).scaleY(1.0f).setDuration(100).start();
+                    if (event.getLocalState() instanceof MultiTabDragState) {
+                        MultiTabDragState multi = (MultiTabDragState) event.getLocalState();
+                        for (int tid : multi.tabIds) {
+                            addTabToGroup(tid, group.id);
+                        }
+                        return true;
+                    } else if (event.getLocalState() instanceof TabItem) {
                         TabItem sourceTab = (TabItem) event.getLocalState();
-                        v.animate().scaleX(1.0f).scaleY(1.0f).setDuration(100).start();
                         addTabToGroup(sourceTab.id, group.id);
                         return true;
                     }
@@ -2267,10 +2828,193 @@ public class MainActivity extends AppCompatActivity {
                 case DragEvent.ACTION_DRAG_ENDED:
                     v.setAlpha(1.0f);
                     v.animate().scaleX(1.0f).scaleY(1.0f).setDuration(100).start();
-                    gd.setStroke(dpToPx(2), Color.parseColor(group.color != null ? group.color : "#00E5FF"));
+                    gd.setStroke(dpToPx(2.5f), groupColor);
                     return true;
             }
             return false;
+        });
+
+        return card;
+    }
+
+    private View createSplitTabCard(TabItem leftTab, TabItem rightTab, int cardWidth, String filterQuery) {
+        boolean isLight = !isDarkTheme;
+        boolean isActive = (leftTab.id == activeTabId || rightTab.id == activeTabId ||
+                            leftTab.id == secondarySplitTabId || rightTab.id == secondarySplitTabId);
+        boolean isSelected = selectedGridTabIds.contains(leftTab.id) || selectedGridTabIds.contains(rightTab.id);
+
+        LinearLayout card = new LinearLayout(this);
+        card.setOrientation(LinearLayout.VERTICAL);
+        GridLayout.LayoutParams lp = new GridLayout.LayoutParams();
+        lp.width = cardWidth;
+        lp.height = (int) (cardWidth * 1.35f);
+        lp.setMargins(dpToPx(6), dpToPx(6), dpToPx(6), dpToPx(6));
+        card.setLayoutParams(lp);
+
+        GradientDrawable gd = new GradientDrawable();
+        gd.setColor(isLight ? 0xFFFFFFFF : 0xFF181B25);
+        gd.setCornerRadius(dpToPx(18));
+        if (isSelected) {
+            gd.setStroke(dpToPx(3), isLight ? 0xFFD97706 : 0xFFFFCC00);
+        } else if (isActive) {
+            gd.setStroke(dpToPx(2), isLight ? 0xFF0284C7 : 0xFF00E5FF);
+        } else {
+            gd.setStroke(dpToPx(1.5f), isLight ? 0xFFBAE6FD : 0x4400E5FF);
+        }
+        card.setBackground(gd);
+        card.setPadding(dpToPx(10), dpToPx(10), dpToPx(10), dpToPx(10));
+
+        // Header: Split Icon + Pair Titles + Unsplit button
+        LinearLayout header = new LinearLayout(this);
+        header.setOrientation(LinearLayout.HORIZONTAL);
+        header.setGravity(Gravity.CENTER_VERTICAL);
+
+        // Split Icon Pill Badge
+        TextView splitBadge = new TextView(this);
+        splitBadge.setText("◫ Split");
+        splitBadge.setTextSize(TypedValue.COMPLEX_UNIT_SP, 10);
+        splitBadge.setTypeface(null, android.graphics.Typeface.BOLD);
+        splitBadge.setTextColor(isLight ? 0xFF0284C7 : 0xFF00E5FF);
+        splitBadge.setPadding(dpToPx(6), dpToPx(2), dpToPx(6), dpToPx(2));
+        GradientDrawable sbGd = new GradientDrawable();
+        sbGd.setColor(isLight ? 0xFFE0F2FE : 0x3300E5FF);
+        sbGd.setCornerRadius(dpToPx(6));
+        splitBadge.setBackground(sbGd);
+
+        TextView titleView = new TextView(this);
+        LinearLayout.LayoutParams titleLp = new LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.WRAP_CONTENT, 1f);
+        titleLp.setMarginStart(dpToPx(6));
+        titleView.setLayoutParams(titleLp);
+        String leftTitle = leftTab.nickname != null && !leftTab.nickname.isEmpty() ? leftTab.nickname : (leftTab.title != null ? leftTab.title : "Tab 1");
+        String rightTitle = rightTab.nickname != null && !rightTab.nickname.isEmpty() ? rightTab.nickname : (rightTab.title != null ? rightTab.title : "Tab 2");
+        titleView.setText(leftTitle + " ⚡ " + rightTitle);
+        titleView.setTextColor(isLight ? 0xFF0F172A : 0xFFDFE2F0);
+        titleView.setTextSize(TypedValue.COMPLEX_UNIT_SP, 11);
+        titleView.setTypeface(null, android.graphics.Typeface.BOLD);
+        titleView.setSingleLine(true);
+        titleView.setEllipsize(android.text.TextUtils.TruncateAt.END);
+
+        // Unsplit / Close Button Circle
+        FrameLayout closeCircle = new FrameLayout(this);
+        closeCircle.setLayoutParams(new LinearLayout.LayoutParams(dpToPx(22), dpToPx(22)));
+        GradientDrawable closeGd = new GradientDrawable();
+        closeGd.setColor(isLight ? 0xFFF1F5F9 : 0xFF262A34);
+        closeGd.setShape(GradientDrawable.OVAL);
+        closeCircle.setBackground(closeGd);
+
+        ImageButton closeBtn = new ImageButton(this);
+        closeBtn.setLayoutParams(new FrameLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.MATCH_PARENT));
+        closeBtn.setBackgroundResource(android.R.color.transparent);
+        closeBtn.setImageResource(R.drawable.ic_pod_close);
+        closeBtn.setColorFilter(isLight ? 0xFF64748B : 0xFFBAC9CC);
+        closeBtn.setPadding(dpToPx(4), dpToPx(4), dpToPx(4), dpToPx(4));
+        closeBtn.setOnClickListener(v -> {
+            playUiFeedbackSound("tap");
+            separateSplitTabs(leftTab.id);
+            updateOmniboxTabStrip();
+            renderTabGridCards(tabGridSearchInput != null ? tabGridSearchInput.getText().toString() : "");
+            Toast.makeText(this, "Un-split tabs", Toast.LENGTH_SHORT).show();
+        });
+        closeCircle.addView(closeBtn);
+
+        header.addView(splitBadge);
+        header.addView(titleView);
+        header.addView(closeCircle);
+        card.addView(header);
+
+        // Body: Side-by-side Dual Previews
+        LinearLayout body = new LinearLayout(this);
+        body.setOrientation(LinearLayout.HORIZONTAL);
+        LinearLayout.LayoutParams bodyLp = new LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, 0, 1f);
+        bodyLp.topMargin = dpToPx(8);
+        body.setLayoutParams(bodyLp);
+        GradientDrawable bodyGd = new GradientDrawable();
+        bodyGd.setColor(isLight ? 0xFFF8FAFC : 0xFF0A0E17);
+        bodyGd.setCornerRadius(dpToPx(12));
+        body.setBackground(bodyGd);
+        body.setClipToOutline(true);
+
+        // Left Half
+        FrameLayout leftFrame = new FrameLayout(this);
+        leftFrame.setLayoutParams(new LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.MATCH_PARENT, 1f));
+        if (leftTab.snapshotBitmap != null && !leftTab.snapshotBitmap.isRecycled()) {
+            ImageView img = new ImageView(this);
+            img.setLayoutParams(new FrameLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.MATCH_PARENT));
+            img.setScaleType(ImageView.ScaleType.CENTER_CROP);
+            img.setImageBitmap(leftTab.snapshotBitmap);
+            leftFrame.addView(img);
+        } else {
+            TextView icon = new TextView(this);
+            icon.setLayoutParams(new FrameLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.MATCH_PARENT, Gravity.CENTER));
+            icon.setGravity(Gravity.CENTER);
+            icon.setText(leftTab.url != null && leftTab.url.contains("youtube.com") ? "🎬" : "🌐");
+            icon.setTextSize(14);
+            leftFrame.addView(icon);
+        }
+
+        // Vertical Divider
+        View vDivider = new View(this);
+        vDivider.setLayoutParams(new LinearLayout.LayoutParams(dpToPx(1.5f), ViewGroup.LayoutParams.MATCH_PARENT));
+        vDivider.setBackgroundColor(isLight ? 0xFFCBD5E1 : 0x4400E5FF);
+
+        // Right Half
+        FrameLayout rightFrame = new FrameLayout(this);
+        rightFrame.setLayoutParams(new LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.MATCH_PARENT, 1f));
+        if (rightTab.snapshotBitmap != null && !rightTab.snapshotBitmap.isRecycled()) {
+            ImageView img = new ImageView(this);
+            img.setLayoutParams(new FrameLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.MATCH_PARENT));
+            img.setScaleType(ImageView.ScaleType.CENTER_CROP);
+            img.setImageBitmap(rightTab.snapshotBitmap);
+            rightFrame.addView(img);
+        } else {
+            TextView icon = new TextView(this);
+            icon.setLayoutParams(new FrameLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.MATCH_PARENT, Gravity.CENTER));
+            icon.setGravity(Gravity.CENTER);
+            icon.setText(rightTab.url != null && rightTab.url.contains("youtube.com") ? "🎬" : "🌐");
+            icon.setTextSize(14);
+            rightFrame.addView(icon);
+        }
+
+        body.addView(leftFrame);
+        body.addView(vDivider);
+        body.addView(rightFrame);
+        card.addView(body);
+
+        card.setOnClickListener(v -> {
+            playUiFeedbackSound("tap");
+            if (isGridSelectionMode || !selectedGridTabIds.isEmpty()) {
+                if (selectedGridTabIds.contains(leftTab.id)) {
+                    selectedGridTabIds.remove(leftTab.id);
+                    selectedGridTabIds.remove(rightTab.id);
+                } else {
+                    selectedGridTabIds.add(leftTab.id);
+                    selectedGridTabIds.add(rightTab.id);
+                }
+                updateTabGridSelectionUi();
+                renderTabGridCards(tabGridSearchInput != null ? tabGridSearchInput.getText().toString() : "");
+            } else {
+                activeTabId = leftTab.id;
+                secondarySplitTabId = rightTab.id;
+                splitModeState = leftTab.splitOrientation > 0 ? leftTab.splitOrientation : 1;
+                applySplitViewLayout();
+                hideTabGridView();
+            }
+        });
+
+        card.setOnLongClickListener(v -> {
+            v.performHapticFeedback(HapticFeedbackConstants.LONG_PRESS);
+            playAssetSound("sfx/pop_button_v2.mp3");
+            List<Integer> pairIds = Arrays.asList(leftTab.id, rightTab.id);
+            ClipData clipData = ClipData.newPlainText("split_pair", leftTab.id + "," + rightTab.id);
+            MultiTabDragState state = new MultiTabDragState(pairIds, leftTab.id);
+            View.DragShadowBuilder shadow = new View.DragShadowBuilder(v);
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.N) {
+                v.startDragAndDrop(clipData, shadow, state, 0);
+            } else {
+                v.startDrag(clipData, shadow, state, 0);
+            }
+            v.setAlpha(0.35f);
+            return true;
         });
 
         return card;
@@ -2282,6 +3026,7 @@ public class MainActivity extends AppCompatActivity {
 
         boolean isActive = (tab.id == activeTabId);
         boolean isSelected = selectedGridTabIds.contains(tab.id);
+        boolean isLight = !isDarkTheme;
 
         LinearLayout card = new LinearLayout(this);
         card.setOrientation(LinearLayout.VERTICAL);
@@ -2292,14 +3037,14 @@ public class MainActivity extends AppCompatActivity {
         card.setLayoutParams(lp);
 
         GradientDrawable gd = new GradientDrawable();
-        gd.setColor(0xFF181B25); // Stitch Obsidian surface-container-low
+        gd.setColor(isLight ? 0xFFFFFFFF : 0xFF181B25);
         gd.setCornerRadius(dpToPx(18));
         if (isSelected) {
-            gd.setStroke(dpToPx(3), 0xFFFFCC00);
+            gd.setStroke(dpToPx(3), isLight ? 0xFFD97706 : 0xFFFFCC00);
         } else if (isActive) {
-            gd.setStroke(dpToPx(2), 0xFF00E5FF); // Stitch Neon Cyan
+            gd.setStroke(dpToPx(2), isLight ? 0xFF0284C7 : 0xFF00E5FF);
         } else {
-            gd.setStroke(dpToPx(1), 0x22FFFFFF); // 1px translucent micro-border
+            gd.setStroke(dpToPx(1), isLight ? 0xFFE2E8F0 : 0x22FFFFFF);
         }
         card.setBackground(gd);
         card.setPadding(dpToPx(10), dpToPx(10), dpToPx(10), dpToPx(10));
@@ -2312,7 +3057,7 @@ public class MainActivity extends AppCompatActivity {
         FrameLayout iconChip = new FrameLayout(this);
         iconChip.setLayoutParams(new LinearLayout.LayoutParams(dpToPx(22), dpToPx(22)));
         GradientDrawable iconChipGd = new GradientDrawable();
-        iconChipGd.setColor(0xFF1C1F29);
+        iconChipGd.setColor(isLight ? 0xFFF1F5F9 : 0xFF1C1F29);
         iconChipGd.setCornerRadius(dpToPx(6));
         iconChip.setBackground(iconChipGd);
 
@@ -2328,7 +3073,7 @@ public class MainActivity extends AppCompatActivity {
         titleLp.setMarginStart(dpToPx(8));
         titleView.setLayoutParams(titleLp);
         titleView.setText(tab.nickname != null && !tab.nickname.isEmpty() ? tab.nickname : title);
-        titleView.setTextColor(0xFFDFE2F0);
+        titleView.setTextColor(isLight ? 0xFF0F172A : 0xFFDFE2F0);
         titleView.setTextSize(TypedValue.COMPLEX_UNIT_SP, 12);
         titleView.setTypeface(null, android.graphics.Typeface.BOLD);
         titleView.setSingleLine(true);
@@ -2337,7 +3082,7 @@ public class MainActivity extends AppCompatActivity {
         FrameLayout closeCircle = new FrameLayout(this);
         closeCircle.setLayoutParams(new LinearLayout.LayoutParams(dpToPx(22), dpToPx(22)));
         GradientDrawable closeGd = new GradientDrawable();
-        closeGd.setColor(0xFF262A34);
+        closeGd.setColor(isLight ? 0xFFF1F5F9 : 0xFF262A34);
         closeGd.setShape(GradientDrawable.OVAL);
         closeCircle.setBackground(closeGd);
 
@@ -2345,13 +3090,14 @@ public class MainActivity extends AppCompatActivity {
         closeBtn.setLayoutParams(new FrameLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.MATCH_PARENT));
         closeBtn.setBackgroundResource(android.R.color.transparent);
         closeBtn.setImageResource(R.drawable.ic_pod_close);
-        closeBtn.setColorFilter(0xFFBAC9CC);
+        closeBtn.setColorFilter(isLight ? 0xFF64748B : 0xFFBAC9CC);
         closeBtn.setPadding(dpToPx(4), dpToPx(4), dpToPx(4), dpToPx(4));
         closeBtn.setOnClickListener(v -> {
             playUiFeedbackSound("tap");
             closeTab(tab.id);
             selectedGridTabIds.remove(tab.id);
-            renderTabGridCards(tabGridSearchInput.getText().toString());
+            updateTabGridSelectionUi();
+            renderTabGridCards(tabGridSearchInput != null ? tabGridSearchInput.getText().toString() : "");
         });
         closeCircle.addView(closeBtn);
 
@@ -2366,7 +3112,7 @@ public class MainActivity extends AppCompatActivity {
         body.setLayoutParams(bodyLp);
 
         GradientDrawable bodyGd = new GradientDrawable();
-        bodyGd.setColor(0xFF0A0E17);
+        bodyGd.setColor(isLight ? 0xFFF8FAFC : 0xFF0A0E17);
         bodyGd.setCornerRadius(dpToPx(12));
         body.setBackground(bodyGd);
         body.setClipToOutline(true);
@@ -2381,7 +3127,7 @@ public class MainActivity extends AppCompatActivity {
             TextView urlSnippet = new TextView(this);
             urlSnippet.setLayoutParams(new FrameLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT, Gravity.CENTER));
             urlSnippet.setText(cleanDisplayUrl(url));
-            urlSnippet.setTextColor(0xFF849396);
+            urlSnippet.setTextColor(isLight ? 0xFF64748B : 0xFF849396);
             urlSnippet.setTextSize(10);
             urlSnippet.setGravity(Gravity.CENTER);
             urlSnippet.setPadding(dpToPx(8), dpToPx(8), dpToPx(8), dpToPx(8));
@@ -2397,12 +3143,12 @@ public class MainActivity extends AppCompatActivity {
             badgeLp.setMargins(dpToPx(6), 0, 0, dpToPx(6));
             domainBadge.setLayoutParams(badgeLp);
             domainBadge.setText(displayDomain);
-            domainBadge.setTextColor(0xFF00E5FF);
+            domainBadge.setTextColor(isLight ? 0xFF0284C7 : 0xFF00E5FF);
             domainBadge.setTextSize(TypedValue.COMPLEX_UNIT_SP, 9);
             domainBadge.setTypeface(null, android.graphics.Typeface.BOLD);
             domainBadge.setPadding(dpToPx(6), dpToPx(2), dpToPx(6), dpToPx(2));
             GradientDrawable badgeGd = new GradientDrawable();
-            badgeGd.setColor(0xCC0F131D);
+            badgeGd.setColor(isLight ? 0xE6F1F5F9 : 0xCC0F131D);
             badgeGd.setCornerRadius(dpToPx(6));
             domainBadge.setBackground(badgeGd);
             body.addView(domainBadge);
@@ -2412,21 +3158,41 @@ public class MainActivity extends AppCompatActivity {
 
         card.setOnClickListener(v -> {
             playUiFeedbackSound("tap");
-            if (!selectedGridTabIds.isEmpty()) {
-                toggleTabSelectionForSplit(tab.id);
+            if (isGridSelectionMode || !selectedGridTabIds.isEmpty()) {
+                if (selectedGridTabIds.contains(tab.id)) {
+                    selectedGridTabIds.remove(tab.id);
+                    if (selectedGridTabIds.isEmpty()) {
+                        isGridSelectionMode = false;
+                    }
+                } else {
+                    selectedGridTabIds.add(tab.id);
+                }
+                updateTabGridSelectionUi();
+                renderTabGridCards(tabGridSearchInput != null ? tabGridSearchInput.getText().toString() : "");
             } else {
                 switchToTab(tab.id);
                 hideTabGridView();
             }
         });
 
+        // Multi-tab drag when selected, or single tab drag
         card.setOnLongClickListener(v -> {
-            if (!selectedGridTabIds.isEmpty()) {
-                toggleTabSelectionForSplit(tab.id);
-                return true;
-            }
             v.performHapticFeedback(HapticFeedbackConstants.LONG_PRESS);
             playAssetSound("sfx/pop_button_v2.mp3");
+
+            if (selectedGridTabIds.size() > 1 && selectedGridTabIds.contains(tab.id)) {
+                ClipData clipData = ClipData.newPlainText("multi_tabs", TextUtils.join(",", selectedGridTabIds));
+                MultiTabDragState state = new MultiTabDragState(selectedGridTabIds, tab.id);
+                View.DragShadowBuilder shadow = new View.DragShadowBuilder(v);
+                if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.N) {
+                    v.startDragAndDrop(clipData, shadow, state, 0);
+                } else {
+                    v.startDrag(clipData, shadow, state, 0);
+                }
+                v.setAlpha(0.35f);
+                return true;
+            }
+
             ClipData clipData = ClipData.newPlainText("tab_id", String.valueOf(tab.id));
             View.DragShadowBuilder shadow = new View.DragShadowBuilder(v);
             if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.N) {
@@ -2441,39 +3207,60 @@ public class MainActivity extends AppCompatActivity {
         card.setOnDragListener((v, event) -> {
             switch (event.getAction()) {
                 case DragEvent.ACTION_DRAG_STARTED:
-                    return event.getLocalState() instanceof TabItem;
+                    return (event.getLocalState() instanceof TabItem) || (event.getLocalState() instanceof MultiTabDragState);
 
                 case DragEvent.ACTION_DRAG_ENTERED:
                     if (event.getLocalState() instanceof TabItem) {
                         TabItem sourceTab = (TabItem) event.getLocalState();
                         if (sourceTab.id != tab.id) {
-                            gd.setStroke(dpToPx(3), 0xFF00E5FF);
+                            gd.setStroke(dpToPx(3), isLight ? 0xFF0284C7 : 0xFF00E5FF);
+                            v.animate().scaleX(1.06f).scaleY(1.06f).setDuration(120).start();
+                        }
+                    } else if (event.getLocalState() instanceof MultiTabDragState) {
+                        MultiTabDragState multiState = (MultiTabDragState) event.getLocalState();
+                        if (!multiState.tabIds.contains(tab.id)) {
+                            gd.setStroke(dpToPx(3), isLight ? 0xFF0284C7 : 0xFF00E5FF);
                             v.animate().scaleX(1.06f).scaleY(1.06f).setDuration(120).start();
                         }
                     }
                     return true;
 
                 case DragEvent.ACTION_DRAG_EXITED:
-                    if (event.getLocalState() instanceof TabItem) {
-                        TabItem sourceTab = (TabItem) event.getLocalState();
-                        if (sourceTab.id != tab.id) {
-                            if (selectedGridTabIds.contains(tab.id)) {
-                                gd.setStroke(dpToPx(3), 0xFFFFCC00);
-                            } else if (tab.id == activeTabId) {
-                                gd.setStroke(dpToPx(2), 0xFF00E5FF);
-                            } else {
-                                gd.setStroke(dpToPx(1), 0x22FFFFFF);
-                            }
-                            v.animate().scaleX(1.0f).scaleY(1.0f).setDuration(120).start();
-                        }
+                    if (selectedGridTabIds.contains(tab.id)) {
+                        gd.setStroke(dpToPx(3), isLight ? 0xFFD97706 : 0xFFFFCC00);
+                    } else if (tab.id == activeTabId) {
+                        gd.setStroke(dpToPx(2), isLight ? 0xFF0284C7 : 0xFF00E5FF);
+                    } else {
+                        gd.setStroke(dpToPx(1), isLight ? 0xFFE2E8F0 : 0x22FFFFFF);
                     }
+                    v.animate().scaleX(1.0f).scaleY(1.0f).setDuration(120).start();
                     return true;
 
                 case DragEvent.ACTION_DROP:
-                    if (event.getLocalState() instanceof TabItem) {
+                    v.animate().scaleX(1.0f).scaleY(1.0f).setDuration(100).start();
+                    if (event.getLocalState() instanceof MultiTabDragState) {
+                        MultiTabDragState multiState = (MultiTabDragState) event.getLocalState();
+                        List<TabItem> tabsToMove = new ArrayList<>();
+                        for (TabItem t : tabsList) {
+                            if (multiState.tabIds.contains(t.id)) {
+                                tabsToMove.add(t);
+                            }
+                        }
+                        int toIdx = tabsList.indexOf(tab);
+                        if (toIdx != -1 && !tabsToMove.isEmpty()) {
+                            tabsList.removeAll(tabsToMove);
+                            int insertIdx = tabsList.indexOf(tab);
+                            if (insertIdx < 0) insertIdx = toIdx;
+                            tabsList.addAll(insertIdx, tabsToMove);
+                            saveOpenTabsState();
+                            renderTabGridCards(tabGridSearchInput != null ? tabGridSearchInput.getText().toString() : "");
+                            playAssetSound("sfx/pop_click.mp3");
+                            Toast.makeText(this, "Moved " + tabsToMove.size() + " tabs", Toast.LENGTH_SHORT).show();
+                            return true;
+                        }
+                    } else if (event.getLocalState() instanceof TabItem) {
                         TabItem sourceTab = (TabItem) event.getLocalState();
                         if (sourceTab.id != tab.id) {
-                            v.animate().scaleX(1.0f).scaleY(1.0f).setDuration(100).start();
                             int fromIdx = tabsList.indexOf(sourceTab);
                             int toIdx = tabsList.indexOf(tab);
                             if (fromIdx != -1 && toIdx != -1) {
@@ -2492,11 +3279,11 @@ public class MainActivity extends AppCompatActivity {
                     v.setAlpha(1.0f);
                     v.animate().scaleX(1.0f).scaleY(1.0f).setDuration(100).start();
                     if (selectedGridTabIds.contains(tab.id)) {
-                        gd.setStroke(dpToPx(3), 0xFFFFCC00);
+                        gd.setStroke(dpToPx(3), isLight ? 0xFFD97706 : 0xFFFFCC00);
                     } else if (tab.id == activeTabId) {
-                        gd.setStroke(dpToPx(2), 0xFF00E5FF);
+                        gd.setStroke(dpToPx(2), isLight ? 0xFF0284C7 : 0xFF00E5FF);
                     } else {
-                        gd.setStroke(dpToPx(1), 0x22FFFFFF);
+                        gd.setStroke(dpToPx(1), isLight ? 0xFFE2E8F0 : 0x22FFFFFF);
                     }
                     return true;
             }
@@ -2541,6 +3328,7 @@ public class MainActivity extends AppCompatActivity {
 
         tabGroupsList.removeIf(g -> g.tabIds.isEmpty());
         saveTabGroups();
+        updateOmniboxTabStrip();
         saveOpenTabsState();
         renderTabGridCards(tabGridSearchInput != null ? tabGridSearchInput.getText().toString() : "");
         playAssetSound("sfx/pop_click.mp3");
@@ -2569,6 +3357,7 @@ public class MainActivity extends AppCompatActivity {
 
         tabGroupsList.removeIf(g -> g.tabIds.isEmpty());
         saveTabGroups();
+        updateOmniboxTabStrip();
         saveOpenTabsState();
         renderTabGridCards(tabGridSearchInput != null ? tabGridSearchInput.getText().toString() : "");
         playAssetSound("sfx/pop_click.mp3");
@@ -2579,22 +3368,15 @@ public class MainActivity extends AppCompatActivity {
         playUiFeedbackSound("tap");
         if (selectedGridTabIds.contains(tabId)) {
             selectedGridTabIds.remove(tabId);
+            if (selectedGridTabIds.isEmpty()) {
+                isGridSelectionMode = false;
+            }
         } else {
             selectedGridTabIds.add(tabId);
         }
 
-        if (!selectedGridTabIds.isEmpty()) {
-            tabGridSplitActionBar.setVisibility(View.VISIBLE);
-            btnTabGridSplitSelected.setEnabled(selectedGridTabIds.size() == 2);
-            btnTabGridSplitSelected.setAlpha(selectedGridTabIds.size() == 2 ? 1.0f : 0.4f);
-            btnTabGridSplitSelected.setText("🔀 Split (" + selectedGridTabIds.size() + ")");
-            btnTabGridGroupSelected.setText("📁 Group (" + selectedGridTabIds.size() + ")");
-            btnTabGridCloseSelected.setText("🗑️ Close (" + selectedGridTabIds.size() + ")");
-        } else {
-            tabGridSplitActionBar.setVisibility(View.GONE);
-        }
-
-        renderTabGridCards(tabGridSearchInput.getText().toString());
+        updateTabGridSelectionUi();
+        renderTabGridCards(tabGridSearchInput != null ? tabGridSearchInput.getText().toString() : "");
     }
 
     public void updateYouTubeLiveState(boolean isPlaying, boolean isMuted) {
@@ -2903,6 +3685,10 @@ public class MainActivity extends AppCompatActivity {
         if (omniboxDividerRight != null) omniboxDividerRight.setBackgroundColor(isDarkTheme ? 0x33FFFFFF : 0x22000000);
 
         updateOmniboxTabStrip();
+        applyTabGridTheme();
+        if (tabGridOverlay != null && tabGridOverlay.getVisibility() == View.VISIBLE && tabGridSearchInput != null) {
+            renderTabGridCards(tabGridSearchInput.getText().toString());
+        }
     }
 
     public void applyWebViewTheme(WebView webView, boolean isDark) {
@@ -4973,6 +5759,10 @@ public class MainActivity extends AppCompatActivity {
     }
 
     private int dpToPx(int dp) {
+        return (int) (dp * getResources().getDisplayMetrics().density + 0.5f);
+    }
+
+    private int dpToPx(float dp) {
         return (int) (dp * getResources().getDisplayMetrics().density + 0.5f);
     }
 
