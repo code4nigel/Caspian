@@ -9422,7 +9422,7 @@ public class MainActivity extends AppCompatActivity {
         playUiFeedbackSound("tap");
         if (bookmarkManager == null) bookmarkManager = new BookmarkManager(this);
         AlertDialog.Builder builder = new AlertDialog.Builder(this, android.R.style.Theme_Black_NoTitleBar_Fullscreen);
-        View dialogView = getLayoutInflater().inflate(R.layout.dialog_history, null);
+        View dialogView = getLayoutInflater().inflate(R.layout.dialog_bookmarks, null);
         builder.setView(dialogView);
         AlertDialog dialog = builder.create();
         if (dialog.getWindow() != null) {
@@ -9430,132 +9430,568 @@ public class MainActivity extends AppCompatActivity {
         }
         dialogView.setBackgroundColor(isDarkTheme ? 0xFF0A0E17 : 0xFFF8FAFC);
 
-        TextView tabBookmarks = dialogView.findViewById(R.id.tab_header_bookmarks);
-        TextView tabHistory = dialogView.findViewById(R.id.history_tab_capsule_text);
-        TextView badgeCount = dialogView.findViewById(R.id.badge_history_count);
-        TextView tabSettings = dialogView.findViewById(R.id.tab_header_settings);
-        EditText searchInput = dialogView.findViewById(R.id.history_search_input);
-        ImageView closeBtn = dialogView.findViewById(R.id.history_close_btn);
-        LinearLayout historyListContainer = dialogView.findViewById(R.id.history_list_container);
-        View emptyState = dialogView.findViewById(R.id.history_empty_view);
-        View timeRangeBar = dialogView.findViewById(R.id.history_bottom_toolbar);
-        View chipAll = dialogView.findViewById(R.id.chip_filter_all);
+        // Header Views
+        View bookmarksRoot = dialogView.findViewById(R.id.bookmarks_root);
+        View headerBar = dialogView.findViewById(R.id.bookmarks_header_bar);
+        ImageButton btnBack = dialogView.findViewById(R.id.btn_bookmarks_back);
+        View capsuleCenter = dialogView.findViewById(R.id.capsule_bookmarks_center);
+        ImageView iconBookmarksHeader = dialogView.findViewById(R.id.icon_bookmarks_header);
+        TextView textBookmarksHeader = dialogView.findViewById(R.id.text_bookmarks_header);
+        TextView badgeHeaderCount = dialogView.findViewById(R.id.badge_bookmarks_header_count);
+        TextView btnGotoHistory = dialogView.findViewById(R.id.btn_bookmarks_goto_history);
+        TextView btnGotoSettings = dialogView.findViewById(R.id.btn_bookmarks_goto_settings);
 
-        if (timeRangeBar != null) timeRangeBar.setVisibility(View.GONE);
-        if (chipAll != null && chipAll.getParent() instanceof View) ((View) chipAll.getParent()).setVisibility(View.GONE);
-        if (tabHistory != null) tabHistory.setText("Bookmarks");
-        if (tabBookmarks != null) tabBookmarks.setText("History");
+        // Content & Toolbar Views
+        TextView textVaultTitle = dialogView.findViewById(R.id.text_vault_title);
+        TextView badgeVaultSaved = dialogView.findViewById(R.id.badge_vault_saved);
+        TextView btnBatchToggle = dialogView.findViewById(R.id.btn_bookmarks_batch_toggle);
+        TextView btnBatchDelete = dialogView.findViewById(R.id.btn_bookmarks_batch_delete);
 
-        if (tabBookmarks != null) {
-            tabBookmarks.setOnClickListener(v -> {
-                dialog.dismiss();
-                showHistoryDialog();
-            });
+        View segmenterContainer = dialogView.findViewById(R.id.segmenter_container);
+        TextView btnSegmentBookmarks = dialogView.findViewById(R.id.btn_segment_bookmarks);
+        TextView btnSegmentReadingList = dialogView.findViewById(R.id.btn_segment_reading_list);
+        TextView btnSegmentAiDigests = dialogView.findViewById(R.id.btn_segment_ai_digests);
+
+        View searchBar = dialogView.findViewById(R.id.bookmarks_search_bar);
+        ImageView iconSearch = dialogView.findViewById(R.id.icon_bookmarks_search);
+        EditText searchInput = dialogView.findViewById(R.id.bookmarks_search_input);
+        View btnSort = dialogView.findViewById(R.id.btn_bookmarks_sort);
+        TextView textSortLabel = dialogView.findViewById(R.id.text_bookmarks_sort_label);
+
+        // Filter Chips
+        TextView chipAll = dialogView.findViewById(R.id.chip_filter_all);
+        TextView chipFav = dialogView.findViewById(R.id.chip_filter_favorites);
+        TextView chipDev = dialogView.findViewById(R.id.chip_filter_dev);
+        TextView chipAi = dialogView.findViewById(R.id.chip_filter_ai);
+        LinearLayout layoutChips = dialogView.findViewById(R.id.layout_filter_chips);
+
+        LinearLayout listContainer = dialogView.findViewById(R.id.bookmarks_list_container);
+        View emptyView = dialogView.findViewById(R.id.layout_bookmarks_empty);
+        TextView textEmpty = dialogView.findViewById(R.id.text_bookmarks_empty);
+
+        // Bottom Action Dock
+        View bottomDock = dialogView.findViewById(R.id.bookmarks_bottom_dock);
+        View btnDockExport = dialogView.findViewById(R.id.btn_dock_export);
+        View btnDockAdd = dialogView.findViewById(R.id.btn_dock_add_folder);
+        View btnDockImport = dialogView.findViewById(R.id.btn_dock_import);
+        TextView textDockExport = dialogView.findViewById(R.id.text_dock_export);
+        TextView textDockImport = dialogView.findViewById(R.id.text_dock_import);
+        ImageView iconDockExport = dialogView.findViewById(R.id.icon_dock_export);
+        ImageView iconDockImport = dialogView.findViewById(R.id.icon_dock_import);
+
+        // Apply Theme Backgrounds and Colors
+        if (bookmarksRoot != null) bookmarksRoot.setBackgroundColor(isDarkTheme ? 0xFF0A0E17 : 0xFFF8FAFC);
+        if (headerBar != null) headerBar.setBackgroundColor(isDarkTheme ? 0xFF0A0E17 : 0xFFF8FAFC);
+        if (btnBack != null) btnBack.setColorFilter(isDarkTheme ? 0xFFBAC9CC : 0xFF334155);
+
+        if (capsuleCenter != null) {
+            GradientDrawable capBg = new GradientDrawable();
+            capBg.setCornerRadius(dpToPx(16));
+            capBg.setColor(isDarkTheme ? 0xFF141926 : 0xFFFFFFFF);
+            capBg.setStroke(dpToPx(1), isDarkTheme ? 0xFF00E5FF : 0xFFE2E8F0);
+            capsuleCenter.setBackground(capBg);
         }
-        if (tabSettings != null) {
-            tabSettings.setOnClickListener(v -> {
-                dialog.dismiss();
-                openControlSheet();
-            });
-        }
-        if (closeBtn != null) {
-            closeBtn.setOnClickListener(v -> dialog.dismiss());
+        if (textBookmarksHeader != null) textBookmarksHeader.setTextColor(isDarkTheme ? 0xFFFFFFFF : 0xFF0F172A);
+        if (iconBookmarksHeader != null) iconBookmarksHeader.setColorFilter(isDarkTheme ? 0xFF00E5FF : 0xFF0284C7);
+
+        if (badgeHeaderCount != null) {
+            GradientDrawable bBg = new GradientDrawable();
+            bBg.setCornerRadius(dpToPx(10));
+            bBg.setColor(isDarkTheme ? 0xFF1E2838 : 0xFFE0F2FE);
+            badgeHeaderCount.setBackground(bBg);
+            badgeHeaderCount.setTextColor(isDarkTheme ? 0xFF00E5FF : 0xFF0284C7);
         }
 
-        Runnable refreshBookmarks = () -> {
-            if (historyListContainer == null) return;
-            historyListContainer.removeAllViews();
-            List<BookmarkManager.BookmarkItem> bms = bookmarkManager.getAllBookmarks();
-            String q = searchInput != null ? searchInput.getText().toString().trim().toLowerCase() : "";
-            List<BookmarkManager.BookmarkItem> filtered = new ArrayList<>();
-            for (BookmarkManager.BookmarkItem b : bms) {
-                if (q.isEmpty() || (b.title != null && b.title.toLowerCase().contains(q)) || (b.url != null && b.url.toLowerCase().contains(q))) {
-                    filtered.add(b);
+        if (btnGotoHistory != null) btnGotoHistory.setTextColor(isDarkTheme ? 0xFF849396 : 0xFF64748B);
+        if (btnGotoSettings != null) btnGotoSettings.setTextColor(isDarkTheme ? 0xFF849396 : 0xFF64748B);
+
+        if (textVaultTitle != null) textVaultTitle.setTextColor(isDarkTheme ? 0xFFDFE2F0 : 0xFF0F172A);
+        if (badgeVaultSaved != null) {
+            GradientDrawable vBg = new GradientDrawable();
+            vBg.setCornerRadius(dpToPx(8));
+            vBg.setColor(isDarkTheme ? 0xFF142232 : 0xFFE0F2FE);
+            badgeVaultSaved.setBackground(vBg);
+            badgeVaultSaved.setTextColor(isDarkTheme ? 0xFF00E5FF : 0xFF0284C7);
+        }
+
+        if (btnBatchToggle != null) {
+            GradientDrawable btBg = new GradientDrawable();
+            btBg.setCornerRadius(dpToPx(12));
+            btBg.setColor(isDarkTheme ? 0xFF161B24 : 0xFFFFFFFF);
+            btBg.setStroke(dpToPx(1), isDarkTheme ? 0xFF232B3E : 0xFFCBD5E1);
+            btnBatchToggle.setBackground(btBg);
+            btnBatchToggle.setTextColor(isDarkTheme ? 0xFFBAC9CC : 0xFF334155);
+        }
+
+        if (segmenterContainer != null) {
+            GradientDrawable segBg = new GradientDrawable();
+            segBg.setCornerRadius(dpToPx(12));
+            segBg.setColor(isDarkTheme ? 0xFF121722 : 0xFFF1F5F9);
+            segmenterContainer.setBackground(segBg);
+        }
+
+        if (searchBar != null) {
+            GradientDrawable sbBg = new GradientDrawable();
+            sbBg.setCornerRadius(dpToPx(14));
+            sbBg.setColor(isDarkTheme ? 0xFF141926 : 0xFFFFFFFF);
+            sbBg.setStroke(dpToPx(1), isDarkTheme ? 0xFF1F293D : 0xFFE2E8F0);
+            searchBar.setBackground(sbBg);
+        }
+        if (iconSearch != null) iconSearch.setColorFilter(isDarkTheme ? 0xFF849396 : 0xFF94A3B8);
+        if (searchInput != null) {
+            searchInput.setTextColor(isDarkTheme ? 0xFFDFE2F0 : 0xFF0F172A);
+            searchInput.setHintTextColor(isDarkTheme ? 0xFF64748B : 0xFF94A3B8);
+        }
+
+        if (btnSort != null) {
+            GradientDrawable sBg = new GradientDrawable();
+            sBg.setCornerRadius(dpToPx(8));
+            sBg.setColor(isDarkTheme ? 0xFF1E2838 : 0xFFF1F5F9);
+            btnSort.setBackground(sBg);
+        }
+        if (textSortLabel != null) textSortLabel.setTextColor(isDarkTheme ? 0xFF00E5FF : 0xFF0284C7);
+
+        // Bottom Dock Styling
+        if (bottomDock != null) {
+            GradientDrawable dockBg = new GradientDrawable();
+            dockBg.setCornerRadius(dpToPx(26));
+            dockBg.setColor(isDarkTheme ? 0xFF141926 : 0xFFFFFFFF);
+            dockBg.setStroke(dpToPx(1), isDarkTheme ? 0xFF232B3E : 0xFFE2E8F0);
+            bottomDock.setBackground(dockBg);
+            bottomDock.setElevation(dpToPx(16));
+        }
+        if (textDockExport != null) textDockExport.setTextColor(isDarkTheme ? 0xFFDFE2F0 : 0xFF0F172A);
+        if (textDockImport != null) textDockImport.setTextColor(isDarkTheme ? 0xFFDFE2F0 : 0xFF0F172A);
+        if (iconDockExport != null) iconDockExport.setColorFilter(isDarkTheme ? 0xFF00E5FF : 0xFF0284C7);
+        if (iconDockImport != null) iconDockImport.setColorFilter(isDarkTheme ? 0xFF00E5FF : 0xFF0284C7);
+
+        if (btnDockAdd != null) {
+            GradientDrawable plusBg = new GradientDrawable();
+            plusBg.setShape(GradientDrawable.OVAL);
+            plusBg.setColor(0xFF00E5FF);
+            btnDockAdd.setBackground(plusBg);
+        }
+
+        // State variables
+        final boolean[] isSelectMode = {false};
+        final Set<String> selectedBookmarkIds = new HashSet<>();
+        final String[] activeCategory = {"all"}; // "all", "favorites", "dev", "ai", or folder name
+        final String[] activeSort = {"newest"}; // "newest", "oldest", "az", "za"
+
+        // Helper to style chips
+        Runnable updateChipStyles = () -> {
+            TextView[] chips = {chipAll, chipFav, chipDev, chipAi};
+            String[] tags = {"all", "favorites", "dev", "ai"};
+            for (int i = 0; i < chips.length; i++) {
+                TextView chip = chips[i];
+                if (chip == null) continue;
+                boolean isAct = tags[i].equalsIgnoreCase(activeCategory[0]);
+                GradientDrawable cBg = new GradientDrawable();
+                cBg.setCornerRadius(dpToPx(14));
+                if (isAct) {
+                    cBg.setColor(isDarkTheme ? 0xFF00E5FF : 0xFF0F172A);
+                    chip.setTextColor(isDarkTheme ? 0xFF000000 : 0xFFFFFFFF);
+                } else {
+                    cBg.setColor(isDarkTheme ? 0xFF161B24 : 0xFFFFFFFF);
+                    cBg.setStroke(dpToPx(1), isDarkTheme ? 0xFF232B3E : 0xFFE2E8F0);
+                    chip.setTextColor(isDarkTheme ? 0xFFCBD5E1 : 0xFF475569);
                 }
-            }
-            if (badgeCount != null) badgeCount.setText(String.valueOf(filtered.size()));
-            if (emptyState != null) emptyState.setVisibility(filtered.isEmpty() ? View.VISIBLE : View.GONE);
-
-            for (BookmarkManager.BookmarkItem item : filtered) {
-                LinearLayout card = new LinearLayout(this);
-                card.setOrientation(LinearLayout.VERTICAL);
-                LinearLayout.LayoutParams cLp = new LinearLayout.LayoutParams(
-                        LinearLayout.LayoutParams.MATCH_PARENT, LinearLayout.LayoutParams.WRAP_CONTENT);
-                cLp.setMargins(dpToPx(14), dpToPx(6), dpToPx(14), dpToPx(6));
-                card.setLayoutParams(cLp);
-
-                GradientDrawable cGd = new GradientDrawable();
-                cGd.setColor(isDarkTheme ? 0xFF141926 : 0xFFFFFFFF);
-                cGd.setCornerRadius(dpToPx(16));
-                cGd.setStroke(dpToPx(1), isDarkTheme ? 0xFF232B3E : 0xFFE2E8F0);
-                card.setBackground(cGd);
-                card.setPadding(dpToPx(14), dpToPx(12), dpToPx(14), dpToPx(12));
-
-                TextView tvTitle = new TextView(this);
-                tvTitle.setText(item.title);
-                tvTitle.setTextSize(14f);
-                tvTitle.setTypeface(null, Typeface.BOLD);
-                tvTitle.setTextColor(isDarkTheme ? 0xFFF1F5F9 : 0xFF0F172A);
-                card.addView(tvTitle);
-
-                TextView tvUrl = new TextView(this);
-                tvUrl.setText(item.url);
-                tvUrl.setTextSize(12f);
-                tvUrl.setTextColor(isDarkTheme ? 0xFF00E5FF : 0xFF0284C7);
-                tvUrl.setSingleLine(true);
-                tvUrl.setEllipsize(TextUtils.TruncateAt.END);
-                card.addView(tvUrl);
-
-                card.setOnClickListener(v -> {
-                    dialog.dismiss();
-                    TabItem active = getActiveOrDominantTab();
-                    if (active != null && active.webView != null) {
-                        active.webView.loadUrl(item.url);
-                    } else {
-                        addNewTab("web", null, item.url, false);
-                    }
-                });
-
-                card.setOnLongClickListener(v -> {
-                    new AlertDialog.Builder(this)
-                            .setTitle(item.title)
-                            .setItems(new CharSequence[]{"Open", "Open in New Tab", "Delete Bookmark"}, (d, which) -> {
-                                if (which == 0) {
-                                    dialog.dismiss();
-                                    TabItem active = getActiveOrDominantTab();
-                                    if (active != null && active.webView != null) {
-                                        active.webView.loadUrl(item.url);
-                                    } else {
-                                        addNewTab("web", null, item.url, false);
-                                    }
-                                } else if (which == 1) {
-                                    dialog.dismiss();
-                                    addNewTab("web", null, item.url, false);
-                                } else if (which == 2) {
-                                    bookmarkManager.deleteBookmark(item.id);
-                                    Toast.makeText(this, "Bookmark deleted", Toast.LENGTH_SHORT).show();
-                                    dialog.dismiss();
-                                    showBookmarksDialog();
-                                }
-                            })
-                            .show();
-                    return true;
-                });
-
-                historyListContainer.addView(card);
+                chip.setBackground(cBg);
             }
         };
 
+        // Header Navigation Listeners
+        if (btnBack != null) btnBack.setOnClickListener(v -> dialog.dismiss());
+        if (btnGotoHistory != null) {
+            btnGotoHistory.setOnClickListener(v -> {
+                dialog.dismiss();
+                playUiFeedbackSound("tap");
+                showHistoryDialog();
+            });
+        }
+        if (btnGotoSettings != null) {
+            btnGotoSettings.setOnClickListener(v -> {
+                dialog.dismiss();
+                playUiFeedbackSound("tap");
+                openControlSheet();
+            });
+        }
+
+        // Bookmark List Refresh Logic
+        Runnable[] refreshRef = new Runnable[1];
+        refreshRef[0] = () -> {
+            if (listContainer == null) return;
+            listContainer.removeAllViews();
+            List<BookmarkManager.BookmarkItem> bms = bookmarkManager.getAllBookmarks();
+
+            // Total count badges
+            if (badgeHeaderCount != null) badgeHeaderCount.setText(String.valueOf(bms.size()));
+            if (badgeVaultSaved != null) badgeVaultSaved.setText(bms.size() + " SAVED");
+            if (chipAll != null) chipAll.setText("ALL (" + bms.size() + ")");
+
+            // Filter
+            String query = searchInput != null ? searchInput.getText().toString().trim().toLowerCase() : "";
+            List<BookmarkManager.BookmarkItem> filtered = new ArrayList<>();
+            for (BookmarkManager.BookmarkItem b : bms) {
+                if (activeCategory[0].equalsIgnoreCase("favorites") && !b.isFavorite) continue;
+                if (activeCategory[0].equalsIgnoreCase("dev") && (b.folder == null || !b.folder.toLowerCase().contains("dev"))) continue;
+                if (activeCategory[0].equalsIgnoreCase("ai") && (b.folder == null || !b.folder.toLowerCase().contains("ai"))) continue;
+
+                if (!query.isEmpty()) {
+                    boolean match = (b.title != null && b.title.toLowerCase().contains(query))
+                            || (b.url != null && b.url.toLowerCase().contains(query))
+                            || (b.folder != null && b.folder.toLowerCase().contains(query));
+                    if (!match) continue;
+                }
+                filtered.add(b);
+            }
+
+            // Sort
+            if ("newest".equals(activeSort[0])) {
+                Collections.sort(filtered, (a, b) -> Long.compare(b.timestamp, a.timestamp));
+            } else if ("oldest".equals(activeSort[0])) {
+                Collections.sort(filtered, (a, b) -> Long.compare(a.timestamp, b.timestamp));
+            } else if ("az".equals(activeSort[0])) {
+                Collections.sort(filtered, (a, b) -> a.title.compareToIgnoreCase(b.title));
+            } else if ("za".equals(activeSort[0])) {
+                Collections.sort(filtered, (a, b) -> b.title.compareToIgnoreCase(a.title));
+            }
+
+            if (emptyView != null) emptyView.setVisibility(filtered.isEmpty() ? View.VISIBLE : View.GONE);
+
+            // Render each bookmark using item_stitch_bookmark_entry.xml
+            for (BookmarkManager.BookmarkItem item : filtered) {
+                View card = getLayoutInflater().inflate(R.layout.item_stitch_bookmark_entry, listContainer, false);
+                LinearLayout itemRoot = card.findViewById(R.id.bookmark_item_root);
+                android.widget.CheckBox itemCheck = card.findViewById(R.id.bookmark_item_checkbox);
+                FrameLayout iconFrame = card.findViewById(R.id.bookmark_item_icon_frame);
+                TextView iconEmoji = card.findViewById(R.id.bookmark_item_emoji);
+                TextView titleView = card.findViewById(R.id.bookmark_item_title);
+                TextView tagView = card.findViewById(R.id.bookmark_item_tag);
+                TextView domainView = card.findViewById(R.id.bookmark_item_domain);
+                TextView timeView = card.findViewById(R.id.bookmark_item_time);
+                ImageButton starBtn = card.findViewById(R.id.bookmark_item_star);
+                ImageButton moreBtn = card.findViewById(R.id.bookmark_item_more);
+
+                // Card Background
+                if (itemRoot != null) {
+                    GradientDrawable cBg = new GradientDrawable();
+                    cBg.setCornerRadius(dpToPx(18));
+                    cBg.setColor(isDarkTheme ? 0xFF141926 : 0xFFFFFFFF);
+                    cBg.setStroke(dpToPx(1), isDarkTheme ? 0xFF1F293D : 0xFFE2E8F0);
+                    itemRoot.setBackground(cBg);
+                }
+
+                // Batch Selection Checkbox
+                if (itemCheck != null) {
+                    itemCheck.setVisibility(isSelectMode[0] ? View.VISIBLE : View.GONE);
+                    itemCheck.setChecked(selectedBookmarkIds.contains(item.id));
+                    itemCheck.setOnCheckedChangeListener((cb, checked) -> {
+                        if (checked) selectedBookmarkIds.add(item.id);
+                        else selectedBookmarkIds.remove(item.id);
+                        if (btnBatchDelete != null) {
+                            btnBatchDelete.setVisibility(!selectedBookmarkIds.isEmpty() ? View.VISIBLE : View.GONE);
+                            btnBatchDelete.setText("Delete (" + selectedBookmarkIds.size() + ")");
+                        }
+                    });
+                }
+
+                // Title & Tag
+                if (titleView != null) {
+                    titleView.setText(item.title);
+                    titleView.setTextColor(isDarkTheme ? 0xFFF1F5F9 : 0xFF0F172A);
+                }
+                if (tagView != null) {
+                    if (item.folder != null && !item.folder.isEmpty() && !"Default".equalsIgnoreCase(item.folder)) {
+                        tagView.setVisibility(View.VISIBLE);
+                        String tagShort = item.folder.contains("&") ? item.folder.split("&")[0].trim() : item.folder;
+                        if (tagShort.length() > 8) tagShort = tagShort.substring(0, 8);
+                        tagView.setText(tagShort.toUpperCase());
+                        GradientDrawable tBg = new GradientDrawable();
+                        tBg.setCornerRadius(dpToPx(6));
+                        tBg.setColor(isDarkTheme ? 0xFF1E2838 : 0xFFE0F2FE);
+                        tagView.setBackground(tBg);
+                        tagView.setTextColor(isDarkTheme ? 0xFF00E5FF : 0xFF0284C7);
+                    } else {
+                        tagView.setVisibility(View.GONE);
+                    }
+                }
+
+                // Domain & Relative Time
+                if (domainView != null) {
+                    String domain = item.url;
+                    try {
+                        Uri u = Uri.parse(item.url);
+                        if (u != null && u.getHost() != null) domain = u.getHost();
+                    } catch (Exception ignored) {}
+                    domainView.setText(domain);
+                    domainView.setTextColor(isDarkTheme ? 0xFF849396 : 0xFF64748B);
+                }
+
+                if (timeView != null) {
+                    long diff = System.currentTimeMillis() - item.timestamp;
+                    String timeStr;
+                    if (diff < 60000L) timeStr = "just now";
+                    else if (diff < 3600000L) timeStr = (diff / 60000L) + "m ago";
+                    else if (diff < 86400000L) timeStr = (diff / 3600000L) + "h ago";
+                    else if (diff < 604800000L) timeStr = (diff / 86400000L) + "d ago";
+                    else if (diff < 2592000000L) timeStr = (diff / 604800000L) + "w ago";
+                    else timeStr = new java.text.SimpleDateFormat("MMM dd", java.util.Locale.US).format(new java.util.Date(item.timestamp));
+                    timeView.setText(timeStr);
+                    timeView.setTextColor(isDarkTheme ? 0xFF10B981 : 0xFF059669);
+                }
+
+                // Squircle Icon Frame (Pastel background + emoji)
+                if (iconFrame != null && iconEmoji != null) {
+                    String u = item.url.toLowerCase();
+                    String t = item.title.toLowerCase();
+                    int squircleBg;
+                    String emoji;
+                    if (u.contains("notion") || t.contains("notion") || t.contains("spec") || t.contains("doc")) {
+                        squircleBg = isDarkTheme ? 0xFF064E3B : 0xFFD1FAE5;
+                        emoji = "📝";
+                    } else if (u.contains("arxiv") || t.contains("ai") || t.contains("llm") || t.contains("prompt")) {
+                        squircleBg = isDarkTheme ? 0xFF78350F : 0xFFFEF3C7;
+                        emoji = "📖";
+                    } else if (u.contains("figma") || t.contains("figma") || t.contains("design") || t.contains("token")) {
+                        squircleBg = isDarkTheme ? 0xFF831843 : 0xFFFCE7F3;
+                        emoji = "✏️";
+                    } else if (u.contains("tailwind") || u.contains("github") || t.contains("code") || t.contains("dev")) {
+                        squircleBg = isDarkTheme ? 0xFF164E63 : 0xFFCFFAFE;
+                        emoji = "💻";
+                    } else if (u.contains("chatgpt") || u.contains("gemini") || u.contains("claude")) {
+                        squircleBg = isDarkTheme ? 0xFF312E81 : 0xFFEDE9FE;
+                        emoji = "🤖";
+                    } else {
+                        squircleBg = isDarkTheme ? 0xFF1E293B : 0xFFF1F5F9;
+                        emoji = "🔖";
+                    }
+
+                    GradientDrawable fBg = new GradientDrawable();
+                    fBg.setCornerRadius(dpToPx(12));
+                    fBg.setColor(squircleBg);
+                    iconFrame.setBackground(fBg);
+                    iconEmoji.setText(emoji);
+                }
+
+                // Favorite Star Button
+                if (starBtn != null) {
+                    starBtn.setImageResource(R.drawable.ic_menu_bookmark);
+                    starBtn.setColorFilter(item.isFavorite ? 0xFFFBBF24 : (isDarkTheme ? 0xFF475569 : 0xFFCBD5E1));
+                    starBtn.setOnClickListener(v -> {
+                        playUiFeedbackSound("tap");
+                        bookmarkManager.toggleFavorite(item.id);
+                        refreshRef[0].run();
+                    });
+                }
+
+                // 3-Dots More Options Menu
+                if (moreBtn != null) {
+                    moreBtn.setColorFilter(isDarkTheme ? 0xFF849396 : 0xFF64748B);
+                    moreBtn.setOnClickListener(v -> {
+                        playUiFeedbackSound("tap");
+                        PopupMenu popup = new PopupMenu(this, moreBtn);
+                        popup.getMenu().add(0, 1, 0, "Open in Active Tab");
+                        popup.getMenu().add(0, 2, 1, "Open in New Tab");
+                        popup.getMenu().add(0, 3, 2, "Copy Link");
+                        popup.getMenu().add(0, 4, 3, "Delete Bookmark");
+                        popup.setOnMenuItemClickListener(mi -> {
+                            if (mi.getItemId() == 1) {
+                                dialog.dismiss();
+                                TabItem active = getActiveOrDominantTab();
+                                if (active != null && active.webView != null) active.webView.loadUrl(item.url);
+                                else addNewTab("web", null, item.url, false);
+                                return true;
+                            } else if (mi.getItemId() == 2) {
+                                dialog.dismiss();
+                                addNewTab("web", null, item.url, false);
+                                return true;
+                            } else if (mi.getItemId() == 3) {
+                                ClipboardManager cm = (ClipboardManager) getSystemService(Context.CLIPBOARD_SERVICE);
+                                if (cm != null) cm.setPrimaryClip(ClipData.newPlainText("URL", item.url));
+                                Toast.makeText(this, "Link copied to clipboard", Toast.LENGTH_SHORT).show();
+                                return true;
+                            } else if (mi.getItemId() == 4) {
+                                bookmarkManager.deleteBookmark(item.id);
+                                Toast.makeText(this, "Bookmark deleted", Toast.LENGTH_SHORT).show();
+                                refreshRef[0].run();
+                                return true;
+                            }
+                            return false;
+                        });
+                        popup.show();
+                    });
+                }
+
+                // Card Click
+                card.setOnClickListener(v -> {
+                    if (isSelectMode[0]) {
+                        if (itemCheck != null) itemCheck.toggle();
+                    } else {
+                        dialog.dismiss();
+                        playUiFeedbackSound("tap");
+                        TabItem active = getActiveOrDominantTab();
+                        if (active != null && active.webView != null) active.webView.loadUrl(item.url);
+                        else addNewTab("web", null, item.url, false);
+                    }
+                });
+
+                listContainer.addView(card);
+            }
+        };
+
+        currentBookmarksRefreshRunnable = refreshRef[0];
+
+        // Batch Select Toggle Listener
+        if (btnBatchToggle != null) {
+            btnBatchToggle.setOnClickListener(v -> {
+                playUiFeedbackSound("tap");
+                isSelectMode[0] = !isSelectMode[0];
+                btnBatchToggle.setText(isSelectMode[0] ? "CANCEL" : "SELECT");
+                selectedBookmarkIds.clear();
+                if (btnBatchDelete != null) btnBatchDelete.setVisibility(View.GONE);
+                refreshRef[0].run();
+            });
+        }
+
+        // Batch Delete Listener
+        if (btnBatchDelete != null) {
+            btnBatchDelete.setOnClickListener(v -> {
+                playUiFeedbackSound("tap");
+                if (!selectedBookmarkIds.isEmpty()) {
+                    new AlertDialog.Builder(this)
+                            .setTitle("Delete Bookmarks")
+                            .setMessage("Delete " + selectedBookmarkIds.size() + " selected bookmarks?")
+                            .setPositiveButton("Delete", (d, which) -> {
+                                bookmarkManager.batchDelete(new ArrayList<>(selectedBookmarkIds));
+                                selectedBookmarkIds.clear();
+                                isSelectMode[0] = false;
+                                btnBatchToggle.setText("SELECT");
+                                btnBatchDelete.setVisibility(View.GONE);
+                                refreshRef[0].run();
+                                Toast.makeText(this, "Bookmarks deleted", Toast.LENGTH_SHORT).show();
+                            })
+                            .setNegativeButton("Cancel", null)
+                            .show();
+                }
+            });
+        }
+
+        // Filter Chip Listeners
+        View.OnClickListener chipClick = v -> {
+            playUiFeedbackSound("tap");
+            if (v == chipAll) activeCategory[0] = "all";
+            else if (v == chipFav) activeCategory[0] = "favorites";
+            else if (v == chipDev) activeCategory[0] = "dev";
+            else if (v == chipAi) activeCategory[0] = "ai";
+            updateChipStyles.run();
+            refreshRef[0].run();
+        };
+        if (chipAll != null) chipAll.setOnClickListener(chipClick);
+        if (chipFav != null) chipFav.setOnClickListener(chipClick);
+        if (chipDev != null) chipDev.setOnClickListener(chipClick);
+        if (chipAi != null) chipAi.setOnClickListener(chipClick);
+
+        // Sort Button Listener
+        if (btnSort != null) {
+            btnSort.setOnClickListener(v -> {
+                playUiFeedbackSound("tap");
+                PopupMenu sortMenu = new PopupMenu(this, btnSort);
+                sortMenu.getMenu().add(0, 1, 0, "Newest First");
+                sortMenu.getMenu().add(0, 2, 1, "Oldest First");
+                sortMenu.getMenu().add(0, 3, 2, "Title (A-Z)");
+                sortMenu.getMenu().add(0, 4, 3, "Title (Z-A)");
+                sortMenu.setOnMenuItemClickListener(item -> {
+                    if (item.getItemId() == 1) { activeSort[0] = "newest"; textSortLabel.setText("Newest"); }
+                    else if (item.getItemId() == 2) { activeSort[0] = "oldest"; textSortLabel.setText("Oldest"); }
+                    else if (item.getItemId() == 3) { activeSort[0] = "az"; textSortLabel.setText("A-Z"); }
+                    else if (item.getItemId() == 4) { activeSort[0] = "za"; textSortLabel.setText("Z-A"); }
+                    refreshRef[0].run();
+                    return true;
+                });
+                sortMenu.show();
+            });
+        }
+
+        // Search Input Listener
         if (searchInput != null) {
-            searchInput.setHint("Search bookmarks...");
             searchInput.addTextChangedListener(new TextWatcher() {
                 @Override public void beforeTextChanged(CharSequence s, int start, int count, int after) {}
-                @Override public void onTextChanged(CharSequence s, int start, int before, int count) { refreshBookmarks.run(); }
+                @Override public void onTextChanged(CharSequence s, int start, int before, int count) { refreshRef[0].run(); }
                 @Override public void afterTextChanged(Editable s) {}
             });
         }
 
-        refreshBookmarks.run();
+        // Bottom Dock: Export Bookmarks Button
+        if (btnDockExport != null) {
+            btnDockExport.setOnClickListener(v -> {
+                playUiFeedbackSound("tap");
+                try {
+                    Intent intent = new Intent(Intent.ACTION_OPEN_DOCUMENT_TREE);
+                    intent.addFlags(Intent.FLAG_GRANT_WRITE_URI_PERMISSION);
+                    startActivityForResult(intent, REQUEST_CODE_EXPORT_BOOKMARKS_TREE);
+                    Toast.makeText(this, "Select export destination folder", Toast.LENGTH_SHORT).show();
+                } catch (Exception e) {
+                    Toast.makeText(this, "Export unavailable: " + e.getMessage(), Toast.LENGTH_SHORT).show();
+                }
+            });
+        }
+
+        // Bottom Dock: Import Bookmarks Button
+        if (btnDockImport != null) {
+            btnDockImport.setOnClickListener(v -> {
+                playUiFeedbackSound("tap");
+                try {
+                    Intent intent = new Intent(Intent.ACTION_GET_CONTENT);
+                    intent.setType("*/*");
+                    intent.addCategory(Intent.CATEGORY_OPENABLE);
+                    startActivityForResult(Intent.createChooser(intent, "Select Bookmarks File (HTML/JSON)"), REQUEST_CODE_IMPORT_BOOKMARKS_FILE);
+                } catch (Exception e) {
+                    Toast.makeText(this, "Import unavailable: " + e.getMessage(), Toast.LENGTH_SHORT).show();
+                }
+            });
+        }
+
+        // Bottom Dock: Add Bookmark Center Plus Button
+        if (btnDockAdd != null) {
+            btnDockAdd.setOnClickListener(v -> {
+                playUiFeedbackSound("tap");
+                LinearLayout addLayout = new LinearLayout(this);
+                addLayout.setOrientation(LinearLayout.VERTICAL);
+                addLayout.setPadding(dpToPx(20), dpToPx(16), dpToPx(20), dpToPx(10));
+
+                EditText etTitle = new EditText(this);
+                etTitle.setHint("Title");
+                TabItem activeTab = getActiveOrDominantTab();
+                if (activeTab != null && activeTab.title != null) etTitle.setText(activeTab.title);
+                addLayout.addView(etTitle);
+
+                EditText etUrl = new EditText(this);
+                etUrl.setHint("https://...");
+                if (activeTab != null && activeTab.url != null) etUrl.setText(activeTab.url);
+                addLayout.addView(etUrl);
+
+                new AlertDialog.Builder(this)
+                        .setTitle("Add Bookmark")
+                        .setView(addLayout)
+                        .setPositiveButton("Save", (d, which) -> {
+                            String t = etTitle.getText().toString().trim();
+                            String u = etUrl.getText().toString().trim();
+                            if (!u.isEmpty()) {
+                                if (!u.startsWith("http://") && !u.startsWith("https://")) u = "https://" + u;
+                                if (t.isEmpty()) t = u;
+                                bookmarkManager.addBookmark(t, u, "Default", "");
+                                Toast.makeText(this, "Bookmark added! ✨", Toast.LENGTH_SHORT).show();
+                                refreshRef[0].run();
+                            }
+                        })
+                        .setNegativeButton("Cancel", null)
+                        .show();
+            });
+        }
+
+        updateChipStyles.run();
+        refreshRef[0].run();
         dialog.show();
     }
 

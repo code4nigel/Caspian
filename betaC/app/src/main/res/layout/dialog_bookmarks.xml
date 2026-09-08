@@ -391,13 +391,13 @@
                     </LinearLayout>
                 </HorizontalScrollView>
 
-                <!-- Bookmarks RecyclerView -->
-                <androidx.recyclerview.widget.RecyclerView
-                    android:id="@+id/recycler_bookmarks"
+                <!-- Bookmarks List Container -->
+                <LinearLayout
+                    android:id="@+id/bookmarks_list_container"
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
                     android:layout_marginTop="14dp"
-                    android:nestedScrollingEnabled="false" />
+                    android:orientation="vertical" />
 
                 <!-- Empty State View -->
                 <LinearLayout
