@@ -413,6 +413,7 @@
                     android:contentDescription="Reload Page" />
 
                 <View
+                    android:id="@+id/omnibox_divider_left"
                     android:layout_width="1dp"
                     android:layout_height="14dp"
                     android:layout_marginStart="4dp"
@@ -477,11 +478,30 @@
                             android:inputType="textUri|textNoSuggestions"
                             android:padding="0dp" />
 
-                        <!-- Clear Text Button -->
+                        <!-- Inline Paste Button (Samsung Internet style) -->
+                        <TextView
+                            android:id="@+id/omnibox_paste_btn"
+                            android:layout_width="wrap_content"
+                            android:layout_height="match_parent"
+                            android:gravity="center"
+                            android:paddingStart="8dp"
+                            android:paddingEnd="8dp"
+                            android:text="Paste"
+                            android:textColor="#00E5FF"
+                            android:textSize="12sp"
+                            android:textStyle="bold"
+                            android:background="?attr/selectableItemBackgroundBorderless"
+                            android:visibility="gone"
+                            android:clickable="true"
+                            android:focusable="true" />
+
+                        <!-- Clear / Close Button -->
                         <ImageButton
                             android:id="@+id/omnibox_clear_btn"
-                            android:layout_width="18dp"
-                            android:layout_height="18dp"
+                            android:layout_width="24dp"
+                            android:layout_height="24dp"
+                            android:layout_marginStart="2dp"
+                            android:padding="4dp"
                             android:background="?attr/selectableItemBackgroundBorderless"
                             android:src="@drawable/ic_pod_close"
                             android:tint="#88FFFFFF"
@@ -571,6 +591,7 @@
                 </FrameLayout>
 
                 <View
+                    android:id="@+id/omnibox_divider_right"
                     android:layout_width="1dp"
                     android:layout_height="14dp"
                     android:layout_marginStart="4dp"

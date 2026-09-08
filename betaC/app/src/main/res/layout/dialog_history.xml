@@ -1,5 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
 <LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:id="@+id/history_root"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
     android:background="#0A0E17"
@@ -43,6 +44,7 @@
 
             <!-- Active History Capsule -->
             <LinearLayout
+                android:id="@+id/history_tab_capsule"
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
                 android:orientation="horizontal"
@@ -56,6 +58,7 @@
                 android:layout_marginEnd="14dp">
 
                 <TextView
+                    android:id="@+id/history_tab_capsule_text"
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
                     android:text="History"
@@ -98,6 +101,7 @@
 
         <!-- Integrated Search + Action Controls Capsule -->
         <LinearLayout
+            android:id="@+id/history_search_capsule"
             android:layout_width="match_parent"
             android:layout_height="44dp"
             android:layout_marginStart="16dp"
@@ -111,6 +115,7 @@
 
             <!-- Search Icon -->
             <ImageView
+                android:id="@+id/history_search_icon"
                 android:layout_width="16dp"
                 android:layout_height="16dp"
                 android:src="@drawable/ic_pod_search"
@@ -134,6 +139,7 @@
 
             <!-- Vertical Divider -->
             <View
+                android:id="@+id/history_search_divider"
                 android:layout_width="1dp"
                 android:layout_height="18dp"
                 android:background="#1E2433"
@@ -324,6 +330,7 @@
 
         <!-- Matte Container Box -->
         <LinearLayout
+            android:id="@+id/history_bottom_bar_card"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:orientation="vertical"
@@ -350,6 +357,7 @@
                     android:focusable="true">
 
                     <ImageView
+                        android:id="@+id/icon_time_range_clock"
                         android:layout_width="14dp"
                         android:layout_height="14dp"
                         android:src="@drawable/ic_stitch_clock"
@@ -357,6 +365,7 @@
                         android:contentDescription="Time" />
 
                     <TextView
+                        android:id="@+id/label_time_range"
                         android:layout_width="wrap_content"
                         android:layout_height="wrap_content"
                         android:text="Time Range:"
@@ -386,6 +395,7 @@
                             android:textStyle="bold" />
 
                         <ImageView
+                            android:id="@+id/icon_time_range_chevron"
                             android:layout_width="10dp"
                             android:layout_height="10dp"
                             android:layout_marginStart="4dp"
@@ -414,6 +424,7 @@
                         android:focusable="true">
 
                         <ImageView
+                            android:id="@+id/icon_clear_cookies"
                             android:layout_width="14dp"
                             android:layout_height="14dp"
                             android:src="@drawable/ic_stitch_cookie"
@@ -421,6 +432,7 @@
                             android:contentDescription="Cookies" />
 
                         <TextView
+                            android:id="@+id/text_clear_cookies"
                             android:layout_width="wrap_content"
                             android:layout_height="wrap_content"
                             android:layout_marginStart="4dp"
@@ -443,6 +455,7 @@
                         android:focusable="true">
 
                         <ImageView
+                            android:id="@+id/icon_clear_data"
                             android:layout_width="14dp"
                             android:layout_height="14dp"
                             android:src="@drawable/ic_stitch_trash"
@@ -450,6 +463,7 @@
                             android:contentDescription="Data" />
 
                         <TextView
+                            android:id="@+id/text_clear_data"
                             android:layout_width="wrap_content"
                             android:layout_height="wrap_content"
                             android:layout_marginStart="4dp"
@@ -471,6 +485,7 @@
                         android:focusable="true">
 
                         <ImageView
+                            android:id="@+id/icon_clear_both"
                             android:layout_width="14dp"
                             android:layout_height="14dp"
                             android:src="@drawable/ic_stitch_refresh"
@@ -478,6 +493,7 @@
                             android:contentDescription="Both" />
 
                         <TextView
+                            android:id="@+id/text_clear_both"
                             android:layout_width="wrap_content"
                             android:layout_height="wrap_content"
                             android:layout_marginStart="4dp"
