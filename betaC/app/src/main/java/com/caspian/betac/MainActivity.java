@@ -6272,6 +6272,10 @@ public class MainActivity extends AppCompatActivity {
             }
         }
 
+        final SharedPreferences gridPrefs = getSharedPreferences(PREFS_NAME, MODE_PRIVATE);
+        int savedPage = gridPrefs.getInt("last_card_grid_page", 0);
+        int initialPage = Math.max(0, Math.min(savedPage, pages.size() - 1));
+
         if (flipper != null) {
             flipper.removeAllViews();
             for (int p = 0; p < pages.size(); p++) {
@@ -6296,11 +6300,16 @@ public class MainActivity extends AppCompatActivity {
             }
 
             flipper.setOnPageChangeListener(pageIndex -> {
+                gridPrefs.edit().putInt("last_card_grid_page", pageIndex).apply();
                 updateDynamicIndicatorDots(dotsLayout, flipper, pageIndex, pages.size(), isDarkTheme);
             });
+
+            if (initialPage > 0 && initialPage < pages.size()) {
+                flipper.setDisplayedChild(initialPage);
+            }
         }
 
-        updateDynamicIndicatorDots(dotsLayout, flipper, 0, pages.size(), isDarkTheme);
+        updateDynamicIndicatorDots(dotsLayout, flipper, initialPage, pages.size(), isDarkTheme);
 
         // Wire tile click actions
         View tileNight = tileMap.get("night_mode");
@@ -8419,126 +8428,515 @@ public class MainActivity extends AppCompatActivity {
         builder.setView(dialogView);
         AlertDialog dialog = builder.create();
         if (dialog.getWindow() != null) {
-            dialog.getWindow().setBackgroundDrawable(new ColorDrawable(0xF2050811));
+            dialog.getWindow().setBackgroundDrawable(new ColorDrawable(0xFF0A0E17));
         }
 
-        ImageButton closeBtn = dialogView.findViewById(R.id.history_close_btn);
+        TextView badgeCount = dialogView.findViewById(R.id.badge_history_count);
+        TextView tabBookmarks = dialogView.findViewById(R.id.tab_header_bookmarks);
+        TextView tabSettings = dialogView.findViewById(R.id.tab_header_settings);
         EditText searchInput = dialogView.findViewById(R.id.history_search_input);
+        TextView btnSelect = dialogView.findViewById(R.id.btn_history_select);
+        ImageView btnOptions = dialogView.findViewById(R.id.btn_history_options);
+        ImageView closeBtn = dialogView.findViewById(R.id.history_close_btn);
+
+        TextView chipAll = dialogView.findViewById(R.id.chip_filter_all);
+        TextView chip1h = dialogView.findViewById(R.id.chip_filter_1h);
+        TextView chip24h = dialogView.findViewById(R.id.chip_filter_24h);
+        TextView chipDomains = dialogView.findViewById(R.id.chip_filter_domains);
+
         LinearLayout listContainer = dialogView.findViewById(R.id.history_list_container);
         TextView emptyView = dialogView.findViewById(R.id.history_empty_view);
-        Button btn1h = dialogView.findViewById(R.id.btn_clear_history_1h);
-        Button btn24h = dialogView.findViewById(R.id.btn_clear_history_24h);
-        Button btnAll = dialogView.findViewById(R.id.btn_clear_history_all);
-        Button btnCookies = dialogView.findViewById(R.id.btn_clear_cookies);
 
-        Runnable refreshList = () -> {
+        View bottomNormalBar = dialogView.findViewById(R.id.bottom_normal_bar);
+        View bottomSelectBar = dialogView.findViewById(R.id.bottom_select_bar);
+        View timeRangeSelector = dialogView.findViewById(R.id.layout_time_range_selector);
+        TextView textSelectedTimeRange = dialogView.findViewById(R.id.text_selected_time_range);
+
+        View btnClearCookies = dialogView.findViewById(R.id.btn_clear_cookies);
+        View btnClearData = dialogView.findViewById(R.id.btn_clear_data);
+        View btnClearBoth = dialogView.findViewById(R.id.btn_clear_both);
+
+        TextView textSelectedCount = dialogView.findViewById(R.id.text_selected_count);
+        TextView btnSelectAllToggle = dialogView.findViewById(R.id.btn_select_all_toggle);
+        TextView btnDeleteSelected = dialogView.findViewById(R.id.btn_delete_selected);
+        TextView btnCancelSelect = dialogView.findViewById(R.id.btn_cancel_select);
+
+        final boolean[] isSelectMode = new boolean[]{false};
+        final Set<Long> selectedIds = new HashSet<>();
+        final String[] activeFilter = new String[]{"all"};
+        final String[] selectedTimeRange = new String[]{"24h"};
+        final List<HistoryManager.HistoryEntry> currentVisibleEntries = new ArrayList<>();
+
+        java.text.SimpleDateFormat timeSdf = new java.text.SimpleDateFormat("HH:mm", java.util.Locale.getDefault());
+        java.text.SimpleDateFormat dayFormat = new java.text.SimpleDateFormat("MMM dd", java.util.Locale.getDefault());
+
+        Runnable updateChipsVisuals = () -> {
+            if (chipAll != null) {
+                boolean act = "all".equals(activeFilter[0]);
+                chipAll.setBackgroundResource(act ? R.drawable.bg_stitch_chip_active : R.drawable.bg_stitch_chip_inactive);
+                chipAll.setTextColor(act ? 0xFF0F172A : 0xFF94A3B8);
+            }
+            if (chip1h != null) {
+                boolean act = "1h".equals(activeFilter[0]);
+                chip1h.setBackgroundResource(act ? R.drawable.bg_stitch_chip_active : R.drawable.bg_stitch_chip_inactive);
+                chip1h.setTextColor(act ? 0xFF0F172A : 0xFF94A3B8);
+            }
+            if (chip24h != null) {
+                boolean act = "24h".equals(activeFilter[0]);
+                chip24h.setBackgroundResource(act ? R.drawable.bg_stitch_chip_active : R.drawable.bg_stitch_chip_inactive);
+                chip24h.setTextColor(act ? 0xFF0F172A : 0xFF94A3B8);
+            }
+            if (chipDomains != null) {
+                boolean act = "domains".equals(activeFilter[0]);
+                chipDomains.setBackgroundResource(act ? R.drawable.bg_stitch_chip_active : R.drawable.bg_stitch_chip_inactive);
+                chipDomains.setTextColor(act ? 0xFF0F172A : 0xFF94A3B8);
+            }
+        };
+
+        final Runnable[] refreshList = new Runnable[1];
+        refreshList[0] = () -> {
             listContainer.removeAllViews();
-            String query = searchInput.getText().toString();
-            List<HistoryManager.HistoryEntry> entries = HistoryManager.getInstance(this).getHistory(query);
-            if (entries.isEmpty()) {
-                emptyView.setVisibility(View.VISIBLE);
+            currentVisibleEntries.clear();
+            String query = searchInput != null ? searchInput.getText().toString() : "";
+            List<HistoryManager.HistoryEntry> rawEntries = HistoryManager.getInstance(this).getHistory(query);
+
+            int totalCount = HistoryManager.getInstance(this).getTotalHistoryCount();
+            if (badgeCount != null) badgeCount.setText(String.valueOf(totalCount));
+
+            long now = System.currentTimeMillis();
+            for (HistoryManager.HistoryEntry e : rawEntries) {
+                if ("1h".equals(activeFilter[0])) {
+                    if (e.timestamp < now - (3600L * 1000L)) continue;
+                } else if ("24h".equals(activeFilter[0])) {
+                    if (e.timestamp < now - (24L * 3600L * 1000L)) continue;
+                }
+                currentVisibleEntries.add(e);
+            }
+
+            if (currentVisibleEntries.isEmpty()) {
+                if (emptyView != null) emptyView.setVisibility(View.VISIBLE);
             } else {
-                emptyView.setVisibility(View.GONE);
-                java.text.SimpleDateFormat sdf = new java.text.SimpleDateFormat("MMM dd, HH:mm", java.util.Locale.getDefault());
-                for (HistoryManager.HistoryEntry entry : entries) {
-                    LinearLayout row = new LinearLayout(this);
-                    row.setLayoutParams(new LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT));
-                    row.setOrientation(LinearLayout.VERTICAL);
-                    row.setPadding(dpToPx(12), dpToPx(10), dpToPx(12), dpToPx(10));
-                    row.setBackgroundResource(R.drawable.bg_liquid_glass_pill);
+                if (emptyView != null) emptyView.setVisibility(View.GONE);
 
-                    TextView titleView = new TextView(this);
-                    titleView.setText(entry.title);
-                    titleView.setTextColor(0xFFDFE2F0);
-                    titleView.setTextSize(TypedValue.COMPLEX_UNIT_SP, 13);
-                    titleView.setTypeface(null, android.graphics.Typeface.BOLD);
-                    titleView.setSingleLine(true);
-                    titleView.setEllipsize(android.text.TextUtils.TruncateAt.END);
+                java.util.Calendar calNow = java.util.Calendar.getInstance();
+                int curYear = calNow.get(java.util.Calendar.YEAR);
+                int curDay = calNow.get(java.util.Calendar.DAY_OF_YEAR);
 
-                    LinearLayout subRow = new LinearLayout(this);
-                    subRow.setOrientation(LinearLayout.HORIZONTAL);
-                    subRow.setGravity(Gravity.CENTER_VERTICAL);
-                    subRow.setPadding(0, dpToPx(4), 0, 0);
+                // Group entries by date
+                java.util.LinkedHashMap<String, List<HistoryManager.HistoryEntry>> groups = new java.util.LinkedHashMap<>();
+                for (HistoryManager.HistoryEntry entry : currentVisibleEntries) {
+                    java.util.Calendar calEntry = java.util.Calendar.getInstance();
+                    calEntry.setTimeInMillis(entry.timestamp);
+                    int entryYear = calEntry.get(java.util.Calendar.YEAR);
+                    int entryDay = calEntry.get(java.util.Calendar.DAY_OF_YEAR);
 
-                    TextView urlView = new TextView(this);
-                    LinearLayout.LayoutParams urlLp = new LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.WRAP_CONTENT, 1f);
-                    urlView.setLayoutParams(urlLp);
-                    urlView.setText(cleanDisplayUrl(entry.url));
-                    urlView.setTextColor(0xFF00E5FF);
-                    urlView.setTextSize(TypedValue.COMPLEX_UNIT_SP, 11);
-                    urlView.setSingleLine(true);
-                    urlView.setEllipsize(android.text.TextUtils.TruncateAt.END);
+                    String groupKey;
+                    if (curYear == entryYear && curDay == entryDay) {
+                        groupKey = "TODAY • " + dayFormat.format(new Date(entry.timestamp)).toUpperCase(Locale.ROOT);
+                    } else if (curYear == entryYear && curDay - 1 == entryDay) {
+                        groupKey = "YESTERDAY • " + dayFormat.format(new Date(entry.timestamp)).toUpperCase(Locale.ROOT);
+                    } else {
+                        groupKey = dayFormat.format(new Date(entry.timestamp)).toUpperCase(Locale.ROOT);
+                    }
 
-                    TextView timeView = new TextView(this);
-                    timeView.setText(sdf.format(new java.util.Date(entry.timestamp)));
-                    timeView.setTextColor(0xFF849396);
-                    timeView.setTextSize(TypedValue.COMPLEX_UNIT_SP, 10);
-                    timeView.setPadding(dpToPx(8), 0, 0, 0);
+                    if (!groups.containsKey(groupKey)) {
+                        groups.put(groupKey, new ArrayList<>());
+                    }
+                    groups.get(groupKey).add(entry);
+                }
 
-                    subRow.addView(urlView);
-                    subRow.addView(timeView);
+                for (Map.Entry<String, List<HistoryManager.HistoryEntry>> group : groups.entrySet()) {
+                    String dateKey = group.getKey();
+                    List<HistoryManager.HistoryEntry> dayEntries = group.getValue();
 
-                    row.addView(titleView);
-                    row.addView(subRow);
+                    // Section Header
+                    LinearLayout secHeader = new LinearLayout(this);
+                    secHeader.setOrientation(LinearLayout.HORIZONTAL);
+                    secHeader.setGravity(Gravity.CENTER_VERTICAL);
+                    secHeader.setPadding(dpToPx(2), dpToPx(8), dpToPx(2), dpToPx(4));
 
-                    row.setOnClickListener(v -> {
+                    TextView secTitle = new TextView(this);
+                    secTitle.setLayoutParams(new LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.WRAP_CONTENT, 1f));
+                    secTitle.setText(dateKey);
+                    secTitle.setTextColor(0xFF94A3B8);
+                    secTitle.setTextSize(TypedValue.COMPLEX_UNIT_SP, 11f);
+                    secTitle.setTypeface(Typeface.MONOSPACE, Typeface.BOLD);
+                    secHeader.addView(secTitle);
+
+                    TextView secDelete = new TextView(this);
+                    secDelete.setText(dateKey.startsWith("TODAY") ? "Delete Today" : (dateKey.startsWith("YESTERDAY") ? "Delete Yesterday" : "Delete Day"));
+                    secDelete.setTextColor(0xFF64748B);
+                    secDelete.setTextSize(TypedValue.COMPLEX_UNIT_SP, 10.5f);
+                    secDelete.setClickable(true);
+                    secDelete.setFocusable(true);
+                    secDelete.setOnClickListener(v -> {
                         playUiFeedbackSound("tap");
-                        dialog.dismiss();
-                        TabItem active = getActiveOrDominantTab();
-                        if (active != null) {
-                            active.webView.loadUrl(entry.url);
-                        } else {
-                            addNewTab("web", null, entry.url, false);
-                        }
+                        List<Long> idsToDelete = new ArrayList<>();
+                        for (HistoryManager.HistoryEntry e : dayEntries) idsToDelete.add(e.id);
+                        HistoryManager.getInstance(this).deleteEntries(idsToDelete);
+                        refreshList[0].run();
+                        Toast.makeText(this, "Cleared " + dateKey, Toast.LENGTH_SHORT).show();
                     });
+                    secHeader.addView(secDelete);
+                    listContainer.addView(secHeader);
 
-                    LinearLayout.LayoutParams rowLp = (LinearLayout.LayoutParams) row.getLayoutParams();
-                    rowLp.bottomMargin = dpToPx(6);
-                    row.setLayoutParams(rowLp);
+                    // Group Items
+                    for (HistoryManager.HistoryEntry entry : dayEntries) {
+                        LinearLayout card = new LinearLayout(this);
+                        card.setOrientation(LinearLayout.HORIZONTAL);
+                        card.setGravity(Gravity.CENTER_VERTICAL);
+                        card.setPadding(dpToPx(12), dpToPx(10), dpToPx(10), dpToPx(10));
+                        card.setBackgroundResource(R.drawable.bg_stitch_history_entry);
 
-                    listContainer.addView(row);
+                        LinearLayout.LayoutParams cardLp = new LinearLayout.LayoutParams(
+                                ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT);
+                        cardLp.bottomMargin = dpToPx(7);
+                        card.setLayoutParams(cardLp);
+
+                        // Checkbox for Select Mode
+                        if (isSelectMode[0]) {
+                            TextView checkIcon = new TextView(this);
+                            boolean isChecked = selectedIds.contains(entry.id);
+                            checkIcon.setText(isChecked ? "✓" : "○");
+                            checkIcon.setTextColor(isChecked ? 0xFF00E5FF : 0xFF64748B);
+                            checkIcon.setTextSize(TypedValue.COMPLEX_UNIT_SP, 14f);
+                            checkIcon.setTypeface(null, Typeface.BOLD);
+                            checkIcon.setPadding(0, 0, dpToPx(10), 0);
+                            card.addView(checkIcon);
+                        }
+
+                        // Squircle Icon Container (32dp x 32dp)
+                        FrameLayout iconBox = new FrameLayout(this);
+                        LinearLayout.LayoutParams ibLp = new LinearLayout.LayoutParams(dpToPx(32), dpToPx(32));
+                        ibLp.setMarginEnd(dpToPx(10));
+                        iconBox.setLayoutParams(ibLp);
+
+                        GradientDrawable ibGd = new GradientDrawable();
+                        ibGd.setColor(0xFF0D1117);
+                        ibGd.setCornerRadius(dpToPx(8));
+                        ibGd.setStroke(dpToPx(1), 0xFF1E2433);
+                        iconBox.setBackground(ibGd);
+
+                        ImageView iv = new ImageView(this);
+                        FrameLayout.LayoutParams ivLp = new FrameLayout.LayoutParams(dpToPx(16), dpToPx(16));
+                        ivLp.gravity = Gravity.CENTER;
+                        iv.setLayoutParams(ivLp);
+                        if (entry.url.contains("google.")) {
+                            iv.setImageResource(R.drawable.ic_stitch_google);
+                        } else {
+                            iv.setImageResource(R.drawable.ic_stitch_globe);
+                            iv.setColorFilter(0xFF38BDF8);
+                        }
+                        iconBox.addView(iv);
+                        card.addView(iconBox);
+
+                        // Text Details Column
+                        LinearLayout textCol = new LinearLayout(this);
+                        textCol.setOrientation(LinearLayout.VERTICAL);
+                        LinearLayout.LayoutParams tcLp = new LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.WRAP_CONTENT, 1f);
+                        textCol.setLayoutParams(tcLp);
+
+                        TextView titleTv = new TextView(this);
+                        titleTv.setText(entry.title != null && !entry.title.isEmpty() ? entry.title : entry.url);
+                        titleTv.setTextColor(0xFFF1F5F9);
+                        titleTv.setTextSize(TypedValue.COMPLEX_UNIT_SP, 12.5f);
+                        titleTv.setTypeface(null, Typeface.BOLD);
+                        titleTv.setSingleLine(true);
+                        titleTv.setEllipsize(android.text.TextUtils.TruncateAt.END);
+
+                        TextView urlTv = new TextView(this);
+                        urlTv.setText(cleanDisplayUrl(entry.url));
+                        urlTv.setTextColor(0xFF94A3B8);
+                        urlTv.setTextSize(TypedValue.COMPLEX_UNIT_SP, 11f);
+                        urlTv.setSingleLine(true);
+                        urlTv.setEllipsize(android.text.TextUtils.TruncateAt.END);
+
+                        textCol.addView(titleTv);
+                        textCol.addView(urlTv);
+                        card.addView(textCol);
+
+                        // Right Column: Time + 3-dots Menu
+                        LinearLayout rightCol = new LinearLayout(this);
+                        rightCol.setOrientation(LinearLayout.HORIZONTAL);
+                        rightCol.setGravity(Gravity.CENTER_VERTICAL);
+                        rightCol.setPadding(dpToPx(6), 0, 0, 0);
+
+                        TextView timeTv = new TextView(this);
+                        timeTv.setText(timeSdf.format(new Date(entry.timestamp)));
+                        timeTv.setTextColor(0xFF64748B);
+                        timeTv.setTextSize(TypedValue.COMPLEX_UNIT_SP, 10.5f);
+                        timeTv.setTypeface(Typeface.MONOSPACE);
+                        rightCol.addView(timeTv);
+
+                        ImageView moreBtn = new ImageView(this);
+                        LinearLayout.LayoutParams mbLp = new LinearLayout.LayoutParams(dpToPx(24), dpToPx(24));
+                        mbLp.setMarginStart(dpToPx(4));
+                        moreBtn.setLayoutParams(mbLp);
+                        moreBtn.setImageResource(R.drawable.ic_stitch_more_vert);
+                        moreBtn.setColorFilter(0xFF94A3B8);
+                        moreBtn.setPadding(dpToPx(5), dpToPx(5), dpToPx(5), dpToPx(5));
+                        moreBtn.setBackgroundResource(R.drawable.bg_stitch_round_button);
+                        moreBtn.setClickable(true);
+                        moreBtn.setFocusable(true);
+                        moreBtn.setOnClickListener(v -> {
+                            playUiFeedbackSound("tap");
+                            PopupMenu popup = new PopupMenu(this, moreBtn);
+                            popup.getMenu().add("Open in New Tab");
+                            popup.getMenu().add("Copy URL");
+                            popup.getMenu().add("Delete Entry");
+                            popup.setOnMenuItemClickListener(item -> {
+                                if ("Open in New Tab".equals(item.getTitle())) {
+                                    dialog.dismiss();
+                                    addNewTab("web", null, entry.url, false);
+                                } else if ("Copy URL".equals(item.getTitle())) {
+                                    android.content.ClipboardManager cm = (android.content.ClipboardManager) getSystemService(Context.CLIPBOARD_SERVICE);
+                                    cm.setPrimaryClip(android.content.ClipData.newPlainText("URL", entry.url));
+                                    Toast.makeText(this, "Copied URL to clipboard", Toast.LENGTH_SHORT).show();
+                                } else if ("Delete Entry".equals(item.getTitle())) {
+                                    HistoryManager.getInstance(this).deleteEntry(entry.id);
+                                    refreshList[0].run();
+                                }
+                                return true;
+                            });
+                            popup.show();
+                        });
+                        rightCol.addView(moreBtn);
+                        card.addView(rightCol);
+
+                        card.setOnClickListener(v -> {
+                            playUiFeedbackSound("tap");
+                            if (isSelectMode[0]) {
+                                if (selectedIds.contains(entry.id)) {
+                                    selectedIds.remove(entry.id);
+                                } else {
+                                    selectedIds.add(entry.id);
+                                }
+                                if (textSelectedCount != null) {
+                                    textSelectedCount.setText(selectedIds.size() + " selected");
+                                }
+                                refreshList[0].run();
+                            } else {
+                                dialog.dismiss();
+                                TabItem active = getActiveOrDominantTab();
+                                if (active != null) {
+                                    active.webView.loadUrl(entry.url);
+                                } else {
+                                    addNewTab("web", null, entry.url, false);
+                                }
+                            }
+                        });
+
+                        listContainer.addView(card);
+                    }
                 }
             }
         };
 
-        refreshList.run();
+        refreshList[0].run();
 
-        searchInput.addTextChangedListener(new TextWatcher() {
-            @Override public void beforeTextChanged(CharSequence s, int start, int count, int after) {}
-            @Override public void onTextChanged(CharSequence s, int start, int before, int count) { refreshList.run(); }
-            @Override public void afterTextChanged(Editable s) {}
-        });
+        // Search Input Listener
+        if (searchInput != null) {
+            searchInput.addTextChangedListener(new TextWatcher() {
+                @Override public void beforeTextChanged(CharSequence s, int start, int count, int after) {}
+                @Override public void onTextChanged(CharSequence s, int start, int before, int count) { refreshList[0].run(); }
+                @Override public void afterTextChanged(Editable s) {}
+            });
+        }
 
-        closeBtn.setOnClickListener(v -> dialog.dismiss());
+        // Close Button
+        if (closeBtn != null) {
+            closeBtn.setOnClickListener(v -> dialog.dismiss());
+        }
 
-        btn1h.setOnClickListener(v -> {
+        // Header Bookmarks & Settings Navigation
+        if (tabBookmarks != null) {
+            tabBookmarks.setOnClickListener(v -> {
+                dialog.dismiss();
+                playUiFeedbackSound("tap");
+                Toast.makeText(this, "🔖 Bookmarks", Toast.LENGTH_SHORT).show();
+            });
+        }
+        if (tabSettings != null) {
+            tabSettings.setOnClickListener(v -> {
+                dialog.dismiss();
+                playUiFeedbackSound("tap");
+                openControlSheet();
+            });
+        }
+
+        // Filter Chips Click Listeners
+        View.OnClickListener chipListener = v -> {
             playUiFeedbackSound("tap");
-            long oneHourAgo = System.currentTimeMillis() - (3600 * 1000);
-            HistoryManager.getInstance(this).clearHistorySince(oneHourAgo);
-            refreshList.run();
-            Toast.makeText(this, "🧹 Cleared history from last hour", Toast.LENGTH_SHORT).show();
-        });
+            if (v == chipAll) activeFilter[0] = "all";
+            else if (v == chip1h) activeFilter[0] = "1h";
+            else if (v == chip24h) activeFilter[0] = "24h";
+            else if (v == chipDomains) activeFilter[0] = "domains";
+            updateChipsVisuals.run();
+            refreshList[0].run();
+        };
+        if (chipAll != null) chipAll.setOnClickListener(chipListener);
+        if (chip1h != null) chip1h.setOnClickListener(chipListener);
+        if (chip24h != null) chip24h.setOnClickListener(chipListener);
+        if (chipDomains != null) chipDomains.setOnClickListener(chipListener);
 
-        btn24h.setOnClickListener(v -> {
-            playUiFeedbackSound("tap");
-            long twentyFourHoursAgo = System.currentTimeMillis() - (24 * 3600 * 1000);
-            HistoryManager.getInstance(this).clearHistorySince(twentyFourHoursAgo);
-            refreshList.run();
-            Toast.makeText(this, "🧹 Cleared history from last 24 hours", Toast.LENGTH_SHORT).show();
-        });
+        // Select Mode Toggle
+        if (btnSelect != null) {
+            btnSelect.setOnClickListener(v -> {
+                playUiFeedbackSound("tap");
+                isSelectMode[0] = !isSelectMode[0];
+                if (isSelectMode[0]) {
+                    btnSelect.setText("Done");
+                    if (bottomNormalBar != null) bottomNormalBar.setVisibility(View.GONE);
+                    if (bottomSelectBar != null) bottomSelectBar.setVisibility(View.VISIBLE);
+                } else {
+                    selectedIds.clear();
+                    btnSelect.setText("Select");
+                    if (bottomNormalBar != null) bottomNormalBar.setVisibility(View.VISIBLE);
+                    if (bottomSelectBar != null) bottomSelectBar.setVisibility(View.GONE);
+                }
+                refreshList[0].run();
+            });
+        }
 
-        btnAll.setOnClickListener(v -> {
-            playUiFeedbackSound("tap");
-            HistoryManager.getInstance(this).clearAllHistory();
-            refreshList.run();
-            Toast.makeText(this, "🗑️ All history cleared", Toast.LENGTH_SHORT).show();
-        });
+        // Options 3-dots Menu
+        if (btnOptions != null) {
+            btnOptions.setOnClickListener(v -> {
+                playUiFeedbackSound("tap");
+                PopupMenu popup = new PopupMenu(this, btnOptions);
+                popup.getMenu().add("Select Multiple");
+                popup.getMenu().add("Select All");
+                popup.getMenu().add("Clear Entire History");
+                popup.setOnMenuItemClickListener(item -> {
+                    if ("Select Multiple".equals(item.getTitle())) {
+                        isSelectMode[0] = true;
+                        if (btnSelect != null) btnSelect.setText("Done");
+                        if (bottomNormalBar != null) bottomNormalBar.setVisibility(View.GONE);
+                        if (bottomSelectBar != null) bottomSelectBar.setVisibility(View.VISIBLE);
+                        refreshList[0].run();
+                    } else if ("Select All".equals(item.getTitle())) {
+                        isSelectMode[0] = true;
+                        if (btnSelect != null) btnSelect.setText("Done");
+                        if (bottomNormalBar != null) bottomNormalBar.setVisibility(View.GONE);
+                        if (bottomSelectBar != null) bottomSelectBar.setVisibility(View.VISIBLE);
+                        selectedIds.clear();
+                        for (HistoryManager.HistoryEntry e : currentVisibleEntries) selectedIds.add(e.id);
+                        if (textSelectedCount != null) textSelectedCount.setText(selectedIds.size() + " selected");
+                        if (btnSelectAllToggle != null) btnSelectAllToggle.setText("Deselect All");
+                        refreshList[0].run();
+                    } else if ("Clear Entire History".equals(item.getTitle())) {
+                        new AlertDialog.Builder(this)
+                                .setTitle("Clear History")
+                                .setMessage("Are you sure you want to delete all browsing history?")
+                                .setPositiveButton("Clear All", (d, w) -> {
+                                    HistoryManager.getInstance(this).clearAllHistory();
+                                    refreshList[0].run();
+                                    Toast.makeText(this, "🗑️ All browsing history cleared", Toast.LENGTH_SHORT).show();
+                                })
+                                .setNegativeButton("Cancel", null)
+                                .show();
+                    }
+                    return true;
+                });
+                popup.show();
+            });
+        }
 
-        btnCookies.setOnClickListener(v -> {
+        // Bottom Time Range Dropdown Selector
+        View.OnClickListener timeRangePicker = v -> {
             playUiFeedbackSound("tap");
-            HistoryManager.clearCookiesAndCache();
-            Toast.makeText(this, "🍪 Cookies and storage cache cleared", Toast.LENGTH_SHORT).show();
-        });
+            String[] ranges = new String[]{"Last 1 hour", "Last 24 Hours", "Last 1 week", "Entire history"};
+            new AlertDialog.Builder(this)
+                    .setTitle("Select Time Range")
+                    .setItems(ranges, (d, which) -> {
+                        if (which == 0) selectedTimeRange[0] = "1h";
+                        else if (which == 1) selectedTimeRange[0] = "24h";
+                        else if (which == 2) selectedTimeRange[0] = "1w";
+                        else selectedTimeRange[0] = "all";
+                        if (textSelectedTimeRange != null) textSelectedTimeRange.setText(ranges[which]);
+                    })
+                    .show();
+        };
+        if (timeRangeSelector != null) timeRangeSelector.setOnClickListener(timeRangePicker);
+
+        // Clear Buttons
+        if (btnClearCookies != null) {
+            btnClearCookies.setOnClickListener(v -> {
+                playUiFeedbackSound("tap");
+                HistoryManager.clearCookies();
+                Toast.makeText(this, "🍪 Cookies cleared", Toast.LENGTH_SHORT).show();
+            });
+        }
+        if (btnClearData != null) {
+            btnClearData.setOnClickListener(v -> {
+                playUiFeedbackSound("tap");
+                HistoryManager.clearWebData();
+                Toast.makeText(this, "🧹 Browsing cache & data cleared", Toast.LENGTH_SHORT).show();
+            });
+        }
+        if (btnClearBoth != null) {
+            btnClearBoth.setOnClickListener(v -> {
+                playUiFeedbackSound("tap");
+                long cutoff = 0;
+                if ("1h".equals(selectedTimeRange[0])) cutoff = System.currentTimeMillis() - 3600_000L;
+                else if ("24h".equals(selectedTimeRange[0])) cutoff = System.currentTimeMillis() - 86400_000L;
+                else if ("1w".equals(selectedTimeRange[0])) cutoff = System.currentTimeMillis() - 7 * 86400_000L;
+
+                if (cutoff > 0) {
+                    HistoryManager.getInstance(this).clearHistorySince(cutoff);
+                } else {
+                    HistoryManager.getInstance(this).clearAllHistory();
+                }
+                HistoryManager.clearCookiesAndCache();
+                refreshList[0].run();
+                Toast.makeText(this, "✨ History, cookies & cache cleared", Toast.LENGTH_SHORT).show();
+            });
+        }
+
+        // Selection Action Bar Controls
+        if (btnSelectAllToggle != null) {
+            btnSelectAllToggle.setOnClickListener(v -> {
+                playUiFeedbackSound("tap");
+                if (selectedIds.size() >= currentVisibleEntries.size() && !currentVisibleEntries.isEmpty()) {
+                    selectedIds.clear();
+                    btnSelectAllToggle.setText("Select All");
+                } else {
+                    for (HistoryManager.HistoryEntry e : currentVisibleEntries) {
+                        selectedIds.add(e.id);
+                    }
+                    btnSelectAllToggle.setText("Deselect All");
+                }
+                if (textSelectedCount != null) textSelectedCount.setText(selectedIds.size() + " selected");
+                refreshList[0].run();
+            });
+        }
+
+        if (btnDeleteSelected != null) {
+            btnDeleteSelected.setOnClickListener(v -> {
+                playUiFeedbackSound("tap");
+                if (selectedIds.isEmpty()) return;
+                int count = selectedIds.size();
+                HistoryManager.getInstance(this).deleteEntries(selectedIds);
+                selectedIds.clear();
+                isSelectMode[0] = false;
+                if (btnSelect != null) btnSelect.setText("Select");
+                if (bottomNormalBar != null) bottomNormalBar.setVisibility(View.VISIBLE);
+                if (bottomSelectBar != null) bottomSelectBar.setVisibility(View.GONE);
+                refreshList[0].run();
+                Toast.makeText(this, "🗑️ Deleted " + count + " items", Toast.LENGTH_SHORT).show();
+            });
+        }
+
+        if (btnCancelSelect != null) {
+            btnCancelSelect.setOnClickListener(v -> {
+                playUiFeedbackSound("tap");
+                selectedIds.clear();
+                isSelectMode[0] = false;
+                if (btnSelect != null) btnSelect.setText("Select");
+                if (bottomNormalBar != null) bottomNormalBar.setVisibility(View.VISIBLE);
+                if (bottomSelectBar != null) bottomSelectBar.setVisibility(View.GONE);
+                refreshList[0].run();
+            });
+        }
 
         dialog.show();
     }
@@ -12571,7 +12969,6 @@ public class MainActivity extends AppCompatActivity {
                 tab.webView.loadUrl(currentUrl);
             }
         }
-        Toast.makeText(this, "Vault switched to " + cask.name, Toast.LENGTH_SHORT).show();
         saveOpenTabsState();
     }
 

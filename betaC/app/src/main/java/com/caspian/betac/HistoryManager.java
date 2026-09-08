@@ -121,6 +121,24 @@ public class HistoryManager extends SQLiteOpenHelper {
         } catch (Exception ignored) {}
     }
 
+    public void deleteEntries(java.util.Collection<Long> ids) {
+        if (ids == null || ids.isEmpty()) return;
+        try {
+            SQLiteDatabase db = getWritableDatabase();
+            StringBuilder sb = new StringBuilder();
+            sb.append(COLUMN_ID).append(" IN (");
+            int i = 0;
+            String[] args = new String[ids.size()];
+            for (Long id : ids) {
+                if (i > 0) sb.append(",");
+                sb.append("?");
+                args[i++] = String.valueOf(id);
+            }
+            sb.append(")");
+            db.delete(TABLE_HISTORY, sb.toString(), args);
+        } catch (Exception ignored) {}
+    }
+
     public void clearHistorySince(long cutoffTimeMillis) {
         try {
             SQLiteDatabase db = getWritableDatabase();
@@ -135,11 +153,44 @@ public class HistoryManager extends SQLiteOpenHelper {
         } catch (Exception ignored) {}
     }
 
-    public static void clearCookiesAndCache() {
+    public void deleteRange(long startMillis, long endMillis) {
+        try {
+            SQLiteDatabase db = getWritableDatabase();
+            db.delete(TABLE_HISTORY, COLUMN_TIMESTAMP + " >= ? AND " + COLUMN_TIMESTAMP + " <= ?",
+                    new String[]{String.valueOf(startMillis), String.valueOf(endMillis)});
+        } catch (Exception ignored) {}
+    }
+
+    public int getTotalHistoryCount() {
+        int count = 0;
+        try {
+            SQLiteDatabase db = getReadableDatabase();
+            Cursor cursor = db.rawQuery("SELECT COUNT(*) FROM " + TABLE_HISTORY, null);
+            if (cursor != null) {
+                if (cursor.moveToFirst()) {
+                    count = cursor.getInt(0);
+                }
+                cursor.close();
+            }
+        } catch (Exception ignored) {}
+        return count;
+    }
+
+    public static void clearCookies() {
         try {
             CookieManager.getInstance().removeAllCookies(null);
             CookieManager.getInstance().flush();
+        } catch (Exception ignored) {}
+    }
+
+    public static void clearWebData() {
+        try {
             WebStorage.getInstance().deleteAllData();
         } catch (Exception ignored) {}
+    }
+
+    public static void clearCookiesAndCache() {
+        clearCookies();
+        clearWebData();
     }
 }
