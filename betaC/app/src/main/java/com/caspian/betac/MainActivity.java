@@ -19,6 +19,7 @@ import android.support.v4.media.session.PlaybackStateCompat;
 import androidx.core.app.NotificationCompat;
 import androidx.core.app.NotificationManagerCompat;
 import android.content.ClipData;
+import android.content.ClipDescription;
 import android.content.ClipboardManager;
 import android.content.Context;
 import android.content.Intent;
@@ -108,6 +109,7 @@ import android.widget.ImageButton;
 import android.widget.ImageView;
 import android.widget.LinearLayout;
 import android.widget.PopupMenu;
+import android.widget.RelativeLayout;
 import android.media.AudioManager;
 import android.widget.ProgressBar;
 import android.widget.SeekBar;
@@ -6173,29 +6175,28 @@ public class MainActivity extends AppCompatActivity {
             if (bs != null) bs.setBackgroundResource(android.R.color.transparent);
         }
 
-        // SwipeableViewFlipper Page Switcher & Animated Morphing Dots
+        dialog.setOnShowListener(dialogInterface -> {
+            com.google.android.material.bottomsheet.BottomSheetDialog d = (com.google.android.material.bottomsheet.BottomSheetDialog) dialogInterface;
+            FrameLayout bottomSheet = d.findViewById(com.google.android.material.R.id.design_bottom_sheet);
+            if (bottomSheet != null) {
+                com.google.android.material.bottomsheet.BottomSheetBehavior<FrameLayout> behavior =
+                        com.google.android.material.bottomsheet.BottomSheetBehavior.from(bottomSheet);
+                ViewGroup.LayoutParams lp = bottomSheet.getLayoutParams();
+                if (lp != null) {
+                    lp.height = ViewGroup.LayoutParams.WRAP_CONTENT;
+                    bottomSheet.setLayoutParams(lp);
+                }
+                behavior.setFitToContents(true);
+                behavior.setSkipCollapsed(true);
+                behavior.setState(com.google.android.material.bottomsheet.BottomSheetBehavior.STATE_EXPANDED);
+            }
+        });
+
+        // SwipeableViewFlipper Page Switcher & Dynamic Indicator Dots
         SwipeableViewFlipper flipper = dialogView.findViewById(R.id.action_grid_flipper);
-        View dot1 = dialogView.findViewById(R.id.pill_dot_page1);
-        View dot2 = dialogView.findViewById(R.id.pill_dot_page2);
+        LinearLayout dotsLayout = dialogView.findViewById(R.id.action_grid_dots_layout);
 
-        animateIndicatorDots(dot1, dot2, 0, isDarkTheme, false);
-
-        if (flipper != null) {
-            flipper.setOnPageChangeListener(pageIndex -> animateIndicatorDots(dot1, dot2, pageIndex, isDarkTheme, true));
-        }
-
-        if (dot1 != null) dot1.setOnClickListener(v -> {
-            if (flipper != null && flipper.getDisplayedChild() != 0) {
-                flipper.setDisplayedChildWithAnim(0);
-                animateIndicatorDots(dot1, dot2, 0, isDarkTheme, true);
-            }
-        });
-        if (dot2 != null) dot2.setOnClickListener(v -> {
-            if (flipper != null && flipper.getDisplayedChild() != 1) {
-                flipper.setDisplayedChildWithAnim(1);
-                animateIndicatorDots(dot1, dot2, 1, isDarkTheme, true);
-            }
-        });
+        List<List<String>> pages = getCardGridAllPages();
 
         TextView badgeVersion = dialogView.findViewById(R.id.badge_app_version);
         if (badgeVersion != null) {
@@ -6232,6 +6233,17 @@ public class MainActivity extends AppCompatActivity {
         if (btnCaskSwitch != null) btnCaskSwitch.setOnClickListener(caskSwitchListener);
         if (widgetCaskBar != null) widgetCaskBar.setOnClickListener(caskSwitchListener);
 
+        // Zoom Stepper Interactive Pill on Page 2
+        View widgetZoom = dialogView.findViewById(R.id.widget_grid_zoom_stepper);
+
+        // Detach widgets from default layout so they can be placed dynamically into pages
+        if (widgetCaskBar != null && widgetCaskBar.getParent() instanceof ViewGroup) {
+            ((ViewGroup) widgetCaskBar.getParent()).removeView(widgetCaskBar);
+        }
+        if (widgetZoom != null && widgetZoom.getParent() instanceof ViewGroup) {
+            ((ViewGroup) widgetZoom.getParent()).removeView(widgetZoom);
+        }
+
         // Collect action tile views
         Map<String, View> tileMap = new HashMap<>();
         tileMap.put("night_mode", dialogView.findViewById(R.id.tile_night_mode));
@@ -6253,22 +6265,42 @@ public class MainActivity extends AppCompatActivity {
         tileMap.put("clear_data", dialogView.findViewById(R.id.tile_clear_data));
         tileMap.put("edit_layout", dialogView.findViewById(R.id.tile_edit_layout));
 
-        // Detach tiles from static layout to dynamically order into Page 1 and Page 2
+        // Detach tiles from static layout to dynamically order into pages
         for (View tileView : tileMap.values()) {
             if (tileView != null && tileView.getParent() instanceof ViewGroup) {
                 ((ViewGroup) tileView.getParent()).removeView(tileView);
             }
         }
 
-        TableLayout page1Table = dialogView.findViewById(R.id.action_grid_page1);
-        TableLayout page2Table = dialogView.findViewById(R.id.action_grid_page2);
-        if (page1Table != null) page1Table.removeAllViews();
-        if (page2Table != null) page2Table.removeAllViews();
+        if (flipper != null) {
+            flipper.removeAllViews();
+            for (int p = 0; p < pages.size(); p++) {
+                LinearLayout pageWrapper = new LinearLayout(this);
+                pageWrapper.setOrientation(LinearLayout.VERTICAL);
+                pageWrapper.setLayoutParams(new ViewGroup.LayoutParams(
+                        ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT));
 
-        List<String> p1Keys = getCardGridPage1Keys();
-        List<String> p2Keys = getCardGridPage2Keys();
-        populateGridTable(page1Table, p1Keys, tileMap);
-        populateGridTable(page2Table, p2Keys, tileMap);
+                TableLayout pageTable = new TableLayout(this);
+                pageTable.setLayoutParams(new LinearLayout.LayoutParams(
+                        ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT));
+                populateGridTable(pageTable, pages.get(p), tileMap);
+                pageWrapper.addView(pageTable);
+
+                if (p == 0 && widgetCaskBar != null) {
+                    pageWrapper.addView(widgetCaskBar);
+                } else if (p == 1 && widgetZoom != null) {
+                    pageWrapper.addView(widgetZoom);
+                }
+
+                flipper.addView(pageWrapper);
+            }
+
+            flipper.setOnPageChangeListener(pageIndex -> {
+                updateDynamicIndicatorDots(dotsLayout, flipper, pageIndex, pages.size(), isDarkTheme);
+            });
+        }
+
+        updateDynamicIndicatorDots(dotsLayout, flipper, 0, pages.size(), isDarkTheme);
 
         // Wire tile click actions
         View tileNight = tileMap.get("night_mode");
@@ -6485,6 +6517,47 @@ public class MainActivity extends AppCompatActivity {
 
         applyGridTheme(dialogView, isDarkTheme);
         dialog.show();
+    }
+
+    private void updateDynamicIndicatorDots(LinearLayout dotsLayout, SwipeableViewFlipper flipper,
+                                            int activePage, int totalPages, boolean isDark) {
+        if (dotsLayout == null || totalPages <= 1) {
+            if (dotsLayout != null) dotsLayout.setVisibility(View.GONE);
+            return;
+        }
+        dotsLayout.setVisibility(View.VISIBLE);
+        dotsLayout.removeAllViews();
+
+        int activeWidth = dpToPx(18);
+        int inactiveWidth = dpToPx(6);
+        int dotHeight = dpToPx(6);
+        int activeColor = !isDark ? 0xFF0284C7 : 0xFF00E5FF;
+        int inactiveColor = !isDark ? 0xFFCBD5E1 : 0xFF475569;
+
+        for (int i = 0; i < totalPages; i++) {
+            final int pageIdx = i;
+            View dot = new View(this);
+            LinearLayout.LayoutParams lp = new LinearLayout.LayoutParams(
+                    i == activePage ? activeWidth : inactiveWidth, dotHeight);
+            if (i < totalPages - 1) {
+                lp.setMarginEnd(dpToPx(7));
+            }
+            dot.setLayoutParams(lp);
+
+            GradientDrawable gd = new GradientDrawable();
+            gd.setColor(i == activePage ? activeColor : inactiveColor);
+            gd.setCornerRadius(dpToPx(3));
+            dot.setBackground(gd);
+
+            dot.setOnClickListener(v -> {
+                if (flipper != null && flipper.getDisplayedChild() != pageIdx) {
+                    flipper.setDisplayedChildWithAnim(pageIdx);
+                    updateDynamicIndicatorDots(dotsLayout, flipper, pageIdx, totalPages, isDark);
+                }
+            });
+
+            dotsLayout.addView(dot);
+        }
     }
 
     private void animateIndicatorDots(View dot1, View dot2, int targetPage, boolean isDark, boolean animate) {
@@ -7204,6 +7277,8 @@ public class MainActivity extends AppCompatActivity {
         omniboxHeaderWrapper.setFocusable(true);
     }
 
+    private static final int CARD_GRID_PAGE_CAPACITY = 10;
+
     private static final List<String> DEFAULT_P1_GRID_KEYS = Arrays.asList(
             "night_mode", "desktop_site", "bookmarks", "history", "downloads",
             "incognito", "find", "share", "split", "settings"
@@ -7217,12 +7292,106 @@ public class MainActivity extends AppCompatActivity {
             try {
                 getSharedPreferences(PREFS_NAME, MODE_PRIVATE)
                         .edit()
+                        .remove("action_grid_pages_json")
                         .remove("action_grid_p1_keys")
                         .remove("action_grid_p2_keys")
                         .apply();
                 Toast.makeText(this, "Card grid menu reset to default", Toast.LENGTH_SHORT).show();
             } catch (Throwable ignored) {}
         });
+    }
+
+    private void cascadeOverfill(List<List<String>> pages, int startPage) {
+        if (pages == null) return;
+        for (int p = startPage; p < pages.size(); p++) {
+            while (pages.get(p).size() > CARD_GRID_PAGE_CAPACITY) {
+                String overflow = pages.get(p).remove(pages.get(p).size() - 1);
+                if (p + 1 < pages.size()) {
+                    pages.get(p + 1).add(0, overflow);
+                } else {
+                    List<String> newPage = new ArrayList<>();
+                    newPage.add(overflow);
+                    pages.add(newPage);
+                    break;
+                }
+            }
+        }
+    }
+
+    private void pruneEmptyPages(List<List<String>> pages) {
+        if (pages == null) return;
+        while (pages.size() > 2 && pages.get(pages.size() - 1).isEmpty()) {
+            pages.remove(pages.size() - 1);
+        }
+        while (pages.size() < 2) {
+            pages.add(new ArrayList<>());
+        }
+    }
+
+    private List<List<String>> getCardGridAllPages() {
+        String json = getSharedPreferences(PREFS_NAME, MODE_PRIVATE)
+                .getString("action_grid_pages_json", null);
+        if (json != null && !json.trim().isEmpty()) {
+            try {
+                org.json.JSONArray arr = new org.json.JSONArray(json);
+                List<List<String>> pages = new ArrayList<>();
+                for (int i = 0; i < arr.length(); i++) {
+                    org.json.JSONArray pArr = arr.getJSONArray(i);
+                    List<String> page = new ArrayList<>();
+                    for (int j = 0; j < pArr.length(); j++) {
+                        String k = pArr.getString(j);
+                        if (k != null && !k.trim().isEmpty()) {
+                            page.add(k.trim());
+                        }
+                    }
+                    pages.add(page);
+                }
+                pruneEmptyPages(pages);
+
+                Set<String> existing = new HashSet<>();
+                for (List<String> p : pages) existing.addAll(p);
+                for (String k : DEFAULT_P1_GRID_KEYS) {
+                    if (!existing.contains(k)) {
+                        pages.get(pages.size() - 1).add(k);
+                        existing.add(k);
+                    }
+                }
+                for (String k : DEFAULT_P2_GRID_KEYS) {
+                    if (!existing.contains(k)) {
+                        pages.get(pages.size() - 1).add(k);
+                        existing.add(k);
+                    }
+                }
+                cascadeOverfill(pages, 0);
+                return pages;
+            } catch (Exception ignored) {}
+        }
+
+        // Fallback to legacy keys or default
+        List<List<String>> defaultPages = new ArrayList<>();
+        defaultPages.add(getCardGridPage1Keys());
+        defaultPages.add(getCardGridPage2Keys());
+        return defaultPages;
+    }
+
+    private void saveCardGridPages(List<List<String>> pages) {
+        if (pages == null) return;
+        pruneEmptyPages(pages);
+        try {
+            org.json.JSONArray rootArr = new org.json.JSONArray();
+            for (List<String> p : pages) {
+                org.json.JSONArray pArr = new org.json.JSONArray();
+                for (String k : p) pArr.put(k);
+                rootArr.put(pArr);
+            }
+            getSharedPreferences(PREFS_NAME, MODE_PRIVATE)
+                    .edit()
+                    .putString("action_grid_pages_json", rootArr.toString())
+                    .apply();
+            if (pages.size() >= 1) {
+                saveCardGridKeys(pages.get(0), pages.size() >= 2 ? pages.get(1) : new ArrayList<>());
+            }
+        } catch (Throwable ignored) {}
     }
 
     private List<String> getCardGridPage1Keys() {
@@ -7284,7 +7453,7 @@ public class MainActivity extends AppCompatActivity {
     private void populateGridTable(TableLayout table, List<String> keys, Map<String, View> tileMap) {
         if (table == null || keys == null || tileMap == null) return;
         table.setStretchAllColumns(true);
-        int columnsPerRow = keys.size() <= 8 ? 4 : 5;
+        int columnsPerRow = 5;
         TableRow currentRow = null;
         int colCount = 0;
         for (int i = 0; i < keys.size(); i++) {
@@ -7316,244 +7485,52 @@ public class MainActivity extends AppCompatActivity {
         }
     }
 
-    private void showSwapTargetPicker(List<String> p1Keys, List<String> p2Keys,
-                                      int sourcePage, int sourceIdx, String sourceKey,
-                                      Runnable onSwapped) {
-        List<String> targetList = sourcePage == 1 ? p2Keys : p1Keys;
-        String sourceName = getCardGridItemDisplayName(sourceKey);
-        String targetPageName = sourcePage == 1 ? "Page 2" : "Page 1";
-
-        String[] targetNames = new String[targetList.size()];
-        for (int i = 0; i < targetList.size(); i++) {
-            targetNames[i] = getCardGridItemDisplayName(targetList.get(i));
+    private int getCardGridItemIconRes(String key) {
+        if (key == null) return R.drawable.ic_pod_settings;
+        switch (key) {
+            case "night_mode": return R.drawable.ic_menu_moon;
+            case "desktop_site": return R.drawable.ic_browser_desktop;
+            case "bookmarks": return R.drawable.ic_menu_bookmark;
+            case "history": return R.drawable.ic_menu_history;
+            case "downloads": return R.drawable.ic_menu_download;
+            case "incognito": return R.drawable.ic_menu_incognito;
+            case "find": return R.drawable.ic_pod_search;
+            case "share": return R.drawable.ic_menu_share;
+            case "split": return R.drawable.ic_browser_split;
+            case "settings": return R.drawable.ic_pod_settings;
+            case "new_tab": return R.drawable.ic_browser_tabs;
+            case "dual_ai": return R.drawable.ic_arena_plus;
+            case "pdf": return R.drawable.ic_menu_pdf;
+            case "print": return R.drawable.ic_menu_print;
+            case "shield": return R.drawable.ic_browser_shield;
+            case "clear_data": return R.drawable.ic_pod_close;
+            case "edit_layout": return R.drawable.ic_menu_edit;
+            default: return R.drawable.ic_pod_settings;
         }
-
-        AlertDialog.Builder builder = new AlertDialog.Builder(this);
-        builder.setTitle("Swap " + sourceName + " with " + targetPageName + " item:");
-        builder.setItems(targetNames, (dialog, which) -> {
-            String targetKey = targetList.get(which);
-            if (sourcePage == 1) {
-                p1Keys.set(sourceIdx, targetKey);
-                p2Keys.set(which, sourceKey);
-            } else {
-                p2Keys.set(sourceIdx, targetKey);
-                p1Keys.set(which, sourceKey);
-            }
-            playUiFeedbackSound("tap");
-            Toast.makeText(this, "Swapped " + sourceName + " ⇄ " + targetNames[which], Toast.LENGTH_SHORT).show();
-            if (onSwapped != null) onSwapped.run();
-        });
-        builder.setNegativeButton("Cancel", null);
-        builder.show();
     }
 
-    public void showCardGridEditDialog() {
-        com.google.android.material.bottomsheet.BottomSheetDialog editDialog =
-                new com.google.android.material.bottomsheet.BottomSheetDialog(this);
-        View dialogView = LayoutInflater.from(this).inflate(R.layout.dialog_card_grid_edit, null);
-        editDialog.setContentView(dialogView);
-
-        if (editDialog.getWindow() != null) {
-            View bs = editDialog.getWindow().findViewById(com.google.android.material.R.id.design_bottom_sheet);
-            if (bs != null) bs.setBackgroundResource(android.R.color.transparent);
+    private String getCardGridItemCleanLabel(String key) {
+        if (key == null) return "Unknown";
+        switch (key) {
+            case "night_mode": return "Night mode";
+            case "desktop_site": return "Desktop";
+            case "bookmarks": return "Bookmarks";
+            case "history": return "History";
+            case "downloads": return "Downloads";
+            case "incognito": return "Incognito";
+            case "find": return "Find";
+            case "share": return "Share";
+            case "split": return "Dual Split";
+            case "settings": return "Settings";
+            case "new_tab": return "New tab";
+            case "dual_ai": return "Dual AI";
+            case "pdf": return "Open PDF";
+            case "print": return "Print";
+            case "shield": return "Waveguard";
+            case "clear_data": return "Clear Data";
+            case "edit_layout": return "Edit Menu";
+            default: return key;
         }
-
-        final List<String> p1Keys = new ArrayList<>(getCardGridPage1Keys());
-        final List<String> p2Keys = new ArrayList<>(getCardGridPage2Keys());
-
-        LinearLayout containerP1 = dialogView.findViewById(R.id.container_edit_page1);
-        LinearLayout containerP2 = dialogView.findViewById(R.id.container_edit_page2);
-
-        TextView btnReset = dialogView.findViewById(R.id.btn_edit_reset);
-        TextView btnDone = dialogView.findViewById(R.id.btn_edit_done);
-
-        if (!isDarkTheme) {
-            GradientDrawable rootGd = new GradientDrawable();
-            rootGd.setColor(0xFFFFFFFF);
-            rootGd.setCornerRadii(new float[]{dpToPx(24), dpToPx(24), dpToPx(24), dpToPx(24), 0, 0, 0, 0});
-            dialogView.setBackground(rootGd);
-
-            View handle = dialogView.findViewById(R.id.edit_grid_drag_handle);
-            if (handle != null) {
-                GradientDrawable hGd = new GradientDrawable();
-                hGd.setColor(0xFFCBD5E1);
-                hGd.setCornerRadius(dpToPx(3));
-                handle.setBackground(hGd);
-            }
-            TextView title = dialogView.findViewById(R.id.text_edit_title);
-            if (title != null) title.setTextColor(0xFF0284C7);
-
-            TextView h1 = dialogView.findViewById(R.id.header_section_page1);
-            if (h1 != null) h1.setTextColor(0xFF0F172A);
-            TextView h2 = dialogView.findViewById(R.id.header_section_page2);
-            if (h2 != null) h2.setTextColor(0xFF0F172A);
-
-            View divider = dialogView.findViewById(R.id.edit_divider);
-            if (divider != null) divider.setBackgroundColor(0xFFE2E8F0);
-
-            if (btnReset != null) btnReset.setTextColor(0xFF64748B);
-            if (btnDone != null) {
-                GradientDrawable doneGd = new GradientDrawable();
-                doneGd.setColor(0xFFE0F2FE);
-                doneGd.setStroke(dpToPx(1), 0xFF0284C7);
-                doneGd.setCornerRadius(dpToPx(12));
-                btnDone.setBackground(doneGd);
-                btnDone.setTextColor(0xFF0284C7);
-            }
-        }
-
-        final Runnable[] renderItems = new Runnable[1];
-        renderItems[0] = () -> {
-            containerP1.removeAllViews();
-            containerP2.removeAllViews();
-
-            for (int i = 0; i < p1Keys.size(); i++) {
-                final int idx = i;
-                final String key = p1Keys.get(i);
-                View row = createEditRowView(key, 1, idx, p1Keys.size(),
-                        () -> {
-                            if (idx > 0) {
-                                Collections.swap(p1Keys, idx, idx - 1);
-                                renderItems[0].run();
-                            }
-                        },
-                        () -> {
-                            if (idx < p1Keys.size() - 1) {
-                                Collections.swap(p1Keys, idx, idx + 1);
-                                renderItems[0].run();
-                            }
-                        },
-                        () -> {
-                            showSwapTargetPicker(p1Keys, p2Keys, 1, idx, key, renderItems[0]);
-                        }
-                );
-                containerP1.addView(row);
-            }
-
-            for (int i = 0; i < p2Keys.size(); i++) {
-                final int idx = i;
-                final String key = p2Keys.get(i);
-                View row = createEditRowView(key, 2, idx, p2Keys.size(),
-                        () -> {
-                            if (idx > 0) {
-                                Collections.swap(p2Keys, idx, idx - 1);
-                                renderItems[0].run();
-                            }
-                        },
-                        () -> {
-                            if (idx < p2Keys.size() - 1) {
-                                Collections.swap(p2Keys, idx, idx + 1);
-                                renderItems[0].run();
-                            }
-                        },
-                        () -> {
-                            showSwapTargetPicker(p1Keys, p2Keys, 2, idx, key, renderItems[0]);
-                        }
-                );
-                containerP2.addView(row);
-            }
-        };
-
-        renderItems[0].run();
-
-        if (btnReset != null) {
-            btnReset.setOnClickListener(v -> {
-                p1Keys.clear();
-                p1Keys.addAll(DEFAULT_P1_GRID_KEYS);
-                p2Keys.clear();
-                p2Keys.addAll(DEFAULT_P2_GRID_KEYS);
-                renderItems[0].run();
-                Toast.makeText(this, "Layout reset to default", Toast.LENGTH_SHORT).show();
-            });
-        }
-
-        if (btnDone != null) {
-            btnDone.setOnClickListener(v -> {
-                saveCardGridKeys(p1Keys, p2Keys);
-                editDialog.dismiss();
-                Toast.makeText(this, "Menu customized!", Toast.LENGTH_SHORT).show();
-                showBrowserActionGrid();
-            });
-        }
-
-        editDialog.show();
-    }
-
-    private View createEditRowView(String key, int pageNumber, int index, int totalCount,
-                                   Runnable onMoveUp, Runnable onMoveDown, Runnable onSwitchPage) {
-        LinearLayout row = new LinearLayout(this);
-        row.setOrientation(LinearLayout.HORIZONTAL);
-        row.setGravity(Gravity.CENTER_VERTICAL);
-        row.setPadding(dpToPx(12), dpToPx(8), dpToPx(8), dpToPx(8));
-        LinearLayout.LayoutParams rowLp = new LinearLayout.LayoutParams(
-                ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT);
-        rowLp.bottomMargin = dpToPx(6);
-        row.setLayoutParams(rowLp);
-
-        GradientDrawable rowBg = new GradientDrawable();
-        rowBg.setColor(!isDarkTheme ? 0xFFF8FAFC : 0xFF161B22);
-        rowBg.setStroke(dpToPx(1), !isDarkTheme ? 0xFFE2E8F0 : 0xFF21262D);
-        rowBg.setCornerRadius(dpToPx(12));
-        row.setBackground(rowBg);
-
-        TextView tvTitle = new TextView(this);
-        LinearLayout.LayoutParams titleLp = new LinearLayout.LayoutParams(
-                0, ViewGroup.LayoutParams.WRAP_CONTENT, 1f);
-        tvTitle.setLayoutParams(titleLp);
-        tvTitle.setText(getCardGridItemDisplayName(key));
-        tvTitle.setTextColor(!isDarkTheme ? 0xFF0F172A : 0xFFDFE2F0);
-        tvTitle.setTextSize(TypedValue.COMPLEX_UNIT_SP, 12f);
-        tvTitle.setTypeface(Typeface.DEFAULT_BOLD);
-        row.addView(tvTitle);
-
-        LinearLayout actions = new LinearLayout(this);
-        actions.setOrientation(LinearLayout.HORIZONTAL);
-        actions.setGravity(Gravity.CENTER_VERTICAL);
-
-        TextView btnUp = new TextView(this);
-        btnUp.setText("▲");
-        btnUp.setPadding(dpToPx(7), dpToPx(4), dpToPx(7), dpToPx(4));
-        btnUp.setTextSize(TypedValue.COMPLEX_UNIT_SP, 12f);
-        btnUp.setTextColor(index > 0 ? (!isDarkTheme ? 0xFF0284C7 : 0xFF00E5FF) : (!isDarkTheme ? 0xFFCBD5E1 : 0xFF475569));
-        if (index > 0) {
-            btnUp.setOnClickListener(v -> {
-                playUiFeedbackSound("tap");
-                onMoveUp.run();
-            });
-        }
-        actions.addView(btnUp);
-
-        TextView btnDown = new TextView(this);
-        btnDown.setText("▼");
-        btnDown.setPadding(dpToPx(7), dpToPx(4), dpToPx(7), dpToPx(4));
-        btnDown.setTextSize(TypedValue.COMPLEX_UNIT_SP, 12f);
-        btnDown.setTextColor(index < totalCount - 1 ? (!isDarkTheme ? 0xFF0284C7 : 0xFF00E5FF) : (!isDarkTheme ? 0xFFCBD5E1 : 0xFF475569));
-        if (index < totalCount - 1) {
-            btnDown.setOnClickListener(v -> {
-                playUiFeedbackSound("tap");
-                onMoveDown.run();
-            });
-        }
-        actions.addView(btnDown);
-
-        TextView btnSwitch = new TextView(this);
-        btnSwitch.setText(pageNumber == 1 ? "⇄ Swap P2" : "⇄ Swap P1");
-        btnSwitch.setPadding(dpToPx(9), dpToPx(4), dpToPx(9), dpToPx(4));
-        btnSwitch.setTextSize(TypedValue.COMPLEX_UNIT_SP, 11f);
-        btnSwitch.setTypeface(Typeface.DEFAULT_BOLD);
-        GradientDrawable swBg = new GradientDrawable();
-        swBg.setColor(!isDarkTheme ? 0xFFE0F2FE : 0xFF1E293B);
-        swBg.setCornerRadius(dpToPx(8));
-        btnSwitch.setBackground(swBg);
-        btnSwitch.setTextColor(!isDarkTheme ? 0xFF0284C7 : 0xFF38BDF8);
-        btnSwitch.setOnClickListener(v -> {
-            playUiFeedbackSound("tap");
-            onSwitchPage.run();
-        });
-        actions.addView(btnSwitch);
-
-        row.addView(actions);
-        return row;
     }
 
     private String getCardGridItemDisplayName(String key) {
@@ -7578,6 +7555,565 @@ public class MainActivity extends AppCompatActivity {
             case "edit_layout": return "✏️ Edit Menu";
             default: return key;
         }
+    }
+
+    public void showCardGridEditDialog() {
+        com.google.android.material.bottomsheet.BottomSheetDialog editDialog =
+                new com.google.android.material.bottomsheet.BottomSheetDialog(this);
+        View dialogView = LayoutInflater.from(this).inflate(R.layout.dialog_card_grid_edit, null);
+        editDialog.setContentView(dialogView);
+
+        if (editDialog.getWindow() != null) {
+            View bs = editDialog.getWindow().findViewById(com.google.android.material.R.id.design_bottom_sheet);
+            if (bs != null) bs.setBackgroundResource(android.R.color.transparent);
+        }
+
+        editDialog.setOnShowListener(dialogInterface -> {
+            com.google.android.material.bottomsheet.BottomSheetDialog d = (com.google.android.material.bottomsheet.BottomSheetDialog) dialogInterface;
+            FrameLayout bottomSheet = d.findViewById(com.google.android.material.R.id.design_bottom_sheet);
+            if (bottomSheet != null) {
+                com.google.android.material.bottomsheet.BottomSheetBehavior<FrameLayout> behavior =
+                        com.google.android.material.bottomsheet.BottomSheetBehavior.from(bottomSheet);
+                ViewGroup.LayoutParams lp = bottomSheet.getLayoutParams();
+                if (lp != null) {
+                    lp.height = ViewGroup.LayoutParams.WRAP_CONTENT;
+                    bottomSheet.setLayoutParams(lp);
+                }
+                behavior.setFitToContents(true);
+                behavior.setSkipCollapsed(true);
+                behavior.setState(com.google.android.material.bottomsheet.BottomSheetBehavior.STATE_EXPANDED);
+            }
+        });
+
+        final List<List<String>> pages = getCardGridAllPages();
+        final String[] selectedKey = new String[]{null};
+        final int[] selectedPage = new int[]{-1};
+        final int[] selectedIdx = new int[]{-1};
+
+        LinearLayout containerPages = dialogView.findViewById(R.id.container_edit_pages);
+        LinearLayout selectedActionBar = dialogView.findViewById(R.id.container_selected_action_bar);
+        TextView btnAddPage = dialogView.findViewById(R.id.btn_edit_add_page);
+        TextView btnReset = dialogView.findViewById(R.id.btn_edit_reset);
+        TextView btnDone = dialogView.findViewById(R.id.btn_edit_done);
+
+        if (!isDarkTheme) {
+            GradientDrawable rootGd = new GradientDrawable();
+            rootGd.setColor(0xFFFFFFFF);
+            rootGd.setCornerRadii(new float[]{dpToPx(24), dpToPx(24), dpToPx(24), dpToPx(24), 0, 0, 0, 0});
+            dialogView.setBackground(rootGd);
+
+            View handle = dialogView.findViewById(R.id.edit_grid_drag_handle);
+            if (handle != null) {
+                GradientDrawable hGd = new GradientDrawable();
+                hGd.setColor(0xFFCBD5E1);
+                hGd.setCornerRadius(dpToPx(3));
+                handle.setBackground(hGd);
+            }
+            TextView title = dialogView.findViewById(R.id.text_edit_title);
+            if (title != null) title.setTextColor(0xFF0284C7);
+
+            if (btnAddPage != null) {
+                GradientDrawable addGd = new GradientDrawable();
+                addGd.setColor(0xFFF1F5F9);
+                addGd.setStroke(dpToPx(1), 0xFFCBD5E1);
+                addGd.setCornerRadius(dpToPx(10));
+                btnAddPage.setBackground(addGd);
+                btnAddPage.setTextColor(0xFF0284C7);
+            }
+
+            if (btnReset != null) btnReset.setTextColor(0xFF64748B);
+            if (btnDone != null) {
+                GradientDrawable doneGd = new GradientDrawable();
+                doneGd.setColor(0xFFE0F2FE);
+                doneGd.setStroke(dpToPx(1), 0xFF0284C7);
+                doneGd.setCornerRadius(dpToPx(12));
+                btnDone.setBackground(doneGd);
+                btnDone.setTextColor(0xFF0284C7);
+            }
+        }
+
+        final Runnable[] renderUi = new Runnable[1];
+        renderUi[0] = () -> {
+            if (selectedActionBar != null) {
+                if (selectedKey[0] == null) {
+                    selectedActionBar.setVisibility(View.GONE);
+                    selectedActionBar.removeAllViews();
+                } else {
+                    selectedActionBar.setVisibility(View.VISIBLE);
+                    selectedActionBar.removeAllViews();
+
+                    // Style action bar banner
+                    GradientDrawable abGd = new GradientDrawable();
+                    abGd.setColor(!isDarkTheme ? 0xFFE0F2FE : 0xFF00384D);
+                    abGd.setStroke(dpToPx(1), !isDarkTheme ? 0xFF0284C7 : 0xFF00E5FF);
+                    abGd.setCornerRadius(dpToPx(14));
+                    selectedActionBar.setBackground(abGd);
+
+                    // Top row: Info + Cancel button
+                    RelativeLayout topRow = new RelativeLayout(this);
+                    topRow.setLayoutParams(new LinearLayout.LayoutParams(
+                            ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT));
+
+                    TextView tvSelInfo = new TextView(this);
+                    tvSelInfo.setText("Selected: " + getCardGridItemDisplayName(selectedKey[0]) + "  (Page " + (selectedPage[0] + 1) + ")");
+                    tvSelInfo.setTextColor(!isDarkTheme ? 0xFF0369A1 : 0xFF00E5FF);
+                    tvSelInfo.setTextSize(TypedValue.COMPLEX_UNIT_SP, 12f);
+                    tvSelInfo.setTypeface(Typeface.DEFAULT_BOLD);
+                    RelativeLayout.LayoutParams infoLp = new RelativeLayout.LayoutParams(
+                            ViewGroup.LayoutParams.WRAP_CONTENT, ViewGroup.LayoutParams.WRAP_CONTENT);
+                    infoLp.addRule(RelativeLayout.ALIGN_PARENT_START);
+                    infoLp.addRule(RelativeLayout.CENTER_VERTICAL);
+                    tvSelInfo.setLayoutParams(infoLp);
+                    topRow.addView(tvSelInfo);
+
+                    TextView btnCancelSel = new TextView(this);
+                    btnCancelSel.setText("✕ Cancel");
+                    btnCancelSel.setTextColor(!isDarkTheme ? 0xFF64748B : 0xFF94A3B8);
+                    btnCancelSel.setTextSize(TypedValue.COMPLEX_UNIT_SP, 11f);
+                    btnCancelSel.setPadding(dpToPx(6), dpToPx(2), dpToPx(6), dpToPx(2));
+                    RelativeLayout.LayoutParams cancelLp = new RelativeLayout.LayoutParams(
+                            ViewGroup.LayoutParams.WRAP_CONTENT, ViewGroup.LayoutParams.WRAP_CONTENT);
+                    cancelLp.addRule(RelativeLayout.ALIGN_PARENT_END);
+                    cancelLp.addRule(RelativeLayout.CENTER_VERTICAL);
+                    btnCancelSel.setLayoutParams(cancelLp);
+                    btnCancelSel.setOnClickListener(v -> {
+                        selectedKey[0] = null;
+                        selectedPage[0] = -1;
+                        selectedIdx[0] = -1;
+                        playUiFeedbackSound("tap");
+                        renderUi[0].run();
+                    });
+                    topRow.addView(btnCancelSel);
+
+                    selectedActionBar.addView(topRow);
+
+                    // Bottom row: Scrollable action chips
+                    HorizontalScrollView hsv = new HorizontalScrollView(this);
+                    hsv.setHorizontalScrollBarEnabled(false);
+                    LinearLayout.LayoutParams hsvLp = new LinearLayout.LayoutParams(
+                            ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT);
+                    hsvLp.topMargin = dpToPx(8);
+                    hsv.setLayoutParams(hsvLp);
+
+                    LinearLayout chipContainer = new LinearLayout(this);
+                    chipContainer.setOrientation(LinearLayout.HORIZONTAL);
+                    chipContainer.setGravity(Gravity.CENTER_VERTICAL);
+
+                    TextView lblMove = new TextView(this);
+                    lblMove.setText("Move to: ");
+                    lblMove.setTextColor(!isDarkTheme ? 0xFF475569 : 0xFFCBD5E1);
+                    lblMove.setTextSize(TypedValue.COMPLEX_UNIT_SP, 11f);
+                    lblMove.setTypeface(Typeface.DEFAULT_BOLD);
+                    chipContainer.addView(lblMove);
+
+                    for (int p = 0; p < pages.size(); p++) {
+                        if (p != selectedPage[0]) {
+                            final int targetP = p;
+                            TextView chip = new TextView(this);
+                            chip.setText("➔ Page " + (targetP + 1));
+                            chip.setTextSize(TypedValue.COMPLEX_UNIT_SP, 11f);
+                            chip.setTypeface(Typeface.DEFAULT_BOLD);
+                            chip.setTextColor(!isDarkTheme ? 0xFF0284C7 : 0xFF38BDF8);
+                            chip.setPadding(dpToPx(10), dpToPx(5), dpToPx(10), dpToPx(5));
+
+                            GradientDrawable cGd = new GradientDrawable();
+                            cGd.setColor(!isDarkTheme ? 0xFFFFFFFF : 0xFF161B22);
+                            cGd.setStroke(dpToPx(1), !isDarkTheme ? 0xFFBAE6FD : 0xFF38BDF8);
+                            cGd.setCornerRadius(dpToPx(10));
+                            chip.setBackground(cGd);
+
+                            LinearLayout.LayoutParams cLp = new LinearLayout.LayoutParams(
+                                    ViewGroup.LayoutParams.WRAP_CONTENT, ViewGroup.LayoutParams.WRAP_CONTENT);
+                            cLp.setMarginEnd(dpToPx(8));
+                            chip.setLayoutParams(cLp);
+
+                            chip.setOnClickListener(v -> {
+                                String keyToMove = selectedKey[0];
+                                int srcP = selectedPage[0];
+                                int srcI = selectedIdx[0];
+                                if (srcP >= 0 && srcP < pages.size() && srcI >= 0 && srcI < pages.get(srcP).size()) {
+                                    pages.get(srcP).remove(srcI);
+                                    pages.get(targetP).add(keyToMove);
+                                    cascadeOverfill(pages, targetP);
+                                    pruneEmptyPages(pages);
+                                }
+                                selectedKey[0] = null;
+                                selectedPage[0] = -1;
+                                selectedIdx[0] = -1;
+                                playUiFeedbackSound("tap");
+                                renderUi[0].run();
+                            });
+                            chipContainer.addView(chip);
+                        }
+                    }
+
+                    // New Page chip
+                    TextView chipNew = new TextView(this);
+                    chipNew.setText("➕ New Page");
+                    chipNew.setTextSize(TypedValue.COMPLEX_UNIT_SP, 11f);
+                    chipNew.setTypeface(Typeface.DEFAULT_BOLD);
+                    chipNew.setTextColor(!isDarkTheme ? 0xFF059669 : 0xFF10B981);
+                    chipNew.setPadding(dpToPx(10), dpToPx(5), dpToPx(10), dpToPx(5));
+
+                    GradientDrawable nGd = new GradientDrawable();
+                    nGd.setColor(!isDarkTheme ? 0xFFECFDF5 : 0xFF0B291B);
+                    nGd.setStroke(dpToPx(1), !isDarkTheme ? 0xFFA7F3D0 : 0xFF10B981);
+                    nGd.setCornerRadius(dpToPx(10));
+                    chipNew.setBackground(nGd);
+
+                    LinearLayout.LayoutParams nLp = new LinearLayout.LayoutParams(
+                            ViewGroup.LayoutParams.WRAP_CONTENT, ViewGroup.LayoutParams.WRAP_CONTENT);
+                    nLp.setMarginEnd(dpToPx(8));
+                    chipNew.setLayoutParams(nLp);
+
+                    chipNew.setOnClickListener(v -> {
+                        String keyToMove = selectedKey[0];
+                        int srcP = selectedPage[0];
+                        int srcI = selectedIdx[0];
+                        if (srcP >= 0 && srcP < pages.size() && srcI >= 0 && srcI < pages.get(srcP).size()) {
+                            pages.get(srcP).remove(srcI);
+                            List<String> newP = new ArrayList<>();
+                            newP.add(keyToMove);
+                            pages.add(newP);
+                            cascadeOverfill(pages, pages.size() - 1);
+                            pruneEmptyPages(pages);
+                        }
+                        selectedKey[0] = null;
+                        selectedPage[0] = -1;
+                        selectedIdx[0] = -1;
+                        playUiFeedbackSound("tap");
+                        renderUi[0].run();
+                    });
+                    chipContainer.addView(chipNew);
+
+                    // Reorder within page: Left / Right
+                    if (selectedIdx[0] > 0) {
+                        TextView chipLeft = new TextView(this);
+                        chipLeft.setText("◀ Left");
+                        chipLeft.setTextSize(TypedValue.COMPLEX_UNIT_SP, 11f);
+                        chipLeft.setTextColor(!isDarkTheme ? 0xFF0F172A : 0xFFDFE2F0);
+                        chipLeft.setPadding(dpToPx(8), dpToPx(5), dpToPx(8), dpToPx(5));
+                        GradientDrawable lGd = new GradientDrawable();
+                        lGd.setColor(!isDarkTheme ? 0xFFF1F5F9 : 0xFF21262D);
+                        lGd.setCornerRadius(dpToPx(10));
+                        chipLeft.setBackground(lGd);
+                        LinearLayout.LayoutParams lLp = new LinearLayout.LayoutParams(
+                                ViewGroup.LayoutParams.WRAP_CONTENT, ViewGroup.LayoutParams.WRAP_CONTENT);
+                        lLp.setMarginEnd(dpToPx(8));
+                        chipLeft.setLayoutParams(lLp);
+                        chipLeft.setOnClickListener(v -> {
+                            int p = selectedPage[0];
+                            int idx = selectedIdx[0];
+                            Collections.swap(pages.get(p), idx, idx - 1);
+                            selectedIdx[0] = idx - 1;
+                            playUiFeedbackSound("tap");
+                            renderUi[0].run();
+                        });
+                        chipContainer.addView(chipLeft);
+                    }
+
+                    if (selectedPage[0] >= 0 && selectedPage[0] < pages.size() && selectedIdx[0] < pages.get(selectedPage[0]).size() - 1) {
+                        TextView chipRight = new TextView(this);
+                        chipRight.setText("▶ Right");
+                        chipRight.setTextSize(TypedValue.COMPLEX_UNIT_SP, 11f);
+                        chipRight.setTextColor(!isDarkTheme ? 0xFF0F172A : 0xFFDFE2F0);
+                        chipRight.setPadding(dpToPx(8), dpToPx(5), dpToPx(8), dpToPx(5));
+                        GradientDrawable rGd = new GradientDrawable();
+                        rGd.setColor(!isDarkTheme ? 0xFFF1F5F9 : 0xFF21262D);
+                        rGd.setCornerRadius(dpToPx(10));
+                        chipRight.setBackground(rGd);
+                        LinearLayout.LayoutParams rLp = new LinearLayout.LayoutParams(
+                                ViewGroup.LayoutParams.WRAP_CONTENT, ViewGroup.LayoutParams.WRAP_CONTENT);
+                        chipRight.setLayoutParams(rLp);
+                        chipRight.setOnClickListener(v -> {
+                            int p = selectedPage[0];
+                            int idx = selectedIdx[0];
+                            Collections.swap(pages.get(p), idx, idx + 1);
+                            selectedIdx[0] = idx + 1;
+                            playUiFeedbackSound("tap");
+                            renderUi[0].run();
+                        });
+                        chipContainer.addView(chipRight);
+                    }
+
+                    hsv.addView(chipContainer);
+                    selectedActionBar.addView(hsv);
+                }
+            }
+
+            if (containerPages != null) {
+                containerPages.removeAllViews();
+                for (int p = 0; p < pages.size(); p++) {
+                    final int pageIndex = p;
+                    List<String> pageItems = pages.get(pageIndex);
+
+                    LinearLayout pageSection = new LinearLayout(this);
+                    pageSection.setOrientation(LinearLayout.VERTICAL);
+                    LinearLayout.LayoutParams psLp = new LinearLayout.LayoutParams(
+                            ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT);
+                    psLp.bottomMargin = dpToPx(16);
+                    pageSection.setLayoutParams(psLp);
+                    pageSection.setPadding(dpToPx(12), dpToPx(10), dpToPx(12), dpToPx(10));
+
+                    GradientDrawable secGd = new GradientDrawable();
+                    secGd.setColor(!isDarkTheme ? 0xFFF8FAFC : 0xFF161B22);
+                    secGd.setStroke(dpToPx(1), !isDarkTheme ? 0xFFE2E8F0 : 0xFF21262D);
+                    secGd.setCornerRadius(dpToPx(16));
+                    pageSection.setBackground(secGd);
+
+                    // Drag and Drop target support on page section
+                    pageSection.setOnDragListener((v, event) -> {
+                        switch (event.getAction()) {
+                            case DragEvent.ACTION_DRAG_ENTERED:
+                                GradientDrawable dragEnterGd = new GradientDrawable();
+                                dragEnterGd.setColor(!isDarkTheme ? 0xFFE0F2FE : 0xFF0D2838);
+                                dragEnterGd.setStroke(dpToPx(2), !isDarkTheme ? 0xFF0284C7 : 0xFF00E5FF);
+                                dragEnterGd.setCornerRadius(dpToPx(16));
+                                pageSection.setBackground(dragEnterGd);
+                                return true;
+                            case DragEvent.ACTION_DRAG_EXITED:
+                            case DragEvent.ACTION_DRAG_ENDED:
+                                pageSection.setBackground(secGd);
+                                return true;
+                            case DragEvent.ACTION_DROP:
+                                pageSection.setBackground(secGd);
+                                ClipData clipData = event.getClipData();
+                                if (clipData != null && clipData.getItemCount() > 0) {
+                                    String raw = clipData.getItemAt(0).getText().toString();
+                                    String[] parts = raw.split(":");
+                                    if (parts.length >= 3) {
+                                        try {
+                                            int srcP = Integer.parseInt(parts[0]);
+                                            int srcIdx = Integer.parseInt(parts[1]);
+                                            String itemKey = parts[2];
+                                            if (srcP != pageIndex) {
+                                                if (srcP < pages.size() && srcIdx < pages.get(srcP).size()) {
+                                                    pages.get(srcP).remove(srcIdx);
+                                                    pages.get(pageIndex).add(itemKey);
+                                                    cascadeOverfill(pages, pageIndex);
+                                                    pruneEmptyPages(pages);
+                                                    selectedKey[0] = null;
+                                                    selectedPage[0] = -1;
+                                                    selectedIdx[0] = -1;
+                                                    playUiFeedbackSound("tap");
+                                                    renderUi[0].run();
+                                                }
+                                            }
+                                        } catch (Exception ignored) {}
+                                    }
+                                }
+                                return true;
+                        }
+                        return true;
+                    });
+
+                    // Page Header (Title + Count badge + Optional Delete empty page)
+                    RelativeLayout header = new RelativeLayout(this);
+                    header.setLayoutParams(new LinearLayout.LayoutParams(
+                            ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT));
+
+                    TextView tvTitle = new TextView(this);
+                    tvTitle.setText("PAGE " + (pageIndex + 1));
+                    tvTitle.setTextColor(!isDarkTheme ? 0xFF0284C7 : 0xFF38BDF8);
+                    tvTitle.setTextSize(TypedValue.COMPLEX_UNIT_SP, 12f);
+                    tvTitle.setTypeface(Typeface.DEFAULT_BOLD);
+                    tvTitle.setLetterSpacing(0.06f);
+                    RelativeLayout.LayoutParams tLp = new RelativeLayout.LayoutParams(
+                            ViewGroup.LayoutParams.WRAP_CONTENT, ViewGroup.LayoutParams.WRAP_CONTENT);
+                    tLp.addRule(RelativeLayout.ALIGN_PARENT_START);
+                    tLp.addRule(RelativeLayout.CENTER_VERTICAL);
+                    tvTitle.setLayoutParams(tLp);
+                    header.addView(tvTitle);
+
+                    LinearLayout rightHeader = new LinearLayout(this);
+                    rightHeader.setOrientation(LinearLayout.HORIZONTAL);
+                    rightHeader.setGravity(Gravity.CENTER_VERTICAL);
+                    RelativeLayout.LayoutParams rhLp = new RelativeLayout.LayoutParams(
+                            ViewGroup.LayoutParams.WRAP_CONTENT, ViewGroup.LayoutParams.WRAP_CONTENT);
+                    rhLp.addRule(RelativeLayout.ALIGN_PARENT_END);
+                    rhLp.addRule(RelativeLayout.CENTER_VERTICAL);
+                    rightHeader.setLayoutParams(rhLp);
+
+                    TextView tvCount = new TextView(this);
+                    tvCount.setText(pageItems.size() + "/10");
+                    tvCount.setTextSize(TypedValue.COMPLEX_UNIT_SP, 11f);
+                    tvCount.setTypeface(Typeface.DEFAULT_BOLD);
+                    tvCount.setTextColor(pageItems.size() >= 10 ? 0xFF10B981 : (!isDarkTheme ? 0xFF64748B : 0xFF94A3B8));
+                    rightHeader.addView(tvCount);
+
+                    if (pages.size() > 2 && pageItems.isEmpty()) {
+                        TextView btnDel = new TextView(this);
+                        btnDel.setText("✕ Remove");
+                        btnDel.setTextSize(TypedValue.COMPLEX_UNIT_SP, 11f);
+                        btnDel.setTextColor(0xFFEF4444);
+                        btnDel.setPadding(dpToPx(8), 0, 0, 0);
+                        btnDel.setOnClickListener(v -> {
+                            pages.remove(pageIndex);
+                            pruneEmptyPages(pages);
+                            selectedKey[0] = null;
+                            playUiFeedbackSound("tap");
+                            renderUi[0].run();
+                        });
+                        rightHeader.addView(btnDel);
+                    }
+                    header.addView(rightHeader);
+                    pageSection.addView(header);
+
+                    // Items Grid (5 columns per row)
+                    TableLayout table = new TableLayout(this);
+                    TableLayout.LayoutParams tblLp = new TableLayout.LayoutParams(
+                            TableLayout.LayoutParams.MATCH_PARENT, TableLayout.LayoutParams.WRAP_CONTENT);
+                    tblLp.topMargin = dpToPx(10);
+                    table.setLayoutParams(tblLp);
+                    table.setStretchAllColumns(true);
+
+                    int colCount = 0;
+                    TableRow currentRow = null;
+                    for (int i = 0; i < pageItems.size(); i++) {
+                        if (i % 5 == 0) {
+                            currentRow = new TableRow(this);
+                            TableLayout.LayoutParams trLp = new TableLayout.LayoutParams(
+                                    TableLayout.LayoutParams.MATCH_PARENT, TableLayout.LayoutParams.WRAP_CONTENT);
+                            trLp.bottomMargin = dpToPx(8);
+                            currentRow.setLayoutParams(trLp);
+                            table.addView(currentRow);
+                            colCount = 0;
+                        }
+
+                        final int itemIdx = i;
+                        final String key = pageItems.get(i);
+                        boolean isSelected = key.equals(selectedKey[0]);
+
+                        LinearLayout itemCard = new LinearLayout(this);
+                        itemCard.setOrientation(LinearLayout.VERTICAL);
+                        itemCard.setGravity(Gravity.CENTER);
+                        TableRow.LayoutParams cLp = new TableRow.LayoutParams(0, TableRow.LayoutParams.WRAP_CONTENT, 1f);
+                        itemCard.setLayoutParams(cLp);
+                        itemCard.setPadding(dpToPx(2), dpToPx(4), dpToPx(2), dpToPx(4));
+
+                        FrameLayout squircle = new FrameLayout(this);
+                        LinearLayout.LayoutParams sqLp = new LinearLayout.LayoutParams(dpToPx(44), dpToPx(44));
+                        squircle.setLayoutParams(sqLp);
+
+                        GradientDrawable sqGd = new GradientDrawable();
+                        if (isSelected) {
+                            sqGd.setColor(!isDarkTheme ? 0xFFE0F2FE : 0xFF00384D);
+                            sqGd.setStroke(dpToPx(2), !isDarkTheme ? 0xFF0284C7 : 0xFF00E5FF);
+                        } else {
+                            sqGd.setColor(!isDarkTheme ? 0xFFFFFFFF : 0xFF0D1117);
+                            sqGd.setStroke(dpToPx(1), !isDarkTheme ? 0xFFE2E8F0 : 0xFF30363D);
+                        }
+                        sqGd.setCornerRadius(dpToPx(14));
+                        squircle.setBackground(sqGd);
+
+                        ImageView icon = new ImageView(this);
+                        FrameLayout.LayoutParams iLp = new FrameLayout.LayoutParams(dpToPx(20), dpToPx(20), Gravity.CENTER);
+                        icon.setLayoutParams(iLp);
+                        icon.setImageResource(getCardGridItemIconRes(key));
+                        icon.setColorFilter(isSelected ? (!isDarkTheme ? 0xFF0284C7 : 0xFF00E5FF) : (!isDarkTheme ? 0xFF0F172A : 0xFFDFE2F0));
+                        squircle.addView(icon);
+                        itemCard.addView(squircle);
+
+                        TextView label = new TextView(this);
+                        LinearLayout.LayoutParams lblLp = new LinearLayout.LayoutParams(
+                                ViewGroup.LayoutParams.WRAP_CONTENT, ViewGroup.LayoutParams.WRAP_CONTENT);
+                        lblLp.topMargin = dpToPx(4);
+                        label.setLayoutParams(lblLp);
+                        label.setText(getCardGridItemCleanLabel(key));
+                        label.setTextColor(isSelected ? (!isDarkTheme ? 0xFF0284C7 : 0xFF00E5FF) : (!isDarkTheme ? 0xFF334155 : 0xFF94A3B8));
+                        label.setTextSize(TypedValue.COMPLEX_UNIT_SP, 9.5f);
+                        label.setSingleLine(true);
+                        label.setEllipsize(android.text.TextUtils.TruncateAt.END);
+                        itemCard.addView(label);
+
+                        // Tap to select / deselect
+                        itemCard.setOnClickListener(v -> {
+                            playUiFeedbackSound("tap");
+                            if (key.equals(selectedKey[0])) {
+                                selectedKey[0] = null;
+                                selectedPage[0] = -1;
+                                selectedIdx[0] = -1;
+                            } else {
+                                selectedKey[0] = key;
+                                selectedPage[0] = pageIndex;
+                                selectedIdx[0] = itemIdx;
+                            }
+                            renderUi[0].run();
+                        });
+
+                        // Long press to Drag & Drop
+                        itemCard.setOnLongClickListener(v -> {
+                            playUiFeedbackSound("tap");
+                            ClipData.Item clipItem = new ClipData.Item(pageIndex + ":" + itemIdx + ":" + key);
+                            ClipData dragData = new ClipData("CARD_GRID_ITEM", new String[]{ClipDescription.MIMETYPE_TEXT_PLAIN}, clipItem);
+                            View.DragShadowBuilder shadow = new View.DragShadowBuilder(squircle);
+                            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.N) {
+                                v.startDragAndDrop(dragData, shadow, null, 0);
+                            } else {
+                                v.startDrag(dragData, shadow, null, 0);
+                            }
+                            return true;
+                        });
+
+                        if (currentRow != null) {
+                            currentRow.addView(itemCard);
+                            colCount++;
+                        }
+                    }
+
+                    // Fill remaining slots in last row with dummy views to preserve 5-col alignment
+                    if (currentRow != null && colCount > 0 && colCount < 5) {
+                        for (int k = colCount; k < 5; k++) {
+                            View dummy = new View(this);
+                            TableRow.LayoutParams dLp = new TableRow.LayoutParams(0, TableRow.LayoutParams.WRAP_CONTENT, 1f);
+                            dummy.setLayoutParams(dLp);
+                            currentRow.addView(dummy);
+                        }
+                    }
+
+                    pageSection.addView(table);
+                    containerPages.addView(pageSection);
+                }
+            }
+        };
+
+        renderUi[0].run();
+
+        if (btnAddPage != null) {
+            btnAddPage.setOnClickListener(v -> {
+                pages.add(new ArrayList<>());
+                playUiFeedbackSound("tap");
+                Toast.makeText(this, "Page " + pages.size() + " added", Toast.LENGTH_SHORT).show();
+                renderUi[0].run();
+            });
+        }
+
+        if (btnReset != null) {
+            btnReset.setOnClickListener(v -> {
+                pages.clear();
+                pages.add(new ArrayList<>(DEFAULT_P1_GRID_KEYS));
+                pages.add(new ArrayList<>(DEFAULT_P2_GRID_KEYS));
+                selectedKey[0] = null;
+                selectedPage[0] = -1;
+                selectedIdx[0] = -1;
+                playUiFeedbackSound("tap");
+                Toast.makeText(this, "Layout reset to default", Toast.LENGTH_SHORT).show();
+                renderUi[0].run();
+            });
+        }
+
+        if (btnDone != null) {
+            btnDone.setOnClickListener(v -> {
+                pruneEmptyPages(pages);
+                saveCardGridPages(pages);
+                editDialog.dismiss();
+                playUiFeedbackSound("tap");
+                Toast.makeText(this, "Menu customized!", Toast.LENGTH_SHORT).show();
+                showBrowserActionGrid();
+            });
+        }
+
+        editDialog.show();
     }
 
     public void applyOmniboxPosition(String position) {

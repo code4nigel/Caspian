@@ -106,6 +106,7 @@ public class SwipeableViewFlipper extends ViewFlipper {
             setInAnimation(getContext(), R.anim.slide_in_right);
             setOutAnimation(getContext(), R.anim.slide_out_left);
             showNext();
+            requestLayout();
             if (pageChangeListener != null) {
                 pageChangeListener.onPageChanged(getDisplayedChild());
             }
@@ -117,6 +118,7 @@ public class SwipeableViewFlipper extends ViewFlipper {
             setInAnimation(getContext(), R.anim.slide_in_left);
             setOutAnimation(getContext(), R.anim.slide_out_right);
             showPrevious();
+            requestLayout();
             if (pageChangeListener != null) {
                 pageChangeListener.onPageChanged(getDisplayedChild());
             }
@@ -134,8 +136,34 @@ public class SwipeableViewFlipper extends ViewFlipper {
             setOutAnimation(getContext(), R.anim.slide_out_right);
         }
         setDisplayedChild(index);
+        requestLayout();
         if (pageChangeListener != null) {
             pageChangeListener.onPageChanged(index);
         }
+    }
+
+    @Override
+    protected void onMeasure(int widthMeasureSpec, int heightMeasureSpec) {
+        int maxHeight = 0;
+        int count = getChildCount();
+        int current = getDisplayedChild();
+        android.view.View activeChild = (current >= 0 && current < count) ? getChildAt(current) : null;
+        if (activeChild != null && activeChild.getVisibility() != GONE) {
+            measureChildWithMargins(activeChild, widthMeasureSpec, 0, MeasureSpec.makeMeasureSpec(0, MeasureSpec.UNSPECIFIED), 0);
+            maxHeight = activeChild.getMeasuredHeight();
+        } else {
+            for (int i = 0; i < count; i++) {
+                android.view.View child = getChildAt(i);
+                if (child != null && child.getVisibility() != GONE) {
+                    measureChildWithMargins(child, widthMeasureSpec, 0, MeasureSpec.makeMeasureSpec(0, MeasureSpec.UNSPECIFIED), 0);
+                    if (child.getMeasuredHeight() > maxHeight) {
+                        maxHeight = child.getMeasuredHeight();
+                    }
+                }
+            }
+        }
+        int desiredHeight = maxHeight + getPaddingTop() + getPaddingBottom();
+        int finalHeight = resolveSize(desiredHeight, heightMeasureSpec);
+        setMeasuredDimension(resolveSize(getDefaultSize(0, widthMeasureSpec), widthMeasureSpec), finalHeight);
     }
 }

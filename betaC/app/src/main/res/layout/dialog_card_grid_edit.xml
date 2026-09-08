@@ -20,11 +20,11 @@
         android:layout_marginBottom="12dp"
         android:background="@drawable/bg_stitch_handle_bar" />
 
-    <!-- Header: Title + Reset & Done Buttons -->
+    <!-- Header: Title + Add Page + Reset & Done Buttons -->
     <RelativeLayout
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:layout_marginBottom="12dp">
+        android:layout_marginBottom="10dp">
 
         <TextView
             android:id="@+id/text_edit_title"
@@ -43,19 +43,37 @@
             android:layout_height="wrap_content"
             android:layout_alignParentEnd="true"
             android:layout_centerVertical="true"
+            android:gravity="center_vertical"
             android:orientation="horizontal">
+
+            <TextView
+                android:id="@+id/btn_edit_add_page"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:background="@drawable/bg_stitch_squircle"
+                android:paddingStart="9dp"
+                android:paddingEnd="9dp"
+                android:paddingTop="4dp"
+                android:paddingBottom="4dp"
+                android:text="＋ Page"
+                android:textColor="#38BDF8"
+                android:textSize="11.5sp"
+                android:textStyle="bold"
+                android:clickable="true"
+                android:focusable="true" />
 
             <TextView
                 android:id="@+id/btn_edit_reset"
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
-                android:paddingStart="10dp"
-                android:paddingEnd="10dp"
-                android:paddingTop="5dp"
-                android:paddingBottom="5dp"
+                android:layout_marginStart="8dp"
+                android:paddingStart="8dp"
+                android:paddingEnd="8dp"
+                android:paddingTop="4dp"
+                android:paddingBottom="4dp"
                 android:text="Reset"
                 android:textColor="#94A3B8"
-                android:textSize="12sp"
+                android:textSize="11.5sp"
                 android:textStyle="bold"
                 android:clickable="true"
                 android:focusable="true" />
@@ -66,10 +84,10 @@
                 android:layout_height="wrap_content"
                 android:layout_marginStart="8dp"
                 android:background="@drawable/bg_stitch_squircle_active"
-                android:paddingStart="14dp"
-                android:paddingEnd="14dp"
-                android:paddingTop="6dp"
-                android:paddingBottom="6dp"
+                android:paddingStart="13dp"
+                android:paddingEnd="13dp"
+                android:paddingTop="5dp"
+                android:paddingBottom="5dp"
                 android:text="Done"
                 android:textColor="#00E5FF"
                 android:textSize="12sp"
@@ -79,85 +97,28 @@
         </LinearLayout>
     </RelativeLayout>
 
-    <!-- Scrollable Lists for Page 1 and Page 2 -->
+    <!-- Floating / Docked Selected Item Action Bar Banner -->
+    <LinearLayout
+        android:id="@+id/container_selected_action_bar"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:orientation="vertical"
+        android:visibility="gone"
+        android:layout_marginBottom="10dp"
+        android:background="@drawable/bg_stitch_squircle_active"
+        android:padding="8dp" />
+
+    <!-- Scrollable Dynamic Pages Container -->
     <androidx.core.widget.NestedScrollView
         android:layout_width="match_parent"
-        android:layout_height="380dp"
+        android:layout_height="400dp"
         android:fillViewport="true">
 
         <LinearLayout
+            android:id="@+id/container_edit_pages"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:orientation="vertical">
-
-            <!-- Section 1 Header: Page 1 -->
-            <TextView
-                android:id="@+id/header_section_page1"
-                android:layout_width="wrap_content"
-                android:layout_height="wrap_content"
-                android:layout_marginTop="6dp"
-                android:layout_marginBottom="4dp"
-                android:text="PAGE 1 — PRIMARY ESSENTIALS"
-                android:textColor="#DFE2F0"
-                android:textSize="11sp"
-                android:textStyle="bold"
-                android:letterSpacing="0.05" />
-
-            <TextView
-                android:id="@+id/desc_section_page1"
-                android:layout_width="wrap_content"
-                android:layout_height="wrap_content"
-                android:layout_marginBottom="8dp"
-                android:text="First view when opening menu"
-                android:textColor="#64748B"
-                android:textSize="10.5sp" />
-
-            <!-- Page 1 Items Container -->
-            <LinearLayout
-                android:id="@+id/container_edit_page1"
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:orientation="vertical"
-                android:layout_marginBottom="16dp" />
-
-            <!-- Divider -->
-            <View
-                android:id="@+id/edit_divider"
-                android:layout_width="match_parent"
-                android:layout_height="1dp"
-                android:layout_marginBottom="14dp"
-                android:background="#1E293B" />
-
-            <!-- Section 2 Header: Page 2 -->
-            <TextView
-                android:id="@+id/header_section_page2"
-                android:layout_width="wrap_content"
-                android:layout_height="wrap_content"
-                android:layout_marginBottom="4dp"
-                android:text="PAGE 2 — POWER TOOLS"
-                android:textColor="#DFE2F0"
-                android:textSize="11sp"
-                android:textStyle="bold"
-                android:letterSpacing="0.05" />
-
-            <TextView
-                android:id="@+id/desc_section_page2"
-                android:layout_width="wrap_content"
-                android:layout_height="wrap_content"
-                android:layout_marginBottom="8dp"
-                android:text="Swipe left to access these tools"
-                android:textColor="#64748B"
-                android:textSize="10.5sp" />
-
-            <!-- Page 2 Items Container -->
-            <LinearLayout
-                android:id="@+id/container_edit_page2"
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:orientation="vertical"
-                android:layout_marginBottom="10dp" />
-
-        </LinearLayout>
+            android:orientation="vertical" />
     </androidx.core.widget.NestedScrollView>
 
 </LinearLayout>
