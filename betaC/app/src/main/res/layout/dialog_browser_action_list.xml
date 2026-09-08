@@ -1,0 +1,785 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:id="@+id/action_list_root"
+    android:layout_width="match_parent"
+    android:layout_height="wrap_content"
+    android:orientation="vertical"
+    android:background="@drawable/bg_caspian_dialog"
+    android:paddingStart="16dp"
+    android:paddingEnd="16dp"
+    android:paddingTop="10dp"
+    android:paddingBottom="18dp">
+
+    <!-- Top Drag Handle -->
+    <View
+        android:id="@+id/action_list_drag_handle"
+        android:layout_width="44dp"
+        android:layout_height="6dp"
+        android:layout_gravity="center_horizontal"
+        android:layout_marginTop="4dp"
+        android:layout_marginBottom="14dp"
+        android:background="@drawable/bg_stitch_handle_bar" />
+
+    <!-- Section 1: Top 5 Quick Action Cards (5 Columns) -->
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:orientation="horizontal"
+        android:weightSum="5"
+        android:layout_marginBottom="12dp">
+
+        <!-- 1. New Tab -->
+        <LinearLayout
+            android:id="@+id/action_list_tile_new_tab"
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_weight="1"
+            android:gravity="center"
+            android:orientation="vertical"
+            android:clickable="true"
+            android:focusable="true">
+            <FrameLayout
+                android:id="@+id/squircle_list_new_tab"
+                android:layout_width="44dp"
+                android:layout_height="44dp"
+                android:background="@drawable/bg_stitch_squircle">
+                <ImageView
+                    android:id="@+id/icon_list_new_tab"
+                    android:layout_width="20dp"
+                    android:layout_height="20dp"
+                    android:layout_gravity="center"
+                    android:src="@drawable/ic_arena_plus"
+                    android:tint="#DFE2F0" />
+            </FrameLayout>
+            <TextView
+                android:id="@+id/text_list_new_tab"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="5dp"
+                android:text="New Tab"
+                android:textColor="#DFE2F0"
+                android:textSize="10.5sp"
+                android:singleLine="true" />
+        </LinearLayout>
+
+        <!-- 2. Dual AI (Highlighted Cyan Card) -->
+        <LinearLayout
+            android:id="@+id/action_list_tile_dual_ai"
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_weight="1"
+            android:gravity="center"
+            android:orientation="vertical"
+            android:clickable="true"
+            android:focusable="true">
+            <FrameLayout
+                android:id="@+id/squircle_list_dual_ai"
+                android:layout_width="44dp"
+                android:layout_height="44dp"
+                android:background="@drawable/bg_stitch_squircle_active">
+                <ImageView
+                    android:id="@+id/icon_list_dual_ai"
+                    android:layout_width="20dp"
+                    android:layout_height="20dp"
+                    android:layout_gravity="center"
+                    android:src="@drawable/ic_arena_plus"
+                    android:tint="#00E5FF" />
+            </FrameLayout>
+            <TextView
+                android:id="@+id/text_list_dual_ai"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="5dp"
+                android:text="Dual AI"
+                android:textColor="#00E5FF"
+                android:textSize="10.5sp"
+                android:textStyle="bold"
+                android:singleLine="true" />
+        </LinearLayout>
+
+        <!-- 3. Theme Toggle (Night / Light Mode) -->
+        <LinearLayout
+            android:id="@+id/action_list_tile_theme"
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_weight="1"
+            android:gravity="center"
+            android:orientation="vertical"
+            android:clickable="true"
+            android:focusable="true">
+            <FrameLayout
+                android:id="@+id/squircle_list_theme"
+                android:layout_width="44dp"
+                android:layout_height="44dp"
+                android:background="@drawable/bg_stitch_squircle">
+                <ImageView
+                    android:id="@+id/icon_list_theme"
+                    android:layout_width="20dp"
+                    android:layout_height="20dp"
+                    android:layout_gravity="center"
+                    android:src="@drawable/ic_menu_moon"
+                    android:tint="#DFE2F0" />
+            </FrameLayout>
+            <TextView
+                android:id="@+id/text_list_theme"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="5dp"
+                android:text="Night"
+                android:textColor="#DFE2F0"
+                android:textSize="10.5sp"
+                android:singleLine="true" />
+        </LinearLayout>
+
+        <!-- 4. Split Pane -->
+        <LinearLayout
+            android:id="@+id/action_list_tile_split"
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_weight="1"
+            android:gravity="center"
+            android:orientation="vertical"
+            android:clickable="true"
+            android:focusable="true">
+            <FrameLayout
+                android:id="@+id/squircle_list_split"
+                android:layout_width="44dp"
+                android:layout_height="44dp"
+                android:background="@drawable/bg_stitch_squircle">
+                <ImageView
+                    android:id="@+id/icon_list_split"
+                    android:layout_width="20dp"
+                    android:layout_height="20dp"
+                    android:layout_gravity="center"
+                    android:src="@drawable/ic_browser_split"
+                    android:tint="#DFE2F0" />
+            </FrameLayout>
+            <TextView
+                android:id="@+id/text_list_split"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="5dp"
+                android:text="Split"
+                android:textColor="#DFE2F0"
+                android:textSize="10.5sp"
+                android:singleLine="true" />
+        </LinearLayout>
+
+        <!-- 5. Desktop Mode -->
+        <LinearLayout
+            android:id="@+id/action_list_tile_desktop"
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_weight="1"
+            android:gravity="center"
+            android:orientation="vertical"
+            android:clickable="true"
+            android:focusable="true">
+            <FrameLayout
+                android:id="@+id/squircle_list_desktop"
+                android:layout_width="44dp"
+                android:layout_height="44dp"
+                android:background="@drawable/bg_stitch_squircle">
+                <ImageView
+                    android:id="@+id/icon_list_desktop"
+                    android:layout_width="20dp"
+                    android:layout_height="20dp"
+                    android:layout_gravity="center"
+                    android:src="@drawable/ic_browser_desktop"
+                    android:tint="#DFE2F0" />
+            </FrameLayout>
+            <TextView
+                android:id="@+id/text_list_desktop"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="5dp"
+                android:text="Desktop"
+                android:textColor="#DFE2F0"
+                android:textSize="10.5sp"
+                android:singleLine="true" />
+        </LinearLayout>
+    </LinearLayout>
+
+    <!-- Section 2: Interactive System Controls (2 Widgets: Zoom Stepper & Open PDF) -->
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:orientation="horizontal"
+        android:weightSum="2"
+        android:layout_marginBottom="12dp">
+
+        <!-- Zoom Stepper Widget -->
+        <LinearLayout
+            android:id="@+id/widget_zoom_stepper"
+            android:layout_width="0dp"
+            android:layout_height="44dp"
+            android:layout_weight="1"
+            android:layout_marginEnd="6dp"
+            android:background="@drawable/bg_stitch_squircle"
+            android:gravity="center_vertical"
+            android:orientation="horizontal"
+            android:paddingStart="10dp"
+            android:paddingEnd="8dp">
+
+            <ImageView
+                android:id="@+id/icon_widget_zoom"
+                android:layout_width="15dp"
+                android:layout_height="15dp"
+                android:layout_marginEnd="6dp"
+                android:src="@drawable/ic_menu_zoom"
+                android:tint="#94A3B8" />
+
+            <TextView
+                android:id="@+id/text_zoom_label"
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_weight="1"
+                android:text="Zoom"
+                android:textColor="#DFE2F0"
+                android:textSize="11.5sp"
+                android:textStyle="bold" />
+
+            <!-- Stepper Capsule -->
+            <LinearLayout
+                android:id="@+id/capsule_zoom_stepper"
+                android:layout_width="wrap_content"
+                android:layout_height="28dp"
+                android:background="@drawable/bg_stitch_zoom_stepper"
+                android:gravity="center_vertical"
+                android:orientation="horizontal"
+                android:paddingStart="4dp"
+                android:paddingEnd="4dp">
+
+                <TextView
+                    android:id="@+id/btn_stepper_minus"
+                    android:layout_width="22dp"
+                    android:layout_height="match_parent"
+                    android:gravity="center"
+                    android:text="－"
+                    android:textColor="#DFE2F0"
+                    android:textSize="13sp"
+                    android:textStyle="bold"
+                    android:clickable="true"
+                    android:focusable="true" />
+
+                <TextView
+                    android:id="@+id/text_stepper_zoom_val"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:paddingStart="4dp"
+                    android:paddingEnd="4dp"
+                    android:text="100%"
+                    android:textColor="#00E5FF"
+                    android:textSize="11sp"
+                    android:textStyle="bold" />
+
+                <TextView
+                    android:id="@+id/btn_stepper_plus"
+                    android:layout_width="22dp"
+                    android:layout_height="match_parent"
+                    android:gravity="center"
+                    android:text="＋"
+                    android:textColor="#DFE2F0"
+                    android:textSize="13sp"
+                    android:textStyle="bold"
+                    android:clickable="true"
+                    android:focusable="true" />
+            </LinearLayout>
+        </LinearLayout>
+
+        <!-- Open PDF Widget -->
+        <LinearLayout
+            android:id="@+id/widget_open_pdf"
+            android:layout_width="0dp"
+            android:layout_height="44dp"
+            android:layout_weight="1"
+            android:layout_marginStart="6dp"
+            android:background="@drawable/bg_stitch_squircle"
+            android:gravity="center_vertical"
+            android:orientation="horizontal"
+            android:paddingStart="12dp"
+            android:paddingEnd="12dp"
+            android:clickable="true"
+            android:focusable="true">
+
+            <ImageView
+                android:id="@+id/icon_open_pdf"
+                android:layout_width="16dp"
+                android:layout_height="16dp"
+                android:layout_marginEnd="8dp"
+                android:src="@drawable/ic_menu_pdf"
+                android:tint="#FB7185" />
+
+            <TextView
+                android:id="@+id/text_open_pdf_label"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="Open PDF"
+                android:textColor="#DFE2F0"
+                android:textSize="11.5sp"
+                android:textStyle="bold" />
+        </LinearLayout>
+    </LinearLayout>
+
+    <!-- Section 3: Precision Action List (Divider Separated) -->
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:orientation="vertical">
+
+        <!-- Row 1: Find in Page -->
+        <RelativeLayout
+            android:id="@+id/action_list_row_find"
+            android:layout_width="match_parent"
+            android:layout_height="42dp"
+            android:background="?attr/selectableItemBackground"
+            android:clickable="true"
+            android:focusable="true"
+            android:paddingStart="4dp"
+            android:paddingEnd="4dp">
+
+            <LinearLayout
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_alignParentStart="true"
+                android:layout_centerVertical="true"
+                android:gravity="center_vertical"
+                android:orientation="horizontal">
+
+                <ImageView
+                    android:id="@+id/icon_row_find"
+                    android:layout_width="16dp"
+                    android:layout_height="16dp"
+                    android:layout_marginEnd="10dp"
+                    android:src="@drawable/ic_pod_search"
+                    android:tint="#94A3B8" />
+
+                <TextView
+                    android:id="@+id/text_row_find_label"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="Find in page"
+                    android:textColor="#DFE2F0"
+                    android:textSize="12.5sp" />
+            </LinearLayout>
+
+            <TextView
+                android:id="@+id/badge_row_find_shortcut"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_alignParentEnd="true"
+                android:layout_centerVertical="true"
+                android:background="@drawable/bg_stitch_action_chip"
+                android:paddingStart="8dp"
+                android:paddingEnd="8dp"
+                android:paddingTop="2dp"
+                android:paddingBottom="2dp"
+                android:text="⌘F"
+                android:textColor="#94A3B8"
+                android:textSize="10.5sp"
+                android:textStyle="bold" />
+        </RelativeLayout>
+
+        <View
+            android:id="@+id/divider_list_1"
+            android:layout_width="match_parent"
+            android:layout_height="1dp"
+            android:background="#1AFFFFFF" />
+
+        <!-- Row 2: History & Timeline -->
+        <RelativeLayout
+            android:id="@+id/action_list_row_history"
+            android:layout_width="match_parent"
+            android:layout_height="42dp"
+            android:background="?attr/selectableItemBackground"
+            android:clickable="true"
+            android:focusable="true"
+            android:paddingStart="4dp"
+            android:paddingEnd="4dp">
+
+            <LinearLayout
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_alignParentStart="true"
+                android:layout_centerVertical="true"
+                android:gravity="center_vertical"
+                android:orientation="horizontal">
+
+                <ImageView
+                    android:id="@+id/icon_row_history"
+                    android:layout_width="16dp"
+                    android:layout_height="16dp"
+                    android:layout_marginEnd="10dp"
+                    android:src="@drawable/ic_menu_history"
+                    android:tint="#94A3B8" />
+
+                <TextView
+                    android:id="@+id/text_row_history_label"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="History &amp; Timeline"
+                    android:textColor="#DFE2F0"
+                    android:textSize="12.5sp" />
+            </LinearLayout>
+
+            <TextView
+                android:id="@+id/badge_row_history_time"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_alignParentEnd="true"
+                android:layout_centerVertical="true"
+                android:text="Recent"
+                android:textColor="#64748B"
+                android:textSize="11.5sp" />
+        </RelativeLayout>
+
+        <View
+            android:id="@+id/divider_list_2"
+            android:layout_width="match_parent"
+            android:layout_height="1dp"
+            android:background="#1AFFFFFF" />
+
+        <!-- Row 3: Downloads -->
+        <RelativeLayout
+            android:id="@+id/action_list_row_downloads"
+            android:layout_width="match_parent"
+            android:layout_height="42dp"
+            android:background="?attr/selectableItemBackground"
+            android:clickable="true"
+            android:focusable="true"
+            android:paddingStart="4dp"
+            android:paddingEnd="4dp">
+
+            <LinearLayout
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_alignParentStart="true"
+                android:layout_centerVertical="true"
+                android:gravity="center_vertical"
+                android:orientation="horizontal">
+
+                <ImageView
+                    android:id="@+id/icon_row_downloads"
+                    android:layout_width="16dp"
+                    android:layout_height="16dp"
+                    android:layout_marginEnd="10dp"
+                    android:src="@drawable/ic_menu_download"
+                    android:tint="#94A3B8" />
+
+                <TextView
+                    android:id="@+id/text_row_downloads_label"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="Downloads"
+                    android:textColor="#DFE2F0"
+                    android:textSize="12.5sp" />
+            </LinearLayout>
+
+            <LinearLayout
+                android:id="@+id/badge_row_downloads_container"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_alignParentEnd="true"
+                android:layout_centerVertical="true"
+                android:background="@drawable/bg_stitch_badge_version"
+                android:backgroundTint="#1A10B981"
+                android:gravity="center_vertical"
+                android:orientation="horizontal"
+                android:paddingStart="8dp"
+                android:paddingEnd="8dp"
+                android:paddingTop="2dp"
+                android:paddingBottom="2dp"
+                android:visibility="gone">
+
+                <View
+                    android:layout_width="6dp"
+                    android:layout_height="6dp"
+                    android:layout_marginEnd="5dp"
+                    android:background="@drawable/bg_stitch_dot_inactive"
+                    android:backgroundTint="#10B981" />
+
+                <TextView
+                    android:id="@+id/badge_row_downloads_count"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="Active"
+                    android:textColor="#10B981"
+                    android:textSize="10.5sp"
+                    android:textStyle="bold" />
+            </LinearLayout>
+        </RelativeLayout>
+
+        <View
+            android:id="@+id/divider_list_3"
+            android:layout_width="match_parent"
+            android:layout_height="1dp"
+            android:background="#1AFFFFFF" />
+
+        <!-- Row 4: Share & Export (With Quick Chips) -->
+        <RelativeLayout
+            android:id="@+id/action_list_row_share"
+            android:layout_width="match_parent"
+            android:layout_height="44dp"
+            android:paddingStart="4dp"
+            android:paddingEnd="4dp">
+
+            <LinearLayout
+                android:id="@+id/share_title_container"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_alignParentStart="true"
+                android:layout_centerVertical="true"
+                android:gravity="center_vertical"
+                android:orientation="horizontal">
+
+                <ImageView
+                    android:id="@+id/icon_row_share"
+                    android:layout_width="16dp"
+                    android:layout_height="16dp"
+                    android:layout_marginEnd="10dp"
+                    android:src="@drawable/ic_menu_share"
+                    android:tint="#94A3B8" />
+
+                <TextView
+                    android:id="@+id/text_row_share_label"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="Share &amp; Export"
+                    android:textColor="#DFE2F0"
+                    android:textSize="12.5sp" />
+            </LinearLayout>
+
+            <!-- Export Quick Format Chips -->
+            <LinearLayout
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_alignParentEnd="true"
+                android:layout_centerVertical="true"
+                android:orientation="horizontal">
+
+                <TextView
+                    android:id="@+id/chip_export_pdf"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:layout_marginEnd="4dp"
+                    android:background="@drawable/bg_stitch_action_chip"
+                    android:paddingStart="8dp"
+                    android:paddingEnd="8dp"
+                    android:paddingTop="3dp"
+                    android:paddingBottom="3dp"
+                    android:text="PDF"
+                    android:textColor="#DFE2F0"
+                    android:textSize="10.5sp"
+                    android:textStyle="bold"
+                    android:clickable="true"
+                    android:focusable="true" />
+
+                <TextView
+                    android:id="@+id/chip_export_txt"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:layout_marginEnd="4dp"
+                    android:background="@drawable/bg_stitch_action_chip"
+                    android:paddingStart="8dp"
+                    android:paddingEnd="8dp"
+                    android:paddingTop="3dp"
+                    android:paddingBottom="3dp"
+                    android:text="TXT"
+                    android:textColor="#DFE2F0"
+                    android:textSize="10.5sp"
+                    android:textStyle="bold"
+                    android:clickable="true"
+                    android:focusable="true" />
+
+                <TextView
+                    android:id="@+id/chip_export_doc"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:layout_marginEnd="4dp"
+                    android:background="@drawable/bg_stitch_action_chip"
+                    android:paddingStart="8dp"
+                    android:paddingEnd="8dp"
+                    android:paddingTop="3dp"
+                    android:paddingBottom="3dp"
+                    android:text="DOC"
+                    android:textColor="#DFE2F0"
+                    android:textSize="10.5sp"
+                    android:textStyle="bold"
+                    android:clickable="true"
+                    android:focusable="true" />
+
+                <TextView
+                    android:id="@+id/chip_export_md"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:background="@drawable/bg_stitch_action_chip"
+                    android:paddingStart="8dp"
+                    android:paddingEnd="8dp"
+                    android:paddingTop="3dp"
+                    android:paddingBottom="3dp"
+                    android:text="MD"
+                    android:textColor="#DFE2F0"
+                    android:textSize="10.5sp"
+                    android:textStyle="bold"
+                    android:clickable="true"
+                    android:focusable="true" />
+            </LinearLayout>
+        </RelativeLayout>
+
+        <View
+            android:id="@+id/divider_list_4"
+            android:layout_width="match_parent"
+            android:layout_height="1dp"
+            android:background="#1AFFFFFF" />
+
+        <!-- Row 5: Settings & Preferences -->
+        <RelativeLayout
+            android:id="@+id/action_list_row_settings"
+            android:layout_width="match_parent"
+            android:layout_height="42dp"
+            android:background="?attr/selectableItemBackground"
+            android:clickable="true"
+            android:focusable="true"
+            android:paddingStart="4dp"
+            android:paddingEnd="4dp">
+
+            <LinearLayout
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_alignParentStart="true"
+                android:layout_centerVertical="true"
+                android:gravity="center_vertical"
+                android:orientation="horizontal">
+
+                <ImageView
+                    android:id="@+id/icon_row_settings"
+                    android:layout_width="16dp"
+                    android:layout_height="16dp"
+                    android:layout_marginEnd="10dp"
+                    android:src="@drawable/ic_pod_settings"
+                    android:tint="#94A3B8" />
+
+                <TextView
+                    android:id="@+id/text_row_settings_label"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="Settings &amp; Preferences"
+                    android:textColor="#DFE2F0"
+                    android:textSize="12.5sp" />
+            </LinearLayout>
+
+            <TextView
+                android:id="@+id/badge_row_settings"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_alignParentEnd="true"
+                android:layout_centerVertical="true"
+                android:text="Caspian"
+                android:textColor="#64748B"
+                android:textSize="11.5sp" />
+        </RelativeLayout>
+    </LinearLayout>
+
+    <!-- Section 4: Security & AdBlock Shield (Waveguard Pro Card) -->
+    <RelativeLayout
+        android:id="@+id/card_waveguard_pro"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="10dp"
+        android:background="@drawable/bg_stitch_waveguard_card"
+        android:paddingStart="12dp"
+        android:paddingEnd="12dp"
+        android:paddingTop="10dp"
+        android:paddingBottom="10dp">
+
+        <LinearLayout
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_alignParentStart="true"
+            android:layout_centerVertical="true"
+            android:gravity="center_vertical"
+            android:orientation="horizontal">
+
+            <FrameLayout
+                android:id="@+id/squircle_waveguard_pro"
+                android:layout_width="36dp"
+                android:layout_height="36dp"
+                android:layout_marginEnd="10dp"
+                android:background="@drawable/bg_stitch_squircle"
+                android:backgroundTint="#059669">
+                <ImageView
+                    android:layout_width="18dp"
+                    android:layout_height="18dp"
+                    android:layout_gravity="center"
+                    android:src="@drawable/ic_browser_shield"
+                    android:tint="#FFFFFF" />
+            </FrameLayout>
+
+            <LinearLayout
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:orientation="vertical">
+
+                <LinearLayout
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:gravity="center_vertical"
+                    android:orientation="horizontal">
+
+                    <TextView
+                        android:id="@+id/text_waveguard_pro_title"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:layout_marginEnd="6dp"
+                        android:text="Caspian Waveguard"
+                        android:textColor="#FFFFFF"
+                        android:textSize="12sp"
+                        android:textStyle="bold" />
+
+                    <TextView
+                        android:id="@+id/badge_waveguard_pro_active"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:background="@drawable/bg_stitch_badge_version"
+                        android:backgroundTint="#2610B981"
+                        android:paddingStart="5dp"
+                        android:paddingEnd="5dp"
+                        android:paddingTop="1dp"
+                        android:paddingBottom="1dp"
+                        android:text="ACTIVE"
+                        android:textColor="#10B981"
+                        android:textSize="8.5sp"
+                        android:textStyle="bold" />
+                </LinearLayout>
+
+                <TextView
+                    android:id="@+id/text_waveguard_pro_blocked"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="2dp"
+                    android:text="142 trackers &amp; ads blocked"
+                    android:textColor="#94A3B8"
+                    android:textSize="10.5sp" />
+            </LinearLayout>
+        </LinearLayout>
+
+        <TextView
+            android:id="@+id/btn_waveguard_pro_settings"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_alignParentEnd="true"
+            android:layout_centerVertical="true"
+            android:background="@drawable/bg_stitch_action_chip"
+            android:paddingStart="12dp"
+            android:paddingEnd="12dp"
+            android:paddingTop="6dp"
+            android:paddingBottom="6dp"
+            android:text="Settings"
+            android:textColor="#DFE2F0"
+            android:textSize="11.5sp"
+            android:textStyle="bold"
+            android:clickable="true"
+            android:focusable="true" />
+    </RelativeLayout>
+
+</LinearLayout>

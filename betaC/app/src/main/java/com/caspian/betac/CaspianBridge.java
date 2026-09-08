@@ -89,6 +89,10 @@ public class CaspianBridge {
             if ("adblock_enabled".equals(key) || "waveguard_enabled".equals(key)) {
                 activity.runOnUiThread(() -> activity.setAdBlockEnabled(!"false".equalsIgnoreCase(val)));
             }
+            if ("themeMode".equals(key) || "theme".equals(key)) {
+                boolean isDark = !"light".equalsIgnoreCase(val);
+                activity.runOnUiThread(() -> activity.toggleHostTheme(isDark));
+            }
         }
     }
 
@@ -1173,6 +1177,57 @@ public class CaspianBridge {
     public void deleteWhisperModel(String tier) {
         if (activity == null) return;
         activity.runOnUiThread(() -> activity.deleteWhisperModel(tier));
+    }
+
+    @JavascriptInterface
+    public void setOmniboxPosition(String position) {
+        if (activity != null) {
+            activity.runOnUiThread(() -> activity.setOmniboxPosition(position));
+        }
+    }
+
+    @JavascriptInterface
+    public String getOmniboxPosition() {
+        if (activity != null) {
+            return activity.getOmniboxPosition();
+        }
+        return "bottom";
+    }
+
+    @JavascriptInterface
+    public void setOmniboxMenuStyle(String style) {
+        if (activity != null) {
+            activity.runOnUiThread(() -> activity.setOmniboxMenuStyle(style));
+        }
+    }
+
+    @JavascriptInterface
+    public String getOmniboxMenuStyle() {
+        if (activity != null) {
+            return activity.getOmniboxMenuStyle();
+        }
+        return "grid";
+    }
+
+    @JavascriptInterface
+    public void showBrowserActionGrid() {
+        if (activity != null) {
+            activity.runOnUiThread(activity::showBrowserActionGrid);
+        }
+    }
+
+    @JavascriptInterface
+    public void resetCardGridLayout() {
+        if (activity != null) {
+            activity.runOnUiThread(activity::resetCardGridLayout);
+        }
+    }
+
+    @JavascriptInterface
+    public void showBrowserActionList() {
+        if (activity != null) {
+            activity.runOnUiThread(() -> activity.showBrowserMenuList(null));
+        }
     }
 }
 

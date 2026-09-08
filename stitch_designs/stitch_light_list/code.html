@@ -1,0 +1,271 @@
+<!DOCTYPE html><html lang="en" style=""><head>
+<meta charset="utf-8">
+<meta content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" name="viewport">
+<title class="">light_list</title>
+<!-- Tailwind CSS v3 with Plugins -->
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<script>
+    tailwind.config = {
+      theme: {
+        extend: {
+          colors: {
+            brand: {
+              cyan: '#0284c7',
+              accent: '#00a6b4',
+              emerald: '#059669',
+              slateBg: '#f8fafc',
+              borderLight: '#e2e8f0',
+            }
+          },
+          fontFamily: {
+            sans: ['-apple-system', 'BlinkMacSystemFont', '"SF Pro Display"', '"SF Pro Text"', 'Inter', 'sans-serif'],
+            mono: ['"SF Mono"', 'Menlo', 'Monaco', 'Courier New', 'monospace']
+          },
+          boxShadow: {
+            'subtle-card': '0 4px 20px -2px rgba(15, 23, 42, 0.06), 0 2px 6px -1px rgba(15, 23, 42, 0.04)',
+            'floating-menu': '0 20px 40px -8px rgba(15, 23, 42, 0.12), 0 1px 3px 0 rgba(15, 23, 42, 0.05)',
+            'action-button': '0 4px 14px 0 rgba(2, 132, 199, 0.25)',
+          }
+        }
+      }
+    }
+  </script>
+<style data-purpose="base-typography">
+    body {
+      -webkit-font-smoothing: antialiased;
+      -moz-osx-font-smoothing: grayscale;
+      font-feature-settings: "cv02", "cv03", "cv04", "cv11";
+      user-select: none;
+    }
+  </style>
+<style data-purpose="custom-scrollbars-and-touch">
+    /* Remove tap highlight on mobile devices */
+    * {
+      -webkit-tap-highlight-color: transparent;
+    }
+  </style>
+</head>
+<body class="bg-slate-100 min-h-screen flex justify-center items-start text-slate-900 font-sans p-0 sm:p-6 antialiased">
+<!-- Mobile Viewport Shell (iPhone 15 Pro Form Factor) -->
+<main class="w-full max-w-[430px] min-h-[932px] bg-slate-50 flex flex-col relative overflow-hidden shadow-2xl border-x sm:border border-slate-200/80 sm:rounded-[48px]">
+<!-- BEGIN: iOSStatusBar -->
+<header class="w-full pt-3 px-8 pb-2 flex justify-between items-center z-50 text-slate-800 text-[14px] font-semibold tracking-tight">
+<span class="w-12 text-left font-medium">:41</span>
+<!-- Dynamic Island / Speaker Pill Placeholder -->
+<div class="w-28 h-4 bg-slate-900/10 rounded-full mx-auto backdrop-blur-sm"></div>
+<div class="flex items-center space-x-2 w-12 justify-end">
+<!-- Cellular Bars -->
+<svg class="w-4 h-3 text-slate-800 fill-current" viewBox="0 0 17 12">
+<rect height="4" rx="0.5" width="3" x="0" y="8"></rect>
+<rect height="7" rx="0.5" width="3" x="4.5" y="5"></rect>
+<rect height="10" rx="0.5" width="3" x="9" y="2"></rect>
+<rect height="12" rx="0.5" width="3" x="13.5" y="0"></rect>
+</svg>
+<!-- Wifi Icon -->
+<svg class="w-3.5 h-3.5 text-slate-800 fill-current" viewBox="0 0 24 24">
+<path d="M12 4C7.31 4 3.07 5.9 0 8.98L12 21 24 8.98C20.93 5.9 16.69 4 12 4zm0 3c3.78 0 7.23 1.48 9.8 3.91L12 18.73 2.2 10.91C4.77 8.48 8.22 7 12 7z"></path>
+</svg>
+<!-- Battery Icon -->
+<div class="w-5 h-2.5 border border-slate-800 rounded-[3px] p-0.5 flex items-center">
+<div class="h-full w-3 bg-slate-800 rounded-[1px]"></div>
+</div>
+</div>
+</header>
+<!-- END: iOSStatusBar -->
+<!-- BEGIN: TopOmniboxBar -->
+<section class="px-4 py-2 flex items-center space-x-2 border-b border-slate-200/60 bg-white/80 backdrop-blur-md sticky top-0 z-40" data-purpose="top-navigation-bar">
+<!-- Back Arrow -->
+<button aria-label="Back" class="p-1.5 text-slate-600 hover:text-slate-900 transition-colors">
+<svg class="w-5 h-5 stroke-[2.2] stroke-current fill-none" viewBox="0 0 24 24">
+<path d="M15.75 19.5L8.25 12l7.5-7.5" stroke-linecap="round" stroke-linejoin="round"></path>
+</svg>
+</button>
+<!-- Forward Arrow -->
+<button aria-label="Forward" class="p-1.5 text-slate-300 transition-colors cursor-not-allowed" disabled="">
+<svg class="w-5 h-5 stroke-[2.2] stroke-current fill-none" viewBox="0 0 24 24">
+<path d="M8.25 4.5l7.5 7.5-7.5 7.5" stroke-linecap="round" stroke-linejoin="round"></path>
+</svg>
+</button>
+<!-- Reload Button -->
+<button aria-label="Reload" class="p-1.5 text-slate-600 hover:text-slate-900 transition-colors">
+<svg class="w-4.5 h-4.5 stroke-[2.2] stroke-current fill-none" viewBox="0 0 24 24">
+<path d="M16.023 9.348h4.992v-.001M2.985 19.644v-4.992m0 0h4.992m-4.993 0l3.181 3.183a8.25 8.25 0 0013.803-3.7M4.031 9.865a8.25 8.25 0 0113.803-3.7l3.181 3.182m0-4.991v4.99" stroke-linecap="round" stroke-linejoin="round"></path>
+</svg>
+</button>
+<!-- Address Bar Pill -->
+<div class="flex-1 bg-slate-100 hover:bg-slate-200/70 transition-colors border border-slate-200/80 rounded-full h-10 px-3 flex items-center justify-between text-xs cursor-pointer shadow-inner">
+<div class="flex items-center space-x-2 truncate">
+<!-- SSL Lock/Shield Icon -->
+<div class="text-emerald-600 flex items-center justify-center">
+<svg class="w-4 h-4 stroke-[2.2] stroke-current fill-none" viewBox="0 0 24 24">
+<path d="M9 12.75L11.25 15 15 9.75m-3-7.036A11.959 11.959 0 013.598 6 11.99 11.99 0 003 9.749c0 5.592 3.824 10.29 9 11.623 5.176-1.332 9-6.03 9-11.622 0-1.31-.21-2.571-.598-3.751h-.152c-3.196 0-6.1-1.248-8.25-3.285z" stroke-linecap="round" stroke-linejoin="round"></path>
+</svg>
+</div>
+<span class="text-slate-800 font-medium tracking-tight truncate">caspian.ai<span class="text-slate-400">/search?q=pro+workspace</span></span>
+</div>
+<!-- Search & Mic controls -->
+<div class="flex items-center space-x-1.5 text-slate-400 pl-1">
+<svg class="w-3.5 h-3.5 stroke-[2] stroke-current fill-none" viewBox="0 0 24 24">
+<path d="M21 21l-5.197-5.197m0 0A7.5 7.5 0 105.196 5.196a7.5 7.5 0 0010.607 10.607z" stroke-linecap="round" stroke-linejoin="round"></path>
+</svg>
+<svg class="w-3.5 h-3.5 stroke-[2] stroke-current fill-none" viewBox="0 0 24 24">
+<path d="M12 18.75a6 6 0 006-6v-1.5m-6 7.5a6 6 0 01-6-6v-1.5m6 7.5v3.75m-3.75 0h7.5M12 15.75a3 3 0 01-3-3V4.5a3 3 0 116 0v8.25a3 3 0 01-3 3z" stroke-linecap="round" stroke-linejoin="round"></path>
+</svg>
+</div>
+</div>
+<!-- Tab Count Indicator -->
+<button aria-label="Open Tabs" class="w-7 h-7 rounded-lg border border-slate-300 flex items-center justify-center text-xs font-semibold text-slate-700 bg-white shadow-sm hover:border-slate-400 transition">
+        3
+      </button>
+</section>
+<!-- END: TopOmniboxBar -->
+<!-- BEGIN: RefinedProOmniboxMenu -->
+<div class="px-4 py-3 flex-1 overflow-y-auto" data-purpose="menu-body-wrapper">
+<!-- Main Frosted Container Card -->
+<section class="bg-white/95 backdrop-blur-2xl rounded-3xl border border-slate-200/90 shadow-floating-menu p-3 flex flex-col space-y-3.5" data-purpose="menu-main-panel">
+<!-- Row 1: Bento Quick Actions (4 Uniform Grid Tiles) -->
+<div class="grid grid-cols-4 gap-2 text-center" data-purpose="bento-quick-actions">
+<!-- Tile: New Tab -->
+<button class="flex flex-col items-center justify-center p-3 rounded-2xl bg-slate-50/80 hover:bg-slate-100/90 border border-slate-200/60 transition-all duration-150 active:scale-95 group">
+<div class="w-9 h-9 rounded-xl bg-white flex items-center justify-center shadow-sm text-slate-700 group-hover:text-sky-600 transition-colors mb-1.5 border border-slate-200/50">
+<svg class="w-5 h-5 stroke-[2.2] stroke-current fill-none" viewBox="0 0 24 24">
+<path d="M12 4.5v15m7.5-7.5h-15" stroke-linecap="round" stroke-linejoin="round"></path>
+</svg>
+</div>
+<span class="text-[11px] font-semibold text-slate-700 tracking-tight leading-tight">New Tab</span>
+</button>
+<!-- Tile: Dual AI (Highlighted / Active) -->
+<button class="flex flex-col items-center justify-center p-3 rounded-2xl bg-sky-50/70 hover:bg-sky-50 border border-sky-200/70 transition-all duration-150 active:scale-95 group relative shadow-xs">
+
+<div class="w-9 h-9 rounded-xl bg-sky-500 text-white flex items-center justify-center shadow-sm shadow-sky-500/20 mb-1.5">
+<svg class="w-5 h-5 fill-current" viewBox="0 0 24 24">
+<path d="M13 2L3 14h9l-1 8 10-12h-9l1-8z"></path>
+</svg>
+</div>
+<span class="text-[11px] font-semibold text-sky-900 tracking-tight leading-tight">Dual AI</span>
+</button>
+<!-- Tile: Split Pane -->
+<button class="flex flex-col items-center justify-center p-3 rounded-2xl bg-slate-50/80 hover:bg-slate-100/90 border border-slate-200/60 transition-all duration-150 active:scale-95 group">
+<div class="w-9 h-9 rounded-xl bg-white flex items-center justify-center shadow-sm text-slate-700 group-hover:text-sky-600 transition-colors mb-1.5 border border-slate-200/50">
+<svg class="w-5 h-5 stroke-[2] stroke-current fill-none" viewBox="0 0 24 24">
+<rect height="16" rx="2" width="18" x="3" y="4"></rect>
+<path d="M12 4v16" stroke-linecap="round"></path>
+</svg>
+</div>
+<span class="text-[11px] font-semibold text-slate-700 tracking-tight leading-tight">Split Pane</span>
+</button>
+<!-- Tile: Desktop Mode -->
+<button class="flex flex-col items-center justify-center p-3 rounded-2xl bg-slate-50/80 hover:bg-slate-100/90 border border-slate-200/60 transition-all duration-150 active:scale-95 group">
+<div class="w-9 h-9 rounded-xl bg-white flex items-center justify-center shadow-sm text-slate-700 group-hover:text-sky-600 transition-colors mb-1.5 border border-slate-200/50">
+<svg class="w-5 h-5 stroke-[2] stroke-current fill-none" viewBox="0 0 24 24">
+<rect height="14" rx="2" width="20" x="2" y="3"></rect>
+<path d="M8 21h8m-4-4v4" stroke-linecap="round"></path>
+</svg>
+</div>
+<span class="text-[11px] font-semibold text-slate-700 tracking-tight leading-tight">Desktop</span>
+</button>
+</div>
+<!-- Row 2: Interactive System Controls (Zoom Stepper & Open PDF/Reader) -->
+<div class="grid grid-cols-2 gap-2" data-purpose="interactive-system-widgets">
+<!-- Zoom Stepper Widget -->
+<div class="bg-slate-50/90 border border-slate-200/80 rounded-2xl px-2.5 py-2 flex items-center justify-between shadow-xs gap-1.5 min-w-0"><div class="flex items-center space-x-1.5 text-slate-700 font-medium text-xs truncate min-w-0"><svg class="w-3.5 h-3.5 text-slate-500 stroke-[2] stroke-current fill-none shrink-0" viewBox="0 0 24 24"><circle cx="11" cy="11" r="8"></circle><line x1="21" x2="16.65" y1="21" y2="16.65"></line><line x1="11" x2="11" y1="8" y2="14"></line><line x1="8" x2="14" y1="11" y2="11"></line></svg><span class="truncate font-medium">Zoom</span></div><div class="flex items-center space-x-1 bg-white border border-slate-200/80 rounded-xl px-1.5 py-1 shadow-2xs shrink-0"><button class="w-4.5 h-4.5 flex items-center justify-center text-slate-600 hover:text-slate-900 font-bold active:bg-slate-100 rounded text-xs transition">-</button><span class="text-[11px] font-semibold text-slate-800 font-mono text-center px-0.5 whitespace-nowrap">100%</span><button class="w-4.5 h-4.5 flex items-center justify-center text-slate-600 hover:text-slate-900 font-bold active:bg-slate-100 rounded text-xs transition">+</button></div></div>
+<!-- Open PDF / Reader Widget -->
+<button class="bg-slate-50/90 hover:bg-slate-100/90 border border-slate-200/80 rounded-2xl px-3 py-2 flex items-center space-x-2 shadow-xs transition-colors text-left group min-w-0 w-full active:scale-95"><svg class="w-4 h-4 text-rose-500 stroke-[2] stroke-current fill-none shrink-0" viewBox="0 0 24 24"><path d="M19.5 14.25v-2.625a3.375 3.375 0 00-3.375-3.375h-1.5A1.125 1.125 0 0113.5 7.125v-1.5a3.375 3.375 0 00-3.375-3.375H8.25m0 12.75h7.5m-7.5 3H12M10.5 2.25H5.625c-.621 0-1.125.504-1.125 1.125v17.25c0 .621.504 1.125 1.125 1.125h12.75c.621 0 1.125-.504 1.125-1.125V11.25a9 9 0 00-9-9z" stroke-linecap="round" stroke-linejoin="round"></path></svg><span class="text-xs font-semibold text-slate-700 group-hover:text-slate-900 truncate">Open PDF</span></button>
+</div>
+<!-- Section: Precision Action List (Rows 3-6) -->
+<div class="divide-y divide-slate-100 text-sm font-medium" data-purpose="omnibox-list-items">
+<!-- Item 1: Find in Page -->
+<button class="w-full flex items-center justify-between py-2.5 px-1 hover:bg-slate-50/80 rounded-xl transition text-left group">
+<div class="flex items-center space-x-3 text-slate-700 group-hover:text-slate-900">
+<svg class="w-4 h-4 text-slate-500 group-hover:text-sky-600 transition stroke-[2] stroke-current fill-none" viewBox="0 0 24 24">
+<circle cx="11" cy="11" r="8"></circle>
+<path d="M21 21l-4.35-4.35" stroke-linecap="round"></path>
+</svg>
+<span class="text-xs font-medium tracking-tight">Find in page</span>
+</div>
+<span class="px-2 py-0.5 rounded-md bg-slate-100 text-slate-600 border border-slate-200/70 font-mono text-[10px] font-semibold tracking-wider">
+              ⌘F
+            </span>
+</button>
+<!-- Item 2: History & Timeline -->
+<button class="w-full flex items-center justify-between py-2.5 px-1 hover:bg-slate-50/80 rounded-xl transition text-left group">
+<div class="flex items-center space-x-3 text-slate-700 group-hover:text-slate-900">
+<svg class="w-4 h-4 text-slate-500 group-hover:text-sky-600 transition stroke-[2] stroke-current fill-none" viewBox="0 0 24 24">
+<circle cx="12" cy="12" r="9"></circle>
+<polyline points="12 7 12 12 15 15"></polyline>
+</svg>
+<span class="text-xs font-medium tracking-tight">History &amp; Timeline</span>
+</div>
+<span class="text-[11px] text-slate-400 font-normal">
+              14m ago
+            </span>
+</button>
+<!-- Item 3: Downloads -->
+<button class="w-full flex items-center justify-between py-2.5 px-1 hover:bg-slate-50/80 rounded-xl transition text-left group">
+<div class="flex items-center space-x-3 text-slate-700 group-hover:text-slate-900">
+<svg class="w-4 h-4 text-slate-500 group-hover:text-sky-600 transition stroke-[2] stroke-current fill-none" viewBox="0 0 24 24">
+<path d="M3 16.5v2.25A2.25 2.25 0 005.25 21h13.5A2.25 2.25 0 0021 18.75V16.5M16.5 12L12 16.5m0 0L7.5 12m4.5 4.5V3" stroke-linecap="round" stroke-linejoin="round"></path>
+</svg>
+<span class="text-xs font-medium tracking-tight">Downloads</span>
+</div>
+<!-- Active Status Pill -->
+<div class="flex items-center space-x-1.5 px-2.5 py-0.5 rounded-full bg-emerald-50 border border-emerald-200/80 text-emerald-700">
+<span class="w-1.5 h-1.5 rounded-full bg-emerald-500"></span>
+<span class="text-[10px] font-semibold tracking-tight">2 active</span>
+</div>
+</button>
+<!-- Item 4: Share & Export -->
+<div class="w-full flex items-center justify-between py-2.5 px-1 text-left">
+<div class="flex items-center space-x-3 text-slate-700">
+<svg class="w-4 h-4 text-slate-500 stroke-[2] stroke-current fill-none" viewBox="0 0 24 24">
+<path d="M3 16.5v2.25A2.25 2.25 0 005.25 21h13.5A2.25 2.25 0 0021 18.75V16.5m-13.5-9L12 3m0 0l4.5 4.5M12 3v13.5" stroke-linecap="round" stroke-linejoin="round"></path>
+</svg>
+<span class="text-xs font-medium tracking-tight">Share &amp; Export</span>
+</div>
+<!-- Action Chips -->
+<div class="flex items-center space-x-1.5"><button class="px-2 py-0.5 rounded-lg bg-slate-100 hover:bg-slate-200 text-slate-700 text-[10px] font-medium border border-slate-200 transition shrink-0">PDF</button><button class="px-2 py-0.5 rounded-lg bg-slate-100 hover:bg-slate-200 text-slate-700 text-[10px] font-medium border border-slate-200 transition shrink-0">TXT</button><button class="px-2 py-0.5 rounded-lg bg-slate-100 hover:bg-slate-200 text-slate-700 text-[10px] font-medium border border-slate-200 transition shrink-0">DOC</button><button class="px-2 py-0.5 rounded-lg bg-slate-100 hover:bg-slate-200 text-slate-700 text-[10px] font-medium border border-slate-200 transition shrink-0">MD</button></div>
+</div>
+</div>
+<!-- Section: Security & AdBlock Shield (Waveguard Pro) -->
+<aside class="mt-1 p-3 bg-gradient-to-br from-emerald-50/70 via-slate-50 to-sky-50/40 rounded-2xl border border-emerald-200/70 flex items-center justify-between" data-purpose="waveguard-security-card">
+<div class="flex items-center space-x-3">
+<div class="w-9 h-9 rounded-xl bg-emerald-600 text-white flex items-center justify-center shadow-sm shadow-emerald-600/20 shrink-0">
+<!-- Waveguard shield -->
+<svg class="w-5 h-5 stroke-[2] stroke-current fill-none" viewBox="0 0 24 24">
+<path d="M9 12.75L11.25 15 15 9.75M21 12c0 1.268-.63 2.39-1.593 3.068a3.745 3.745 0 01-1.043 3.296 3.745 3.745 0 01-3.296 1.043A3.745 3.745 0 0112 21c-1.268 0-2.39-.63-3.068-1.593a3.746 3.746 0 01-3.296-1.043 3.745 3.745 0 01-1.043-3.296A3.745 3.745 0 013 12c0-1.268.63-2.39 1.593-3.068a3.745 3.745 0 011.043-3.296 3.746 3.746 0 013.296-1.043A3.746 3.746 0 0112 3c1.268 0 2.39.63 3.068 1.593a3.746 3.746 0 013.296 1.043 3.746 3.746 0 011.043 3.296A3.745 3.745 0 0121 12z" stroke-linecap="round" stroke-linejoin="round"></path>
+</svg>
+</div>
+<div>
+<div class="flex items-center space-x-1.5">
+<h4 class="text-xs font-bold text-slate-800 tracking-tight leading-none">Caspian Waveguard</h4>
+<span class="px-1.5 py-0.2 rounded-full bg-emerald-100 text-emerald-800 text-[9px] font-bold uppercase tracking-wider">Active</span>
+</div>
+<p class="text-[11px] text-slate-500 mt-1 leading-none">142 trackers &amp; ads blocked</p>
+</div>
+</div>
+<button class="px-3 py-1.5 rounded-xl bg-white border border-slate-200 text-slate-700 hover:text-slate-900 text-xs font-medium shadow-2xs hover:bg-slate-50 transition">
+            Settings
+          </button>
+</aside>
+</section>
+<!-- Drag Handle Indicator for Modal Card -->
+<div class="flex justify-center mt-3" data-purpose="sheet-dismiss-handle">
+<div class="w-10 h-1 bg-slate-300/80 rounded-full"></div>
+</div>
+</div>
+<!-- END: RefinedProOmniboxMenu -->
+<!-- BEGIN: FloatingCaspianWaveButton -->
+<!-- Caspian Wave Floating Action Button (Light Style matching Screen 3 position) -->
+<aside class="absolute bottom-7 right-6 z-50" data-purpose="floating-caspian-action">
+
+</aside>
+<!-- END: FloatingCaspianWaveButton -->
+<!-- BEGIN: iOSHomeIndicator -->
+<footer class="w-full pb-2 pt-1 flex justify-center mt-auto" data-purpose="ios-home-bar">
+<div class="w-36 h-1 bg-slate-300 rounded-full"></div>
+</footer>
+<!-- END: iOSHomeIndicator -->
+</main>
+
+
+</body></html>

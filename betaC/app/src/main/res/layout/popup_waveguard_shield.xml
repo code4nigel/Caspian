@@ -51,21 +51,38 @@
                     android:letterSpacing="0.08" />
             </LinearLayout>
 
-            <TextView
-                android:id="@+id/shield_status_badge"
+            <LinearLayout
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
                 android:layout_alignParentEnd="true"
                 android:layout_centerVertical="true"
-                android:background="#2000E5FF"
-                android:paddingStart="8dp"
-                android:paddingTop="3dp"
-                android:paddingEnd="8dp"
-                android:paddingBottom="3dp"
-                android:text="PROTECTED"
-                android:textColor="#00E5FF"
-                android:textSize="10sp"
-                android:textStyle="bold" />
+                android:gravity="center_vertical"
+                android:orientation="horizontal">
+
+                <TextView
+                    android:id="@+id/shield_status_badge"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:background="#2000E5FF"
+                    android:paddingStart="8dp"
+                    android:paddingTop="3dp"
+                    android:paddingEnd="8dp"
+                    android:paddingBottom="3dp"
+                    android:text="PROTECTED"
+                    android:textColor="#00E5FF"
+                    android:textSize="10sp"
+                    android:textStyle="bold" />
+
+                <ImageButton
+                    android:id="@+id/btn_close_waveguard_popup"
+                    android:layout_width="26dp"
+                    android:layout_height="26dp"
+                    android:layout_marginStart="8dp"
+                    android:background="?attr/selectableItemBackgroundBorderless"
+                    android:src="@drawable/ic_pod_close"
+                    android:tint="#94A3B8"
+                    android:contentDescription="Close Waveguard" />
+            </LinearLayout>
         </RelativeLayout>
 
         <!-- Current Site Info -->
@@ -177,144 +194,175 @@
             </LinearLayout>
         </LinearLayout>
 
-        <!-- Granular Controls Divider / Section Title -->
-        <TextView
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:text="ADVANCED DEFENSE"
-            android:textColor="#556575"
-            android:textSize="10sp"
-            android:textStyle="bold"
-            android:letterSpacing="0.05"
-            android:layout_marginBottom="6dp" />
-
-        <!-- Switch 1: Ads & Trackers -->
-        <RelativeLayout
+        <!-- Collapsible Advanced Settings Header -->
+        <LinearLayout
+            android:id="@+id/header_advanced_settings"
             android:layout_width="match_parent"
-            android:layout_height="36dp">
-            <TextView
-                android:layout_width="wrap_content"
-                android:layout_height="wrap_content"
-                android:layout_alignParentStart="true"
-                android:layout_centerVertical="true"
-                android:text="Cross-Site Trackers &amp; Ads"
-                android:textColor="#D0D7DE"
-                android:textSize="12sp" />
-            <androidx.appcompat.widget.SwitchCompat
-                android:id="@+id/switch_adblock"
-                android:layout_width="wrap_content"
-                android:layout_height="wrap_content"
-                android:layout_alignParentEnd="true"
-                android:layout_centerVertical="true"
-                android:checked="true"
-                app:thumbTint="#00E5FF"
-                app:trackTint="#3300E5FF" />
-        </RelativeLayout>
-
-        <!-- Switch 2: Cosmetic Element Hiding -->
-        <RelativeLayout
-            android:layout_width="match_parent"
-            android:layout_height="36dp">
-            <TextView
-                android:layout_width="wrap_content"
-                android:layout_height="wrap_content"
-                android:layout_alignParentStart="true"
-                android:layout_centerVertical="true"
-                android:text="Cosmetic Element Hiding"
-                android:textColor="#D0D7DE"
-                android:textSize="12sp" />
-            <androidx.appcompat.widget.SwitchCompat
-                android:id="@+id/switch_cosmetic"
-                android:layout_width="wrap_content"
-                android:layout_height="wrap_content"
-                android:layout_alignParentEnd="true"
-                android:layout_centerVertical="true"
-                android:checked="true"
-                app:thumbTint="#00E5FF"
-                app:trackTint="#3300E5FF" />
-        </RelativeLayout>
-
-        <!-- Switch 3: Anti-Adblock Defuser -->
-        <RelativeLayout
-            android:layout_width="match_parent"
-            android:layout_height="36dp">
-            <TextView
-                android:layout_width="wrap_content"
-                android:layout_height="wrap_content"
-                android:layout_alignParentStart="true"
-                android:layout_centerVertical="true"
-                android:text="Anti-Adblock Defuser"
-                android:textColor="#D0D7DE"
-                android:textSize="12sp" />
-            <androidx.appcompat.widget.SwitchCompat
-                android:id="@+id/switch_defuser"
-                android:layout_width="wrap_content"
-                android:layout_height="wrap_content"
-                android:layout_alignParentEnd="true"
-                android:layout_centerVertical="true"
-                android:checked="true"
-                app:thumbTint="#00E5FF"
-                app:trackTint="#3300E5FF" />
-        </RelativeLayout>
-
-        <!-- Switch 4: Aggressive Popups & Redirects -->
-        <RelativeLayout
-            android:layout_width="match_parent"
-            android:layout_height="36dp"
-            android:layout_marginBottom="8dp">
-            <TextView
-                android:layout_width="wrap_content"
-                android:layout_height="wrap_content"
-                android:layout_alignParentStart="true"
-                android:layout_centerVertical="true"
-                android:text="Block Popups &amp; Redirects"
-                android:textColor="#D0D7DE"
-                android:textSize="12sp" />
-            <androidx.appcompat.widget.SwitchCompat
-                android:id="@+id/switch_popups"
-                android:layout_width="wrap_content"
-                android:layout_height="wrap_content"
-                android:layout_alignParentEnd="true"
-                android:layout_centerVertical="true"
-                android:checked="true"
-                app:thumbTint="#00E5FF"
-                app:trackTint="#3300E5FF" />
-        </RelativeLayout>
-
-        <View
-            android:layout_width="match_parent"
-            android:layout_height="1dp"
-            android:background="#222C38"
-            android:layout_marginBottom="8dp" />
-
-        <!-- Footer: Rule status & Update Rules button -->
-        <RelativeLayout
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content">
+            android:layout_height="38dp"
+            android:gravity="center_vertical"
+            android:orientation="horizontal"
+            android:clickable="true"
+            android:focusable="true"
+            android:paddingStart="4dp"
+            android:paddingEnd="4dp"
+            android:layout_marginTop="2dp"
+            android:layout_marginBottom="4dp">
 
             <TextView
-                android:id="@+id/rules_version_text"
-                android:layout_width="wrap_content"
+                android:id="@+id/text_advanced_settings_title"
+                android:layout_width="0dp"
                 android:layout_height="wrap_content"
-                android:layout_alignParentStart="true"
-                android:layout_centerVertical="true"
-                android:text="Waveguard v2.4 (227 rules)"
+                android:layout_weight="1"
+                android:text="ADVANCED SETTINGS"
                 android:textColor="#556575"
-                android:textSize="10sp" />
+                android:textSize="10.5sp"
+                android:textStyle="bold"
+                android:letterSpacing="0.06" />
 
-            <TextView
-                android:id="@+id/btn_update_rules"
-                android:layout_width="wrap_content"
-                android:layout_height="wrap_content"
-                android:layout_alignParentEnd="true"
-                android:layout_centerVertical="true"
-                android:background="?attr/selectableItemBackground"
-                android:padding="6dp"
-                android:text="Update Lists"
-                android:textColor="#00E5FF"
-                android:textSize="11sp"
-                android:textStyle="bold" />
-        </RelativeLayout>
+            <ImageView
+                android:id="@+id/icon_advanced_chevron"
+                android:layout_width="16dp"
+                android:layout_height="16dp"
+                android:src="@drawable/ic_menu_chevron_down"
+                android:tint="#556575" />
+        </LinearLayout>
+
+        <!-- Collapsible Advanced Settings Container (Collapsed by Default) -->
+        <LinearLayout
+            android:id="@+id/container_advanced_settings"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:orientation="vertical"
+            android:visibility="gone">
+
+            <!-- Switch 1: Ads & Trackers -->
+            <RelativeLayout
+                android:layout_width="match_parent"
+                android:layout_height="36dp">
+                <TextView
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:layout_alignParentStart="true"
+                    android:layout_centerVertical="true"
+                    android:text="Cross-Site Trackers &amp; Ads"
+                    android:textColor="#D0D7DE"
+                    android:textSize="12sp" />
+                <androidx.appcompat.widget.SwitchCompat
+                    android:id="@+id/switch_adblock"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:layout_alignParentEnd="true"
+                    android:layout_centerVertical="true"
+                    android:checked="true"
+                    app:thumbTint="#00E5FF"
+                    app:trackTint="#3300E5FF" />
+            </RelativeLayout>
+
+            <!-- Switch 2: Cosmetic Element Hiding -->
+            <RelativeLayout
+                android:layout_width="match_parent"
+                android:layout_height="36dp">
+                <TextView
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:layout_alignParentStart="true"
+                    android:layout_centerVertical="true"
+                    android:text="Cosmetic Element Hiding"
+                    android:textColor="#D0D7DE"
+                    android:textSize="12sp" />
+                <androidx.appcompat.widget.SwitchCompat
+                    android:id="@+id/switch_cosmetic"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:layout_alignParentEnd="true"
+                    android:layout_centerVertical="true"
+                    android:checked="true"
+                    app:thumbTint="#00E5FF"
+                    app:trackTint="#3300E5FF" />
+            </RelativeLayout>
+
+            <!-- Switch 3: Anti-Adblock Defuser -->
+            <RelativeLayout
+                android:layout_width="match_parent"
+                android:layout_height="36dp">
+                <TextView
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:layout_alignParentStart="true"
+                    android:layout_centerVertical="true"
+                    android:text="Anti-Adblock Defuser"
+                    android:textColor="#D0D7DE"
+                    android:textSize="12sp" />
+                <androidx.appcompat.widget.SwitchCompat
+                    android:id="@+id/switch_defuser"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:layout_alignParentEnd="true"
+                    android:layout_centerVertical="true"
+                    android:checked="true"
+                    app:thumbTint="#00E5FF"
+                    app:trackTint="#3300E5FF" />
+            </RelativeLayout>
+
+            <!-- Switch 4: Aggressive Popups & Redirects -->
+            <RelativeLayout
+                android:layout_width="match_parent"
+                android:layout_height="36dp"
+                android:layout_marginBottom="8dp">
+                <TextView
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:layout_alignParentStart="true"
+                    android:layout_centerVertical="true"
+                    android:text="Block Popups &amp; Redirects"
+                    android:textColor="#D0D7DE"
+                    android:textSize="12sp" />
+                <androidx.appcompat.widget.SwitchCompat
+                    android:id="@+id/switch_popups"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:layout_alignParentEnd="true"
+                    android:layout_centerVertical="true"
+                    android:checked="true"
+                    app:thumbTint="#00E5FF"
+                    app:trackTint="#3300E5FF" />
+            </RelativeLayout>
+
+            <View
+                android:layout_width="match_parent"
+                android:layout_height="1dp"
+                android:background="#222C38"
+                android:layout_marginBottom="8dp" />
+
+            <!-- Footer: Rule status & Update Rules button -->
+            <RelativeLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content">
+
+                <TextView
+                    android:id="@+id/rules_version_text"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:layout_alignParentStart="true"
+                    android:layout_centerVertical="true"
+                    android:text="Waveguard v2.4 (227 rules)"
+                    android:textColor="#556575"
+                    android:textSize="10sp" />
+
+                <TextView
+                    android:id="@+id/btn_update_rules"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:layout_alignParentEnd="true"
+                    android:layout_centerVertical="true"
+                    android:background="?attr/selectableItemBackground"
+                    android:padding="6dp"
+                    android:text="Update Lists"
+                    android:textColor="#00E5FF"
+                    android:textSize="11sp"
+                    android:textStyle="bold" />
+            </RelativeLayout>
+        </LinearLayout>
 
     </LinearLayout>
 </androidx.cardview.widget.CardView>

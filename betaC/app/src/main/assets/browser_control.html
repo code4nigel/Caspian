@@ -966,6 +966,49 @@
         </div>
       </div>
 
+      <!-- Interface & Omnibox Customization Card -->
+      <div class="m3-card" id="settings-card-omnibox" style="margin-top: 14px;">
+        <div class="m3-card-row" style="margin-bottom: 12px;">
+          <div>
+            <div class="m3-card-title">INTERFACE & OMNIBOX</div>
+            <div class="m3-card-sub">Customize bar placement and action menu layout.</div>
+          </div>
+        </div>
+
+        <!-- Omnibox Position -->
+        <div class="setting-row" style="margin-bottom: 12px;">
+          <div>
+            <div class="setting-label">Omnibox Placement</div>
+            <div class="setting-desc" style="font-size: 10.5px; color: var(--text-muted);">Anchor address bar at top or bottom</div>
+          </div>
+          <div class="mode-pill-toggle">
+            <button id="omnibox-pos-top" class="mode-pill active" data-pos="top">Top Bar</button>
+            <button id="omnibox-pos-bottom" class="mode-pill" data-pos="bottom">Bottom Bar</button>
+          </div>
+        </div>
+
+        <!-- Omnibox Menu Style -->
+        <div class="setting-row">
+          <div>
+            <div class="setting-label">Action Menu Style</div>
+            <div class="setting-desc" style="font-size: 10.5px; color: var(--text-muted);">Choose between Grid Action Sheet and Classic List</div>
+          </div>
+          <div class="mode-pill-toggle">
+            <button id="menu-style-list" class="mode-pill active" data-style="list">Classic List</button>
+            <button id="menu-style-grid" class="mode-pill" data-style="grid">Grid Sheet</button>
+          </div>
+        </div>
+
+        <!-- Reset Card Menu Layout -->
+        <div class="setting-row" style="margin-top: 8px;">
+          <div>
+            <div class="setting-label">Menu Grid Layout</div>
+            <div class="setting-desc" style="font-size: 10.5px; color: var(--text-muted);">Reset action cards and buttons to default arrangement</div>
+          </div>
+          <button id="btn-reset-menu-grid" class="btn-clean" style="padding: 6px 14px; font-size: 11px; font-weight: 600; border-radius: 8px; background: rgba(56, 189, 248, 0.12); color: #38bdf8; border: 1px solid rgba(56, 189, 248, 0.3); cursor: pointer;">Reset Layout</button>
+        </div>
+      </div>
+
       <!-- Visuals & Animations Card -->
       <details class="m3-card" id="settings-card-visuals" style="cursor: pointer; padding-bottom: 12px;">
         <summary

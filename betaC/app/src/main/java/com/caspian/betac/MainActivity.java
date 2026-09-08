@@ -1,5 +1,6 @@
 package com.caspian.betac;
 
+import android.animation.ValueAnimator;
 import android.Manifest;
 import android.annotation.SuppressLint;
 import android.app.DownloadManager;
@@ -109,6 +110,8 @@ import android.widget.PopupMenu;
 import android.media.AudioManager;
 import android.widget.ProgressBar;
 import android.widget.SeekBar;
+import android.widget.TableLayout;
+import android.widget.TableRow;
 import android.widget.TextView;
 import android.widget.Toast;
 
@@ -141,8 +144,10 @@ import java.net.URL;
 import java.nio.charset.StandardCharsets;
 import java.text.SimpleDateFormat;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.Collections;
 import java.util.Date;
+import java.util.HashMap;
 import java.util.HashSet;
 import java.util.LinkedHashMap;
 import java.util.List;
@@ -255,12 +260,15 @@ public class MainActivity extends AppCompatActivity {
     private AICommandRouter.SearchEngine currentSearchEngine = AICommandRouter.SearchEngine.GOOGLE;
 
     private FrameLayout rootContainer;
+    private FrameLayout browserContentLayout;
     private FrameLayout omniboxHeaderWrapper;
     private LinearLayout omniboxHeader;
     private FrameLayout omniboxCapsule;
     private ImageButton omniboxBackBtn;
     private ImageButton omniboxForwardBtn;
     private boolean isDarkTheme = true;
+    private String omniboxPosition = "bottom";
+    private String omniboxMenuStyle = "grid";
     
     private LinearLayout omniboxUrlContainer;
     private FrameLayout omniboxShieldBtn;
@@ -1580,7 +1588,10 @@ public class MainActivity extends AppCompatActivity {
     private void bindViews() {
         try {
             rootContainer = findViewById(R.id.root_container);
+            browserContentLayout = findViewById(R.id.browser_content_layout);
             omniboxHeaderWrapper = findViewById(R.id.omnibox_header_wrapper);
+            omniboxPosition = getSharedPreferences(PREFS_NAME, MODE_PRIVATE).getString("omnibox_position", "bottom");
+            omniboxMenuStyle = getSharedPreferences(PREFS_NAME, MODE_PRIVATE).getString("omnibox_menu_style", "grid");
             omniboxHeader = findViewById(R.id.omnibox_header);
             omniboxCapsule = findViewById(R.id.omnibox_capsule);
             omniboxBackBtn = findViewById(R.id.omnibox_back_btn);
@@ -1622,6 +1633,8 @@ public class MainActivity extends AppCompatActivity {
             splitRightTapMask = findViewById(R.id.split_right_tap_mask);
             splitDivider = findViewById(R.id.split_divider);
             splitDividerHandle = findViewById(R.id.split_divider_handle);
+
+            applyOmniboxPosition(omniboxPosition);
 
             splitArenaBroadcastContainer = findViewById(R.id.split_arena_broadcast_container);
             splitArenaInput = findViewById(R.id.split_arena_input);
@@ -2821,12 +2834,7 @@ public class MainActivity extends AppCompatActivity {
             rootContainer.setBackgroundColor(isDarkTheme ? 0xFF050811 : 0xFFF8FAFC);
         }
         if (omniboxHeaderWrapper != null) {
-            TabItem currentTab = getActiveOrDominantTab();
-            if (currentTab != null && currentTab.isIncognito) {
-                omniboxHeaderWrapper.setBackgroundColor(0xFF1E102E);
-            } else {
-                omniboxHeaderWrapper.setBackgroundColor(isDarkTheme ? 0xFF0D1524 : 0xFFFFFFFF);
-            }
+            updateOmniboxScrimBackground();
         }
         if (omniboxHeader != null) {
             omniboxHeader.setBackgroundResource(isDarkTheme ? R.drawable.bg_liquid_glass : R.drawable.bg_liquid_glass_light);
@@ -2867,6 +2875,11 @@ public class MainActivity extends AppCompatActivity {
                 WebSettingsCompat.setForceDarkStrategy(webView.getSettings(), WebSettingsCompat.DARK_STRATEGY_PREFER_WEB_THEME_OVER_USER_AGENT_DARKENING);
             }
         } catch (Throwable ignored) {}
+        try {
+            if (WebViewFeature.isFeatureSupported(WebViewFeature.ALGORITHMIC_DARKENING)) {
+                WebSettingsCompat.setAlgorithmicDarkeningAllowed(webView.getSettings(), isDark);
+            }
+        } catch (Throwable ignored) {}
 
         try {
             String themeJs = "(function() {\n" +
@@ -2888,8 +2901,8 @@ public class MainActivity extends AppCompatActivity {
                     "    try { localStorage.setItem('theme', isDark ? 'dark' : 'light'); } catch(e){}\n" +
                     "    try { localStorage.setItem('colorMode', isDark ? 'dark' : 'light'); } catch(e){}\n" +
                     "\n" +
-                    "    // 1. Google Gemini Theme Adaptation\n" +
-                    "    if (host.includes('gemini.google.com') || host.includes('google.com')) {\n" +
+                    "    // 1. Google Gemini Theme Adaptation (STRICTLY for gemini.google.com, NEVER for general google.com search)\n" +
+                    "    if (host.includes('gemini.google.com')) {\n" +
                     "      if (document.documentElement) {\n" +
                     "        document.documentElement.classList.toggle('dark-theme', isDark);\n" +
                     "        document.documentElement.classList.toggle('light-theme', !isDark);\n" +
@@ -2914,6 +2927,24 @@ public class MainActivity extends AppCompatActivity {
                     "          existingGeminiStyle.textContent = 'body, html, .main-container, mat-sidenav-container, mat-sidenav-content, .conversation-container, .chat-history { background-color: #ffffff !important; color: #1f1f1f !important; } .header, .side-nav, input-area { background: #f0f4f9 !important; }';\n" +
                     "        }\n" +
                     "      }\n" +
+                    "    } else if (host.includes('google.')) {\n" +
+                    "      // Remove any previously injected Gemini style from Google Search\n" +
+                    "      try {\n" +
+                    "        var prevStyle = document.getElementById('caspian-gemini-theme-style');\n" +
+                    "        if (prevStyle) prevStyle.remove();\n" +
+                    "        if (!isDark) {\n" +
+                    "          if (document.documentElement) {\n" +
+                    "            document.documentElement.removeAttribute('dark');\n" +
+                    "            document.documentElement.removeAttribute('dark-theme');\n" +
+                    "            document.documentElement.classList.remove('dark-theme');\n" +
+                    "          }\n" +
+                    "          if (document.body) {\n" +
+                    "            document.body.removeAttribute('dark');\n" +
+                    "            document.body.removeAttribute('dark-theme');\n" +
+                    "            document.body.classList.remove('dark-theme');\n" +
+                    "          }\n" +
+                    "        }\n" +
+                    "      } catch(e) {}\n" +
                     "    }\n" +
                     "\n" +
                     "    // 2. YouTube Theme Adaptation\n" +
@@ -2953,11 +2984,16 @@ public class MainActivity extends AppCompatActivity {
                     "      if (document.documentElement) {\n" +
                     "        document.documentElement.classList.toggle('dark', isDark);\n" +
                     "        document.documentElement.classList.toggle('light', !isDark);\n" +
+                    "        document.documentElement.style.colorScheme = isDark ? 'dark' : 'light';\n" +
                     "      }\n" +
                     "      if (document.body) {\n" +
                     "        document.body.classList.toggle('dark', isDark);\n" +
                     "        document.body.classList.toggle('light', !isDark);\n" +
+                    "        document.body.style.colorScheme = isDark ? 'dark' : 'light';\n" +
                     "      }\n" +
+                    "      try { localStorage.setItem('theme', isDark ? 'dark' : 'light'); } catch(e){}\n" +
+                    "      try { localStorage.setItem('colorMode', isDark ? 'dark' : 'light'); } catch(e){}\n" +
+                    "      try { localStorage.setItem('color-theme', isDark ? 'dark' : 'light'); } catch(e){}\n" +
                     "    }\n" +
                     "  } catch(e) {}\n" +
                     "})();";
@@ -2988,6 +3024,16 @@ public class MainActivity extends AppCompatActivity {
                 applyWebViewTheme(tab.webView, isDark);
             }
         }
+
+        // Sync to control sheet webview (Caspian Menu sheet)
+        if (controlWebView != null) {
+            controlWebView.evaluateJavascript(
+                "if (typeof window.setThemeFromHost === 'function') { window.setThemeFromHost('" + (isDark ? "dark" : "light") + "'); } " +
+                "else if (typeof window.setTheme === 'function') { window.setTheme('" + (isDark ? "dark" : "light") + "'); }",
+                null
+            );
+        }
+
         updateOmniboxState();
     }
 
@@ -5197,34 +5243,187 @@ public class MainActivity extends AppCompatActivity {
     }
 
     private void showQuickToolbarsPopup(View anchor) {
-        List<CaspianMenuItem> menuItems = new ArrayList<>();
-        menuItems.add(new CaspianMenuItem(
-                "🤖 ChatGPT Dock: " + (isChatgptDockExplicitlyHidden ? "OFF" : "ON"),
-                () -> toggleChatGPTDock(isChatgptDockExplicitlyHidden)
-        ));
-        menuItems.add(new CaspianMenuItem(
-                "♊ Gemini Dock: " + (isGeminiDockExplicitlyHidden ? "OFF" : "ON"),
-                () -> toggleGeminiDock(isGeminiDockExplicitlyHidden)
-        ));
-        menuItems.add(new CaspianMenuItem(
-                "🎬 YouTube Remote: " + (isYtRemoteExplicitlyHidden ? "OFF" : "ON"),
-                () -> toggleFloatingYouTubeRemote(isYtRemoteExplicitlyHidden)
-        ));
-        menuItems.add(new CaspianMenuItem(
-                "🌐 Google Dock: " + (isSearchNavExplicitlyHidden ? "OFF" : "ON"),
-                () -> toggleGoogleSearchDock(isSearchNavExplicitlyHidden)
-        ));
-        menuItems.add(new CaspianMenuItem(
-                "🛡️ Waveguard Shield: " + (waveguardShield != null && waveguardShield.isGlobalEnabled() ? "ON" : "OFF"),
-                () -> {
-                    if (waveguardShield != null) {
-                        waveguardShield.setGlobalEnabled(!waveguardShield.isGlobalEnabled());
-                        updateOmniboxState();
+        com.google.android.material.bottomsheet.BottomSheetDialog dialog =
+                new com.google.android.material.bottomsheet.BottomSheetDialog(this);
+        View dialogView = LayoutInflater.from(this).inflate(R.layout.dialog_quick_toolbars, null);
+        dialog.setContentView(dialogView);
+
+        if (dialog.getWindow() != null) {
+            View bs = dialog.getWindow().findViewById(com.google.android.material.R.id.design_bottom_sheet);
+            if (bs != null) bs.setBackgroundResource(android.R.color.transparent);
+        }
+
+        // Close button
+        View btnClose = dialogView.findViewById(R.id.btn_close_quick_toolbars);
+        if (btnClose != null) {
+            btnClose.setOnClickListener(v -> dialog.dismiss());
+        }
+
+        // 1. ChatGPT Dock
+        View rowChatgpt = dialogView.findViewById(R.id.row_dock_chatgpt);
+        androidx.appcompat.widget.SwitchCompat switchChatgpt = dialogView.findViewById(R.id.switch_dock_chatgpt);
+        if (switchChatgpt != null) {
+            switchChatgpt.setChecked(!isChatgptDockExplicitlyHidden);
+            switchChatgpt.setOnClickListener(v -> {
+                playUiFeedbackSound("tap");
+                boolean targetShow = switchChatgpt.isChecked();
+                toggleChatGPTDock(targetShow);
+            });
+        }
+        if (rowChatgpt != null) {
+            rowChatgpt.setOnClickListener(v -> {
+                playUiFeedbackSound("tap");
+                boolean newTarget = isChatgptDockExplicitlyHidden;
+                toggleChatGPTDock(newTarget);
+                if (switchChatgpt != null) switchChatgpt.setChecked(newTarget);
+            });
+        }
+
+        // 2. Gemini Dock
+        View rowGemini = dialogView.findViewById(R.id.row_dock_gemini);
+        androidx.appcompat.widget.SwitchCompat switchGemini = dialogView.findViewById(R.id.switch_dock_gemini);
+        if (switchGemini != null) {
+            switchGemini.setChecked(!isGeminiDockExplicitlyHidden);
+            switchGemini.setOnClickListener(v -> {
+                playUiFeedbackSound("tap");
+                boolean targetShow = switchGemini.isChecked();
+                toggleGeminiDock(targetShow);
+            });
+        }
+        if (rowGemini != null) {
+            rowGemini.setOnClickListener(v -> {
+                playUiFeedbackSound("tap");
+                boolean newTarget = isGeminiDockExplicitlyHidden;
+                toggleGeminiDock(newTarget);
+                if (switchGemini != null) switchGemini.setChecked(newTarget);
+            });
+        }
+
+        // 3. YouTube Remote
+        View rowYouTube = dialogView.findViewById(R.id.row_dock_youtube);
+        androidx.appcompat.widget.SwitchCompat switchYouTube = dialogView.findViewById(R.id.switch_dock_youtube);
+        if (switchYouTube != null) {
+            switchYouTube.setChecked(!isYtRemoteExplicitlyHidden);
+            switchYouTube.setOnClickListener(v -> {
+                playUiFeedbackSound("tap");
+                boolean targetShow = switchYouTube.isChecked();
+                toggleFloatingYouTubeRemote(targetShow);
+            });
+        }
+        if (rowYouTube != null) {
+            rowYouTube.setOnClickListener(v -> {
+                playUiFeedbackSound("tap");
+                boolean newTarget = isYtRemoteExplicitlyHidden;
+                toggleFloatingYouTubeRemote(newTarget);
+                if (switchYouTube != null) switchYouTube.setChecked(newTarget);
+            });
+        }
+
+        // 4. Google Dock
+        View rowGoogle = dialogView.findViewById(R.id.row_dock_google);
+        androidx.appcompat.widget.SwitchCompat switchGoogle = dialogView.findViewById(R.id.switch_dock_google);
+        if (switchGoogle != null) {
+            switchGoogle.setChecked(!isSearchNavExplicitlyHidden);
+            switchGoogle.setOnClickListener(v -> {
+                playUiFeedbackSound("tap");
+                boolean targetShow = switchGoogle.isChecked();
+                toggleGoogleSearchDock(targetShow);
+            });
+        }
+        if (rowGoogle != null) {
+            rowGoogle.setOnClickListener(v -> {
+                playUiFeedbackSound("tap");
+                boolean newTarget = isSearchNavExplicitlyHidden;
+                toggleGoogleSearchDock(newTarget);
+                if (switchGoogle != null) switchGoogle.setChecked(newTarget);
+            });
+        }
+
+        // 5. Waveguard Shield
+        View rowWaveguard = dialogView.findViewById(R.id.row_dock_waveguard);
+        androidx.appcompat.widget.SwitchCompat switchWaveguard = dialogView.findViewById(R.id.switch_dock_waveguard);
+        if (switchWaveguard != null) {
+            switchWaveguard.setChecked(waveguardShield != null && waveguardShield.isGlobalEnabled());
+            switchWaveguard.setOnClickListener(v -> {
+                playUiFeedbackSound("tap");
+                if (waveguardShield != null) {
+                    boolean target = switchWaveguard.isChecked();
+                    waveguardShield.setGlobalEnabled(target);
+                    updateOmniboxState();
+                }
+            });
+        }
+        if (rowWaveguard != null) {
+            rowWaveguard.setOnClickListener(v -> {
+                playUiFeedbackSound("tap");
+                if (waveguardShield != null) {
+                    boolean target = !waveguardShield.isGlobalEnabled();
+                    waveguardShield.setGlobalEnabled(target);
+                    updateOmniboxState();
+                    if (switchWaveguard != null) switchWaveguard.setChecked(target);
+                }
+            });
+        }
+
+        applyQuickToolbarsTheme(dialogView, isDarkTheme);
+        dialog.show();
+    }
+
+    private void applyQuickToolbarsTheme(View root, boolean isDark) {
+        if (root == null) return;
+        try {
+            if (!isDark) {
+                GradientDrawable rootGd = new GradientDrawable();
+                rootGd.setColor(0xFFFFFFFF);
+                rootGd.setCornerRadii(new float[]{dpToPx(22), dpToPx(22), dpToPx(22), dpToPx(22), 0, 0, 0, 0});
+                root.setBackground(rootGd);
+
+                View handle = root.findViewById(R.id.quick_toolbars_drag_handle);
+                if (handle != null) {
+                    GradientDrawable handleGd = new GradientDrawable();
+                    handleGd.setColor(0xFFCBD5E1);
+                    handleGd.setCornerRadius(dpToPx(3));
+                    handle.setBackground(handleGd);
+                }
+
+                int slateDark = 0xFF0F172A;
+                int subText = 0xFF64748B;
+                int rowBg = 0xFFF1F5F9;
+
+                TextView headerTitle = root.findViewById(R.id.text_quick_toolbars_title);
+                if (headerTitle != null) headerTitle.setTextColor(0xFF475569);
+
+                ImageButton btnClose = root.findViewById(R.id.btn_close_quick_toolbars);
+                if (btnClose != null) btnClose.setColorFilter(0xFF64748B);
+
+                int[] rowIds = {R.id.row_dock_chatgpt, R.id.row_dock_gemini, R.id.row_dock_youtube, R.id.row_dock_google, R.id.row_dock_waveguard};
+                int[] titleIds = {R.id.title_dock_chatgpt, R.id.title_dock_gemini, R.id.title_dock_youtube, R.id.title_dock_google, R.id.title_dock_waveguard};
+                int[] subIds = {R.id.sub_dock_chatgpt, R.id.sub_dock_gemini, R.id.sub_dock_youtube, R.id.sub_dock_google, R.id.sub_dock_waveguard};
+                int[] squircleIds = {R.id.squircle_dock_chatgpt, R.id.squircle_dock_gemini, R.id.squircle_dock_youtube, R.id.squircle_dock_google, R.id.squircle_dock_waveguard};
+
+                for (int i = 0; i < rowIds.length; i++) {
+                    View row = root.findViewById(rowIds[i]);
+                    if (row != null) {
+                        GradientDrawable rowGd = new GradientDrawable();
+                        rowGd.setColor(rowBg);
+                        rowGd.setCornerRadius(dpToPx(12));
+                        rowGd.setStroke(dpToPx(1), 0xFFE2E8F0);
+                        row.setBackground(rowGd);
+                    }
+                    TextView title = root.findViewById(titleIds[i]);
+                    if (title != null) title.setTextColor(slateDark);
+                    TextView sub = root.findViewById(subIds[i]);
+                    if (sub != null) sub.setTextColor(subText);
+                    View squircle = root.findViewById(squircleIds[i]);
+                    if (squircle != null) {
+                        GradientDrawable sqGd = new GradientDrawable();
+                        sqGd.setColor(0xFFE2E8F0);
+                        sqGd.setCornerRadius(dpToPx(10));
+                        squircle.setBackground(sqGd);
                     }
                 }
-        ));
-
-        showCaspianCustomPopup(anchor, menuItems);
+            }
+        } catch (Throwable ignored) {}
     }
 
     public void handleOmniboxSubmission(String rawInput) {
@@ -5258,6 +5457,95 @@ public class MainActivity extends AppCompatActivity {
             popupWindow.setElevation(24f);
             popupWindow.setOutsideTouchable(true);
 
+            // Dynamic Light/Dark Theme Styling
+            androidx.cardview.widget.CardView cardRoot = (androidx.cardview.widget.CardView) popupView;
+            int bgCard = !isDarkTheme ? 0xFFFFFFFF : 0xFF131922;
+            int titleColor = !isDarkTheme ? 0xFF0F172A : 0xFFFFFFFF;
+            int domainColor = !isDarkTheme ? 0xFF64748B : 0xFF9EABB8;
+            int rowBg = !isDarkTheme ? 0xFFF1F5F9 : 0xFF1A222F;
+            int labelColor = !isDarkTheme ? 0xFF0F172A : 0xFFFFFFFF;
+            int sublabelColor = !isDarkTheme ? 0xFF64748B : 0xFF7A8999;
+            int statsBg = !isDarkTheme ? 0xFFF8FAFC : 0xFF10151C;
+            int statsBorder = !isDarkTheme ? 0xFFE2E8F0 : 0xFF1E2836;
+            int secHeaderColor = !isDarkTheme ? 0xFF64748B : 0xFF556575;
+            int updateBtnBg = !isDarkTheme ? 0xFFE0F2FE : 0xFF162534;
+            int updateBtnText = !isDarkTheme ? 0xFF0284C7 : 0xFF00E5FF;
+            int closeBtnTint = !isDarkTheme ? 0xFF64748B : 0xFF94A3B8;
+
+            cardRoot.setCardBackgroundColor(bgCard);
+
+            TextView shieldTitle = popupView.findViewById(R.id.shield_title);
+            if (shieldTitle != null) shieldTitle.setTextColor(titleColor);
+
+            ImageButton btnClose = popupView.findViewById(R.id.btn_close_waveguard_popup);
+            if (btnClose != null) {
+                btnClose.setColorFilter(closeBtnTint);
+                btnClose.setOnClickListener(v -> popupWindow.dismiss());
+            }
+
+            TextView domainText = popupView.findViewById(R.id.current_site_domain);
+            if (domainText != null) domainText.setTextColor(domainColor);
+
+            View toggleRow = popupView.findViewById(R.id.site_shield_toggle_row);
+            if (toggleRow != null) {
+                GradientDrawable trGd = new GradientDrawable();
+                trGd.setColor(rowBg);
+                trGd.setCornerRadius(dpToPx(12));
+                if (!isDarkTheme) trGd.setStroke(dpToPx(1), 0xFFE2E8F0);
+                toggleRow.setBackground(trGd);
+            }
+
+            TextView labelShield = popupView.findViewById(R.id.site_shield_label);
+            if (labelShield != null) labelShield.setTextColor(labelColor);
+
+            TextView sublabelShield = popupView.findViewById(R.id.site_shield_sublabel);
+            if (sublabelShield != null) sublabelShield.setTextColor(sublabelColor);
+
+            View statsPanel = popupView.findViewById(R.id.stats_panel);
+            if (statsPanel != null) {
+                GradientDrawable spGd = new GradientDrawable();
+                spGd.setColor(statsBg);
+                spGd.setCornerRadius(dpToPx(12));
+                spGd.setStroke(dpToPx(1), statsBorder);
+                statsPanel.setBackground(spGd);
+            }
+
+            TextView blockedTotalText = popupView.findViewById(R.id.blocked_total_text);
+            if (blockedTotalText != null) blockedTotalText.setTextColor(sublabelColor);
+
+            TextView textAdvTitle = popupView.findViewById(R.id.text_advanced_settings_title);
+            if (textAdvTitle != null) textAdvTitle.setTextColor(secHeaderColor);
+
+            ImageView iconAdvChevron = popupView.findViewById(R.id.icon_advanced_chevron);
+            if (iconAdvChevron != null) iconAdvChevron.setColorFilter(secHeaderColor);
+
+            View headerAdv = popupView.findViewById(R.id.header_advanced_settings);
+            View containerAdv = popupView.findViewById(R.id.container_advanced_settings);
+            if (headerAdv != null && containerAdv != null) {
+                headerAdv.setOnClickListener(v -> {
+                    boolean isCurrentlyExpanded = containerAdv.getVisibility() == View.VISIBLE;
+                    containerAdv.setVisibility(isCurrentlyExpanded ? View.GONE : View.VISIBLE);
+                    if (iconAdvChevron != null) {
+                        iconAdvChevron.animate()
+                                .rotation(isCurrentlyExpanded ? 0f : 180f)
+                                .setDuration(200)
+                                .start();
+                    }
+                });
+            }
+
+            TextView rulesVersionText = popupView.findViewById(R.id.rules_version_text);
+            if (rulesVersionText != null) rulesVersionText.setTextColor(secHeaderColor);
+
+            TextView btnUpdateRules = popupView.findViewById(R.id.btn_update_rules);
+            if (btnUpdateRules != null) {
+                GradientDrawable ubGd = new GradientDrawable();
+                ubGd.setColor(updateBtnBg);
+                ubGd.setCornerRadius(dpToPx(8));
+                btnUpdateRules.setBackground(ubGd);
+                btnUpdateRules.setTextColor(updateBtnText);
+            }
+
             TabItem currentTab = getActiveOrDominantTab();
             String currentUrl = currentTab != null ? currentTab.url : null;
             String host = "";
@@ -5269,8 +5557,7 @@ public class MainActivity extends AppCompatActivity {
             }
             if (host == null || host.isEmpty()) host = "Active Tab";
 
-            TextView domainText = popupView.findViewById(R.id.current_site_domain);
-            domainText.setText(host);
+            if (domainText != null) domainText.setText(host);
 
             final String cleanHost = host;
             boolean isWhitelisted = waveguardShield.isSiteWhitelisted(cleanHost);
@@ -5279,36 +5566,17 @@ public class MainActivity extends AppCompatActivity {
             androidx.appcompat.widget.SwitchCompat siteShieldSwitch = popupView.findViewById(R.id.site_shield_switch);
             TextView statusBadge = popupView.findViewById(R.id.shield_status_badge);
             TextView blockedBadge = popupView.findViewById(R.id.blocked_count_badge);
-            TextView blockedTotalText = popupView.findViewById(R.id.blocked_total_text);
-            TextView rulesVersionText = popupView.findViewById(R.id.rules_version_text);
 
             int tabBlocks = currentTab != null ? waveguardShield.getBlockedCountForTab(currentTab.id) : 0;
             int totalBlocks = waveguardShield.getTotalBlockedCount();
-            blockedBadge.setText(String.valueOf(tabBlocks));
-            blockedTotalText.setText(totalBlocks + " blocked all-time across tabs");
-            rulesVersionText.setText("Waveguard Active (" + waveguardShield.getRuleCount() + " filters)");
+            if (blockedBadge != null) blockedBadge.setText(String.valueOf(tabBlocks));
+            if (blockedTotalText != null) blockedTotalText.setText(totalBlocks + " blocked all-time across tabs");
+            if (rulesVersionText != null) rulesVersionText.setText("Waveguard Active (" + waveguardShield.getRuleCount() + " filters)");
 
             boolean siteActive = isGlobalOn && !isWhitelisted;
-            siteShieldSwitch.setChecked(siteActive);
-            if (siteActive) {
-                statusBadge.setText("PROTECTED");
-                statusBadge.setTextColor(android.graphics.Color.parseColor("#00E5FF"));
-                statusBadge.setBackgroundColor(android.graphics.Color.parseColor("#2000E5FF"));
-            } else {
-                statusBadge.setText("PAUSED");
-                statusBadge.setTextColor(android.graphics.Color.parseColor("#FF5252"));
-                statusBadge.setBackgroundColor(android.graphics.Color.parseColor("#20FF5252"));
-            }
-
-            siteShieldSwitch.setOnCheckedChangeListener((btn, isChecked) -> {
-                if (cleanHost.contains(".")) {
-                    waveguardShield.setSiteWhitelisted(cleanHost, !isChecked);
-                } else {
-                    waveguardShield.setGlobalEnabled(isChecked);
-                }
-                updateOmniboxState();
-                syncWaveguardToControlWeb();
-                if (isChecked) {
+            if (siteShieldSwitch != null) siteShieldSwitch.setChecked(siteActive);
+            if (statusBadge != null) {
+                if (siteActive) {
                     statusBadge.setText("PROTECTED");
                     statusBadge.setTextColor(android.graphics.Color.parseColor("#00E5FF"));
                     statusBadge.setBackgroundColor(android.graphics.Color.parseColor("#2000E5FF"));
@@ -5317,59 +5585,92 @@ public class MainActivity extends AppCompatActivity {
                     statusBadge.setTextColor(android.graphics.Color.parseColor("#FF5252"));
                     statusBadge.setBackgroundColor(android.graphics.Color.parseColor("#20FF5252"));
                 }
-                if (currentTab != null && currentTab.webView != null) {
-                    currentTab.webView.reload();
-                }
-            });
+            }
+
+            if (siteShieldSwitch != null) {
+                siteShieldSwitch.setOnCheckedChangeListener((btn, isChecked) -> {
+                    if (cleanHost.contains(".")) {
+                        waveguardShield.setSiteWhitelisted(cleanHost, !isChecked);
+                    } else {
+                        waveguardShield.setGlobalEnabled(isChecked);
+                    }
+                    updateOmniboxState();
+                    syncWaveguardToControlWeb();
+                    if (statusBadge != null) {
+                        if (isChecked) {
+                            statusBadge.setText("PROTECTED");
+                            statusBadge.setTextColor(android.graphics.Color.parseColor("#00E5FF"));
+                            statusBadge.setBackgroundColor(android.graphics.Color.parseColor("#2000E5FF"));
+                        } else {
+                            statusBadge.setText("PAUSED");
+                            statusBadge.setTextColor(android.graphics.Color.parseColor("#FF5252"));
+                            statusBadge.setBackgroundColor(android.graphics.Color.parseColor("#20FF5252"));
+                        }
+                    }
+                    if (currentTab != null && currentTab.webView != null) {
+                        currentTab.webView.reload();
+                    }
+                });
+            }
 
             androidx.appcompat.widget.SwitchCompat swAdblock = popupView.findViewById(R.id.switch_adblock);
             androidx.appcompat.widget.SwitchCompat swCosmetic = popupView.findViewById(R.id.switch_cosmetic);
             androidx.appcompat.widget.SwitchCompat swDefuser = popupView.findViewById(R.id.switch_defuser);
             androidx.appcompat.widget.SwitchCompat swPopups = popupView.findViewById(R.id.switch_popups);
 
-            swAdblock.setChecked(waveguardShield.isGlobalEnabled());
-            swAdblock.setOnCheckedChangeListener((b, val) -> {
-                waveguardShield.setGlobalEnabled(val);
-                updateOmniboxState();
-                syncWaveguardToControlWeb();
-            });
+            if (swAdblock != null) {
+                swAdblock.setChecked(waveguardShield.isGlobalEnabled());
+                swAdblock.setOnCheckedChangeListener((b, val) -> {
+                    waveguardShield.setGlobalEnabled(val);
+                    updateOmniboxState();
+                    syncWaveguardToControlWeb();
+                });
+            }
 
-            swCosmetic.setChecked(waveguardShield.isCosmeticEnabled());
-            swCosmetic.setOnCheckedChangeListener((b, val) -> {
-                waveguardShield.setCosmeticEnabled(val);
-                syncWaveguardToControlWeb();
-            });
+            if (swCosmetic != null) {
+                swCosmetic.setChecked(waveguardShield.isCosmeticEnabled());
+                swCosmetic.setOnCheckedChangeListener((b, val) -> {
+                    waveguardShield.setCosmeticEnabled(val);
+                    syncWaveguardToControlWeb();
+                });
+            }
 
-            swDefuser.setChecked(waveguardShield.isDefuserEnabled());
-            swDefuser.setOnCheckedChangeListener((b, val) -> {
-                waveguardShield.setDefuserEnabled(val);
-                syncWaveguardToControlWeb();
-            });
+            if (swDefuser != null) {
+                swDefuser.setChecked(waveguardShield.isDefuserEnabled());
+                swDefuser.setOnCheckedChangeListener((b, val) -> {
+                    waveguardShield.setDefuserEnabled(val);
+                    syncWaveguardToControlWeb();
+                });
+            }
 
-            swPopups.setChecked(waveguardShield.isEasyPrivacyEnabled());
-            swPopups.setOnCheckedChangeListener((b, val) -> {
-                waveguardShield.setEasyPrivacyEnabled(val);
-                syncWaveguardToControlWeb();
-            });
+            if (swPopups != null) {
+                swPopups.setChecked(waveguardShield.isEasyPrivacyEnabled());
+                swPopups.setOnCheckedChangeListener((b, val) -> {
+                    waveguardShield.setEasyPrivacyEnabled(val);
+                    syncWaveguardToControlWeb();
+                });
+            }
 
-            TextView btnUpdateRules = popupView.findViewById(R.id.btn_update_rules);
-            btnUpdateRules.setOnClickListener(v -> {
-                btnUpdateRules.setText("Updating...");
-                waveguardShield.checkForUpdates((success, newCount, message) -> {
-                    runOnUiThread(() -> {
-                        btnUpdateRules.setText("Updated");
-                        rulesVersionText.setText("Waveguard Active (" + newCount + " filters)");
-                        Toast.makeText(MainActivity.this, message, Toast.LENGTH_SHORT).show();
-                        syncWaveguardToControlWeb();
+            if (btnUpdateRules != null) {
+                btnUpdateRules.setOnClickListener(v -> {
+                    btnUpdateRules.setText("Updating...");
+                    waveguardShield.checkForUpdates((success, newCount, message) -> {
+                        runOnUiThread(() -> {
+                            btnUpdateRules.setText("Updated");
+                            if (rulesVersionText != null) rulesVersionText.setText("Waveguard Active (" + newCount + " filters)");
+                            Toast.makeText(MainActivity.this, message, Toast.LENGTH_SHORT).show();
+                            syncWaveguardToControlWeb();
+                        });
                     });
                 });
-            });
-
-            if (anchor != null) {
-                popupWindow.showAsDropDown(anchor, 0, 10);
-            } else {
-                popupWindow.showAtLocation(rootContainer, Gravity.TOP | Gravity.START, 20, 120);
             }
+
+            // Screen Positioning: always horizontally centered, upward when bottom omnibox
+            boolean isBottom = "bottom".equalsIgnoreCase(omniboxPosition);
+            View targetParent = rootContainer != null ? rootContainer : getWindow().getDecorView();
+            int gravity = (isBottom ? Gravity.BOTTOM : Gravity.TOP) | Gravity.CENTER_HORIZONTAL;
+            int yOffset = isBottom ? dpToPx(72) : dpToPx(64);
+            popupWindow.showAtLocation(targetParent, gravity, 0, yOffset);
         } catch (Exception e) {
             Log.e(TAG, "Failed to show Waveguard flyout: ", e);
             showShieldStatusDialog();
@@ -5396,23 +5697,1932 @@ public class MainActivity extends AppCompatActivity {
     }
 
     private void showBrowserMenu(View anchor) {
-        TabItem currentTab = getActiveOrDominantTab();
-        List<CaspianMenuItem> menuItems = new ArrayList<>();
-        menuItems.add(new CaspianMenuItem("➕ New Tab", () -> addNewTab("web", null)));
-        menuItems.add(new CaspianMenuItem("📄 Open PDF", this::openPdfPicker));
-        menuItems.add(new CaspianMenuItem(
-                (currentTab != null && currentTab.isDesktop) ? "🖥️ Desktop site [ON]" : "🖥️ Desktop site [OFF]",
-                () -> { if (currentTab != null) toggleDesktopMode(currentTab.id); }
-        ));
-        menuItems.add(new CaspianMenuItem("🔍 Find in page", () -> showOmniboxFinder()));
-        menuItems.add(new CaspianMenuItem("⚡ Dual AI Ask", () -> launchDualAIAsk()));
-        menuItems.add(new CaspianMenuItem("🔀 Split Screen", () -> cycleSplitViewMode()));
-        menuItems.add(new CaspianMenuItem("📜 History", () -> showHistoryDialog()));
-        menuItems.add(new CaspianMenuItem("📤 Share & Export", () -> showExportOptions()));
-        menuItems.add(new CaspianMenuItem("📥 Downloads", () -> openDownloadsManagerModal()));
-        menuItems.add(new CaspianMenuItem("🔍 Page Zoom (" + currentTextZoom + "%)", () -> showPageZoomDialog()));
+        if ("grid".equalsIgnoreCase(omniboxMenuStyle)) {
+            showBrowserActionGrid();
+            return;
+        }
+        showBrowserMenuList(anchor);
+    }
 
-        showCaspianCustomPopup(anchor, menuItems);
+    public void showBrowserMenuList(View anchor) {
+        TabItem currentTab = getActiveOrDominantTab();
+        com.google.android.material.bottomsheet.BottomSheetDialog dialog =
+                new com.google.android.material.bottomsheet.BottomSheetDialog(this);
+        View dialogView = LayoutInflater.from(this).inflate(R.layout.dialog_browser_action_list, null);
+        dialog.setContentView(dialogView);
+
+        if (dialog.getWindow() != null) {
+            View bs = dialog.getWindow().findViewById(com.google.android.material.R.id.design_bottom_sheet);
+            if (bs != null) bs.setBackgroundResource(android.R.color.transparent);
+        }
+
+        // Section 1: Quick Actions (New Tab, Dual AI, Theme, Split, Desktop)
+        View btnNewTab = dialogView.findViewById(R.id.action_list_tile_new_tab);
+        if (btnNewTab != null) {
+            btnNewTab.setOnClickListener(v -> {
+                dialog.dismiss();
+                addNewTab("web", null);
+            });
+        }
+
+        View btnDualAi = dialogView.findViewById(R.id.action_list_tile_dual_ai);
+        if (btnDualAi != null) {
+            btnDualAi.setOnClickListener(v -> {
+                dialog.dismiss();
+                launchDualAIAsk();
+            });
+        }
+
+        View btnTheme = dialogView.findViewById(R.id.action_list_tile_theme);
+        if (btnTheme != null) {
+            btnTheme.setOnClickListener(v -> {
+                dialog.dismiss();
+                toggleHostTheme(!isDarkTheme);
+            });
+        }
+
+        View btnSplit = dialogView.findViewById(R.id.action_list_tile_split);
+        if (btnSplit != null) {
+            btnSplit.setOnClickListener(v -> {
+                dialog.dismiss();
+                cycleSplitViewMode();
+            });
+        }
+
+        View btnDesktop = dialogView.findViewById(R.id.action_list_tile_desktop);
+        if (btnDesktop != null) {
+            btnDesktop.setOnClickListener(v -> {
+                dialog.dismiss();
+                if (currentTab != null) toggleDesktopMode(currentTab.id);
+            });
+        }
+
+        // Section 2: Interactive Controls (Zoom & PDF)
+        TextView textZoomVal = dialogView.findViewById(R.id.text_stepper_zoom_val);
+        if (textZoomVal != null) {
+            textZoomVal.setText(currentTextZoom + "%");
+        }
+
+        TextView btnMinus = dialogView.findViewById(R.id.btn_stepper_minus);
+        if (btnMinus != null) {
+            btnMinus.setOnClickListener(v -> {
+                int next = Math.max(25, currentTextZoom - 10);
+                setPageZoom(next);
+                if (textZoomVal != null) textZoomVal.setText(next + "%");
+            });
+        }
+
+        TextView btnPlus = dialogView.findViewById(R.id.btn_stepper_plus);
+        if (btnPlus != null) {
+            btnPlus.setOnClickListener(v -> {
+                int next = Math.min(300, currentTextZoom + 10);
+                setPageZoom(next);
+                if (textZoomVal != null) textZoomVal.setText(next + "%");
+            });
+        }
+
+        View widgetPdf = dialogView.findViewById(R.id.widget_open_pdf);
+        if (widgetPdf != null) {
+            widgetPdf.setOnClickListener(v -> {
+                dialog.dismiss();
+                openPdfPicker();
+            });
+        }
+
+        // Section 3: Precision Action Rows
+        View rowFind = dialogView.findViewById(R.id.action_list_row_find);
+        if (rowFind != null) {
+            rowFind.setOnClickListener(v -> {
+                dialog.dismiss();
+                showOmniboxFinder();
+            });
+        }
+
+        View rowHistory = dialogView.findViewById(R.id.action_list_row_history);
+        if (rowHistory != null) {
+            rowHistory.setOnClickListener(v -> {
+                dialog.dismiss();
+                showHistoryDialog();
+            });
+        }
+
+        View rowDownloads = dialogView.findViewById(R.id.action_list_row_downloads);
+        if (rowDownloads != null) {
+            rowDownloads.setOnClickListener(v -> {
+                dialog.dismiss();
+                openDownloadsManagerModal();
+            });
+        }
+
+        // Export Chips
+        TextView chipPdf = dialogView.findViewById(R.id.chip_export_pdf);
+        if (chipPdf != null) {
+            chipPdf.setOnClickListener(v -> {
+                dialog.dismiss();
+                exportCurrentDocument("pdf");
+            });
+        }
+        TextView chipTxt = dialogView.findViewById(R.id.chip_export_txt);
+        if (chipTxt != null) {
+            chipTxt.setOnClickListener(v -> {
+                dialog.dismiss();
+                exportCurrentDocument("txt");
+            });
+        }
+        TextView chipDoc = dialogView.findViewById(R.id.chip_export_doc);
+        if (chipDoc != null) {
+            chipDoc.setOnClickListener(v -> {
+                dialog.dismiss();
+                exportCurrentDocument("doc");
+            });
+        }
+        TextView chipMd = dialogView.findViewById(R.id.chip_export_md);
+        if (chipMd != null) {
+            chipMd.setOnClickListener(v -> {
+                dialog.dismiss();
+                exportCurrentDocument("md");
+            });
+        }
+
+        View rowSettings = dialogView.findViewById(R.id.action_list_row_settings);
+        if (rowSettings != null) {
+            rowSettings.setOnClickListener(v -> {
+                dialog.dismiss();
+                openControlSheet();
+            });
+        }
+
+        // Section 4: Waveguard Card Settings Button
+        View btnWaveguardSettings = dialogView.findViewById(R.id.btn_waveguard_pro_settings);
+        if (btnWaveguardSettings != null) {
+            btnWaveguardSettings.setOnClickListener(v -> {
+                dialog.dismiss();
+                showWaveguardFlyout(anchor != null ? anchor : dialogView);
+            });
+        }
+
+        applyListTheme(dialogView, isDarkTheme);
+        dialog.show();
+    }
+
+    private void applyListTheme(View root, boolean isDark) {
+        if (root == null) return;
+        try {
+            if (!isDark) {
+                // Pristine Light Theme for Action List (matching stitch_designs/stitch_light_list)
+                GradientDrawable rootGd = new GradientDrawable();
+                rootGd.setColor(0xFFFFFFFF);
+                rootGd.setCornerRadii(new float[]{dpToPx(24), dpToPx(24), dpToPx(24), dpToPx(24), 0, 0, 0, 0});
+                root.setBackground(rootGd);
+
+                View handle = root.findViewById(R.id.action_list_drag_handle);
+                if (handle != null) {
+                    GradientDrawable handleGd = new GradientDrawable();
+                    handleGd.setColor(0xFFCBD5E1);
+                    handleGd.setCornerRadius(dpToPx(3));
+                    handle.setBackground(handleGd);
+                }
+
+                int slateText = 0xFF1E293B;
+                int subText = 0xFF334155;
+                int borderLight = 0xFFE2E8F0;
+                int bgSquircleLight = 0xFFF1F5F9;
+
+                // Section 1: Quick Action Cards
+                int[] squircles = {
+                        R.id.squircle_list_new_tab,
+                        R.id.squircle_list_split,
+                        R.id.squircle_list_desktop
+                };
+                for (int id : squircles) {
+                    View sq = root.findViewById(id);
+                    if (sq != null) {
+                        GradientDrawable sqGd = new GradientDrawable();
+                        sqGd.setColor(bgSquircleLight);
+                        sqGd.setStroke(dpToPx(1), borderLight);
+                        sqGd.setCornerRadius(dpToPx(14));
+                        sq.setBackground(sqGd);
+                    }
+                }
+
+                ImageView iconNewTab = root.findViewById(R.id.icon_list_new_tab);
+                if (iconNewTab != null) iconNewTab.setColorFilter(subText);
+                TextView textNewTab = root.findViewById(R.id.text_list_new_tab);
+                if (textNewTab != null) textNewTab.setTextColor(subText);
+
+                ImageView iconSplit = root.findViewById(R.id.icon_list_split);
+                if (iconSplit != null) iconSplit.setColorFilter(subText);
+                TextView textSplit = root.findViewById(R.id.text_list_split);
+                if (textSplit != null) textSplit.setTextColor(subText);
+
+                ImageView iconDesktop = root.findViewById(R.id.icon_list_desktop);
+                if (iconDesktop != null) iconDesktop.setColorFilter(subText);
+                TextView textDesktop = root.findViewById(R.id.text_list_desktop);
+                if (textDesktop != null) textDesktop.setTextColor(subText);
+
+                // Dual AI Card (Highlighted Sky Blue Accent)
+                View sqDualAi = root.findViewById(R.id.squircle_list_dual_ai);
+                if (sqDualAi != null) {
+                    GradientDrawable dualAiGd = new GradientDrawable();
+                    dualAiGd.setColor(0xFFE0F2FE);
+                    dualAiGd.setStroke(dpToPx(2), 0xFF0284C7);
+                    dualAiGd.setCornerRadius(dpToPx(14));
+                    sqDualAi.setBackground(dualAiGd);
+                }
+                ImageView iconDualAi = root.findViewById(R.id.icon_list_dual_ai);
+                if (iconDualAi != null) iconDualAi.setColorFilter(0xFF0284C7);
+                TextView textDualAi = root.findViewById(R.id.text_list_dual_ai);
+                if (textDualAi != null) textDualAi.setTextColor(0xFF0284C7);
+
+                // Theme Toggle Tile (Night / Light Mode)
+                View sqTheme = root.findViewById(R.id.squircle_list_theme);
+                if (sqTheme != null) {
+                    GradientDrawable themeGd = new GradientDrawable();
+                    themeGd.setColor(bgSquircleLight);
+                    themeGd.setStroke(dpToPx(1), borderLight);
+                    themeGd.setCornerRadius(dpToPx(14));
+                    sqTheme.setBackground(themeGd);
+                }
+                ImageView iconTheme = root.findViewById(R.id.icon_list_theme);
+                if (iconTheme != null) {
+                    iconTheme.setImageResource(R.drawable.ic_menu_moon);
+                    iconTheme.setColorFilter(0xFFD97706);
+                }
+                TextView textTheme = root.findViewById(R.id.text_list_theme);
+                if (textTheme != null) {
+                    textTheme.setText("Night");
+                    textTheme.setTextColor(subText);
+                }
+
+                // Section 2: Interactive System Controls (Zoom & PDF)
+                View widgetZoom = root.findViewById(R.id.widget_zoom_stepper);
+                if (widgetZoom != null) {
+                    GradientDrawable wzGd = new GradientDrawable();
+                    wzGd.setColor(0xFFF8FAFC);
+                    wzGd.setStroke(dpToPx(1), borderLight);
+                    wzGd.setCornerRadius(dpToPx(16));
+                    widgetZoom.setBackground(wzGd);
+                }
+                ImageView iconZoom = root.findViewById(R.id.icon_widget_zoom);
+                if (iconZoom != null) iconZoom.setColorFilter(0xFF64748B);
+                TextView textZoom = root.findViewById(R.id.text_zoom_label);
+                if (textZoom != null) textZoom.setTextColor(slateText);
+
+                View capsuleZoom = root.findViewById(R.id.capsule_zoom_stepper);
+                if (capsuleZoom != null) {
+                    GradientDrawable czGd = new GradientDrawable();
+                    czGd.setColor(0xFFFFFFFF);
+                    czGd.setStroke(dpToPx(1), borderLight);
+                    czGd.setCornerRadius(dpToPx(10));
+                    capsuleZoom.setBackground(czGd);
+                }
+                TextView btnMinus = root.findViewById(R.id.btn_stepper_minus);
+                if (btnMinus != null) btnMinus.setTextColor(subText);
+                TextView textZoomVal = root.findViewById(R.id.text_stepper_zoom_val);
+                if (textZoomVal != null) textZoomVal.setTextColor(0xFF0284C7);
+                TextView btnPlus = root.findViewById(R.id.btn_stepper_plus);
+                if (btnPlus != null) btnPlus.setTextColor(subText);
+
+                View widgetPdf = root.findViewById(R.id.widget_open_pdf);
+                if (widgetPdf != null) {
+                    GradientDrawable wpdfGd = new GradientDrawable();
+                    wpdfGd.setColor(0xFFF8FAFC);
+                    wpdfGd.setStroke(dpToPx(1), borderLight);
+                    wpdfGd.setCornerRadius(dpToPx(16));
+                    widgetPdf.setBackground(wpdfGd);
+                }
+                ImageView iconPdf = root.findViewById(R.id.icon_open_pdf);
+                if (iconPdf != null) iconPdf.setColorFilter(0xFFE11D48);
+                TextView textPdf = root.findViewById(R.id.text_open_pdf_label);
+                if (textPdf != null) textPdf.setTextColor(slateText);
+
+                // Dividers
+                int[] dividers = {
+                        R.id.divider_list_1, R.id.divider_list_2, R.id.divider_list_3, R.id.divider_list_4
+                };
+                for (int dId : dividers) {
+                    View div = root.findViewById(dId);
+                    if (div != null) div.setBackgroundColor(borderLight);
+                }
+
+                // Action List Rows
+                int[] rowIcons = {
+                        R.id.icon_row_find, R.id.icon_row_history, R.id.icon_row_downloads,
+                        R.id.icon_row_share, R.id.icon_row_settings
+                };
+                for (int rIconId : rowIcons) {
+                    ImageView riv = root.findViewById(rIconId);
+                    if (riv != null) riv.setColorFilter(0xFF64748B);
+                }
+
+                int[] rowLabels = {
+                        R.id.text_row_find_label, R.id.text_row_history_label,
+                        R.id.text_row_downloads_label, R.id.text_row_share_label, R.id.text_row_settings_label
+                };
+                for (int rLblId : rowLabels) {
+                    TextView rtv = root.findViewById(rLblId);
+                    if (rtv != null) rtv.setTextColor(slateText);
+                }
+
+                // ⌘F Shortcut Badge
+                TextView badgeFind = root.findViewById(R.id.badge_row_find_shortcut);
+                if (badgeFind != null) {
+                    GradientDrawable bfGd = new GradientDrawable();
+                    bfGd.setColor(0xFFF1F5F9);
+                    bfGd.setStroke(dpToPx(1), borderLight);
+                    bfGd.setCornerRadius(dpToPx(6));
+                    badgeFind.setBackground(bfGd);
+                    badgeFind.setTextColor(0xFF475569);
+                }
+
+                TextView badgeHistory = root.findViewById(R.id.badge_row_history_time);
+                if (badgeHistory != null) badgeHistory.setTextColor(0xFF94A3B8);
+
+                View badgeDownloads = root.findViewById(R.id.badge_row_downloads_container);
+                if (badgeDownloads != null) {
+                    GradientDrawable bdGd = new GradientDrawable();
+                    bdGd.setColor(0xFFDCFCE7);
+                    bdGd.setCornerRadius(dpToPx(10));
+                    badgeDownloads.setBackground(bdGd);
+                }
+                TextView textDownloadsBadge = root.findViewById(R.id.badge_row_downloads_count);
+                if (textDownloadsBadge != null) textDownloadsBadge.setTextColor(0xFF15803D);
+
+                // Share & Export Format Chips
+                int[] exportChips = {
+                        R.id.chip_export_pdf, R.id.chip_export_txt, R.id.chip_export_doc, R.id.chip_export_md
+                };
+                for (int cId : exportChips) {
+                    TextView chip = root.findViewById(cId);
+                    if (chip != null) {
+                        GradientDrawable chipGd = new GradientDrawable();
+                        chipGd.setColor(0xFFF1F5F9);
+                        chipGd.setStroke(dpToPx(1), borderLight);
+                        chipGd.setCornerRadius(dpToPx(8));
+                        chip.setBackground(chipGd);
+                        chip.setTextColor(subText);
+                    }
+                }
+
+                TextView badgeSettings = root.findViewById(R.id.badge_row_settings);
+                if (badgeSettings != null) badgeSettings.setTextColor(0xFF94A3B8);
+
+                // Section 4: Caspian Waveguard Pro Card
+                View cardWaveguard = root.findViewById(R.id.card_waveguard_pro);
+                if (cardWaveguard != null) {
+                    GradientDrawable wgCardGd = new GradientDrawable(
+                            GradientDrawable.Orientation.TL_BR,
+                            new int[]{0xFFECFDF5, 0xFFF0FDF4, 0xFFF0F9FF}
+                    );
+                    wgCardGd.setStroke(dpToPx(1), 0xFFA7F3D0);
+                    wgCardGd.setCornerRadius(dpToPx(18));
+                    cardWaveguard.setBackground(wgCardGd);
+                }
+
+                View sqWaveguard = root.findViewById(R.id.squircle_waveguard_pro);
+                if (sqWaveguard != null) {
+                    GradientDrawable sqWgGd = new GradientDrawable();
+                    sqWgGd.setColor(0xFF059669);
+                    sqWgGd.setCornerRadius(dpToPx(12));
+                    sqWaveguard.setBackground(sqWgGd);
+                }
+
+                TextView titleWaveguard = root.findViewById(R.id.text_waveguard_pro_title);
+                if (titleWaveguard != null) titleWaveguard.setTextColor(0xFF0F172A);
+
+                TextView badgeWaveguard = root.findViewById(R.id.badge_waveguard_pro_active);
+                if (badgeWaveguard != null) {
+                    GradientDrawable bwGd = new GradientDrawable();
+                    bwGd.setColor(0xFFD1FAE5);
+                    bwGd.setCornerRadius(dpToPx(8));
+                    badgeWaveguard.setBackground(bwGd);
+                    badgeWaveguard.setTextColor(0xFF065F46);
+                }
+
+                TextView blockedWaveguard = root.findViewById(R.id.text_waveguard_pro_blocked);
+                if (blockedWaveguard != null) blockedWaveguard.setTextColor(0xFF475569);
+
+                TextView btnWaveguardSettings = root.findViewById(R.id.btn_waveguard_pro_settings);
+                if (btnWaveguardSettings != null) {
+                    GradientDrawable bwsGd = new GradientDrawable();
+                    bwsGd.setColor(0xFFFFFFFF);
+                    bwsGd.setStroke(dpToPx(1), 0xFFCBD5E1);
+                    bwsGd.setCornerRadius(dpToPx(10));
+                    btnWaveguardSettings.setBackground(bwsGd);
+                    btnWaveguardSettings.setTextColor(0xFF334155);
+                }
+            } else {
+                // Dark Theme Reset
+                root.setBackgroundResource(R.drawable.bg_caspian_dialog);
+                View handle = root.findViewById(R.id.action_list_drag_handle);
+                if (handle != null) handle.setBackgroundResource(R.drawable.bg_stitch_handle_bar);
+
+                int lightText = 0xFFDFE2F0;
+                int mutedText = 0xFF94A3B8;
+
+                int[] squircles = {
+                        R.id.squircle_list_new_tab, R.id.squircle_list_split,
+                        R.id.squircle_list_desktop, R.id.squircle_list_theme
+                };
+                for (int id : squircles) {
+                    View sq = root.findViewById(id);
+                    if (sq != null) sq.setBackgroundResource(R.drawable.bg_stitch_squircle);
+                }
+
+                View sqDualAi = root.findViewById(R.id.squircle_list_dual_ai);
+                if (sqDualAi != null) sqDualAi.setBackgroundResource(R.drawable.bg_stitch_squircle_active);
+
+                ImageView iconTheme = root.findViewById(R.id.icon_list_theme);
+                if (iconTheme != null) {
+                    iconTheme.setImageResource(R.drawable.ic_menu_sun);
+                    iconTheme.setColorFilter(lightText);
+                }
+                TextView textTheme = root.findViewById(R.id.text_list_theme);
+                if (textTheme != null) {
+                    textTheme.setText("Light");
+                    textTheme.setTextColor(lightText);
+                }
+
+                View widgetZoom = root.findViewById(R.id.widget_zoom_stepper);
+                if (widgetZoom != null) widgetZoom.setBackgroundResource(R.drawable.bg_stitch_squircle);
+                View capsuleZoom = root.findViewById(R.id.capsule_zoom_stepper);
+                if (capsuleZoom != null) capsuleZoom.setBackgroundResource(R.drawable.bg_stitch_zoom_stepper);
+
+                View widgetPdf = root.findViewById(R.id.widget_open_pdf);
+                if (widgetPdf != null) widgetPdf.setBackgroundResource(R.drawable.bg_stitch_squircle);
+
+                int[] exportChips = {
+                        R.id.chip_export_pdf, R.id.chip_export_txt, R.id.chip_export_doc, R.id.chip_export_md
+                };
+                for (int cId : exportChips) {
+                    TextView chip = root.findViewById(cId);
+                    if (chip != null) {
+                        chip.setBackgroundResource(R.drawable.bg_stitch_action_chip);
+                        chip.setTextColor(lightText);
+                    }
+                }
+
+                View cardWaveguard = root.findViewById(R.id.card_waveguard_pro);
+                if (cardWaveguard != null) cardWaveguard.setBackgroundResource(R.drawable.bg_stitch_waveguard_card);
+
+                TextView blockedWaveguard = root.findViewById(R.id.text_waveguard_pro_blocked);
+                if (blockedWaveguard != null) blockedWaveguard.setTextColor(mutedText);
+
+                TextView btnWaveguardSettings = root.findViewById(R.id.btn_waveguard_pro_settings);
+                if (btnWaveguardSettings != null) {
+                    btnWaveguardSettings.setBackgroundResource(R.drawable.bg_stitch_action_chip);
+                    btnWaveguardSettings.setTextColor(lightText);
+                }
+            }
+        } catch (Throwable ignored) {}
+    }
+
+    public void showBrowserActionGrid() {
+        TabItem currentTab = getActiveOrDominantTab();
+        com.google.android.material.bottomsheet.BottomSheetDialog dialog =
+                new com.google.android.material.bottomsheet.BottomSheetDialog(this);
+        View dialogView = LayoutInflater.from(this).inflate(R.layout.dialog_browser_action_grid, null);
+        dialog.setContentView(dialogView);
+
+        if (dialog.getWindow() != null) {
+            View bs = dialog.getWindow().findViewById(com.google.android.material.R.id.design_bottom_sheet);
+            if (bs != null) bs.setBackgroundResource(android.R.color.transparent);
+        }
+
+        // SwipeableViewFlipper Page Switcher & Animated Morphing Dots
+        SwipeableViewFlipper flipper = dialogView.findViewById(R.id.action_grid_flipper);
+        View dot1 = dialogView.findViewById(R.id.pill_dot_page1);
+        View dot2 = dialogView.findViewById(R.id.pill_dot_page2);
+
+        animateIndicatorDots(dot1, dot2, 0, isDarkTheme, false);
+
+        if (flipper != null) {
+            flipper.setOnPageChangeListener(pageIndex -> animateIndicatorDots(dot1, dot2, pageIndex, isDarkTheme, true));
+        }
+
+        if (dot1 != null) dot1.setOnClickListener(v -> {
+            if (flipper != null && flipper.getDisplayedChild() != 0) {
+                flipper.setDisplayedChildWithAnim(0);
+                animateIndicatorDots(dot1, dot2, 0, isDarkTheme, true);
+            }
+        });
+        if (dot2 != null) dot2.setOnClickListener(v -> {
+            if (flipper != null && flipper.getDisplayedChild() != 1) {
+                flipper.setDisplayedChildWithAnim(1);
+                animateIndicatorDots(dot1, dot2, 1, isDarkTheme, true);
+            }
+        });
+
+        // Collect all 20 action tile views
+        Map<String, View> tileMap = new HashMap<>();
+        tileMap.put("night_mode", dialogView.findViewById(R.id.tile_night_mode));
+        tileMap.put("desktop_site", dialogView.findViewById(R.id.tile_desktop_site));
+        tileMap.put("bookmarks", dialogView.findViewById(R.id.tile_bookmarks));
+        tileMap.put("history", dialogView.findViewById(R.id.tile_history));
+        tileMap.put("downloads", dialogView.findViewById(R.id.tile_downloads));
+        tileMap.put("incognito", dialogView.findViewById(R.id.tile_incognito));
+        tileMap.put("find", dialogView.findViewById(R.id.tile_find));
+        tileMap.put("share", dialogView.findViewById(R.id.tile_share));
+        tileMap.put("split", dialogView.findViewById(R.id.tile_split));
+        tileMap.put("settings", dialogView.findViewById(R.id.tile_settings));
+
+        tileMap.put("new_tab", dialogView.findViewById(R.id.tile_new_tab));
+        tileMap.put("dual_ai", dialogView.findViewById(R.id.tile_dual_ai));
+        tileMap.put("pdf", dialogView.findViewById(R.id.tile_pdf));
+        tileMap.put("reload", dialogView.findViewById(R.id.tile_reload));
+        tileMap.put("reader", dialogView.findViewById(R.id.tile_reader));
+        tileMap.put("shield", dialogView.findViewById(R.id.tile_shield));
+        tileMap.put("voice_models", dialogView.findViewById(R.id.tile_voice_models));
+        tileMap.put("casks", dialogView.findViewById(R.id.tile_casks));
+        tileMap.put("clear_data", dialogView.findViewById(R.id.tile_clear_data));
+        tileMap.put("edit_layout", dialogView.findViewById(R.id.tile_edit_layout));
+
+        // Detach tiles from static layout to dynamically order into Page 1 and Page 2
+        for (View tileView : tileMap.values()) {
+            if (tileView != null && tileView.getParent() instanceof ViewGroup) {
+                ((ViewGroup) tileView.getParent()).removeView(tileView);
+            }
+        }
+
+        TableLayout page1Table = dialogView.findViewById(R.id.action_grid_page1);
+        TableLayout page2Table = dialogView.findViewById(R.id.action_grid_page2);
+        if (page1Table != null) page1Table.removeAllViews();
+        if (page2Table != null) page2Table.removeAllViews();
+
+        List<String> p1Keys = getCardGridPage1Keys();
+        List<String> p2Keys = getCardGridPage2Keys();
+        populateGridTable(page1Table, p1Keys, tileMap);
+        populateGridTable(page2Table, p2Keys, tileMap);
+
+        // Wire tile click actions
+        View tileNight = tileMap.get("night_mode");
+        if (tileNight != null) {
+            tileNight.setOnClickListener(v -> {
+                dialog.dismiss();
+                toggleHostTheme(!isDarkTheme);
+            });
+        }
+        View tileDesktop = tileMap.get("desktop_site");
+        if (tileDesktop != null) {
+            tileDesktop.setOnClickListener(v -> {
+                dialog.dismiss();
+                if (currentTab != null) toggleDesktopMode(currentTab.id);
+            });
+        }
+        View tileBookmarks = tileMap.get("bookmarks");
+        if (tileBookmarks != null) {
+            tileBookmarks.setOnClickListener(v -> {
+                dialog.dismiss();
+                Toast.makeText(this, "🔖 Page saved to Bookmarks!", Toast.LENGTH_SHORT).show();
+            });
+        }
+        View tileHistory = tileMap.get("history");
+        if (tileHistory != null) {
+            tileHistory.setOnClickListener(v -> {
+                dialog.dismiss();
+                showHistoryDialog();
+            });
+        }
+        View tileDownloads = tileMap.get("downloads");
+        if (tileDownloads != null) {
+            tileDownloads.setOnClickListener(v -> {
+                dialog.dismiss();
+                openDownloadsManagerModal();
+            });
+        }
+        View tileIncognito = tileMap.get("incognito");
+        if (tileIncognito != null) {
+            tileIncognito.setOnClickListener(v -> {
+                dialog.dismiss();
+                addNewTab("web", null, "https://www.google.com", true);
+                Toast.makeText(this, "🕶️ Incognito tab opened", Toast.LENGTH_SHORT).show();
+            });
+        }
+        View tileFind = tileMap.get("find");
+        if (tileFind != null) {
+            tileFind.setOnClickListener(v -> {
+                dialog.dismiss();
+                showOmniboxFinder();
+            });
+        }
+        View tileShare = tileMap.get("share");
+        if (tileShare != null) {
+            tileShare.setOnClickListener(v -> {
+                dialog.dismiss();
+                showExportOptions();
+            });
+        }
+        View tileSplit = tileMap.get("split");
+        if (tileSplit != null) {
+            tileSplit.setOnClickListener(v -> {
+                dialog.dismiss();
+                cycleSplitViewMode();
+            });
+        }
+        View tileSettings = tileMap.get("settings");
+        if (tileSettings != null) {
+            tileSettings.setOnClickListener(v -> {
+                dialog.dismiss();
+                openControlSheet();
+            });
+        }
+
+        View tileNewTab = tileMap.get("new_tab");
+        if (tileNewTab != null) {
+            tileNewTab.setOnClickListener(v -> {
+                dialog.dismiss();
+                addNewTab("hub", null);
+            });
+        }
+        View tileDualAi = tileMap.get("dual_ai");
+        if (tileDualAi != null) {
+            tileDualAi.setOnClickListener(v -> {
+                dialog.dismiss();
+                cycleSplitViewMode();
+            });
+        }
+        View tilePdf = tileMap.get("pdf");
+        if (tilePdf != null) {
+            tilePdf.setOnClickListener(v -> {
+                dialog.dismiss();
+                openPdfPicker();
+            });
+        }
+        View tileReload = tileMap.get("reload");
+        if (tileReload != null) {
+            tileReload.setOnClickListener(v -> {
+                dialog.dismiss();
+                reloadActiveTab();
+            });
+        }
+        View tileReader = tileMap.get("reader");
+        if (tileReader != null) {
+            tileReader.setOnClickListener(v -> {
+                dialog.dismiss();
+                toggleReaderMode();
+            });
+        }
+        View tileShield = tileMap.get("shield");
+        if (tileShield != null) {
+            tileShield.setOnClickListener(v -> {
+                if (waveguardShield != null) {
+                    boolean nextState = !waveguardShield.isGlobalEnabled();
+                    waveguardShield.setGlobalEnabled(nextState);
+                    updateWaveguardVisuals(dialogView, nextState, isDarkTheme);
+                    updateOmniboxState();
+                    syncWaveguardToControlWeb();
+                    playUiFeedbackSound("tap");
+                    Toast.makeText(this, nextState ? "🛡️ Waveguard Shields ON" : "🛡️ Waveguard Shields OFF", Toast.LENGTH_SHORT).show();
+                    if (currentTab != null && currentTab.webView != null) {
+                        currentTab.webView.reload();
+                    }
+                }
+            });
+        }
+        View tileVoice = tileMap.get("voice_models");
+        if (tileVoice != null) {
+            tileVoice.setOnClickListener(v -> {
+                dialog.dismiss();
+                if (omniboxVoiceBtn != null) omniboxVoiceBtn.performClick();
+            });
+        }
+        View tileCasks = tileMap.get("casks");
+        if (tileCasks != null) {
+            tileCasks.setOnClickListener(v -> {
+                dialog.dismiss();
+                showHistoryDialog();
+            });
+        }
+        View tileClearData = tileMap.get("clear_data");
+        if (tileClearData != null) {
+            tileClearData.setOnClickListener(v -> {
+                dialog.dismiss();
+                new AlertDialog.Builder(this)
+                        .setTitle("Clear Browsing Data")
+                        .setMessage("Clear browser cache and history?")
+                        .setPositiveButton("Clear", (d, w) -> {
+                            android.webkit.WebStorage.getInstance().deleteAllData();
+                            Toast.makeText(this, "Browsing data cleared", Toast.LENGTH_SHORT).show();
+                        })
+                        .setNegativeButton("Cancel", null)
+                        .show();
+            });
+        }
+        View tileEdit = tileMap.get("edit_layout");
+        if (tileEdit != null) {
+            tileEdit.setOnClickListener(v -> {
+                dialog.dismiss();
+                showCardGridEditDialog();
+            });
+        }
+
+        // Zoom Stepper Controls
+        TextView textZoomVal = dialogView.findViewById(R.id.text_grid_zoom_val);
+        if (textZoomVal != null) {
+            textZoomVal.setText(getPageZoom() + "%");
+        }
+        View btnZoomMinus = dialogView.findViewById(R.id.btn_grid_zoom_minus);
+        if (btnZoomMinus != null) {
+            btnZoomMinus.setOnClickListener(v -> {
+                playUiFeedbackSound("tap");
+                int newZoom = Math.max(25, getPageZoom() - 10);
+                setPageZoom(newZoom);
+                if (textZoomVal != null) textZoomVal.setText(newZoom + "%");
+            });
+        }
+        View btnZoomPlus = dialogView.findViewById(R.id.btn_grid_zoom_plus);
+        if (btnZoomPlus != null) {
+            btnZoomPlus.setOnClickListener(v -> {
+                playUiFeedbackSound("tap");
+                int newZoom = Math.min(300, getPageZoom() + 10);
+                setPageZoom(newZoom);
+                if (textZoomVal != null) textZoomVal.setText(newZoom + "%");
+            });
+        }
+        View btnZoomReset = dialogView.findViewById(R.id.btn_grid_zoom_reset);
+        if (btnZoomReset != null) {
+            btnZoomReset.setOnClickListener(v -> {
+                playUiFeedbackSound("tap");
+                setPageZoom(100);
+                if (textZoomVal != null) textZoomVal.setText("100%");
+            });
+        }
+        if (textZoomVal != null) {
+            textZoomVal.setOnClickListener(v -> {
+                playUiFeedbackSound("tap");
+                setPageZoom(100);
+                textZoomVal.setText("100%");
+            });
+        }
+        // Note: widget_grid_zoom_stepper click listener removed so tapping elsewhere does nothing!
+
+        // Bottom Bar Controls
+        View btnExit = dialogView.findViewById(R.id.btn_action_exit_app);
+        if (btnExit != null) {
+            btnExit.setOnClickListener(v -> {
+                dialog.dismiss();
+                finishAffinity();
+            });
+        }
+
+        View btnCloseGrid = dialogView.findViewById(R.id.btn_action_close_grid);
+        if (btnCloseGrid != null) {
+            btnCloseGrid.setOnClickListener(v -> dialog.dismiss());
+        }
+
+        View capsuleWg = dialogView.findViewById(R.id.waveguard_status_capsule);
+        if (capsuleWg != null) {
+            capsuleWg.setOnClickListener(v -> {
+                dialog.dismiss();
+                showWaveguardFlyout(dialogView);
+            });
+        }
+
+        applyGridTheme(dialogView, isDarkTheme);
+        dialog.show();
+    }
+
+    private void animateIndicatorDots(View dot1, View dot2, int targetPage, boolean isDark, boolean animate) {
+        if (dot1 == null || dot2 == null) return;
+        int activeWidth = dpToPx(18);
+        int inactiveWidth = dpToPx(6);
+        int height = dpToPx(6);
+        int activeColor = !isDark ? 0xFF0284C7 : 0xFF00E5FF;
+        int inactiveColor = !isDark ? 0xFFCBD5E1 : 0xFF475569;
+
+        if (!animate) {
+            ViewGroup.LayoutParams lp1 = dot1.getLayoutParams();
+            if (lp1 != null) {
+                lp1.width = targetPage == 0 ? activeWidth : inactiveWidth;
+                lp1.height = height;
+                dot1.setLayoutParams(lp1);
+            }
+            GradientDrawable d1 = new GradientDrawable();
+            d1.setColor(targetPage == 0 ? activeColor : inactiveColor);
+            d1.setCornerRadius(dpToPx(3));
+            dot1.setBackground(d1);
+
+            ViewGroup.LayoutParams lp2 = dot2.getLayoutParams();
+            if (lp2 != null) {
+                lp2.width = targetPage == 1 ? activeWidth : inactiveWidth;
+                lp2.height = height;
+                dot2.setLayoutParams(lp2);
+            }
+            GradientDrawable d2 = new GradientDrawable();
+            d2.setColor(targetPage == 1 ? activeColor : inactiveColor);
+            d2.setCornerRadius(dpToPx(3));
+            dot2.setBackground(d2);
+            return;
+        }
+
+        int startW1 = dot1.getWidth() > 0 ? dot1.getWidth() : (targetPage == 0 ? inactiveWidth : activeWidth);
+        int targetW1 = targetPage == 0 ? activeWidth : inactiveWidth;
+
+        int startW2 = dot2.getWidth() > 0 ? dot2.getWidth() : (targetPage == 1 ? inactiveWidth : activeWidth);
+        int targetW2 = targetPage == 1 ? activeWidth : inactiveWidth;
+
+        ValueAnimator anim = ValueAnimator.ofFloat(0f, 1f);
+        anim.setDuration(220);
+        anim.setInterpolator(new android.view.animation.DecelerateInterpolator());
+        anim.addUpdateListener(animation -> {
+            float frac = (float) animation.getAnimatedValue();
+            int w1 = (int) (startW1 + (targetW1 - startW1) * frac);
+            int w2 = (int) (startW2 + (targetW2 - startW2) * frac);
+
+            ViewGroup.LayoutParams lp1 = dot1.getLayoutParams();
+            if (lp1 != null) {
+                lp1.width = w1;
+                lp1.height = height;
+                dot1.setLayoutParams(lp1);
+            }
+            ViewGroup.LayoutParams lp2 = dot2.getLayoutParams();
+            if (lp2 != null) {
+                lp2.width = w2;
+                lp2.height = height;
+                dot2.setLayoutParams(lp2);
+            }
+
+            GradientDrawable gd1 = new GradientDrawable();
+            int col1 = (Integer) new android.animation.ArgbEvaluator().evaluate(
+                    frac,
+                    targetPage == 0 ? inactiveColor : activeColor,
+                    targetPage == 0 ? activeColor : inactiveColor
+            );
+            gd1.setColor(col1);
+            gd1.setCornerRadius(dpToPx(3));
+            dot1.setBackground(gd1);
+
+            GradientDrawable gd2 = new GradientDrawable();
+            int col2 = (Integer) new android.animation.ArgbEvaluator().evaluate(
+                    frac,
+                    targetPage == 1 ? inactiveColor : activeColor,
+                    targetPage == 1 ? activeColor : inactiveColor
+            );
+            gd2.setColor(col2);
+            gd2.setCornerRadius(dpToPx(3));
+            dot2.setBackground(gd2);
+        });
+        anim.start();
+    }
+
+    private void applyGridTheme(View root, boolean isDark) {
+        if (root == null) return;
+        try {
+            TabItem activeTab = getActiveOrDominantTab();
+            boolean isDesktopActive = activeTab != null && activeTab.isDesktop;
+
+            if (!isDark) {
+                // Pristine Light Theme for Card Grid
+                GradientDrawable rootGd = new GradientDrawable();
+                rootGd.setColor(0xFFFFFFFF);
+                rootGd.setCornerRadii(new float[]{dpToPx(24), dpToPx(24), dpToPx(24), dpToPx(24), 0, 0, 0, 0});
+                root.setBackground(rootGd);
+
+                View handle = root.findViewById(R.id.action_grid_drag_handle);
+                if (handle != null) {
+                    GradientDrawable handleGd = new GradientDrawable();
+                    handleGd.setColor(0xFFCBD5E1);
+                    handleGd.setCornerRadius(dpToPx(3));
+                    handle.setBackground(handleGd);
+                }
+
+                TextView textTitle = root.findViewById(R.id.text_menu_title);
+                if (textTitle != null) textTitle.setTextColor(0xFF64748B);
+
+                TextView badgeVer = root.findViewById(R.id.badge_app_version);
+                if (badgeVer != null) {
+                    GradientDrawable bvGd = new GradientDrawable();
+                    bvGd.setColor(0xFFE0F2FE);
+                    bvGd.setCornerRadius(dpToPx(8));
+                    badgeVer.setBackground(bvGd);
+                    badgeVer.setTextColor(0xFF0284C7);
+                }
+
+                // High-contrast icons and labels on light theme
+                int deepDarkIcon = 0xFF0F172A;
+                int deepDarkLabel = 0xFF1E293B;
+                int borderLight = 0xFFE2E8F0;
+                int bgSquircleLight = 0xFFF1F5F9;
+
+                // All Standard Squircles across Page 1 and Page 2
+                int[] squircles = {
+                        R.id.squircle_night_mode, R.id.squircle_desktop_site, R.id.squircle_bookmarks,
+                        R.id.squircle_history, R.id.squircle_downloads, R.id.squircle_incognito,
+                        R.id.squircle_find, R.id.squircle_share, R.id.squircle_split,
+                        R.id.squircle_pdf, R.id.squircle_casks,
+                        R.id.squircle_voice_models, R.id.squircle_new_tab, R.id.squircle_reload,
+                        R.id.squircle_reader, R.id.squircle_edit_layout
+                };
+                for (int id : squircles) {
+                    View sq = root.findViewById(id);
+                    if (sq != null) {
+                        GradientDrawable sqGd = new GradientDrawable();
+                        sqGd.setColor(bgSquircleLight);
+                        sqGd.setStroke(dpToPx(1), borderLight);
+                        sqGd.setCornerRadius(dpToPx(16));
+                        sq.setBackground(sqGd);
+                    }
+                }
+
+                // Highlighted / Accent Squircles
+                View sqSettings = root.findViewById(R.id.squircle_settings);
+                if (sqSettings != null) {
+                    GradientDrawable sqsGd = new GradientDrawable();
+                    sqsGd.setColor(0xFFE0F2FE);
+                    sqsGd.setStroke(dpToPx(2), 0xFF0284C7);
+                    sqsGd.setCornerRadius(dpToPx(16));
+                    sqSettings.setBackground(sqsGd);
+                }
+
+                View sqDualAi = root.findViewById(R.id.squircle_dual_ai);
+                if (sqDualAi != null) {
+                    GradientDrawable sqdGd = new GradientDrawable();
+                    sqdGd.setColor(0xFFE0F2FE);
+                    sqdGd.setStroke(dpToPx(2), 0xFF0284C7);
+                    sqdGd.setCornerRadius(dpToPx(16));
+                    sqDualAi.setBackground(sqdGd);
+                }
+
+                View sqEdit = root.findViewById(R.id.squircle_edit_layout);
+                if (sqEdit != null) {
+                    GradientDrawable sqeGd = new GradientDrawable();
+                    sqeGd.setColor(0xFFE0F2FE);
+                    sqeGd.setStroke(dpToPx(1), 0xFF0284C7);
+                    sqeGd.setCornerRadius(dpToPx(16));
+                    sqEdit.setBackground(sqeGd);
+                }
+
+                View sqShield = root.findViewById(R.id.squircle_shield);
+                if (sqShield != null) {
+                    GradientDrawable sqshGd = new GradientDrawable();
+                    sqshGd.setColor(0xFFECFDF5);
+                    sqshGd.setStroke(dpToPx(1), 0xFFA7F3D0);
+                    sqshGd.setCornerRadius(dpToPx(16));
+                    sqShield.setBackground(sqshGd);
+                }
+
+                View sqClear = root.findViewById(R.id.squircle_clear_data);
+                if (sqClear != null) {
+                    GradientDrawable sqcGd = new GradientDrawable();
+                    sqcGd.setColor(0xFFFEF2F2);
+                    sqcGd.setStroke(dpToPx(1), 0xFFFECACA);
+                    sqcGd.setCornerRadius(dpToPx(16));
+                    sqClear.setBackground(sqcGd);
+                }
+
+                // ALL Regular Tile Icons
+                int[] tileIcons = {
+                        R.id.icon_desktop_site, R.id.icon_bookmarks, R.id.icon_history,
+                        R.id.icon_downloads, R.id.icon_incognito, R.id.icon_find,
+                        R.id.icon_share, R.id.icon_split,
+                        R.id.icon_casks, R.id.icon_voice_models, R.id.icon_new_tab,
+                        R.id.icon_reload, R.id.icon_reader
+                };
+                for (int id : tileIcons) {
+                    ImageView iv = root.findViewById(id);
+                    if (iv != null) iv.setColorFilter(deepDarkIcon);
+                }
+
+                // Accent & Special Icons
+                ImageView ivNight = root.findViewById(R.id.icon_night_mode);
+                if (ivNight != null) {
+                    ivNight.setImageResource(R.drawable.ic_menu_moon);
+                    ivNight.setColorFilter(0xFFD97706);
+                }
+                ImageView ivSettings = root.findViewById(R.id.icon_settings);
+                if (ivSettings != null) ivSettings.setColorFilter(0xFF0284C7);
+                ImageView ivDualAi = root.findViewById(R.id.icon_dual_ai);
+                if (ivDualAi != null) ivDualAi.setColorFilter(0xFF0284C7);
+                ImageView ivEdit = root.findViewById(R.id.icon_edit_layout);
+                if (ivEdit != null) ivEdit.setColorFilter(0xFF0284C7);
+                ImageView ivShield = root.findViewById(R.id.icon_shield);
+                if (ivShield != null) ivShield.setColorFilter(0xFF059669);
+                ImageView ivPdf = root.findViewById(R.id.icon_pdf);
+                if (ivPdf != null) ivPdf.setColorFilter(0xFFE11D48);
+                ImageView ivClear = root.findViewById(R.id.icon_clear_data);
+                if (ivClear != null) ivClear.setColorFilter(0xFFDC2626);
+
+                // ALL Tile Labels
+                int[] tileLabels = {
+                        R.id.text_night_mode, R.id.text_desktop_site, R.id.text_bookmarks,
+                        R.id.text_history, R.id.text_downloads, R.id.text_incognito,
+                        R.id.text_find, R.id.text_share, R.id.text_split,
+                        R.id.text_pdf, R.id.text_casks,
+                        R.id.text_voice_models, R.id.text_new_tab, R.id.text_reload,
+                        R.id.text_reader, R.id.text_edit_layout
+                };
+                for (int id : tileLabels) {
+                    TextView tv = root.findViewById(id);
+                    if (tv != null) tv.setTextColor(deepDarkLabel);
+                }
+                TextView tvNight = root.findViewById(R.id.text_night_mode);
+                if (tvNight != null) {
+                    tvNight.setText("Night mode");
+                    tvNight.setTextColor(deepDarkLabel);
+                }
+                TextView tvSettings = root.findViewById(R.id.text_settings);
+                if (tvSettings != null) tvSettings.setTextColor(0xFF0284C7);
+                TextView tvDualAi = root.findViewById(R.id.text_dual_ai);
+                if (tvDualAi != null) tvDualAi.setTextColor(0xFF0284C7);
+                TextView tvEdit = root.findViewById(R.id.text_edit_layout);
+                if (tvEdit != null) tvEdit.setTextColor(0xFF0284C7);
+                TextView tvShield = root.findViewById(R.id.text_shield);
+                if (tvShield != null) tvShield.setTextColor(0xFF059669);
+                TextView tvClear = root.findViewById(R.id.text_clear_data);
+                if (tvClear != null) tvClear.setTextColor(0xFFDC2626);
+
+                if (isDesktopActive) {
+                    View sqDesktop = root.findViewById(R.id.squircle_desktop_site);
+                    if (sqDesktop != null) {
+                        GradientDrawable sqdGd = new GradientDrawable();
+                        sqdGd.setColor(0xFFE0F2FE);
+                        sqdGd.setStroke(dpToPx(2), 0xFF0284C7);
+                        sqdGd.setCornerRadius(dpToPx(16));
+                        sqDesktop.setBackground(sqdGd);
+                    }
+                    ImageView ivDesktop = root.findViewById(R.id.icon_desktop_site);
+                    if (ivDesktop != null) ivDesktop.setColorFilter(0xFF0284C7);
+                    TextView tvDesktop = root.findViewById(R.id.text_desktop_site);
+                    if (tvDesktop != null) tvDesktop.setTextColor(0xFF0284C7);
+                }
+
+                // Interactive Zoom Stepper Light Theme
+                View widgetZoom = root.findViewById(R.id.widget_grid_zoom_stepper);
+                if (widgetZoom != null) {
+                    GradientDrawable wzGd = new GradientDrawable();
+                    wzGd.setColor(0xFFF1F5F9);
+                    wzGd.setStroke(dpToPx(1), borderLight);
+                    wzGd.setCornerRadius(dpToPx(16));
+                    widgetZoom.setBackground(wzGd);
+                }
+                ImageView ivZoom = root.findViewById(R.id.icon_grid_zoom);
+                if (ivZoom != null) ivZoom.setColorFilter(deepDarkIcon);
+                TextView tvZoomLabel = root.findViewById(R.id.text_grid_zoom_label);
+                if (tvZoomLabel != null) tvZoomLabel.setTextColor(deepDarkLabel);
+
+                View capsuleZoom = root.findViewById(R.id.capsule_grid_zoom_stepper);
+                if (capsuleZoom != null) {
+                    GradientDrawable czGd = new GradientDrawable();
+                    czGd.setColor(0xFFFFFFFF);
+                    czGd.setStroke(dpToPx(1), 0xFFCBD5E1);
+                    czGd.setCornerRadius(dpToPx(14));
+                    capsuleZoom.setBackground(czGd);
+                }
+                TextView btnZoomM = root.findViewById(R.id.btn_grid_zoom_minus);
+                if (btnZoomM != null) btnZoomM.setTextColor(0xFF0284C7);
+                TextView tvZoomVal = root.findViewById(R.id.text_grid_zoom_val);
+                if (tvZoomVal != null) tvZoomVal.setTextColor(0xFF0284C7);
+                TextView btnZoomP = root.findViewById(R.id.btn_grid_zoom_plus);
+                if (btnZoomP != null) btnZoomP.setTextColor(0xFF0284C7);
+                ImageView btnZoomR = root.findViewById(R.id.btn_grid_zoom_reset);
+                if (btnZoomR != null) btnZoomR.setColorFilter(0xFF0284C7);
+
+                // Page Indicator Dots
+                View dot1 = root.findViewById(R.id.pill_dot_page1);
+                if (dot1 != null) {
+                    GradientDrawable d1Gd = new GradientDrawable();
+                    d1Gd.setColor(0xFF0284C7);
+                    d1Gd.setCornerRadius(dpToPx(3));
+                    dot1.setBackground(d1Gd);
+                }
+                View dot2 = root.findViewById(R.id.pill_dot_page2);
+                if (dot2 != null) {
+                    GradientDrawable d2Gd = new GradientDrawable();
+                    d2Gd.setColor(0xFFCBD5E1);
+                    d2Gd.setCornerRadius(dpToPx(3));
+                    dot2.setBackground(d2Gd);
+                }
+
+                // Waveguard Capsule
+                View capsuleWg = root.findViewById(R.id.waveguard_status_capsule);
+                if (capsuleWg != null) {
+                    GradientDrawable cwgGd = new GradientDrawable();
+                    cwgGd.setColor(0xFFECFDF5);
+                    cwgGd.setStroke(dpToPx(1), 0xFFA7F3D0);
+                    cwgGd.setCornerRadius(dpToPx(18));
+                    capsuleWg.setBackground(cwgGd);
+                }
+                TextView wgTitle = root.findViewById(R.id.waveguard_capsule_title);
+                if (wgTitle != null) wgTitle.setTextColor(0xFF0F172A);
+                TextView wgCount = root.findViewById(R.id.waveguard_capsule_count);
+                if (wgCount != null) wgCount.setTextColor(0xFF059669);
+
+                // Exit & Close Buttons
+                ImageButton btnExit = root.findViewById(R.id.btn_action_exit_app);
+                if (btnExit != null) {
+                    GradientDrawable beGd = new GradientDrawable();
+                    beGd.setColor(0xFFF1F5F9);
+                    beGd.setStroke(dpToPx(1), borderLight);
+                    beGd.setShape(GradientDrawable.OVAL);
+                    btnExit.setBackground(beGd);
+                    btnExit.setColorFilter(deepDarkIcon);
+                }
+                ImageButton btnClose = root.findViewById(R.id.btn_action_close_grid);
+                if (btnClose != null) {
+                    GradientDrawable bcGd = new GradientDrawable();
+                    bcGd.setColor(0xFFF1F5F9);
+                    bcGd.setStroke(dpToPx(1), borderLight);
+                    bcGd.setShape(GradientDrawable.OVAL);
+                    btnClose.setBackground(bcGd);
+                    btnClose.setColorFilter(deepDarkIcon);
+                }
+            } else {
+                // Dark Theme Reset
+                root.setBackgroundResource(R.drawable.bg_caspian_dialog);
+                View handle = root.findViewById(R.id.action_grid_drag_handle);
+                if (handle != null) handle.setBackgroundResource(R.drawable.bg_stitch_handle_bar);
+
+                int lightText = 0xFFDFE2F0;
+
+                int[] squircles = {
+                        R.id.squircle_night_mode, R.id.squircle_desktop_site, R.id.squircle_bookmarks,
+                        R.id.squircle_history, R.id.squircle_downloads, R.id.squircle_incognito,
+                        R.id.squircle_find, R.id.squircle_share, R.id.squircle_split,
+                        R.id.squircle_pdf, R.id.squircle_casks,
+                        R.id.squircle_voice_models, R.id.squircle_new_tab, R.id.squircle_reload,
+                        R.id.squircle_reader, R.id.squircle_shield, R.id.squircle_clear_data,
+                        R.id.squircle_edit_layout
+                };
+                for (int id : squircles) {
+                    View sq = root.findViewById(id);
+                    if (sq != null) sq.setBackgroundResource(R.drawable.bg_stitch_squircle);
+                }
+
+                View sqSettings = root.findViewById(R.id.squircle_settings);
+                if (sqSettings != null) sqSettings.setBackgroundResource(R.drawable.bg_stitch_squircle_active);
+                View sqDualAi = root.findViewById(R.id.squircle_dual_ai);
+                if (sqDualAi != null) sqDualAi.setBackgroundResource(R.drawable.bg_stitch_squircle_active);
+                View sqEdit = root.findViewById(R.id.squircle_edit_layout);
+                if (sqEdit != null) sqEdit.setBackgroundResource(R.drawable.bg_stitch_squircle_active);
+
+                int[] tileIcons = {
+                        R.id.icon_desktop_site, R.id.icon_bookmarks, R.id.icon_history,
+                        R.id.icon_downloads, R.id.icon_incognito, R.id.icon_find,
+                        R.id.icon_share, R.id.icon_split,
+                        R.id.icon_casks, R.id.icon_new_tab, R.id.icon_reload,
+                        R.id.icon_reader
+                };
+                for (int id : tileIcons) {
+                    ImageView iv = root.findViewById(id);
+                    if (iv != null) iv.setColorFilter(lightText);
+                }
+
+                ImageView ivNight = root.findViewById(R.id.icon_night_mode);
+                if (ivNight != null) {
+                    ivNight.setImageResource(R.drawable.ic_menu_sun);
+                    ivNight.setColorFilter(lightText);
+                }
+                ImageView ivSettings = root.findViewById(R.id.icon_settings);
+                if (ivSettings != null) ivSettings.setColorFilter(0xFF00E5FF);
+                ImageView ivDualAi = root.findViewById(R.id.icon_dual_ai);
+                if (ivDualAi != null) ivDualAi.setColorFilter(0xFF00E5FF);
+                ImageView ivEdit = root.findViewById(R.id.icon_edit_layout);
+                if (ivEdit != null) ivEdit.setColorFilter(0xFF38BDF8);
+                ImageView ivShield = root.findViewById(R.id.icon_shield);
+                if (ivShield != null) ivShield.setColorFilter(0xFF10B981);
+                ImageView ivPdf = root.findViewById(R.id.icon_pdf);
+                if (ivPdf != null) ivPdf.setColorFilter(0xFFFB7185);
+                ImageView ivVoice = root.findViewById(R.id.icon_voice_models);
+                if (ivVoice != null) ivVoice.setColorFilter(0xFF00E5FF);
+                ImageView ivClear = root.findViewById(R.id.icon_clear_data);
+                if (ivClear != null) ivClear.setColorFilter(0xFFFF6B6B);
+
+                int[] tileLabels = {
+                        R.id.text_night_mode, R.id.text_desktop_site, R.id.text_bookmarks,
+                        R.id.text_history, R.id.text_downloads, R.id.text_incognito,
+                        R.id.text_find, R.id.text_share, R.id.text_split,
+                        R.id.text_pdf, R.id.text_casks,
+                        R.id.text_voice_models, R.id.text_new_tab, R.id.text_reload,
+                        R.id.text_reader, R.id.text_shield, R.id.text_edit_layout
+                };
+                for (int id : tileLabels) {
+                    TextView tv = root.findViewById(id);
+                    if (tv != null) tv.setTextColor(lightText);
+                }
+                TextView tvNight = root.findViewById(R.id.text_night_mode);
+                if (tvNight != null) tvNight.setText("Light mode");
+
+                TextView tvSettings = root.findViewById(R.id.text_settings);
+                if (tvSettings != null) tvSettings.setTextColor(0xFF00E5FF);
+                TextView tvDualAi = root.findViewById(R.id.text_dual_ai);
+                if (tvDualAi != null) tvDualAi.setTextColor(0xFF00E5FF);
+                TextView tvEdit = root.findViewById(R.id.text_edit_layout);
+                if (tvEdit != null) tvEdit.setTextColor(0xFF38BDF8);
+                TextView tvClear = root.findViewById(R.id.text_clear_data);
+                if (tvClear != null) tvClear.setTextColor(0xFFFF6B6B);
+
+                if (isDesktopActive) {
+                    View sqDesktop = root.findViewById(R.id.squircle_desktop_site);
+                    if (sqDesktop != null) sqDesktop.setBackgroundResource(R.drawable.bg_stitch_squircle_active);
+                    ImageView ivDesktop = root.findViewById(R.id.icon_desktop_site);
+                    if (ivDesktop != null) ivDesktop.setColorFilter(0xFF00E5FF);
+                    TextView tvDesktop = root.findViewById(R.id.text_desktop_site);
+                    if (tvDesktop != null) tvDesktop.setTextColor(0xFF00E5FF);
+                }
+
+                // Interactive Zoom Stepper Dark Theme
+                View widgetZoom = root.findViewById(R.id.widget_grid_zoom_stepper);
+                if (widgetZoom != null) {
+                    GradientDrawable wzGd = new GradientDrawable();
+                    wzGd.setColor(0xFF161B22);
+                    wzGd.setStroke(dpToPx(1), 0xFF30363D);
+                    wzGd.setCornerRadius(dpToPx(16));
+                    widgetZoom.setBackground(wzGd);
+                }
+                ImageView ivZoom = root.findViewById(R.id.icon_grid_zoom);
+                if (ivZoom != null) ivZoom.setColorFilter(lightText);
+                TextView tvZoomLabel = root.findViewById(R.id.text_grid_zoom_label);
+                if (tvZoomLabel != null) tvZoomLabel.setTextColor(lightText);
+
+                View capsuleZoom = root.findViewById(R.id.capsule_grid_zoom_stepper);
+                if (capsuleZoom != null) {
+                    GradientDrawable czGd = new GradientDrawable();
+                    czGd.setColor(0xFF0D1117);
+                    czGd.setStroke(dpToPx(1), 0xFF30363D);
+                    czGd.setCornerRadius(dpToPx(14));
+                    capsuleZoom.setBackground(czGd);
+                }
+                TextView btnZoomM = root.findViewById(R.id.btn_grid_zoom_minus);
+                if (btnZoomM != null) btnZoomM.setTextColor(0xFF00E5FF);
+                TextView tvZoomVal = root.findViewById(R.id.text_grid_zoom_val);
+                if (tvZoomVal != null) tvZoomVal.setTextColor(0xFF00E5FF);
+                TextView btnZoomP = root.findViewById(R.id.btn_grid_zoom_plus);
+                if (btnZoomP != null) btnZoomP.setTextColor(0xFF00E5FF);
+                ImageView btnZoomR = root.findViewById(R.id.btn_grid_zoom_reset);
+                if (btnZoomR != null) btnZoomR.setColorFilter(0xFF00E5FF);
+
+                View capsuleWg = root.findViewById(R.id.waveguard_status_capsule);
+                if (capsuleWg != null) capsuleWg.setBackgroundResource(R.drawable.bg_stitch_waveguard_pill);
+
+                TextView wgTitle = root.findViewById(R.id.waveguard_capsule_title);
+                if (wgTitle != null) wgTitle.setTextColor(lightText);
+                TextView wgCount = root.findViewById(R.id.waveguard_capsule_count);
+                if (wgCount != null) wgCount.setTextColor(0xFF10B981);
+
+                ImageButton btnExit = root.findViewById(R.id.btn_action_exit_app);
+                if (btnExit != null) {
+                    btnExit.setBackgroundResource(R.drawable.bg_stitch_round_button);
+                    btnExit.setColorFilter(lightText);
+                }
+                ImageButton btnClose = root.findViewById(R.id.btn_action_close_grid);
+                if (btnClose != null) {
+                    btnClose.setBackgroundResource(R.drawable.bg_stitch_round_button);
+                    btnClose.setColorFilter(lightText);
+                }
+            }
+
+            TabItem currentTab = getActiveOrDominantTab();
+            boolean isWgOn = waveguardShield != null && waveguardShield.isGlobalEnabled();
+            if (isWgOn && currentTab != null && currentTab.url != null) {
+                try {
+                    String host = Uri.parse(currentTab.url).getHost();
+                    if (host != null && waveguardShield.isSiteWhitelisted(host)) {
+                        isWgOn = false;
+                    }
+                } catch (Exception ignored) {}
+            }
+            updateWaveguardVisuals(root, isWgOn, isDark);
+        } catch (Throwable ignored) {}
+    }
+
+    private void updateWaveguardVisuals(View root, boolean isEnabled, boolean isDark) {
+        if (root == null) return;
+        try {
+            TabItem currentTab = getActiveOrDominantTab();
+            int tabBlocks = (currentTab != null && waveguardShield != null) ? waveguardShield.getBlockedCountForTab(currentTab.id) : 0;
+
+            View sqShield = root.findViewById(R.id.squircle_shield);
+            ImageView ivShield = root.findViewById(R.id.icon_shield);
+            TextView tvShield = root.findViewById(R.id.text_shield);
+            View capsuleWg = root.findViewById(R.id.waveguard_status_capsule);
+            ImageView ivCapsuleWg = root.findViewById(R.id.icon_waveguard_capsule);
+            TextView wgTitle = root.findViewById(R.id.waveguard_capsule_title);
+            TextView wgCount = root.findViewById(R.id.waveguard_capsule_count);
+
+            int deepDarkLabel = 0xFF1E293B;
+            int lightText = 0xFFDFE2F0;
+
+            if (isEnabled) {
+                // Waveguard ON: Active Green Visuals
+                if (!isDark) {
+                    if (sqShield != null) {
+                        GradientDrawable sqshGd = new GradientDrawable();
+                        sqshGd.setColor(0xFFECFDF5);
+                        sqshGd.setStroke(dpToPx(1), 0xFFA7F3D0);
+                        sqshGd.setCornerRadius(dpToPx(16));
+                        sqShield.setBackground(sqshGd);
+                    }
+                    if (ivShield != null) ivShield.setColorFilter(0xFF059669);
+                    if (tvShield != null) {
+                        tvShield.setText("Waveguard");
+                        tvShield.setTextColor(0xFF059669);
+                    }
+                    if (capsuleWg != null) {
+                        GradientDrawable cwgGd = new GradientDrawable();
+                        cwgGd.setColor(0xFFECFDF5);
+                        cwgGd.setStroke(dpToPx(1), 0xFFA7F3D0);
+                        cwgGd.setCornerRadius(dpToPx(18));
+                        capsuleWg.setBackground(cwgGd);
+                    }
+                    if (ivCapsuleWg != null) ivCapsuleWg.setColorFilter(0xFF059669);
+                    if (wgTitle != null) wgTitle.setTextColor(deepDarkLabel);
+                    if (wgCount != null) {
+                        wgCount.setText(tabBlocks + " blocked");
+                        wgCount.setTextColor(0xFF059669);
+                    }
+                } else {
+                    if (sqShield != null) {
+                        GradientDrawable sqshGd = new GradientDrawable();
+                        sqshGd.setColor(0xFF0B291B);
+                        sqshGd.setStroke(dpToPx(1), 0xFF10B981);
+                        sqshGd.setCornerRadius(dpToPx(16));
+                        sqShield.setBackground(sqshGd);
+                    }
+                    if (ivShield != null) ivShield.setColorFilter(0xFF10B981);
+                    if (tvShield != null) {
+                        tvShield.setText("Waveguard");
+                        tvShield.setTextColor(0xFF10B981);
+                    }
+                    if (capsuleWg != null) {
+                        capsuleWg.setBackgroundResource(R.drawable.bg_stitch_waveguard_pill);
+                    }
+                    if (ivCapsuleWg != null) ivCapsuleWg.setColorFilter(0xFF10B981);
+                    if (wgTitle != null) wgTitle.setTextColor(lightText);
+                    if (wgCount != null) {
+                        wgCount.setText(tabBlocks + " blocked");
+                        wgCount.setTextColor(0xFF10B981);
+                    }
+                }
+            } else {
+                // Waveguard OFF: Turn OFF the green color on both waveguard button and bottom bar!
+                if (!isDark) {
+                    if (sqShield != null) {
+                        GradientDrawable sqshGd = new GradientDrawable();
+                        sqshGd.setColor(0xFFF1F5F9);
+                        sqshGd.setStroke(dpToPx(1), 0xFFE2E8F0);
+                        sqshGd.setCornerRadius(dpToPx(16));
+                        sqShield.setBackground(sqshGd);
+                    }
+                    if (ivShield != null) ivShield.setColorFilter(0xFF64748B);
+                    if (tvShield != null) {
+                        tvShield.setText("Waveguard");
+                        tvShield.setTextColor(0xFF64748B);
+                    }
+                    if (capsuleWg != null) {
+                        GradientDrawable cwgGd = new GradientDrawable();
+                        cwgGd.setColor(0xFFF1F5F9);
+                        cwgGd.setStroke(dpToPx(1), 0xFFCBD5E1);
+                        cwgGd.setCornerRadius(dpToPx(18));
+                        capsuleWg.setBackground(cwgGd);
+                    }
+                    if (ivCapsuleWg != null) ivCapsuleWg.setColorFilter(0xFF64748B);
+                    if (wgTitle != null) wgTitle.setTextColor(0xFF64748B);
+                    if (wgCount != null) {
+                        wgCount.setText("Paused");
+                        wgCount.setTextColor(0xFF64748B);
+                    }
+                } else {
+                    if (sqShield != null) {
+                        sqShield.setBackgroundResource(R.drawable.bg_stitch_squircle);
+                    }
+                    if (ivShield != null) ivShield.setColorFilter(0xFF64748B);
+                    if (tvShield != null) {
+                        tvShield.setText("Waveguard");
+                        tvShield.setTextColor(0xFF64748B);
+                    }
+                    if (capsuleWg != null) {
+                        GradientDrawable cwgGd = new GradientDrawable();
+                        cwgGd.setColor(0xFF161B22);
+                        cwgGd.setStroke(dpToPx(1), 0xFF30363D);
+                        cwgGd.setCornerRadius(dpToPx(18));
+                        capsuleWg.setBackground(cwgGd);
+                    }
+                    if (ivCapsuleWg != null) ivCapsuleWg.setColorFilter(0xFF64748B);
+                    if (wgTitle != null) wgTitle.setTextColor(0xFF64748B);
+                    if (wgCount != null) {
+                        wgCount.setText("Paused");
+                        wgCount.setTextColor(0xFF64748B);
+                    }
+                }
+            }
+        } catch (Throwable ignored) {}
+    }
+
+    public void updateOmniboxScrimBackground() {
+        if (omniboxHeaderWrapper == null) return;
+        boolean isBottom = "bottom".equalsIgnoreCase(omniboxPosition);
+        TabItem currentTab = getActiveOrDominantTab();
+        boolean isIncognito = currentTab != null && currentTab.isIncognito;
+
+        GradientDrawable.Orientation orientation = isBottom
+                ? GradientDrawable.Orientation.BOTTOM_TOP
+                : GradientDrawable.Orientation.TOP_BOTTOM;
+
+        int solidBase;
+        int fadeHigh;
+        int fadeMid;
+        int fadeLow;
+        int fadeZero;
+
+        if (isIncognito) {
+            solidBase = 0xFF1A0B2E;
+            fadeHigh  = 0xEE1A0B2E;
+            fadeMid   = 0x881A0B2E;
+            fadeLow   = 0x221A0B2E;
+            fadeZero  = 0x001A0B2E;
+        } else if (!isDarkTheme) {
+            solidBase = 0xFFFFFFFF;
+            fadeHigh  = 0xEEFFFFFF;
+            fadeMid   = 0x88FFFFFF;
+            fadeLow   = 0x22FFFFFF;
+            fadeZero  = 0x00FFFFFF;
+        } else {
+            solidBase = 0xFF0D1117;
+            fadeHigh  = 0xEE0D1117;
+            fadeMid   = 0x880D1117;
+            fadeLow   = 0x220D1117;
+            fadeZero  = 0x000D1117;
+        }
+
+        // Multi-stop gradient with solid base directly behind the capsule and feathered soft fade into the web UI (no hard outline)
+        GradientDrawable scrim = new GradientDrawable(orientation, new int[]{
+                solidBase, solidBase, fadeHigh, fadeMid, fadeLow, fadeZero
+        });
+        omniboxHeaderWrapper.setBackground(scrim);
+        omniboxHeaderWrapper.setClickable(true);
+        omniboxHeaderWrapper.setFocusable(true);
+    }
+
+    private static final List<String> DEFAULT_P1_GRID_KEYS = Arrays.asList(
+            "night_mode", "desktop_site", "bookmarks", "history", "downloads",
+            "incognito", "find", "share", "split", "settings"
+    );
+    private static final List<String> DEFAULT_P2_GRID_KEYS = Arrays.asList(
+            "new_tab", "dual_ai", "pdf", "reload", "reader",
+            "shield", "voice_models", "casks", "clear_data", "edit_layout"
+    );
+
+    public void resetCardGridLayout() {
+        runOnUiThread(() -> {
+            try {
+                getSharedPreferences(PREFS_NAME, MODE_PRIVATE)
+                        .edit()
+                        .remove("action_grid_p1_keys")
+                        .remove("action_grid_p2_keys")
+                        .apply();
+                Toast.makeText(this, "Card grid menu reset to default", Toast.LENGTH_SHORT).show();
+            } catch (Throwable ignored) {}
+        });
+    }
+
+    private List<String> getCardGridPage1Keys() {
+        String p1Raw = getSharedPreferences(PREFS_NAME, MODE_PRIVATE)
+                .getString("action_grid_p1_keys", null);
+        if (p1Raw != null && !p1Raw.trim().isEmpty()) {
+            String[] parts = p1Raw.split(",");
+            List<String> list = new ArrayList<>();
+            for (String s : parts) {
+                String trimmed = s.trim();
+                if (!trimmed.isEmpty() && !list.contains(trimmed)) list.add(trimmed);
+            }
+            if (list.size() == 10) return list;
+        }
+        return new ArrayList<>(DEFAULT_P1_GRID_KEYS);
+    }
+
+    private List<String> getCardGridPage2Keys() {
+        String p2Raw = getSharedPreferences(PREFS_NAME, MODE_PRIVATE)
+                .getString("action_grid_p2_keys", null);
+        if (p2Raw != null && !p2Raw.trim().isEmpty()) {
+            String[] parts = p2Raw.split(",");
+            List<String> list = new ArrayList<>();
+            for (String s : parts) {
+                String trimmed = s.trim();
+                if (!trimmed.isEmpty() && !list.contains(trimmed)) list.add(trimmed);
+            }
+            if (list.size() == 10) return list;
+        }
+        return new ArrayList<>(DEFAULT_P2_GRID_KEYS);
+    }
+
+    private void saveCardGridKeys(List<String> p1, List<String> p2) {
+        StringBuilder sb1 = new StringBuilder();
+        for (int i = 0; i < p1.size(); i++) {
+            if (i > 0) sb1.append(",");
+            sb1.append(p1.get(i));
+        }
+        StringBuilder sb2 = new StringBuilder();
+        for (int i = 0; i < p2.size(); i++) {
+            if (i > 0) sb2.append(",");
+            sb2.append(p2.get(i));
+        }
+        getSharedPreferences(PREFS_NAME, MODE_PRIVATE)
+                .edit()
+                .putString("action_grid_p1_keys", sb1.toString())
+                .putString("action_grid_p2_keys", sb2.toString())
+                .apply();
+    }
+
+    private void populateGridTable(TableLayout table, List<String> keys, Map<String, View> tileMap) {
+        if (table == null || keys == null || tileMap == null) return;
+        TableRow currentRow = null;
+        int colCount = 0;
+        for (int i = 0; i < keys.size(); i++) {
+            if (i % 5 == 0) {
+                currentRow = new TableRow(this);
+                TableLayout.LayoutParams trLp = new TableLayout.LayoutParams(
+                        TableLayout.LayoutParams.MATCH_PARENT, TableLayout.LayoutParams.WRAP_CONTENT);
+                trLp.bottomMargin = dpToPx(12);
+                currentRow.setLayoutParams(trLp);
+                table.addView(currentRow);
+                colCount = 0;
+            }
+            String key = keys.get(i);
+            View tile = tileMap.get(key);
+            if (tile != null && currentRow != null) {
+                TableRow.LayoutParams tLp = new TableRow.LayoutParams(0, TableRow.LayoutParams.WRAP_CONTENT, 1f);
+                tile.setLayoutParams(tLp);
+                currentRow.addView(tile);
+                colCount++;
+            }
+        }
+        if (currentRow != null && colCount > 0 && colCount < 5) {
+            for (int p = colCount; p < 5; p++) {
+                View dummy = new View(this);
+                TableRow.LayoutParams dLp = new TableRow.LayoutParams(0, TableRow.LayoutParams.WRAP_CONTENT, 1f);
+                dummy.setLayoutParams(dLp);
+                currentRow.addView(dummy);
+            }
+        }
+    }
+
+    private void showSwapTargetPicker(List<String> p1Keys, List<String> p2Keys,
+                                      int sourcePage, int sourceIdx, String sourceKey,
+                                      Runnable onSwapped) {
+        List<String> targetList = sourcePage == 1 ? p2Keys : p1Keys;
+        String sourceName = getCardGridItemDisplayName(sourceKey);
+        String targetPageName = sourcePage == 1 ? "Page 2" : "Page 1";
+
+        String[] targetNames = new String[targetList.size()];
+        for (int i = 0; i < targetList.size(); i++) {
+            targetNames[i] = getCardGridItemDisplayName(targetList.get(i));
+        }
+
+        AlertDialog.Builder builder = new AlertDialog.Builder(this);
+        builder.setTitle("Swap " + sourceName + " with " + targetPageName + " item:");
+        builder.setItems(targetNames, (dialog, which) -> {
+            String targetKey = targetList.get(which);
+            if (sourcePage == 1) {
+                p1Keys.set(sourceIdx, targetKey);
+                p2Keys.set(which, sourceKey);
+            } else {
+                p2Keys.set(sourceIdx, targetKey);
+                p1Keys.set(which, sourceKey);
+            }
+            playUiFeedbackSound("tap");
+            Toast.makeText(this, "Swapped " + sourceName + " ⇄ " + targetNames[which], Toast.LENGTH_SHORT).show();
+            if (onSwapped != null) onSwapped.run();
+        });
+        builder.setNegativeButton("Cancel", null);
+        builder.show();
+    }
+
+    public void showCardGridEditDialog() {
+        com.google.android.material.bottomsheet.BottomSheetDialog editDialog =
+                new com.google.android.material.bottomsheet.BottomSheetDialog(this);
+        View dialogView = LayoutInflater.from(this).inflate(R.layout.dialog_card_grid_edit, null);
+        editDialog.setContentView(dialogView);
+
+        if (editDialog.getWindow() != null) {
+            View bs = editDialog.getWindow().findViewById(com.google.android.material.R.id.design_bottom_sheet);
+            if (bs != null) bs.setBackgroundResource(android.R.color.transparent);
+        }
+
+        final List<String> p1Keys = new ArrayList<>(getCardGridPage1Keys());
+        final List<String> p2Keys = new ArrayList<>(getCardGridPage2Keys());
+
+        LinearLayout containerP1 = dialogView.findViewById(R.id.container_edit_page1);
+        LinearLayout containerP2 = dialogView.findViewById(R.id.container_edit_page2);
+
+        TextView btnReset = dialogView.findViewById(R.id.btn_edit_reset);
+        TextView btnDone = dialogView.findViewById(R.id.btn_edit_done);
+
+        if (!isDarkTheme) {
+            GradientDrawable rootGd = new GradientDrawable();
+            rootGd.setColor(0xFFFFFFFF);
+            rootGd.setCornerRadii(new float[]{dpToPx(24), dpToPx(24), dpToPx(24), dpToPx(24), 0, 0, 0, 0});
+            dialogView.setBackground(rootGd);
+
+            View handle = dialogView.findViewById(R.id.edit_grid_drag_handle);
+            if (handle != null) {
+                GradientDrawable hGd = new GradientDrawable();
+                hGd.setColor(0xFFCBD5E1);
+                hGd.setCornerRadius(dpToPx(3));
+                handle.setBackground(hGd);
+            }
+            TextView title = dialogView.findViewById(R.id.text_edit_title);
+            if (title != null) title.setTextColor(0xFF0284C7);
+
+            TextView h1 = dialogView.findViewById(R.id.header_section_page1);
+            if (h1 != null) h1.setTextColor(0xFF0F172A);
+            TextView h2 = dialogView.findViewById(R.id.header_section_page2);
+            if (h2 != null) h2.setTextColor(0xFF0F172A);
+
+            View divider = dialogView.findViewById(R.id.edit_divider);
+            if (divider != null) divider.setBackgroundColor(0xFFE2E8F0);
+
+            if (btnReset != null) btnReset.setTextColor(0xFF64748B);
+            if (btnDone != null) {
+                GradientDrawable doneGd = new GradientDrawable();
+                doneGd.setColor(0xFFE0F2FE);
+                doneGd.setStroke(dpToPx(1), 0xFF0284C7);
+                doneGd.setCornerRadius(dpToPx(12));
+                btnDone.setBackground(doneGd);
+                btnDone.setTextColor(0xFF0284C7);
+            }
+        }
+
+        final Runnable[] renderItems = new Runnable[1];
+        renderItems[0] = () -> {
+            containerP1.removeAllViews();
+            containerP2.removeAllViews();
+
+            for (int i = 0; i < p1Keys.size(); i++) {
+                final int idx = i;
+                final String key = p1Keys.get(i);
+                View row = createEditRowView(key, 1, idx, p1Keys.size(),
+                        () -> {
+                            if (idx > 0) {
+                                Collections.swap(p1Keys, idx, idx - 1);
+                                renderItems[0].run();
+                            }
+                        },
+                        () -> {
+                            if (idx < p1Keys.size() - 1) {
+                                Collections.swap(p1Keys, idx, idx + 1);
+                                renderItems[0].run();
+                            }
+                        },
+                        () -> {
+                            showSwapTargetPicker(p1Keys, p2Keys, 1, idx, key, renderItems[0]);
+                        }
+                );
+                containerP1.addView(row);
+            }
+
+            for (int i = 0; i < p2Keys.size(); i++) {
+                final int idx = i;
+                final String key = p2Keys.get(i);
+                View row = createEditRowView(key, 2, idx, p2Keys.size(),
+                        () -> {
+                            if (idx > 0) {
+                                Collections.swap(p2Keys, idx, idx - 1);
+                                renderItems[0].run();
+                            }
+                        },
+                        () -> {
+                            if (idx < p2Keys.size() - 1) {
+                                Collections.swap(p2Keys, idx, idx + 1);
+                                renderItems[0].run();
+                            }
+                        },
+                        () -> {
+                            showSwapTargetPicker(p1Keys, p2Keys, 2, idx, key, renderItems[0]);
+                        }
+                );
+                containerP2.addView(row);
+            }
+        };
+
+        renderItems[0].run();
+
+        if (btnReset != null) {
+            btnReset.setOnClickListener(v -> {
+                p1Keys.clear();
+                p1Keys.addAll(DEFAULT_P1_GRID_KEYS);
+                p2Keys.clear();
+                p2Keys.addAll(DEFAULT_P2_GRID_KEYS);
+                renderItems[0].run();
+                Toast.makeText(this, "Layout reset to default", Toast.LENGTH_SHORT).show();
+            });
+        }
+
+        if (btnDone != null) {
+            btnDone.setOnClickListener(v -> {
+                saveCardGridKeys(p1Keys, p2Keys);
+                editDialog.dismiss();
+                Toast.makeText(this, "Menu customized!", Toast.LENGTH_SHORT).show();
+                showBrowserActionGrid();
+            });
+        }
+
+        editDialog.show();
+    }
+
+    private View createEditRowView(String key, int pageNumber, int index, int totalCount,
+                                   Runnable onMoveUp, Runnable onMoveDown, Runnable onSwitchPage) {
+        LinearLayout row = new LinearLayout(this);
+        row.setOrientation(LinearLayout.HORIZONTAL);
+        row.setGravity(Gravity.CENTER_VERTICAL);
+        row.setPadding(dpToPx(12), dpToPx(8), dpToPx(8), dpToPx(8));
+        LinearLayout.LayoutParams rowLp = new LinearLayout.LayoutParams(
+                ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT);
+        rowLp.bottomMargin = dpToPx(6);
+        row.setLayoutParams(rowLp);
+
+        GradientDrawable rowBg = new GradientDrawable();
+        rowBg.setColor(!isDarkTheme ? 0xFFF8FAFC : 0xFF161B22);
+        rowBg.setStroke(dpToPx(1), !isDarkTheme ? 0xFFE2E8F0 : 0xFF21262D);
+        rowBg.setCornerRadius(dpToPx(12));
+        row.setBackground(rowBg);
+
+        TextView tvTitle = new TextView(this);
+        LinearLayout.LayoutParams titleLp = new LinearLayout.LayoutParams(
+                0, ViewGroup.LayoutParams.WRAP_CONTENT, 1f);
+        tvTitle.setLayoutParams(titleLp);
+        tvTitle.setText(getCardGridItemDisplayName(key));
+        tvTitle.setTextColor(!isDarkTheme ? 0xFF0F172A : 0xFFDFE2F0);
+        tvTitle.setTextSize(TypedValue.COMPLEX_UNIT_SP, 12f);
+        tvTitle.setTypeface(Typeface.DEFAULT_BOLD);
+        row.addView(tvTitle);
+
+        LinearLayout actions = new LinearLayout(this);
+        actions.setOrientation(LinearLayout.HORIZONTAL);
+        actions.setGravity(Gravity.CENTER_VERTICAL);
+
+        TextView btnUp = new TextView(this);
+        btnUp.setText("▲");
+        btnUp.setPadding(dpToPx(7), dpToPx(4), dpToPx(7), dpToPx(4));
+        btnUp.setTextSize(TypedValue.COMPLEX_UNIT_SP, 12f);
+        btnUp.setTextColor(index > 0 ? (!isDarkTheme ? 0xFF0284C7 : 0xFF00E5FF) : (!isDarkTheme ? 0xFFCBD5E1 : 0xFF475569));
+        if (index > 0) {
+            btnUp.setOnClickListener(v -> {
+                playUiFeedbackSound("tap");
+                onMoveUp.run();
+            });
+        }
+        actions.addView(btnUp);
+
+        TextView btnDown = new TextView(this);
+        btnDown.setText("▼");
+        btnDown.setPadding(dpToPx(7), dpToPx(4), dpToPx(7), dpToPx(4));
+        btnDown.setTextSize(TypedValue.COMPLEX_UNIT_SP, 12f);
+        btnDown.setTextColor(index < totalCount - 1 ? (!isDarkTheme ? 0xFF0284C7 : 0xFF00E5FF) : (!isDarkTheme ? 0xFFCBD5E1 : 0xFF475569));
+        if (index < totalCount - 1) {
+            btnDown.setOnClickListener(v -> {
+                playUiFeedbackSound("tap");
+                onMoveDown.run();
+            });
+        }
+        actions.addView(btnDown);
+
+        TextView btnSwitch = new TextView(this);
+        btnSwitch.setText(pageNumber == 1 ? "⇄ Swap P2" : "⇄ Swap P1");
+        btnSwitch.setPadding(dpToPx(9), dpToPx(4), dpToPx(9), dpToPx(4));
+        btnSwitch.setTextSize(TypedValue.COMPLEX_UNIT_SP, 11f);
+        btnSwitch.setTypeface(Typeface.DEFAULT_BOLD);
+        GradientDrawable swBg = new GradientDrawable();
+        swBg.setColor(!isDarkTheme ? 0xFFE0F2FE : 0xFF1E293B);
+        swBg.setCornerRadius(dpToPx(8));
+        btnSwitch.setBackground(swBg);
+        btnSwitch.setTextColor(!isDarkTheme ? 0xFF0284C7 : 0xFF38BDF8);
+        btnSwitch.setOnClickListener(v -> {
+            playUiFeedbackSound("tap");
+            onSwitchPage.run();
+        });
+        actions.addView(btnSwitch);
+
+        row.addView(actions);
+        return row;
+    }
+
+    private String getCardGridItemDisplayName(String key) {
+        if (key == null) return "Unknown";
+        switch (key) {
+            case "night_mode": return "🌙 Night mode";
+            case "desktop_site": return "💻 Desktop site";
+            case "bookmarks": return "🔖 Bookmarks";
+            case "history": return "🕒 History";
+            case "downloads": return "⬇️ Downloads";
+            case "incognito": return "🕶️ Incognito";
+            case "find": return "🔍 Find in page";
+            case "share": return "🔗 Share";
+            case "split": return "🪟 Dual Split";
+            case "settings": return "⚙️ Settings";
+            case "new_tab": return "➕ New tab";
+            case "dual_ai": return "✨ Dual AI";
+            case "pdf": return "📄 Open PDF";
+            case "reload": return "🔄 Reload";
+            case "reader": return "📖 Reader";
+            case "shield": return "🛡️ Waveguard";
+            case "voice_models": return "🎙️ Voice AI";
+            case "casks": return "🗃️ Casks";
+            case "clear_data": return "🗑️ Clear Data";
+            case "edit_layout": return "✏️ Edit Menu";
+            default: return key;
+        }
+    }
+
+    public void applyOmniboxPosition(String position) {
+        runOnUiThread(() -> {
+            try {
+                omniboxPosition = (position != null && position.equalsIgnoreCase("bottom")) ? "bottom" : "top";
+                boolean isBottom = "bottom".equalsIgnoreCase(omniboxPosition);
+
+                if (omniboxHeaderWrapper != null) {
+                    FrameLayout.LayoutParams lp = (FrameLayout.LayoutParams) omniboxHeaderWrapper.getLayoutParams();
+                    if (lp == null) {
+                        lp = new FrameLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT);
+                    }
+                    lp.gravity = isBottom ? Gravity.BOTTOM : Gravity.TOP;
+                    omniboxHeaderWrapper.setLayoutParams(lp);
+                    omniboxHeaderWrapper.setPadding(
+                            dpToPx(10),
+                            dpToPx(isBottom ? 8 : 6),
+                            dpToPx(10),
+                            dpToPx(isBottom ? 12 : 6)
+                    );
+                }
+
+                if (webviewsParentContainer != null) {
+                    FrameLayout.LayoutParams wpLp = (FrameLayout.LayoutParams) webviewsParentContainer.getLayoutParams();
+                    if (wpLp == null) {
+                        wpLp = new FrameLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.MATCH_PARENT);
+                    }
+                    if (isBottom) {
+                        wpLp.bottomMargin = dpToPx(58);
+                        wpLp.topMargin = 0;
+                    } else {
+                        wpLp.topMargin = dpToPx(58);
+                        wpLp.bottomMargin = 0;
+                    }
+                    webviewsParentContainer.setLayoutParams(wpLp);
+                }
+
+                if (browserProgressBar != null) {
+                    FrameLayout.LayoutParams pbLp = (FrameLayout.LayoutParams) browserProgressBar.getLayoutParams();
+                    if (pbLp == null) {
+                        pbLp = new FrameLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, dpToPx(3));
+                    }
+                    pbLp.gravity = isBottom ? Gravity.BOTTOM : Gravity.TOP;
+                    if (isBottom) {
+                        pbLp.bottomMargin = dpToPx(58);
+                        pbLp.topMargin = 0;
+                    } else {
+                        pbLp.topMargin = dpToPx(58);
+                        pbLp.bottomMargin = 0;
+                    }
+                    browserProgressBar.setLayoutParams(pbLp);
+                }
+
+                if (omniboxSuggestionsContainer != null) {
+                    FrameLayout.LayoutParams sugLp = (FrameLayout.LayoutParams) omniboxSuggestionsContainer.getLayoutParams();
+                    if (sugLp == null) {
+                        sugLp = new FrameLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT);
+                    }
+                    sugLp.gravity = isBottom ? Gravity.BOTTOM : Gravity.TOP;
+                    if (isBottom) {
+                        sugLp.bottomMargin = dpToPx(58);
+                        sugLp.topMargin = 0;
+                    } else {
+                        sugLp.topMargin = dpToPx(58);
+                        sugLp.bottomMargin = 0;
+                    }
+                    omniboxSuggestionsContainer.setLayoutParams(sugLp);
+                }
+
+                updateOmniboxScrimBackground();
+            } catch (Throwable ignored) {}
+        });
+    }
+
+    public void setOmniboxPosition(String position) {
+        this.omniboxPosition = (position != null && position.equalsIgnoreCase("bottom")) ? "bottom" : "top";
+        try {
+            getSharedPreferences(PREFS_NAME, MODE_PRIVATE)
+                    .edit()
+                    .putString("omnibox_position", this.omniboxPosition)
+                    .apply();
+        } catch (Throwable ignored) {}
+        applyOmniboxPosition(this.omniboxPosition);
+    }
+
+    public String getOmniboxPosition() {
+        return this.omniboxPosition;
+    }
+
+    public void setOmniboxMenuStyle(String style) {
+        this.omniboxMenuStyle = (style != null && style.equalsIgnoreCase("grid")) ? "grid" : "list";
+        try {
+            getSharedPreferences(PREFS_NAME, MODE_PRIVATE)
+                    .edit()
+                    .putString("omnibox_menu_style", this.omniboxMenuStyle)
+                    .apply();
+        } catch (Throwable ignored) {}
+    }
+
+    public String getOmniboxMenuStyle() {
+        return this.omniboxMenuStyle;
     }
 
     public void launchDualAIAsk() {
@@ -8311,6 +10521,11 @@ public class MainActivity extends AppCompatActivity {
             @Override
             public boolean shouldOverrideUrlLoading(WebView view, WebResourceRequest request) {
                 String targetUrl = request.getUrl().toString();
+                if (tabItem.isDesktop && targetUrl.contains("://m.youtube.com")) {
+                    String desktopUrl = targetUrl.replace("://m.youtube.com", "://www.youtube.com");
+                    view.loadUrl(desktopUrl);
+                    return true;
+                }
                 if (splitModeState != 0 && openLeftLinksToRight && tabItem.id == activeTabId && secondarySplitTabId != -1) {
                     TabItem rightTab = getTabById(secondarySplitTabId);
                     if (rightTab != null && rightTab.webView != null) {
@@ -8403,8 +10618,17 @@ public class MainActivity extends AppCompatActivity {
 
             @Override
             public void onPageStarted(WebView view, String pageUrl, Bitmap favicon) {
+                if (tabItem.isDesktop && pageUrl != null && pageUrl.contains("://m.youtube.com")) {
+                    String desktopUrl = pageUrl.replace("://m.youtube.com", "://www.youtube.com");
+                    view.stopLoading();
+                    view.loadUrl(desktopUrl);
+                    return;
+                }
                 String oldUrl = tabItem.url;
                 tabItem.url = pageUrl;
+                if (waveguardShield != null && pageUrl != null && !pageUrl.equals(oldUrl)) {
+                    waveguardShield.resetTabBlockedCount(tabItem.id);
+                }
                 tabItem.service = AICommandRouter.detectServiceFromUrl(pageUrl);
                 if (oldUrl != null && oldUrl.toLowerCase().contains("youtube.com") && (pageUrl == null || !pageUrl.toLowerCase().contains("youtube.com"))) {
                     tabItem.isPlayingAudio = false;
@@ -8431,6 +10655,19 @@ public class MainActivity extends AppCompatActivity {
                 if (tabItem.id == activeTabId) {
                     browserProgressBar.setVisibility(View.GONE);
                     updateOmniboxState();
+                }
+
+                applyWebViewTheme(view, isDarkTheme);
+
+                if (tabItem.isDesktop) {
+                    view.evaluateJavascript(
+                            "(function() {" +
+                            "  try {" +
+                            "    if (navigator.userAgentData) {" +
+                            "      Object.defineProperty(navigator.userAgentData, 'mobile', { get: () => false, configurable: true });" +
+                            "    }" +
+                            "  } catch(e) {}" +
+                            "})();", null);
                 }
 
                 captureTabSnapshot(tabItem);
@@ -9458,7 +11695,22 @@ public class MainActivity extends AppCompatActivity {
         tab.isDesktop = !tab.isDesktop;
         tab.webView.getSettings().setUserAgentString(tab.isDesktop ? DESKTOP_UA : MOBILE_UA);
         tab.webView.getSettings().setUseWideViewPort(tab.isDesktop);
-        tab.webView.reload();
+        tab.webView.getSettings().setLoadWithOverviewMode(tab.isDesktop);
+
+        String url = tab.webView.getUrl();
+        if (url != null) {
+            if (tab.isDesktop && url.contains("://m.youtube.com")) {
+                url = url.replace("://m.youtube.com", "://www.youtube.com");
+                tab.webView.loadUrl(url);
+            } else if (!tab.isDesktop && url.contains("://www.youtube.com")) {
+                url = url.replace("://www.youtube.com", "://m.youtube.com");
+                tab.webView.loadUrl(url);
+            } else {
+                tab.webView.reload();
+            }
+        } else {
+            tab.webView.reload();
+        }
         Toast.makeText(this, tab.isDesktop ? "💻 Desktop Mode" : "📱 Mobile Mode", Toast.LENGTH_SHORT).show();
     }
 
@@ -9597,11 +11849,7 @@ public class MainActivity extends AppCompatActivity {
                 }
             }
 
-            if (currentTab.isIncognito) {
-                omniboxHeaderWrapper.setBackgroundColor(0xFF1E102E);
-            } else {
-                omniboxHeaderWrapper.setBackgroundColor(isDarkTheme ? 0xFF0D1524 : 0xFFFFFFFF);
-            }
+            updateOmniboxScrimBackground();
         }
 
         int defaultIconTint = isDarkTheme ? 0xFFA2A9A9 : 0xFF4B5563;

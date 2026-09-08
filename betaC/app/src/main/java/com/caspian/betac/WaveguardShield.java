@@ -324,8 +324,20 @@ public class WaveguardShield {
         if (host == null) return false;
         String h = host.toLowerCase(java.util.Locale.ROOT).trim();
         if (h.startsWith("www.")) h = h.substring(4);
+
+        // Dedicated ad, tracker, analytics, telemetry, and metrics subdomains are NEVER essential!
+        if (h.startsWith("ads.") || h.startsWith("ad.") || h.startsWith("ads-") || h.startsWith("static.ads-")
+                || h.startsWith("pixel.") || h.startsWith("an.") || h.startsWith("analytics.") || h.startsWith("stats.")
+                || h.startsWith("events.") || h.startsWith("telemetry.") || h.startsWith("click.") || h.startsWith("trk.")
+                || h.startsWith("track.") || h.startsWith("tracking.") || h.startsWith("adservice.") || h.startsWith("partnerad.")
+                || h.startsWith("iadsdk.") || h.startsWith("adx.") || h.startsWith("adsfs.") || h.startsWith("bdapi-")
+                || h.startsWith("smetrics.") || h.startsWith("nmetrics.") || h.startsWith("iot-") || h.startsWith("data.ads.")
+                || h.startsWith("data.mistat.") || h.startsWith("api.ad.") || h.startsWith("sdkconfig.ad.")) {
+            return false;
+        }
+
         if ("google.com".equals(h) || h.endsWith(".google.com")) {
-            return !h.startsWith("adservice.") && !h.startsWith("partnerad.") && !h.startsWith("fundingchoicesmessages.");
+            return !h.startsWith("adservice.") && !h.startsWith("partnerad.") && !h.startsWith("fundingchoicesmessages.") && !h.startsWith("analytics.");
         }
         if ("reddit.com".equals(h) || h.endsWith(".reddit.com")
                 || "redditstatic.com".equals(h) || h.endsWith(".redditstatic.com")
@@ -389,21 +401,21 @@ public class WaveguardShield {
             if (host == null) return false;
             host = host.toLowerCase(java.util.Locale.ROOT);
 
-            // Suffix and exact domain matching (skipped for essential services like google.com, youtube.com)
+            // Suffix and exact domain matching
             boolean matchesDomain = false;
-            if (!isEssentialHost(host)) {
-                if (blockedDomains.contains(host)) {
-                    matchesDomain = true;
-                } else {
-                    int dotIndex = host.indexOf('.');
-                    while (dotIndex > 0 && dotIndex < host.length() - 1) {
-                        String sub = host.substring(dotIndex + 1);
-                        if (blockedDomains.contains(sub)) {
-                            matchesDomain = true;
-                            break;
-                        }
-                        dotIndex = host.indexOf('.', dotIndex + 1);
+            // 1. Direct exact match in blockedDomains ALWAYS matches (because blockedDomains contains only known ad/tracker hosts)
+            if (blockedDomains.contains(host)) {
+                matchesDomain = true;
+            } else if (!isEssentialHost(host)) {
+                // Suffix matching only if host itself is not an essential root
+                int dotIndex = host.indexOf('.');
+                while (dotIndex > 0 && dotIndex < host.length() - 1) {
+                    String sub = host.substring(dotIndex + 1);
+                    if (blockedDomains.contains(sub)) {
+                        matchesDomain = true;
+                        break;
                     }
+                    dotIndex = host.indexOf('.', dotIndex + 1);
                 }
             }
 
@@ -477,10 +489,12 @@ public class WaveguardShield {
             }
         } catch (Throwable ignored) {}
 
-        // For all trackers, banners, scripts, and analytics, return 403 Forbidden with 0 bytes to trigger onerror on script/img/embed tags
-        headers.put("Content-Type", "text/plain; charset=UTF-8");
-        return new WebResourceResponse("text/plain", "UTF-8", 403, "Forbidden", headers,
-                new ByteArrayInputStream(new byte[0]));
+        // For all trackers, banners, scripts, and analytics, return null InputStream.
+        // In Android WebView, this causes Chromium network stack to fail the request with net::ERR_BLOCKED_BY_CLIENT / net::ERR_FAILED.
+        // This causes fetch() in JavaScript to immediately reject (throwing a network error),
+        // causing adblock testers (like adblock.turtlecute.org) to accurately register BLOCKED,
+        // and triggering onerror on script/img/iframe tags!
+        return new WebResourceResponse("text/plain", "UTF-8", null);
     }
 
     /**

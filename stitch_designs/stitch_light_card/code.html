@@ -1,0 +1,298 @@
+<!DOCTYPE html><html lang="en" style=""><head>
+<meta charset="utf-8">
+<meta content="width=device-width, initial-scale=1.0, viewport-fit=cover" name="viewport">
+<title>light_card</title>
+<!-- Tailwind CSS v3 with forms and container-queries -->
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<script>
+    tailwind.config = {
+      theme: {
+        extend: {
+          colors: {
+            brand: {
+              50: '#f0f9ff',
+              100: '#e0f2fe',
+              500: '#0284c7',
+              600: '#0369a1',
+              accent: '#00b4d8'
+            }
+          },
+          fontFamily: {
+            sans: ['-apple-system', 'BlinkMacSystemFont', '"SF Pro Display"', '"SF Pro Text"', 'system-ui', 'sans-serif']
+          }
+        }
+      }
+    }
+  </script>
+<!-- BEGIN: Custom Styles -->
+<style data-purpose="layout-and-typography">
+    body {
+      -webkit-tap-highlight-color: transparent;
+      user-select: none;
+      font-feature-settings: "cv02", "cv03", "cv04", "cv11";
+    }
+    
+    /* Smooth iOS momentum scrolling */
+    .no-scrollbar::-webkit-scrollbar {
+      display: none;
+    }
+    .no-scrollbar {
+      -ms-overflow-style: none;
+      scrollbar-width: none;
+    }
+  </style>
+<style data-purpose="glassmorphic-accents">
+    .glass-card {
+      background: rgba(255, 255, 255, 0.98);
+      backdrop-filter: blur(28px);
+      -webkit-backdrop-filter: blur(28px);
+    }
+    .omnibox-glass {
+      background: rgba(255, 255, 255, 0.92);
+      backdrop-filter: blur(20px);
+      -webkit-backdrop-filter: blur(20px);
+    }
+  </style>
+<!-- END: Custom Styles -->
+</head>
+<body class="bg-slate-100 text-slate-900 font-sans min-h-screen flex justify-center items-center antialiased overflow-hidden selection:bg-sky-100">
+<!-- BEGIN: MobileDeviceFrame -->
+<div class="relative w-full max-w-[420px] h-[912px] bg-slate-50 flex flex-col justify-between overflow-hidden shadow-2xl rounded-[48px] border-[7px] border-slate-900/10" data-purpose="mobile-viewport-container">
+<!-- BEGIN: iOSStatusBar -->
+<header class="w-full pt-3 px-7 pb-2 flex items-center justify-between z-30 select-none" data-purpose="ios-status-bar">
+<span class="text-sm font-semibold tracking-tight text-slate-900">9:41</span>
+<!-- Dynamic Island Mock -->
+<div class="h-5 w-24 bg-slate-900 rounded-full mx-auto self-start"></div>
+<div class="flex items-center gap-1.5 text-slate-900">
+<!-- Cellular Signal -->
+<svg class="w-4 h-4 fill-current" viewBox="0 0 24 24">
+<path d="M12 3c-4.97 0-9 4.03-9 9 0 2.12.74 4.07 1.97 5.61L4.35 19.4c-.2.2-.2.51 0 .71.1.1.23.15.35.15.13 0 .26-.05.35-.15l1.9-1.9C8.36 19.34 10.1 20 12 20c4.97 0 9-4.03 9-9s-4.03-9-9-9zm0 15c-3.31 0-6-2.69-6-6s2.69-6 6-6 6 2.69 6 6-2.69 6-6 6z"></path>
+</svg>
+<!-- Wifi -->
+<svg class="w-4 h-4 fill-current" viewBox="0 0 24 24">
+<path d="M12 4C7.31 4 3.07 5.9 0 8.98L12 21 24 8.98C20.93 5.9 16.69 4 12 4zm0 3.38c3.6 0 6.92 1.39 9.4 3.68L12 19.08 2.6 11.06c2.48-2.29 5.8-3.68 9.4-3.68z"></path>
+</svg>
+<!-- Battery Icon -->
+<div class="w-5 h-2.5 rounded-[3px] border border-slate-900 p-0.5 flex items-center">
+<div class="h-full w-full bg-slate-900 rounded-[1px]"></div>
+</div>
+</div>
+</header>
+<!-- END: iOSStatusBar -->
+<!-- BEGIN: TopBrowserOmnibox -->
+<nav class="w-full px-4 pt-1 pb-3 flex items-center gap-2 z-20" data-purpose="top-omnibox-bar">
+<!-- Navigation Controls -->
+<div class="flex items-center gap-1 text-slate-600">
+<button aria-label="Back" class="p-2 rounded-full hover:bg-slate-200/60 active:scale-95 transition" type="button">
+<svg class="w-4 h-4 stroke-slate-700" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24">
+<path d="M15 19l-7-7 7-7" stroke-linecap="round" stroke-linejoin="round"></path>
+</svg>
+</button>
+<button aria-label="Forward" class="p-2 rounded-full text-slate-300" type="button">
+<svg class="w-4 h-4 stroke-current" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24">
+<path d="M9 5l7 7-7 7" stroke-linecap="round" stroke-linejoin="round"></path>
+</svg>
+</button>
+<button aria-label="Reload" class="p-2 rounded-full hover:bg-slate-200/60 active:scale-95 transition" type="button">
+<svg class="w-4 h-4 text-slate-700 fill-none stroke-current" stroke-width="2.2" viewBox="0 0 24 24">
+<path d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" stroke-linecap="round" stroke-linejoin="round"></path>
+</svg>
+</button>
+</div>
+<!-- Address / Search Pill -->
+<div class="flex-1 omnibox-glass rounded-full border border-slate-200 shadow-sm flex items-center px-3 py-1.5 gap-2">
+<svg class="w-3.5 h-3.5 text-emerald-600 shrink-0" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24">
+<path d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" stroke-linecap="round" stroke-linejoin="round"></path>
+</svg>
+<span class="text-xs font-medium text-slate-800 tracking-tight flex-1 truncate">caspian.ai<span class="text-slate-400 font-normal">/explore</span></span>
+<button aria-label="Voice Search" class="text-slate-400 hover:text-slate-600" type="button">
+<svg class="w-3.5 h-3.5 fill-current" viewBox="0 0 24 24">
+<path d="M12 14c1.66 0 3-1.34 3-3V5c0-1.66-1.34-3-3-3S9 3.34 9 5v6c0 1.66 1.34 3 3 3z"></path>
+<path d="M17 11c0 2.76-2.24 5-5 5s-5-2.24-5-5H5c0 3.53 2.61 6.43 6 6.92V21h2v-3.08c3.39-.49 6-3.39 6-6.92h-2z"></path>
+</svg>
+</button>
+</div>
+<!-- Tabs Badge Button -->
+<button aria-label="Open Tabs" class="w-7 h-7 rounded-lg border-2 border-slate-700 text-slate-800 flex items-center justify-center font-bold text-[11px] leading-none shrink-0 shadow-sm hover:bg-slate-200/50" type="button">
+        3
+      </button>
+</nav>
+<!-- END: TopBrowserOmnibox -->
+<!-- BEGIN: BackgroundWebContent -->
+<main class="relative flex-1 px-5 pt-4 opacity-30 select-none pointer-events-none" data-purpose="background-rendered-page">
+<div class="h-4 w-32 bg-slate-300 rounded mb-4"></div>
+<div class="h-7 w-64 bg-slate-400/70 rounded-lg mb-4"></div>
+<div class="space-y-2 mb-6">
+<div class="h-3 w-full bg-slate-300 rounded"></div>
+<div class="h-3 w-5/6 bg-slate-300 rounded"></div>
+<div class="h-3 w-4/6 bg-slate-300 rounded"></div>
+</div>
+<div class="h-48 w-full bg-slate-200 rounded-2xl border border-slate-300/60 mb-4 flex items-center justify-center text-slate-400 text-xs font-medium">
+        Active Page Background
+      </div>
+</main>
+<!-- END: BackgroundWebContent -->
+<!-- BEGIN: BackdropDimmer -->
+<div class="absolute inset-0 bg-slate-900/20 backdrop-blur-[2px] z-30 transition-opacity" data-purpose="bottom-sheet-dimmer"></div>
+<!-- END: BackdropDimmer -->
+<!-- BEGIN: BottomSheetMenuContainer -->
+<section class="relative z-40 w-full glass-card rounded-t-[34px] border-t border-x border-slate-200/80 shadow-[0_-12px_40px_rgba(15,23,42,0.12)] pt-2.5 pb-6 px-4 flex flex-col justify-between" data-purpose="pro-bottom-sheet-card-menu">
+<!-- Top Drag Indicator Handle -->
+<div class="w-full flex justify-center pb-3" data-purpose="drag-handle">
+<div class="w-10 h-1 bg-slate-300 rounded-full"></div>
+</div>
+<!-- Quick Action / Status Notification Micro Header -->
+<div class="flex items-center justify-between px-2 mb-2">
+<div class="flex items-center gap-1.5">
+<span class="w-2 h-2 rounded-full bg-emerald-500 animate-pulse"></span>
+<span class="text-[11px] font-semibold text-slate-500 tracking-wider uppercase">CASPIAN MENU</span>
+</div>
+<span class="text-[11px] font-medium text-sky-600 bg-sky-50 px-2 py-0.5 rounded-full border border-sky-100">v1.2.20-BetaC</span>
+</div>
+<!-- BEGIN: ToolGrid -->
+<!-- 2 Rows x 5 Columns Layout identical to Image Reference Tools -->
+<div class="grid grid-cols-5 gap-y-4 gap-x-2 py-2" data-purpose="menu-grid-2x5">
+<!-- 1. Night mode -->
+<button class="group flex flex-col items-center text-center focus:outline-none" type="button">
+<div class="w-12 h-12 rounded-2xl bg-slate-100/90 text-slate-700 flex items-center justify-center transition-all duration-150 group-hover:bg-slate-200/80 group-active:scale-95 shadow-sm border border-slate-200/60">
+<svg class="w-5 h-5 fill-slate-800" viewBox="0 0 24 24">
+<path d="M12.3 2a10 10 0 0 0-.19 14 9.92 9.92 0 0 0 7.9 3.89 10.14 10.14 0 0 0 1.9-.19 10 10 0 1 1-9.61-17.7z"></path>
+</svg>
+</div>
+<span class="mt-1.5 text-[11px] font-medium text-slate-700 tracking-tight line-clamp-1 leading-tight group-hover:text-slate-900">Night mode</span>
+</button>
+<!-- 2. Desktop site -->
+<button class="group flex flex-col items-center text-center focus:outline-none" type="button">
+<div class="w-12 h-12 rounded-2xl bg-slate-100/90 text-slate-700 flex items-center justify-center transition-all duration-150 group-hover:bg-slate-200/80 group-active:scale-95 shadow-sm border border-slate-200/60">
+<svg class="w-5 h-5 stroke-slate-800 fill-none" stroke-width="2" viewBox="0 0 24 24">
+<rect height="14" rx="2" stroke-linecap="round" stroke-linejoin="round" width="20" x="2" y="3"></rect>
+<line stroke-linecap="round" stroke-linejoin="round" x1="8" x2="16" y1="21" y2="21"></line>
+<line stroke-linecap="round" stroke-linejoin="round" x1="12" x2="12" y1="17" y2="21"></line>
+</svg>
+</div>
+<span class="mt-1.5 text-[11px] font-medium text-slate-700 tracking-tight line-clamp-1 leading-tight group-hover:text-slate-900">Desktop site</span>
+</button>
+<!-- 3. Bookmarks -->
+<button class="group flex flex-col items-center text-center focus:outline-none" type="button">
+<div class="w-12 h-12 rounded-2xl bg-slate-100/90 text-slate-700 flex items-center justify-center transition-all duration-150 group-hover:bg-slate-200/80 group-active:scale-95 shadow-sm border border-slate-200/60">
+<svg class="w-5 h-5 fill-slate-800 stroke-slate-800" stroke-width="0.5" viewBox="0 0 24 24">
+<path d="M19 21l-7-5-7 5V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2z"></path>
+</svg>
+</div>
+<span class="mt-1.5 text-[11px] font-medium text-slate-700 tracking-tight line-clamp-1 leading-tight group-hover:text-slate-900">Bookmarks</span>
+</button>
+<!-- 4. History -->
+<button class="group flex flex-col items-center text-center focus:outline-none" type="button">
+<div class="w-12 h-12 rounded-2xl bg-slate-100/90 text-slate-700 flex items-center justify-center transition-all duration-150 group-hover:bg-slate-200/80 group-active:scale-95 shadow-sm border border-slate-200/60">
+<svg class="w-5 h-5 stroke-slate-800 fill-none" stroke-width="2.2" viewBox="0 0 24 24">
+<path d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" stroke-linecap="round" stroke-linejoin="round"></path>
+</svg>
+</div>
+<span class="mt-1.5 text-[11px] font-medium text-slate-700 tracking-tight line-clamp-1 leading-tight group-hover:text-slate-900">History</span>
+</button>
+<!-- 5. Downloads -->
+<button class="group flex flex-col items-center text-center relative focus:outline-none" type="button">
+<div class="w-12 h-12 rounded-2xl bg-slate-100/90 text-slate-700 flex items-center justify-center transition-all duration-150 group-hover:bg-slate-200/80 group-active:scale-95 shadow-sm border border-slate-200/60 relative">
+<svg class="w-5 h-5 fill-slate-800" viewBox="0 0 24 24">
+<path d="M19.35 10.04C18.67 6.59 15.64 4 12 4 9.11 4 6.6 5.64 5.35 8.04 2.34 8.36 0 10.91 0 14c0 3.31 2.69 6 6 6h13c2.76 0 5-2.24 5-5 0-2.64-2.05-4.78-4.65-4.96zM17 13l-5 5-5-5h3V9h4v4h3z"></path>
+</svg>
+<!-- Emerald Notification Dot -->
+<span class="absolute 1 top-1.5 right-1.5 w-2.5 h-2.5 bg-emerald-500 rounded-full ring-2 ring-white"></span>
+</div>
+<span class="mt-1.5 text-[11px] font-medium text-slate-700 tracking-tight line-clamp-1 leading-tight group-hover:text-slate-900">Downloads</span>
+</button>
+<!-- 6. Incognito -->
+<button class="group flex flex-col items-center text-center focus:outline-none" type="button">
+<div class="w-12 h-12 rounded-2xl bg-slate-100/90 text-slate-700 flex items-center justify-center transition-all duration-150 group-hover:bg-slate-200/80 group-active:scale-95 shadow-sm border border-slate-200/60">
+<svg class="w-5 h-5 stroke-slate-800 fill-none" stroke-width="2" viewBox="0 0 24 24">
+<path d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" stroke-linecap="round" stroke-linejoin="round"></path>
+</svg>
+</div>
+<span class="mt-1.5 text-[11px] font-medium text-slate-700 tracking-tight line-clamp-1 leading-tight group-hover:text-slate-900">Incognito</span>
+</button>
+<!-- 7. Find in page -->
+<button class="group flex flex-col items-center text-center focus:outline-none" type="button">
+<div class="w-12 h-12 rounded-2xl bg-slate-100/90 text-slate-700 flex items-center justify-center transition-all duration-150 group-hover:bg-slate-200/80 group-active:scale-95 shadow-sm border border-slate-200/60">
+<svg class="w-5 h-5 stroke-slate-800 fill-none" stroke-width="2.3" viewBox="0 0 24 24">
+<circle cx="11" cy="11" r="7"></circle>
+<line stroke-linecap="round" x1="21" x2="16.65" y1="21" y2="16.65"></line>
+</svg>
+</div>
+<span class="mt-1.5 text-[11px] font-medium text-slate-700 tracking-tight line-clamp-1 leading-tight group-hover:text-slate-900">Find in page</span>
+</button>
+<!-- 8. Share -->
+<button class="group flex flex-col items-center text-center focus:outline-none" type="button">
+<div class="w-12 h-12 rounded-2xl bg-slate-100/90 text-slate-700 flex items-center justify-center transition-all duration-150 group-hover:bg-slate-200/80 group-active:scale-95 shadow-sm border border-slate-200/60">
+<svg class="w-5 h-5 stroke-slate-800 fill-none" stroke-width="2.2" viewBox="0 0 24 24">
+<circle cx="18" cy="5" r="3"></circle>
+<circle cx="6" cy="12" r="3"></circle>
+<circle cx="18" cy="19" r="3"></circle>
+<line x1="8.59" x2="15.42" y1="13.51" y2="17.49"></line>
+<line x1="15.41" x2="8.59" y1="6.51" y2="10.49"></line>
+</svg>
+</div>
+<span class="mt-1.5 text-[11px] font-medium text-slate-700 tracking-tight line-clamp-1 leading-tight group-hover:text-slate-900">Share</span>
+</button>
+<!-- 9. Split screen -->
+<button class="group flex flex-col items-center text-center focus:outline-none" type="button">
+<div class="w-12 h-12 rounded-2xl bg-slate-100/90 text-slate-700 flex items-center justify-center transition-all duration-150 group-hover:bg-slate-200/80 group-active:scale-95 shadow-sm border border-slate-200/60">
+<svg class="w-5 h-5 stroke-slate-800 fill-none" stroke-width="2" viewBox="0 0 24 24">
+<rect height="18" rx="1.5" width="8" x="3" y="3"></rect>
+<rect height="18" rx="1.5" width="8" x="13" y="3"></rect>
+</svg>
+</div>
+<span class="mt-1.5 text-[11px] font-medium text-slate-700 tracking-tight line-clamp-1 leading-tight group-hover:text-slate-900">Split screen</span>
+</button>
+<!-- 10. Settings (Highlighted Accent) -->
+<button class="group flex flex-col items-center text-center focus:outline-none" type="button">
+<div class="w-12 h-12 rounded-2xl bg-sky-50 text-sky-600 flex items-center justify-center transition-all duration-150 group-hover:bg-sky-100/80 group-active:scale-95 shadow-sm border border-sky-200/80">
+<svg class="w-5 h-5 stroke-sky-600 fill-none animate-spin-slow" stroke-linecap="round" stroke-linejoin="round" stroke-width="2.2" viewBox="0 0 24 24">
+<circle cx="12" cy="12" r="3"></circle>
+<path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"></path>
+</svg>
+</div>
+<span class="mt-1.5 text-[11px] font-semibold text-sky-600 tracking-tight line-clamp-1 leading-tight">Settings</span>
+</button>
+</div>
+<!-- END: ToolGrid -->
+<!-- BEGIN: PaginationDots -->
+<div class="w-full flex justify-center items-center gap-1.5 pt-1 pb-3" data-purpose="pagination-indicator">
+<span class="w-4 h-1.5 rounded-full bg-sky-500 transition-all"></span>
+<span class="w-1.5 h-1.5 rounded-full bg-slate-300"></span>
+</div>
+<!-- END: PaginationDots -->
+<!-- BEGIN: BottomUtilityRow -->
+<footer class="w-full pt-3 border-t border-slate-200/80 flex items-center justify-between px-2" data-purpose="bottom-sheet-utility-bar">
+<!-- Power / Close Session Button -->
+<button aria-label="Power and Close Session" class="w-9 h-9 rounded-full bg-slate-100 text-slate-600 hover:text-red-500 hover:bg-red-50 flex items-center justify-center transition border border-slate-200/70 active:scale-95 shadow-sm" type="button">
+<svg class="w-4 h-4 stroke-current" fill="none" stroke-linecap="round" stroke-width="2.2" viewBox="0 0 24 24">
+<path d="M18.36 6.64a9 9 0 1 1-12.73 0M12 2v10"></path>
+</svg>
+</button>
+<!-- Waveguard Security Shield Mini pill -->
+<div class="flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-slate-100/90 border border-slate-200/80 shadow-sm text-slate-700"><svg class="w-3.5 h-3.5 text-emerald-600 shrink-0" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z" stroke-linecap="round" stroke-linejoin="round"></path></svg><span class="text-[11px] font-semibold text-slate-800 tracking-tight">Waveguard</span><span class="text-[11px] text-slate-400 font-normal">•</span><span class="text-[11px] font-medium text-emerald-600">142 blocked</span></div>
+<!-- Sheet Dismiss / Collapse Chevron -->
+<button aria-label="Collapse Menu" class="w-9 h-9 rounded-full bg-slate-100 text-slate-600 hover:text-slate-900 hover:bg-slate-200/70 flex items-center justify-center transition border border-slate-200/70 active:scale-95 shadow-sm" type="button">
+<svg class="w-4 h-4 stroke-current" fill="none" stroke-linecap="round" stroke-width="2.5" viewBox="0 0 24 24">
+<path d="M19 9l-7 7-7-7"></path>
+</svg>
+</button>
+</footer>
+<!-- END: BottomUtilityRow -->
+<!-- iOS Home Gesture Bar -->
+<div class="w-full flex justify-center pt-3">
+<div class="w-32 h-1 bg-slate-400/80 rounded-full"></div>
+</div>
+</section>
+<!-- END: BottomSheetMenuContainer -->
+<!-- BEGIN: FloatingCaspianButton -->
+<!-- Floating Caspian Wave Action Button adapted for Light theme -->
+
+<!-- END: FloatingCaspianButton -->
+</div>
+<!-- END: MobileDeviceFrame -->
+
+
+
+
+</body></html>
