@@ -1007,6 +1007,18 @@
           </div>
           <button id="btn-reset-menu-grid" class="btn-clean" style="padding: 6px 14px; font-size: 11px; font-weight: 600; border-radius: 8px; background: rgba(56, 189, 248, 0.12); color: #38bdf8; border: 1px solid rgba(56, 189, 248, 0.3); cursor: pointer;">Reset Layout</button>
         </div>
+
+        <!-- Tab Strip Capsule Setting (default ON) -->
+        <div class="setting-row" style="margin-top: 12px;">
+          <div>
+            <div class="setting-label">Tab Strip Capsule</div>
+            <div class="setting-desc" style="font-size: 10.5px; color: var(--text-muted);">Keep the horizontal tab strip capsule visible</div>
+          </div>
+          <div class="mode-pill-toggle">
+            <button id="tab-strip-toggle-on" class="mode-pill active" data-state="on">On</button>
+            <button id="tab-strip-toggle-off" class="mode-pill" data-state="off">Off</button>
+          </div>
+        </div>
       </div>
 
       <!-- Visuals & Animations Card -->
@@ -1978,13 +1990,16 @@
       style="width: 100%; max-width: 360px; max-height: 85vh; display: flex; flex-direction: column; background: var(--bg-card); border: 1px solid var(--border-glass); border-radius: 26px; padding: 22px; box-shadow: 0 20px 50px rgba(0,0,0,0.4); animation: caskModalIn 0.25s cubic-bezier(0.16, 1, 0.3, 1);">
       <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 12px;">
         <div style="display: flex; align-items: center; gap: 10px;">
-          <div
-            style="width: 38px; height: 38px; border-radius: 12px; background: rgba(0,229,255,0.12); border: 1px solid var(--accent, #00e5ff); display: flex; align-items: center; justify-content: center; font-size: 20px;">
-            🚀
+          <div id="update-status-icon-badge"
+            style="position: relative; width: 44px; height: 44px; border-radius: 14px; background: rgba(0,229,255,0.12); border: 1.5px solid var(--accent, #00e5ff); display: flex; align-items: center; justify-content: center; cursor: pointer; flex-shrink: 0; box-shadow: 0 4px 14px rgba(0,229,255,0.2);">
+            <svg id="update-status-ring-svg" style="display: none; position: absolute; inset: 0; width: 44px; height: 44px; transform: rotate(-90deg);" viewBox="0 0 44 44">
+              <circle cx="22" cy="22" r="18" fill="none" stroke="rgba(128,128,128,0.25)" stroke-width="3"></circle>
+              <circle id="update-status-ring-circle" cx="22" cy="22" r="18" fill="none" stroke="var(--accent, #00e5ff)" stroke-width="3" stroke-dasharray="113.1" stroke-dashoffset="113.1" stroke-linecap="round" style="transition: stroke-dashoffset 0.15s ease;"></circle>
+            </svg>
+            <span id="update-status-icon-glyph" style="font-size: 20px; z-index: 1; transition: transform 0.2s ease;">📥</span>
           </div>
           <div>
-            <div id="update-modal-title" style="font-size: 15px; font-weight: 800; color: var(--text-main);">New Update
-              Available</div>
+            <div id="update-modal-title" style="font-size: 15px; font-weight: 800; color: var(--text-main);">New Update Available</div>
             <div id="update-modal-tag" style="font-size: 11px; color: #10b981; font-weight: 700;">v1.1.42-BetaC</div>
           </div>
         </div>

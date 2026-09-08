@@ -1194,7 +1194,7 @@ public class CaspianBridge {
         if (activity != null) {
             return activity.getOmniboxPosition();
         }
-        return "bottom";
+        return "top";
     }
 
     @JavascriptInterface
@@ -1210,6 +1210,21 @@ public class CaspianBridge {
             return activity.getOmniboxMenuStyle();
         }
         return "grid";
+    }
+
+    @JavascriptInterface
+    public void setTabStripEnabled(boolean enabled) {
+        if (activity != null) {
+            activity.runOnUiThread(() -> activity.setTabStripEnabled(enabled));
+        }
+    }
+
+    @JavascriptInterface
+    public boolean isTabStripEnabled() {
+        if (activity != null) {
+            return activity.isTabStripEnabled();
+        }
+        return true;
     }
 
     @JavascriptInterface

@@ -176,18 +176,6 @@
                 android:elevation="60dp"
                 android:visibility="gone">
 
-                <!-- Prefix Add Button -->
-                <ImageButton
-                    android:id="@+id/split_arena_close_btn"
-                    android:layout_width="36dp"
-                    android:layout_height="36dp"
-                    android:background="?attr/selectableItemBackgroundBorderless"
-                    android:src="@drawable/ic_arena_plus"
-                    android:tint="#BAC9CC"
-                    android:padding="8dp"
-                    android:scaleType="fitCenter"
-                    android:contentDescription="Options" />
-
                 <!-- Input Field -->
                 <EditText
                     android:id="@+id/split_arena_input"
@@ -202,20 +190,33 @@
                     android:singleLine="true"
                     android:imeOptions="actionSend"
                     android:inputType="textShortMessage|textAutoCorrect"
-                    android:paddingStart="8dp"
+                    android:paddingStart="12dp"
                     android:paddingEnd="8dp" />
 
                 <!-- Upward Arrow Send Button -->
                 <ImageButton
                     android:id="@+id/split_arena_send_btn"
-                    android:layout_width="40dp"
-                    android:layout_height="40dp"
+                    android:layout_width="38dp"
+                    android:layout_height="38dp"
                     android:background="@drawable/bg_arena_send_circle"
                     android:src="@drawable/ic_pod_arrow_up"
                     android:tint="#FFFFFF"
                     android:padding="8dp"
                     android:scaleType="fitCenter"
                     android:contentDescription="Broadcast Prompt" />
+
+                <!-- Cross Close Button on Right (Closes the capsule) -->
+                <ImageButton
+                    android:id="@+id/split_arena_close_btn"
+                    android:layout_width="36dp"
+                    android:layout_height="36dp"
+                    android:layout_marginStart="4dp"
+                    android:background="?attr/selectableItemBackgroundBorderless"
+                    android:src="@drawable/ic_pod_close"
+                    android:tint="#BAC9CC"
+                    android:padding="8dp"
+                    android:scaleType="fitCenter"
+                    android:contentDescription="Close Capsule" />
             </LinearLayout>
         </FrameLayout>
         <!-- Floating Glass Omnibox Suggestions & Clipboard Dropdown -->
@@ -343,6 +344,47 @@
                             android:orientation="horizontal"
                             android:gravity="center_vertical" />
                     </HorizontalScrollView>
+
+                    <!-- Undo Closed Tab Capsule Button (Pops up for 30s when tab is closed) -->
+                    <FrameLayout
+                        android:id="@+id/btn_omnibox_undo_close_tab"
+                        android:layout_width="wrap_content"
+                        android:layout_height="32dp"
+                        android:layout_marginStart="4dp"
+                        android:layout_marginEnd="2dp"
+                        android:paddingStart="9dp"
+                        android:paddingEnd="9dp"
+                        android:background="@drawable/bg_stitch_history_entry"
+                        android:visibility="gone"
+                        android:clickable="true"
+                        android:focusable="true">
+
+                        <LinearLayout
+                            android:layout_width="wrap_content"
+                            android:layout_height="match_parent"
+                            android:gravity="center"
+                            android:orientation="horizontal">
+
+                            <TextView
+                                android:id="@+id/icon_omnibox_undo_close"
+                                android:layout_width="wrap_content"
+                                android:layout_height="wrap_content"
+                                android:text="↶"
+                                android:textColor="#00E5FF"
+                                android:textSize="13sp"
+                                android:textStyle="bold" />
+
+                            <TextView
+                                android:id="@+id/text_omnibox_undo_close"
+                                android:layout_width="wrap_content"
+                                android:layout_height="wrap_content"
+                                android:layout_marginStart="4dp"
+                                android:text="Undo"
+                                android:textColor="#00E5FF"
+                                android:textSize="11sp"
+                                android:textStyle="bold" />
+                        </LinearLayout>
+                    </FrameLayout>
 
                     <!-- Add New Tab Button at Far Right (Circular pill) -->
                     <FrameLayout

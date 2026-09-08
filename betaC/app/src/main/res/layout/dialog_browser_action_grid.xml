@@ -67,7 +67,7 @@
             android:paddingEnd="9dp"
             android:paddingTop="3dp"
             android:paddingBottom="3dp"
-            android:text="v1.2.41-BetaC"
+            android:text="v1.2.43-BetaC"
             android:textColor="#38BDF8"
             android:textSize="10.5sp"
             android:textStyle="bold"
@@ -189,7 +189,7 @@
                         android:layout_width="wrap_content"
                         android:layout_height="wrap_content"
                         android:layout_marginTop="5dp"
-                        android:text="Bookmarks"
+                        android:text="Save Bookmark"
                         android:textColor="#DFE2F0"
                         android:textSize="10.5sp"
                         android:singleLine="true" />
@@ -775,6 +775,39 @@
                             android:textColor="#38BDF8"
                             android:textSize="10.5sp"
                             android:textStyle="bold"
+                            android:singleLine="true" />
+                    </LinearLayout>
+
+                    <!-- 8. View Bookmarks -->
+                    <LinearLayout
+                        android:id="@+id/tile_view_bookmarks"
+                        android:layout_width="0dp"
+                        android:layout_height="wrap_content"
+                        android:gravity="center"
+                        android:orientation="vertical"
+                        android:clickable="true"
+                        android:focusable="true">
+                        <FrameLayout
+                            android:id="@+id/squircle_view_bookmarks"
+                            android:layout_width="48dp"
+                            android:layout_height="48dp"
+                            android:background="@drawable/bg_stitch_squircle">
+                            <ImageView
+                                android:id="@+id/icon_view_bookmarks"
+                                android:layout_width="22dp"
+                                android:layout_height="22dp"
+                                android:layout_gravity="center"
+                                android:src="@drawable/ic_menu_bookmark"
+                                android:tint="#38BDF8" />
+                        </FrameLayout>
+                        <TextView
+                            android:id="@+id/text_view_bookmarks"
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:layout_marginTop="5dp"
+                            android:text="Bookmarks"
+                            android:textColor="#DFE2F0"
+                            android:textSize="10.5sp"
                             android:singleLine="true" />
                     </LinearLayout>
                 </TableRow>

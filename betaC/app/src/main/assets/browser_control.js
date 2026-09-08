@@ -240,6 +240,90 @@
 
   let latestUpdateInfo = null;
 
+  let updateDownloadState = 'NOT_INSTALLED'; // 'NOT_INSTALLED' | 'DOWNLOADING' | 'PAUSED' | 'DOWNLOADED'
+
+  function setUpdateModalState(state, percent = 0) {
+    updateDownloadState = state;
+    const ringSvg = document.getElementById('update-status-ring-svg');
+    const ringCircle = document.getElementById('update-status-ring-circle');
+    const glyph = document.getElementById('update-status-icon-glyph');
+    const badge = document.getElementById('update-status-icon-badge');
+    const actionBtn = document.getElementById('update-modal-action-btn');
+    const progressContainer = document.getElementById('update-progress-container');
+
+    const totalCircumference = 113.1;
+
+    if (state === 'NOT_INSTALLED') {
+      if (ringSvg) ringSvg.style.display = 'none';
+      if (glyph) {
+        glyph.textContent = '📥';
+        glyph.style.fontSize = '20px';
+      }
+      if (badge) {
+        badge.style.background = 'rgba(0,229,255,0.12)';
+        badge.style.borderColor = 'var(--accent, #00e5ff)';
+      }
+      if (progressContainer) progressContainer.style.display = 'none';
+      if (actionBtn) {
+        actionBtn.disabled = false;
+        actionBtn.innerHTML = '<span>📥 Download & Install</span>';
+      }
+    } else if (state === 'DOWNLOADING') {
+      if (ringSvg) ringSvg.style.display = 'block';
+      if (ringCircle) {
+        const offset = totalCircumference * (1 - Math.max(0, Math.min(100, percent)) / 100);
+        ringCircle.style.strokeDashoffset = offset;
+        ringCircle.style.stroke = 'var(--accent, #00e5ff)';
+      }
+      if (glyph) {
+        glyph.textContent = '⏸';
+        glyph.style.fontSize = '14px';
+      }
+      if (badge) {
+        badge.style.background = 'rgba(0,229,255,0.18)';
+        badge.style.borderColor = 'rgba(0,229,255,0.4)';
+      }
+      if (progressContainer) progressContainer.style.display = 'block';
+      if (actionBtn) {
+        actionBtn.disabled = false;
+        actionBtn.innerHTML = `<span>⏳ Downloading (${percent}%)</span>`;
+      }
+    } else if (state === 'PAUSED') {
+      if (ringSvg) ringSvg.style.display = 'block';
+      if (glyph) {
+        glyph.textContent = '▶️';
+        glyph.style.fontSize = '14px';
+      }
+      if (badge) {
+        badge.style.background = 'rgba(251,191,36,0.18)';
+        badge.style.borderColor = '#fbbf24';
+      }
+      if (actionBtn) {
+        actionBtn.disabled = false;
+        actionBtn.innerHTML = '<span>▶️ Resume Download</span>';
+      }
+    } else if (state === 'DOWNLOADED') {
+      if (ringSvg) ringSvg.style.display = 'block';
+      if (ringCircle) {
+        ringCircle.style.strokeDashoffset = '0';
+        ringCircle.style.stroke = '#10b981';
+      }
+      if (glyph) {
+        glyph.textContent = '📲';
+        glyph.style.fontSize = '20px';
+      }
+      if (badge) {
+        badge.style.background = 'rgba(16,185,129,0.18)';
+        badge.style.borderColor = '#10b981';
+      }
+      if (progressContainer) progressContainer.style.display = 'none';
+      if (actionBtn) {
+        actionBtn.disabled = false;
+        actionBtn.innerHTML = '<span>🚀 Install Now</span>';
+      }
+    }
+  }
+
   function showUpdateModal(info) {
     if (!info) return;
     const modal = document.getElementById('caspian-update-modal');
@@ -258,15 +342,7 @@
       changelogEl.innerHTML = formatMarkdown(info.changelogBody || 'No release notes provided.');
     }
 
-    const progressContainer = document.getElementById('update-progress-container');
-    if (progressContainer) progressContainer.style.display = 'none';
-
-    const actionBtn = document.getElementById('update-modal-action-btn');
-    if (actionBtn) {
-      actionBtn.disabled = false;
-      actionBtn.innerHTML = '<span>🚀 Update & Install</span>';
-    }
-
+    setUpdateModalState('NOT_INSTALLED');
     modal.style.display = 'flex';
   }
 
@@ -337,8 +413,7 @@
   };
 
   window.onUpdateDownloadProgress = function (percent, downloadedBytes, totalBytes) {
-    const progressContainer = document.getElementById('update-progress-container');
-    if (progressContainer) progressContainer.style.display = 'block';
+    setUpdateModalState('DOWNLOADING', percent);
 
     const percentEl = document.getElementById('update-progress-percent');
     if (percentEl) percentEl.textContent = (percent >= 0 ? percent : 0) + '%';
@@ -353,24 +428,46 @@
   };
 
   window.onUpdateDownloadComplete = function (initiated) {
+    setUpdateModalState('DOWNLOADED', 100);
     const textEl = document.getElementById('update-progress-text');
     if (textEl) textEl.textContent = '✅ Download complete! Prompting installer...';
-    const actionBtn = document.getElementById('update-modal-action-btn');
-    if (actionBtn) {
-      actionBtn.innerHTML = '<span>✅ Ready to Install</span>';
-      actionBtn.disabled = true;
-    }
   };
 
   window.onUpdateDownloadError = function (err) {
+    setUpdateModalState('NOT_INSTALLED');
     const textEl = document.getElementById('update-progress-text');
-    if (textEl) textEl.textContent = '❌ Download failed: ' + err;
-    const actionBtn = document.getElementById('update-modal-action-btn');
-    if (actionBtn) {
-      actionBtn.innerHTML = '<span>Retry Download</span>';
-      actionBtn.disabled = false;
+    if (textEl) {
+      textEl.textContent = '❌ Download failed: ' + err;
+      const progressContainer = document.getElementById('update-progress-container');
+      if (progressContainer) progressContainer.style.display = 'block';
     }
   };
+
+  function triggerUpdateDownloadOrInstall() {
+    if (!latestUpdateInfo || !latestUpdateInfo.apkDownloadUrl) {
+      if (window.CaspianBridge && typeof window.CaspianBridge.showToast === 'function') {
+        window.CaspianBridge.showToast('No APK download URL found.');
+      }
+      return;
+    }
+    try { playSFX('tb_clicks'); } catch (e) { }
+
+    if (updateDownloadState === 'DOWNLOADING') {
+      // Pause
+      setUpdateModalState('PAUSED');
+      if (window.CaspianBridge && typeof window.CaspianBridge.showToast === 'function') {
+        window.CaspianBridge.showToast('Download paused');
+      }
+      return;
+    }
+
+    if (updateDownloadState === 'NOT_INSTALLED' || updateDownloadState === 'PAUSED' || updateDownloadState === 'DOWNLOADED') {
+      setUpdateModalState('DOWNLOADING', 0);
+      if (window.CaspianBridge && typeof window.CaspianBridge.downloadAndInstallUpdate === 'function') {
+        window.CaspianBridge.downloadAndInstallUpdate(latestUpdateInfo.apkDownloadUrl, latestUpdateInfo.apkFileName);
+      }
+    }
+  }
 
   // Immediate Setup for Updater UI listeners
   setTimeout(() => {
@@ -388,24 +485,14 @@
       });
     }
 
+    const updateBadge = document.getElementById('update-status-icon-badge');
+    if (updateBadge) {
+      updateBadge.addEventListener('click', triggerUpdateDownloadOrInstall);
+    }
+
     const updateActionBtn = document.getElementById('update-modal-action-btn');
     if (updateActionBtn) {
-      updateActionBtn.addEventListener('click', () => {
-        if (!latestUpdateInfo || !latestUpdateInfo.apkDownloadUrl) {
-          if (window.CaspianBridge && typeof window.CaspianBridge.showToast === 'function') {
-            window.CaspianBridge.showToast('No APK download URL found.');
-          }
-          return;
-        }
-        try {
-          playSFX('tb_clicks');
-        } catch (e) { }
-        updateActionBtn.disabled = true;
-        updateActionBtn.innerHTML = '<span>⏳ Downloading...</span>';
-        if (window.CaspianBridge && typeof window.CaspianBridge.downloadAndInstallUpdate === 'function') {
-          window.CaspianBridge.downloadAndInstallUpdate(latestUpdateInfo.apkDownloadUrl, latestUpdateInfo.apkFileName);
-        }
-      });
+      updateActionBtn.addEventListener('click', triggerUpdateDownloadOrInstall);
     }
 
     const closeUpdateModalBtn = document.getElementById('close-update-modal-btn');
@@ -2323,13 +2410,13 @@
   const menuStyleGrid = document.getElementById('menu-style-grid');
 
   function updateOmniboxCustomizationUI() {
-    let currentPos = 'bottom';
+    let currentPos = 'top';
     let currentStyle = 'grid';
 
     if (window.CaspianBridge && typeof window.CaspianBridge.getOmniboxPosition === 'function') {
-      try { currentPos = window.CaspianBridge.getOmniboxPosition() || 'bottom'; } catch (e) {}
+      try { currentPos = window.CaspianBridge.getOmniboxPosition() || 'top'; } catch (e) {}
     } else {
-      currentPos = localStorage.getItem('omnibox_position') || 'bottom';
+      currentPos = localStorage.getItem('omnibox_position') || 'top';
     }
 
     if (window.CaspianBridge && typeof window.CaspianBridge.getOmniboxMenuStyle === 'function') {
@@ -2385,6 +2472,37 @@
     });
   }
   updateOmniboxCustomizationUI();
+
+  // Tab Strip Capsule Setting Toggle
+  const tabStripToggleOn = document.getElementById('tab-strip-toggle-on');
+  const tabStripToggleOff = document.getElementById('tab-strip-toggle-off');
+
+  function updateTabStripSettingUI() {
+    let enabled = true;
+    if (window.CaspianBridge && typeof window.CaspianBridge.isTabStripEnabled === 'function') {
+      try { enabled = window.CaspianBridge.isTabStripEnabled(); } catch (e) {}
+    } else {
+      enabled = localStorage.getItem('tab_strip_enabled') !== 'false';
+    }
+    if (tabStripToggleOn) tabStripToggleOn.classList.toggle('active', enabled);
+    if (tabStripToggleOff) tabStripToggleOff.classList.toggle('active', !enabled);
+  }
+
+  function setTabStripSetting(enabled) {
+    try { playSFX('tm_header'); } catch (e) {}
+    localStorage.setItem('tab_strip_enabled', enabled ? 'true' : 'false');
+    if (window.CaspianBridge && typeof window.CaspianBridge.setTabStripEnabled === 'function') {
+      window.CaspianBridge.setTabStripEnabled(enabled);
+    }
+    updateTabStripSettingUI();
+    if (window.CaspianBridge && typeof window.CaspianBridge.showToast === 'function') {
+      window.CaspianBridge.showToast('Tab strip ' + (enabled ? 'enabled' : 'hidden'));
+    }
+  }
+
+  if (tabStripToggleOn) tabStripToggleOn.addEventListener('click', () => setTabStripSetting(true));
+  if (tabStripToggleOff) tabStripToggleOff.addEventListener('click', () => setTabStripSetting(false));
+  updateTabStripSettingUI();
 
 
   // Resizable Drag Area Hitbox

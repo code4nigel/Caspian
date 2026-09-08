@@ -10,8 +10,8 @@ android {
         applicationId = "com.caspian.betac"
         minSdk = 24
         targetSdk = 34
-        versionCode = 152
-        versionName = "1.2.41-BetaC"
+        versionCode = 154
+        versionName = "1.2.43-BetaC"
     }
 
     buildTypes {
@@ -42,6 +42,8 @@ dependencies {
     implementation("androidx.browser:browser:1.8.0")
     implementation("androidx.webkit:webkit:1.13.0")
     implementation("androidx.cardview:cardview:1.0.0")
+    implementation("androidx.documentfile:documentfile:1.0.1")
     implementation("androidx.media:media:1.7.0")
     implementation("com.google.android.gms:play-services-mlkit-text-recognition:19.0.0")
 }
+

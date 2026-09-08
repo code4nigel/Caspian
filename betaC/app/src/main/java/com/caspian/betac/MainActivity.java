@@ -286,8 +286,16 @@ public class MainActivity extends AppCompatActivity {
     private ImageButton omniboxBackBtn;
     private ImageButton omniboxForwardBtn;
     private boolean isDarkTheme = true;
-    private String omniboxPosition = "bottom";
+    private String omniboxPosition = "top";
     private String omniboxMenuStyle = "grid";
+    private boolean isTabStripEnabled = true;
+
+    private View btnOmniboxUndoCloseTab;
+    private TextView iconOmniboxUndoClose;
+    private TextView textOmniboxUndoClose;
+    private final Handler tabStripUndoHandler = new Handler(Looper.getMainLooper());
+    private final Runnable tabStripUndoDismissRunnable = this::dismissTabStripUndoButton;
+    private BookmarkManager bookmarkManager;
     
     private LinearLayout omniboxUrlContainer;
     private FrameLayout omniboxShieldBtn;
@@ -570,6 +578,9 @@ public class MainActivity extends AppCompatActivity {
     private ValueCallback<Uri[]> uploadMessage;
     private final static int FILECHOOSER_RESULTCODE = 1;
     private final static int REQUEST_CODE_PDF_PICKER = 9182;
+    private final static int REQUEST_CODE_EXPORT_BOOKMARKS_TREE = 9410;
+    private final static int REQUEST_CODE_IMPORT_BOOKMARKS_FILE = 9411;
+    private Runnable currentBookmarksRefreshRunnable = null;
     private Uri cameraCapturedUri = null;
     private PermissionRequest pendingWebPermissionRequest = null;
     private static final int WEBVIEW_PERMISSION_REQUEST_CODE = 9021;
@@ -599,6 +610,7 @@ public class MainActivity extends AppCompatActivity {
         try { bindViews(); } catch (Throwable ignored) {}
         try { loadPodPreferences(); } catch (Throwable ignored) {}
         try { loadTabGroups(); } catch (Throwable ignored) {}
+        try { bookmarkManager = new BookmarkManager(this); } catch (Throwable ignored) {}
         try { initDownloadManager(); } catch (Throwable ignored) {}
 
         try {
@@ -705,6 +717,16 @@ public class MainActivity extends AppCompatActivity {
             for (Uri uri : selectedUris) {
                 openPdfFromUriInNewTab(uri);
             }
+            return;
+        }
+
+        if (requestCode == REQUEST_CODE_EXPORT_BOOKMARKS_TREE && resultCode == RESULT_OK && data != null && data.getData() != null) {
+            handleExportBookmarksToFolder(data.getData());
+            return;
+        }
+
+        if (requestCode == REQUEST_CODE_IMPORT_BOOKMARKS_FILE && resultCode == RESULT_OK && data != null && data.getData() != null) {
+            handleImportBookmarksFromFile(data.getData());
             return;
         }
 
@@ -1641,8 +1663,27 @@ public class MainActivity extends AppCompatActivity {
                     addNewTab("hub", null);
                 });
             }
-            omniboxPosition = getSharedPreferences(PREFS_NAME, MODE_PRIVATE).getString("omnibox_position", "bottom");
+
+            btnOmniboxUndoCloseTab = findViewById(R.id.btn_omnibox_undo_close_tab);
+            iconOmniboxUndoClose = findViewById(R.id.icon_omnibox_undo_close);
+            textOmniboxUndoClose = findViewById(R.id.text_omnibox_undo_close);
+            if (btnOmniboxUndoCloseTab != null) {
+                btnOmniboxUndoCloseTab.setOnClickListener(v -> {
+                    playUiFeedbackSound("tap");
+                    restoreLastClosedTab();
+                    updateOmniboxTabStrip();
+                    if (hasClosedTabsToUndo()) {
+                        tabStripUndoHandler.removeCallbacks(tabStripUndoDismissRunnable);
+                        tabStripUndoHandler.postDelayed(tabStripUndoDismissRunnable, 30000);
+                    } else {
+                        dismissTabStripUndoButton();
+                    }
+                });
+            }
+
+            omniboxPosition = getSharedPreferences(PREFS_NAME, MODE_PRIVATE).getString("omnibox_position", "top");
             omniboxMenuStyle = getSharedPreferences(PREFS_NAME, MODE_PRIVATE).getString("omnibox_menu_style", "grid");
+            isTabStripEnabled = getSharedPreferences(PREFS_NAME, MODE_PRIVATE).getBoolean("tab_strip_enabled", true);
             omniboxHeader = findViewById(R.id.omnibox_header);
             omniboxCapsule = findViewById(R.id.omnibox_capsule);
             omniboxBackBtn = findViewById(R.id.omnibox_back_btn);
@@ -7194,6 +7235,7 @@ public class MainActivity extends AppCompatActivity {
         tileMap.put("print", dialogView.findViewById(R.id.tile_print));
         tileMap.put("shield", dialogView.findViewById(R.id.tile_shield));
         tileMap.put("clear_data", dialogView.findViewById(R.id.tile_clear_data));
+        tileMap.put("view_bookmarks", dialogView.findViewById(R.id.tile_view_bookmarks));
         tileMap.put("edit_layout", dialogView.findViewById(R.id.tile_edit_layout));
 
         // Detach tiles from static layout to dynamically order into pages
@@ -7261,7 +7303,20 @@ public class MainActivity extends AppCompatActivity {
         if (tileBookmarks != null) {
             tileBookmarks.setOnClickListener(v -> {
                 dialog.dismiss();
-                Toast.makeText(this, "🔖 Page saved to Bookmarks!", Toast.LENGTH_SHORT).show();
+                if (bookmarkManager == null) bookmarkManager = new BookmarkManager(this);
+                if (currentTab != null) {
+                    String url = (currentTab.url != null && !currentTab.url.isEmpty()) ? currentTab.url : (currentTab.webView != null ? currentTab.webView.getUrl() : "");
+                    String title = (currentTab.title != null && !currentTab.title.isEmpty()) ? currentTab.title : "New Bookmark";
+                    bookmarkManager.addBookmark(title, url, "Default", "");
+                }
+                Toast.makeText(this, "💾 Page saved to Bookmarks!", Toast.LENGTH_SHORT).show();
+            });
+        }
+        View tileViewBookmarks = tileMap.get("view_bookmarks");
+        if (tileViewBookmarks != null) {
+            tileViewBookmarks.setOnClickListener(v -> {
+                dialog.dismiss();
+                showBookmarksDialog();
             });
         }
         View tileHistory = tileMap.get("history");
@@ -7335,7 +7390,7 @@ public class MainActivity extends AppCompatActivity {
         if (tileDualAi != null) {
             tileDualAi.setOnClickListener(v -> {
                 dialog.dismiss();
-                cycleSplitViewMode();
+                launchDualAIAsk();
             });
         }
         View tilePdf = tileMap.get("pdf");
@@ -7628,7 +7683,7 @@ public class MainActivity extends AppCompatActivity {
                         R.id.squircle_history, R.id.squircle_downloads, R.id.squircle_incognito,
                         R.id.squircle_find, R.id.squircle_share, R.id.squircle_split,
                         R.id.squircle_pdf, R.id.squircle_print,
-                        R.id.squircle_new_tab, R.id.squircle_edit_layout
+                        R.id.squircle_new_tab, R.id.squircle_view_bookmarks, R.id.squircle_edit_layout
                 };
                 for (int id : squircles) {
                     View sq = root.findViewById(id);
@@ -7692,7 +7747,7 @@ public class MainActivity extends AppCompatActivity {
                         R.id.icon_desktop_site, R.id.icon_bookmarks, R.id.icon_history,
                         R.id.icon_downloads, R.id.icon_incognito, R.id.icon_find,
                         R.id.icon_share, R.id.icon_split,
-                        R.id.icon_new_tab, R.id.icon_print
+                        R.id.icon_new_tab, R.id.icon_print, R.id.icon_view_bookmarks
                 };
                 for (int id : tileIcons) {
                     ImageView iv = root.findViewById(id);
@@ -7724,7 +7779,7 @@ public class MainActivity extends AppCompatActivity {
                         R.id.text_history, R.id.text_downloads, R.id.text_incognito,
                         R.id.text_find, R.id.text_share, R.id.text_split,
                         R.id.text_pdf, R.id.text_print,
-                        R.id.text_new_tab, R.id.text_edit_layout
+                        R.id.text_new_tab, R.id.text_view_bookmarks, R.id.text_edit_layout
                 };
                 for (int id : tileLabels) {
                     TextView tv = root.findViewById(id);
@@ -7882,7 +7937,7 @@ public class MainActivity extends AppCompatActivity {
                         R.id.squircle_find, R.id.squircle_share, R.id.squircle_split,
                         R.id.squircle_pdf, R.id.squircle_print,
                         R.id.squircle_new_tab, R.id.squircle_shield, R.id.squircle_clear_data,
-                        R.id.squircle_edit_layout
+                        R.id.squircle_view_bookmarks, R.id.squircle_edit_layout
                 };
                 for (int id : squircles) {
                     View sq = root.findViewById(id);
@@ -7900,7 +7955,7 @@ public class MainActivity extends AppCompatActivity {
                         R.id.icon_desktop_site, R.id.icon_bookmarks, R.id.icon_history,
                         R.id.icon_downloads, R.id.icon_incognito, R.id.icon_find,
                         R.id.icon_share, R.id.icon_split,
-                        R.id.icon_new_tab, R.id.icon_print
+                        R.id.icon_new_tab, R.id.icon_print, R.id.icon_view_bookmarks
                 };
                 for (int id : tileIcons) {
                     ImageView iv = root.findViewById(id);
@@ -7930,7 +7985,7 @@ public class MainActivity extends AppCompatActivity {
                         R.id.text_history, R.id.text_downloads, R.id.text_incognito,
                         R.id.text_find, R.id.text_share, R.id.text_split,
                         R.id.text_pdf, R.id.text_print,
-                        R.id.text_new_tab, R.id.text_shield, R.id.text_edit_layout
+                        R.id.text_new_tab, R.id.text_shield, R.id.text_view_bookmarks, R.id.text_edit_layout
                 };
                 for (int id : tileLabels) {
                     TextView tv = root.findViewById(id);
@@ -8220,11 +8275,11 @@ public class MainActivity extends AppCompatActivity {
     private static final int CARD_GRID_PAGE_CAPACITY = 10;
 
     private static final List<String> DEFAULT_P1_GRID_KEYS = Arrays.asList(
-            "night_mode", "desktop_site", "bookmarks", "history", "downloads",
-            "incognito", "find", "share", "split", "settings"
+            "night_mode", "pdf", "dual_ai", "new_tab", "desktop_site",
+            "downloads", "find", "shield", "split", "settings"
     );
     private static final List<String> DEFAULT_P2_GRID_KEYS = Arrays.asList(
-            "new_tab", "dual_ai", "pdf", "print", "shield", "clear_data", "edit_layout"
+            "bookmarks", "view_bookmarks", "history", "incognito", "share", "print", "clear_data", "edit_layout"
     );
 
     public void resetCardGridLayout() {
@@ -8232,6 +8287,7 @@ public class MainActivity extends AppCompatActivity {
             try {
                 getSharedPreferences(PREFS_NAME, MODE_PRIVATE)
                         .edit()
+                        .putInt("action_grid_layout_version", 2)
                         .remove("action_grid_pages_json")
                         .remove("action_grid_p1_keys")
                         .remove("action_grid_p2_keys")
@@ -8269,6 +8325,21 @@ public class MainActivity extends AppCompatActivity {
     }
 
     private List<List<String>> getCardGridAllPages() {
+        int layoutVersion = getSharedPreferences(PREFS_NAME, MODE_PRIVATE).getInt("action_grid_layout_version", 0);
+        if (layoutVersion < 2) {
+            getSharedPreferences(PREFS_NAME, MODE_PRIVATE).edit()
+                    .putInt("action_grid_layout_version", 2)
+                    .remove("action_grid_pages_json")
+                    .remove("action_grid_p1_keys")
+                    .remove("action_grid_p2_keys")
+                    .apply();
+            List<List<String>> defaultPages = new ArrayList<>();
+            defaultPages.add(new ArrayList<>(DEFAULT_P1_GRID_KEYS));
+            defaultPages.add(new ArrayList<>(DEFAULT_P2_GRID_KEYS));
+            saveCardGridPages(defaultPages);
+            return defaultPages;
+        }
+
         String json = getSharedPreferences(PREFS_NAME, MODE_PRIVATE)
                 .getString("action_grid_pages_json", null);
         if (json != null && !json.trim().isEmpty()) {
@@ -8309,8 +8380,8 @@ public class MainActivity extends AppCompatActivity {
 
         // Fallback to legacy keys or default
         List<List<String>> defaultPages = new ArrayList<>();
-        defaultPages.add(getCardGridPage1Keys());
-        defaultPages.add(getCardGridPage2Keys());
+        defaultPages.add(new ArrayList<>(DEFAULT_P1_GRID_KEYS));
+        defaultPages.add(new ArrayList<>(DEFAULT_P2_GRID_KEYS));
         return defaultPages;
     }
 
@@ -8342,13 +8413,9 @@ public class MainActivity extends AppCompatActivity {
             List<String> list = new ArrayList<>();
             for (String s : parts) {
                 String trimmed = s.trim();
-                if (!trimmed.isEmpty() && !list.contains(trimmed)
-                        && !trimmed.equals("reload") && !trimmed.equals("reader")
-                        && !trimmed.equals("voice_models") && !trimmed.equals("casks")) {
-                    list.add(trimmed);
-                }
+                if (!trimmed.isEmpty() && !list.contains(trimmed)) list.add(trimmed);
             }
-            if (list.size() == DEFAULT_P1_GRID_KEYS.size()) return list;
+            if (!list.isEmpty()) return list;
         }
         return new ArrayList<>(DEFAULT_P1_GRID_KEYS);
     }
@@ -8361,27 +8428,27 @@ public class MainActivity extends AppCompatActivity {
             List<String> list = new ArrayList<>();
             for (String s : parts) {
                 String trimmed = s.trim();
-                if (!trimmed.isEmpty() && !list.contains(trimmed)
-                        && !trimmed.equals("reload") && !trimmed.equals("reader")
-                        && !trimmed.equals("voice_models") && !trimmed.equals("casks")) {
-                    list.add(trimmed);
-                }
+                if (!trimmed.isEmpty() && !list.contains(trimmed)) list.add(trimmed);
             }
-            if (list.size() == DEFAULT_P2_GRID_KEYS.size()) return list;
+            if (!list.isEmpty()) return list;
         }
         return new ArrayList<>(DEFAULT_P2_GRID_KEYS);
     }
 
-    private void saveCardGridKeys(List<String> p1, List<String> p2) {
+    private void saveCardGridKeys(List<String> page1, List<String> page2) {
         StringBuilder sb1 = new StringBuilder();
-        for (int i = 0; i < p1.size(); i++) {
-            if (i > 0) sb1.append(",");
-            sb1.append(p1.get(i));
+        if (page1 != null) {
+            for (int i = 0; i < page1.size(); i++) {
+                if (i > 0) sb1.append(",");
+                sb1.append(page1.get(i));
+            }
         }
         StringBuilder sb2 = new StringBuilder();
-        for (int i = 0; i < p2.size(); i++) {
-            if (i > 0) sb2.append(",");
-            sb2.append(p2.get(i));
+        if (page2 != null) {
+            for (int i = 0; i < page2.size(); i++) {
+                if (i > 0) sb2.append(",");
+                sb2.append(page2.get(i));
+            }
         }
         getSharedPreferences(PREFS_NAME, MODE_PRIVATE)
                 .edit()
@@ -8396,6 +8463,7 @@ public class MainActivity extends AppCompatActivity {
         int columnsPerRow = 5;
         TableRow currentRow = null;
         int colCount = 0;
+
         for (int i = 0; i < keys.size(); i++) {
             if (i % columnsPerRow == 0) {
                 currentRow = new TableRow(this);
@@ -8431,6 +8499,7 @@ public class MainActivity extends AppCompatActivity {
             case "night_mode": return R.drawable.ic_menu_moon;
             case "desktop_site": return R.drawable.ic_browser_desktop;
             case "bookmarks": return R.drawable.ic_menu_bookmark;
+            case "view_bookmarks": return R.drawable.ic_menu_bookmark;
             case "history": return R.drawable.ic_menu_history;
             case "downloads": return R.drawable.ic_menu_download;
             case "incognito": return R.drawable.ic_menu_incognito;
@@ -8454,7 +8523,8 @@ public class MainActivity extends AppCompatActivity {
         switch (key) {
             case "night_mode": return "Night mode";
             case "desktop_site": return "Desktop";
-            case "bookmarks": return "Bookmarks";
+            case "bookmarks": return "Save Bookmark";
+            case "view_bookmarks": return "Bookmarks";
             case "history": return "History";
             case "downloads": return "Downloads";
             case "incognito": return "Incognito";
@@ -8478,7 +8548,8 @@ public class MainActivity extends AppCompatActivity {
         switch (key) {
             case "night_mode": return "🌙 Night mode";
             case "desktop_site": return "💻 Desktop site";
-            case "bookmarks": return "🔖 Bookmarks";
+            case "bookmarks": return "💾 Save Bookmark";
+            case "view_bookmarks": return "🔖 Bookmarks";
             case "history": return "🕒 History";
             case "downloads": return "⬇️ Downloads";
             case "incognito": return "🕶️ Incognito";
@@ -9322,34 +9393,203 @@ public class MainActivity extends AppCompatActivity {
 
     public void launchDualAIAsk() {
         playUiFeedbackSound("tap");
-        if (splitModeState == 0) {
-            TabItem gptTab = null;
-            TabItem geminiTab = null;
-            for (TabItem t : tabsList) {
-                if (gptTab == null && (t.url.contains("chatgpt.com") || "chatgpt".equalsIgnoreCase(t.service))) gptTab = t;
-                if (geminiTab == null && (t.url.contains("gemini.google.com") || "gemini".equalsIgnoreCase(t.service))) geminiTab = t;
-            }
+        int gptId = nextTabId++;
+        TabItem gptTab = createNewTabInstance(gptId, "https://chatgpt.com", "chatgpt", null, false);
+        gptTab.title = "ChatGPT";
+        tabsList.add(gptTab);
 
-            if (gptTab == null) {
-                int id = nextTabId++;
-                gptTab = createNewTabInstance(id, "https://chatgpt.com", "chatgpt", null, false);
-                gptTab.title = "ChatGPT";
-                tabsList.add(gptTab);
-            }
-            if (geminiTab == null) {
-                int id = nextTabId++;
-                geminiTab = createNewTabInstance(id, "https://gemini.google.com/app", "gemini", null, false);
-                geminiTab.title = "Gemini";
-                tabsList.add(geminiTab);
-            }
-            activeTabId = gptTab.id;
-            secondarySplitTabId = geminiTab.id;
-            splitModeState = 1;
-            splitRatio = 0.5f;
-            applySplitViewLayout();
+        int geminiId = nextTabId++;
+        TabItem geminiTab = createNewTabInstance(geminiId, "https://gemini.google.com/app", "gemini", null, false);
+        geminiTab.title = "Gemini";
+        tabsList.add(geminiTab);
+
+        activeTabId = gptTab.id;
+        secondarySplitTabId = geminiTab.id;
+        splitModeState = 1;
+        splitRatio = 0.5f;
+        applySplitViewLayout();
+        updateOmniboxState();
+        updateOmniboxTabStrip();
+        saveOpenTabsState();
+
+        findViewById(android.R.id.content).postDelayed(() -> {
+            toggleSplitArenaBroadcast(true);
+        }, 300);
+        Toast.makeText(this, "⚡ Dual AI Active!", Toast.LENGTH_SHORT).show();
+    }
+
+    public void showBookmarksDialog() {
+        playUiFeedbackSound("tap");
+        if (bookmarkManager == null) bookmarkManager = new BookmarkManager(this);
+        AlertDialog.Builder builder = new AlertDialog.Builder(this, android.R.style.Theme_Black_NoTitleBar_Fullscreen);
+        View dialogView = getLayoutInflater().inflate(R.layout.dialog_history, null);
+        builder.setView(dialogView);
+        AlertDialog dialog = builder.create();
+        if (dialog.getWindow() != null) {
+            dialog.getWindow().setBackgroundDrawable(new ColorDrawable(isDarkTheme ? 0xFF0A0E17 : 0xFFF8FAFC));
         }
-        toggleSplitArenaBroadcast(true);
-        Toast.makeText(this, "⚡ Dual AI Ask Active!", Toast.LENGTH_SHORT).show();
+        dialogView.setBackgroundColor(isDarkTheme ? 0xFF0A0E17 : 0xFFF8FAFC);
+
+        TextView tabBookmarks = dialogView.findViewById(R.id.tab_header_bookmarks);
+        TextView tabHistory = dialogView.findViewById(R.id.history_tab_capsule_text);
+        TextView badgeCount = dialogView.findViewById(R.id.badge_history_count);
+        TextView tabSettings = dialogView.findViewById(R.id.tab_header_settings);
+        EditText searchInput = dialogView.findViewById(R.id.history_search_input);
+        ImageView closeBtn = dialogView.findViewById(R.id.history_close_btn);
+        LinearLayout historyListContainer = dialogView.findViewById(R.id.history_list_container);
+        View emptyState = dialogView.findViewById(R.id.history_empty_view);
+        View timeRangeBar = dialogView.findViewById(R.id.history_bottom_toolbar);
+        View chipAll = dialogView.findViewById(R.id.chip_filter_all);
+
+        if (timeRangeBar != null) timeRangeBar.setVisibility(View.GONE);
+        if (chipAll != null && chipAll.getParent() instanceof View) ((View) chipAll.getParent()).setVisibility(View.GONE);
+        if (tabHistory != null) tabHistory.setText("Bookmarks");
+        if (tabBookmarks != null) tabBookmarks.setText("History");
+
+        if (tabBookmarks != null) {
+            tabBookmarks.setOnClickListener(v -> {
+                dialog.dismiss();
+                showHistoryDialog();
+            });
+        }
+        if (tabSettings != null) {
+            tabSettings.setOnClickListener(v -> {
+                dialog.dismiss();
+                openControlSheet();
+            });
+        }
+        if (closeBtn != null) {
+            closeBtn.setOnClickListener(v -> dialog.dismiss());
+        }
+
+        Runnable refreshBookmarks = () -> {
+            if (historyListContainer == null) return;
+            historyListContainer.removeAllViews();
+            List<BookmarkManager.BookmarkItem> bms = bookmarkManager.getAllBookmarks();
+            String q = searchInput != null ? searchInput.getText().toString().trim().toLowerCase() : "";
+            List<BookmarkManager.BookmarkItem> filtered = new ArrayList<>();
+            for (BookmarkManager.BookmarkItem b : bms) {
+                if (q.isEmpty() || (b.title != null && b.title.toLowerCase().contains(q)) || (b.url != null && b.url.toLowerCase().contains(q))) {
+                    filtered.add(b);
+                }
+            }
+            if (badgeCount != null) badgeCount.setText(String.valueOf(filtered.size()));
+            if (emptyState != null) emptyState.setVisibility(filtered.isEmpty() ? View.VISIBLE : View.GONE);
+
+            for (BookmarkManager.BookmarkItem item : filtered) {
+                LinearLayout card = new LinearLayout(this);
+                card.setOrientation(LinearLayout.VERTICAL);
+                LinearLayout.LayoutParams cLp = new LinearLayout.LayoutParams(
+                        LinearLayout.LayoutParams.MATCH_PARENT, LinearLayout.LayoutParams.WRAP_CONTENT);
+                cLp.setMargins(dpToPx(14), dpToPx(6), dpToPx(14), dpToPx(6));
+                card.setLayoutParams(cLp);
+
+                GradientDrawable cGd = new GradientDrawable();
+                cGd.setColor(isDarkTheme ? 0xFF141926 : 0xFFFFFFFF);
+                cGd.setCornerRadius(dpToPx(16));
+                cGd.setStroke(dpToPx(1), isDarkTheme ? 0xFF232B3E : 0xFFE2E8F0);
+                card.setBackground(cGd);
+                card.setPadding(dpToPx(14), dpToPx(12), dpToPx(14), dpToPx(12));
+
+                TextView tvTitle = new TextView(this);
+                tvTitle.setText(item.title);
+                tvTitle.setTextSize(14f);
+                tvTitle.setTypeface(null, Typeface.BOLD);
+                tvTitle.setTextColor(isDarkTheme ? 0xFFF1F5F9 : 0xFF0F172A);
+                card.addView(tvTitle);
+
+                TextView tvUrl = new TextView(this);
+                tvUrl.setText(item.url);
+                tvUrl.setTextSize(12f);
+                tvUrl.setTextColor(isDarkTheme ? 0xFF00E5FF : 0xFF0284C7);
+                tvUrl.setSingleLine(true);
+                tvUrl.setEllipsize(TextUtils.TruncateAt.END);
+                card.addView(tvUrl);
+
+                card.setOnClickListener(v -> {
+                    dialog.dismiss();
+                    TabItem active = getActiveOrDominantTab();
+                    if (active != null && active.webView != null) {
+                        active.webView.loadUrl(item.url);
+                    } else {
+                        addNewTab("web", null, item.url, false);
+                    }
+                });
+
+                card.setOnLongClickListener(v -> {
+                    new AlertDialog.Builder(this)
+                            .setTitle(item.title)
+                            .setItems(new CharSequence[]{"Open", "Open in New Tab", "Delete Bookmark"}, (d, which) -> {
+                                if (which == 0) {
+                                    dialog.dismiss();
+                                    TabItem active = getActiveOrDominantTab();
+                                    if (active != null && active.webView != null) {
+                                        active.webView.loadUrl(item.url);
+                                    } else {
+                                        addNewTab("web", null, item.url, false);
+                                    }
+                                } else if (which == 1) {
+                                    dialog.dismiss();
+                                    addNewTab("web", null, item.url, false);
+                                } else if (which == 2) {
+                                    bookmarkManager.deleteBookmark(item.id);
+                                    Toast.makeText(this, "Bookmark deleted", Toast.LENGTH_SHORT).show();
+                                    dialog.dismiss();
+                                    showBookmarksDialog();
+                                }
+                            })
+                            .show();
+                    return true;
+                });
+
+                historyListContainer.addView(card);
+            }
+        };
+
+        if (searchInput != null) {
+            searchInput.setHint("Search bookmarks...");
+            searchInput.addTextChangedListener(new TextWatcher() {
+                @Override public void beforeTextChanged(CharSequence s, int start, int count, int after) {}
+                @Override public void onTextChanged(CharSequence s, int start, int before, int count) { refreshBookmarks.run(); }
+                @Override public void afterTextChanged(Editable s) {}
+            });
+        }
+
+        refreshBookmarks.run();
+        dialog.show();
+    }
+
+    private void handleExportBookmarksToFolder(Uri treeUri) {
+        if (treeUri == null || bookmarkManager == null) return;
+        try {
+            androidx.documentfile.provider.DocumentFile pickedDir = androidx.documentfile.provider.DocumentFile.fromTreeUri(this, treeUri);
+            if (pickedDir != null && pickedDir.canWrite()) {
+                androidx.documentfile.provider.DocumentFile newFile = pickedDir.createFile("text/html", "caspian_bookmarks_" + System.currentTimeMillis() + ".html");
+                if (newFile != null) {
+                    try (java.io.OutputStream os = getContentResolver().openOutputStream(newFile.getUri())) {
+                        if (os != null) {
+                            bookmarkManager.exportNetscapeHtml(os);
+                            Toast.makeText(this, "Bookmarks exported successfully!", Toast.LENGTH_SHORT).show();
+                        }
+                    }
+                }
+            }
+        } catch (Exception e) {
+            Toast.makeText(this, "Export failed: " + e.getMessage(), Toast.LENGTH_SHORT).show();
+        }
+    }
+
+    private void handleImportBookmarksFromFile(Uri fileUri) {
+        if (fileUri == null || bookmarkManager == null) return;
+        try (java.io.InputStream is = getContentResolver().openInputStream(fileUri)) {
+            if (is != null) {
+                int count = bookmarkManager.importFromHtml(is);
+                Toast.makeText(this, "Imported " + count + " bookmarks!", Toast.LENGTH_SHORT).show();
+                if (currentBookmarksRefreshRunnable != null) currentBookmarksRefreshRunnable.run();
+            }
+        } catch (Exception e) {
+            Toast.makeText(this, "Import failed: " + e.getMessage(), Toast.LENGTH_SHORT).show();
+        }
     }
 
     private void showHistoryDialog() {
@@ -9850,7 +10090,7 @@ public class MainActivity extends AppCompatActivity {
             tabBookmarks.setOnClickListener(v -> {
                 dialog.dismiss();
                 playUiFeedbackSound("tap");
-                Toast.makeText(this, "🔖 Bookmarks", Toast.LENGTH_SHORT).show();
+                showBookmarksDialog();
             });
         }
         if (tabSettings != null) {
@@ -14528,13 +14768,46 @@ public class MainActivity extends AppCompatActivity {
         updateOmniboxTabStrip();
     }
 
+    public void setTabStripEnabled(boolean enabled) {
+        this.isTabStripEnabled = enabled;
+        try {
+            getSharedPreferences(PREFS_NAME, MODE_PRIVATE)
+                    .edit()
+                    .putBoolean("tab_strip_enabled", enabled)
+                    .apply();
+        } catch (Throwable ignored) {}
+        runOnUiThread(this::updateOmniboxTabStrip);
+    }
+
+    public boolean isTabStripEnabled() {
+        return this.isTabStripEnabled;
+    }
+
+    public void showTabStripUndoButton() {
+        runOnUiThread(() -> {
+            if (btnOmniboxUndoCloseTab != null && hasClosedTabsToUndo()) {
+                btnOmniboxUndoCloseTab.setVisibility(View.VISIBLE);
+                tabStripUndoHandler.removeCallbacks(tabStripUndoDismissRunnable);
+                tabStripUndoHandler.postDelayed(tabStripUndoDismissRunnable, 30000);
+            }
+        });
+    }
+
+    public void dismissTabStripUndoButton() {
+        runOnUiThread(() -> {
+            if (btnOmniboxUndoCloseTab != null) {
+                btnOmniboxUndoCloseTab.setVisibility(View.GONE);
+            }
+        });
+    }
+
     public void updateOmniboxTabStrip() {
         runOnUiThread(() -> {
             try {
                 if (omniboxTabStripTabs == null || omniboxTabStripScroll == null) return;
                 omniboxTabStripTabs.removeAllViews();
 
-                if (tabsList.isEmpty()) {
+                if (!isTabStripEnabled || tabsList.isEmpty()) {
                     if (omniboxTabStripBar != null) omniboxTabStripBar.setVisibility(View.GONE);
                     return;
                 }
@@ -14556,6 +14829,22 @@ public class MainActivity extends AppCompatActivity {
                     if (addIcon != null) {
                         addIcon.setColorFilter(isDarkTheme ? 0xFFCBD5E1 : 0xFF1E293B);
                     }
+                }
+
+                // Style Undo Closed Tab Button
+                if (btnOmniboxUndoCloseTab != null) {
+                    GradientDrawable undoBg = new GradientDrawable();
+                    undoBg.setCornerRadius(dpToPx(16));
+                    if (isDarkTheme) {
+                        undoBg.setColor(0xFF1E2838);
+                        undoBg.setStroke(dpToPx(1), 0xFF00E5FF);
+                    } else {
+                        undoBg.setColor(0xFFE0F2FE);
+                        undoBg.setStroke(dpToPx(1), 0xFF0284C7);
+                    }
+                    btnOmniboxUndoCloseTab.setBackground(undoBg);
+                    if (iconOmniboxUndoClose != null) iconOmniboxUndoClose.setTextColor(isDarkTheme ? 0xFF00E5FF : 0xFF0284C7);
+                    if (textOmniboxUndoClose != null) textOmniboxUndoClose.setTextColor(isDarkTheme ? 0xFF00E5FF : 0xFF0284C7);
                 }
 
                 int activeId = activeTabId;
@@ -14680,6 +14969,7 @@ public class MainActivity extends AppCompatActivity {
                                 closeBtn.setOnClickListener(v -> {
                                     playUiFeedbackSound("tap");
                                     closeTab(tab.id);
+                                    showTabStripUndoButton();
                                 });
                             }
 
@@ -14770,6 +15060,7 @@ public class MainActivity extends AppCompatActivity {
                                 playUiFeedbackSound("tap");
                                 closeSplitPane(true);
                                 updateOmniboxTabStrip();
+                                showTabStripUndoButton();
                             });
                         }
                         if (leftHalf != null) {
@@ -14815,6 +15106,7 @@ public class MainActivity extends AppCompatActivity {
                                 playUiFeedbackSound("tap");
                                 closeSplitPane(false);
                                 updateOmniboxTabStrip();
+                                showTabStripUndoButton();
                             });
                         }
                         if (rightHalf != null) {
@@ -14912,6 +15204,7 @@ public class MainActivity extends AppCompatActivity {
                         closeBtn.setOnClickListener(v -> {
                             playUiFeedbackSound("tap");
                             closeTab(tab.id);
+                            showTabStripUndoButton();
                         });
                     }
 
