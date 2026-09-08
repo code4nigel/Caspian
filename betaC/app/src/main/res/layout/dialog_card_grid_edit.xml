@@ -111,7 +111,7 @@
     <!-- Scrollable Dynamic Pages Container -->
     <androidx.core.widget.NestedScrollView
         android:layout_width="match_parent"
-        android:layout_height="400dp"
+        android:layout_height="wrap_content"
         android:fillViewport="true">
 
         <LinearLayout

@@ -7842,6 +7842,7 @@ public class MainActivity extends AppCompatActivity {
             }
 
             if (containerPages != null) {
+                final boolean[] dragHandled = new boolean[]{false};
                 containerPages.removeAllViews();
                 for (int p = 0; p < pages.size(); p++) {
                     final int pageIndex = p;
@@ -7861,9 +7862,12 @@ public class MainActivity extends AppCompatActivity {
                     secGd.setCornerRadius(dpToPx(16));
                     pageSection.setBackground(secGd);
 
-                    // Drag and Drop target support on page section
+                    // Drag and Drop target support on page section background
                     pageSection.setOnDragListener((v, event) -> {
                         switch (event.getAction()) {
+                            case DragEvent.ACTION_DRAG_STARTED:
+                                dragHandled[0] = false;
+                                return true;
                             case DragEvent.ACTION_DRAG_ENTERED:
                                 GradientDrawable dragEnterGd = new GradientDrawable();
                                 dragEnterGd.setColor(!isDarkTheme ? 0xFFE0F2FE : 0xFF0D2838);
@@ -7877,6 +7881,10 @@ public class MainActivity extends AppCompatActivity {
                                 return true;
                             case DragEvent.ACTION_DROP:
                                 pageSection.setBackground(secGd);
+                                if (dragHandled[0]) {
+                                    dragHandled[0] = false;
+                                    return true;
+                                }
                                 ClipData clipData = event.getClipData();
                                 if (clipData != null && clipData.getItemCount() > 0) {
                                     String raw = clipData.getItemAt(0).getText().toString();
@@ -7886,7 +7894,17 @@ public class MainActivity extends AppCompatActivity {
                                             int srcP = Integer.parseInt(parts[0]);
                                             int srcIdx = Integer.parseInt(parts[1]);
                                             String itemKey = parts[2];
-                                            if (srcP != pageIndex) {
+                                            if (srcP == pageIndex) {
+                                                if (srcIdx < pages.get(srcP).size()) {
+                                                    pages.get(srcP).remove(srcIdx);
+                                                    pages.get(pageIndex).add(itemKey);
+                                                    playUiFeedbackSound("tap");
+                                                    selectedKey[0] = null;
+                                                    selectedPage[0] = -1;
+                                                    selectedIdx[0] = -1;
+                                                    renderUi[0].run();
+                                                }
+                                            } else {
                                                 if (srcP < pages.size() && srcIdx < pages.get(srcP).size()) {
                                                     pages.get(srcP).remove(srcIdx);
                                                     pages.get(pageIndex).add(itemKey);
@@ -8047,10 +8065,91 @@ public class MainActivity extends AppCompatActivity {
                             ClipData.Item clipItem = new ClipData.Item(pageIndex + ":" + itemIdx + ":" + key);
                             ClipData dragData = new ClipData("CARD_GRID_ITEM", new String[]{ClipDescription.MIMETYPE_TEXT_PLAIN}, clipItem);
                             View.DragShadowBuilder shadow = new View.DragShadowBuilder(squircle);
+                            v.setAlpha(0.35f);
                             if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.N) {
                                 v.startDragAndDrop(dragData, shadow, null, 0);
                             } else {
                                 v.startDrag(dragData, shadow, null, 0);
+                            }
+                            return true;
+                        });
+
+                        // Target Drag Listener for Intra-page and Inter-page precise tile drop
+                        itemCard.setOnDragListener((v, event) -> {
+                            switch (event.getAction()) {
+                                case DragEvent.ACTION_DRAG_STARTED:
+                                    return true;
+                                case DragEvent.ACTION_DRAG_ENTERED: {
+                                    GradientDrawable hoverGd = new GradientDrawable();
+                                    hoverGd.setColor(!isDarkTheme ? 0xFFBAE6FD : 0xFF00384D);
+                                    hoverGd.setStroke(dpToPx(2), !isDarkTheme ? 0xFF0284C7 : 0xFF00E5FF);
+                                    hoverGd.setCornerRadius(dpToPx(14));
+                                    squircle.setBackground(hoverGd);
+                                    squircle.animate().scaleX(1.15f).scaleY(1.15f).setDuration(150).start();
+                                    return true;
+                                }
+                                case DragEvent.ACTION_DRAG_EXITED: {
+                                    squircle.setBackground(sqGd);
+                                    squircle.animate().scaleX(1.0f).scaleY(1.0f).setDuration(150).start();
+                                    return true;
+                                }
+                                case DragEvent.ACTION_DRAG_ENDED: {
+                                    squircle.setBackground(sqGd);
+                                    squircle.setScaleX(1.0f);
+                                    squircle.setScaleY(1.0f);
+                                    itemCard.setAlpha(1.0f);
+                                    return true;
+                                }
+                                case DragEvent.ACTION_DROP: {
+                                    squircle.setBackground(sqGd);
+                                    squircle.setScaleX(1.0f);
+                                    squircle.setScaleY(1.0f);
+                                    ClipData clipData = event.getClipData();
+                                    if (clipData != null && clipData.getItemCount() > 0) {
+                                        String raw = clipData.getItemAt(0).getText().toString();
+                                        String[] parts = raw.split(":");
+                                        if (parts.length >= 3) {
+                                            try {
+                                                int srcP = Integer.parseInt(parts[0]);
+                                                int srcIdx = Integer.parseInt(parts[1]);
+                                                String itemKey = parts[2];
+                                                dragHandled[0] = true;
+
+                                                if (srcP == pageIndex) {
+                                                    // Intra-page reordering within same page!
+                                                    if (srcIdx != itemIdx && srcIdx < pages.get(srcP).size()) {
+                                                        pages.get(srcP).remove(srcIdx);
+                                                        int insertIdx = itemIdx;
+                                                        if (srcIdx < itemIdx) {
+                                                            insertIdx = Math.min(itemIdx, pages.get(srcP).size());
+                                                        }
+                                                        pages.get(srcP).add(insertIdx, itemKey);
+                                                        playUiFeedbackSound("tap");
+                                                        selectedKey[0] = null;
+                                                        selectedPage[0] = -1;
+                                                        selectedIdx[0] = -1;
+                                                        renderUi[0].run();
+                                                    }
+                                                } else {
+                                                    // Cross-page insertion at specific index!
+                                                    if (srcP < pages.size() && srcIdx < pages.get(srcP).size()) {
+                                                        pages.get(srcP).remove(srcIdx);
+                                                        int insertIdx = Math.min(itemIdx, pages.get(pageIndex).size());
+                                                        pages.get(pageIndex).add(insertIdx, itemKey);
+                                                        cascadeOverfill(pages, pageIndex);
+                                                        pruneEmptyPages(pages);
+                                                        playUiFeedbackSound("tap");
+                                                        selectedKey[0] = null;
+                                                        selectedPage[0] = -1;
+                                                        selectedIdx[0] = -1;
+                                                        renderUi[0].run();
+                                                    }
+                                                }
+                                            } catch (Exception ignored) {}
+                                        }
+                                    }
+                                    return true;
+                                }
                             }
                             return true;
                         });
@@ -8067,6 +8166,69 @@ public class MainActivity extends AppCompatActivity {
                             View dummy = new View(this);
                             TableRow.LayoutParams dLp = new TableRow.LayoutParams(0, TableRow.LayoutParams.WRAP_CONTENT, 1f);
                             dummy.setLayoutParams(dLp);
+
+                            // Dummy slot can also accept drag drop to place at the end of the page
+                            dummy.setOnDragListener((v, event) -> {
+                                switch (event.getAction()) {
+                                    case DragEvent.ACTION_DRAG_STARTED:
+                                        return true;
+                                    case DragEvent.ACTION_DRAG_ENTERED: {
+                                        GradientDrawable dEnter = new GradientDrawable();
+                                        dEnter.setColor(!isDarkTheme ? 0xFFE0F2FE : 0xFF0D2838);
+                                        dEnter.setStroke(dpToPx(1), !isDarkTheme ? 0xFF0284C7 : 0xFF00E5FF);
+                                        dEnter.setCornerRadius(dpToPx(14));
+                                        dummy.setBackground(dEnter);
+                                        return true;
+                                    }
+                                    case DragEvent.ACTION_DRAG_EXITED:
+                                    case DragEvent.ACTION_DRAG_ENDED: {
+                                        dummy.setBackground(null);
+                                        return true;
+                                    }
+                                    case DragEvent.ACTION_DROP: {
+                                        dummy.setBackground(null);
+                                        ClipData clipData = event.getClipData();
+                                        if (clipData != null && clipData.getItemCount() > 0) {
+                                            String raw = clipData.getItemAt(0).getText().toString();
+                                            String[] parts = raw.split(":");
+                                            if (parts.length >= 3) {
+                                                try {
+                                                    int srcP = Integer.parseInt(parts[0]);
+                                                    int srcIdx = Integer.parseInt(parts[1]);
+                                                    String itemKey = parts[2];
+                                                    dragHandled[0] = true;
+                                                    if (srcP == pageIndex) {
+                                                        if (srcIdx < pages.get(srcP).size()) {
+                                                            pages.get(srcP).remove(srcIdx);
+                                                            pages.get(pageIndex).add(itemKey);
+                                                            playUiFeedbackSound("tap");
+                                                            selectedKey[0] = null;
+                                                            selectedPage[0] = -1;
+                                                            selectedIdx[0] = -1;
+                                                            renderUi[0].run();
+                                                        }
+                                                    } else {
+                                                        if (srcP < pages.size() && srcIdx < pages.get(srcP).size()) {
+                                                            pages.get(srcP).remove(srcIdx);
+                                                            pages.get(pageIndex).add(itemKey);
+                                                            cascadeOverfill(pages, pageIndex);
+                                                            pruneEmptyPages(pages);
+                                                            playUiFeedbackSound("tap");
+                                                            selectedKey[0] = null;
+                                                            selectedPage[0] = -1;
+                                                            selectedIdx[0] = -1;
+                                                            renderUi[0].run();
+                                                        }
+                                                    }
+                                                } catch (Exception ignored) {}
+                                            }
+                                        }
+                                        return true;
+                                    }
+                                }
+                                return true;
+                            });
+
                             currentRow.addView(dummy);
                         }
                     }
