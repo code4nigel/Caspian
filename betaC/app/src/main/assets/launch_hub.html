@@ -102,7 +102,35 @@
       transition: transform 0.2s ease, border-color 0.2s ease, box-shadow 0.2s ease;
     }
     .app-icon-card:active {
-      transform: scale(0.94);
+      transform: scale(0.92);
+    }
+    @keyframes iosAppLaunchPop {
+      0% {
+        transform: scale(0.92);
+        box-shadow: 0 4px 12px rgba(0,0,0,0.08);
+      }
+      45% {
+        transform: scale(1.15);
+        box-shadow: 0 14px 38px rgba(0, 229, 255, 0.55), 0 0 24px rgba(0, 229, 255, 0.45);
+        border-color: #00e5ff;
+        opacity: 1;
+      }
+      100% {
+        transform: scale(1.28);
+        opacity: 0;
+        box-shadow: 0 22px 55px rgba(0, 229, 255, 0.8), 0 0 40px rgba(0, 229, 255, 0.6);
+        border-color: #00e5ff;
+      }
+    }
+    .app-icon-card.launching {
+      animation: iosAppLaunchPop 0.26s cubic-bezier(0.16, 1, 0.3, 1) forwards !important;
+      z-index: 100;
+      pointer-events: none;
+    }
+    .hub-container.launching-state {
+      transition: opacity 0.24s ease-out, transform 0.24s cubic-bezier(0.16, 1, 0.3, 1);
+      opacity: 0.55;
+      transform: scale(0.96);
     }
     .app-icon-img {
       width: 48px;
@@ -689,42 +717,52 @@
     // Initial Load
     setTimeout(loadCaspianCasks, 100);
 
-    // Platform Launch Listeners
-    document.getElementById('launch-chatgpt').addEventListener('click', () => {
+    // Platform Launch Listeners with iOS App Launch Physics
+    function triggerPlatformLaunch(cardEl, service, fallbackUrl) {
+      if (!cardEl || cardEl.classList.contains('launching')) return;
       playTapSFX();
-      if (window.CaspianBridge && typeof window.CaspianBridge.switchService === 'function') {
-        window.CaspianBridge.switchService('chatgpt');
-      } else {
-        window.location.href = 'https://chatgpt.com/';
-      }
-    });
+      if (navigator.vibrate) navigator.vibrate(35);
 
-    document.getElementById('launch-gemini').addEventListener('click', () => {
-      playTapSFX();
-      if (window.CaspianBridge && typeof window.CaspianBridge.switchService === 'function') {
-        window.CaspianBridge.switchService('gemini');
-      } else {
-        window.location.href = 'https://gemini.google.com/';
-      }
-    });
+      cardEl.classList.add('launching');
+      const hubContainer = document.querySelector('.hub-container');
+      if (hubContainer) hubContainer.classList.add('launching-state');
 
-    document.getElementById('launch-google').addEventListener('click', () => {
-      playTapSFX();
-      if (window.CaspianBridge && typeof window.CaspianBridge.switchService === 'function') {
-        window.CaspianBridge.switchService('google');
-      } else {
-        window.location.href = 'https://www.google.com/';
-      }
-    });
+      setTimeout(() => {
+        if (window.CaspianBridge && typeof window.CaspianBridge.switchService === 'function') {
+          window.CaspianBridge.switchService(service);
+        } else {
+          window.location.href = fallbackUrl;
+        }
+      }, 190);
+    }
 
-    document.getElementById('launch-youtube').addEventListener('click', () => {
-      playTapSFX();
-      if (window.CaspianBridge && typeof window.CaspianBridge.switchService === 'function') {
-        window.CaspianBridge.switchService('youtube');
-      } else {
-        window.location.href = 'https://www.youtube.com/';
-      }
-    });
+    const cardChatgpt = document.getElementById('launch-chatgpt');
+    if (cardChatgpt) {
+      cardChatgpt.addEventListener('click', () => {
+        triggerPlatformLaunch(cardChatgpt, 'chatgpt', 'https://chatgpt.com/');
+      });
+    }
+
+    const cardGemini = document.getElementById('launch-gemini');
+    if (cardGemini) {
+      cardGemini.addEventListener('click', () => {
+        triggerPlatformLaunch(cardGemini, 'gemini', 'https://gemini.google.com/');
+      });
+    }
+
+    const cardGoogle = document.getElementById('launch-google');
+    if (cardGoogle) {
+      cardGoogle.addEventListener('click', () => {
+        triggerPlatformLaunch(cardGoogle, 'google', 'https://www.google.com/');
+      });
+    }
+
+    const cardYoutube = document.getElementById('launch-youtube');
+    if (cardYoutube) {
+      cardYoutube.addEventListener('click', () => {
+        triggerPlatformLaunch(cardYoutube, 'youtube', 'https://www.youtube.com/');
+      });
+    }
   </script>
 </body>
 </html>

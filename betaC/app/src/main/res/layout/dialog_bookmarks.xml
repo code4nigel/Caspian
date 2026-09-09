@@ -11,35 +11,34 @@
         android:orientation="vertical">
 
         <!-- Top Header Bar -->
-        <LinearLayout
+        <FrameLayout
             android:id="@+id/bookmarks_header_bar"
             android:layout_width="match_parent"
             android:layout_height="56dp"
-            android:orientation="horizontal"
-            android:gravity="center_vertical"
-            android:paddingStart="14dp"
-            android:paddingEnd="14dp"
             android:background="#0A0E17">
 
             <ImageButton
                 android:id="@+id/btn_bookmarks_back"
                 android:layout_width="36dp"
                 android:layout_height="36dp"
+                android:layout_gravity="center_vertical|start"
+                android:layout_marginStart="14dp"
                 android:background="?attr/selectableItemBackgroundBorderless"
                 android:src="@drawable/ic_pod_back"
                 android:tint="#BAC9CC"
                 android:padding="8dp"
                 android:scaleType="fitCenter" />
 
-            <!-- Center Bookmarks Title Capsule -->
+            <!-- Centered Header Carousel Bar: Bookmarks (Count) | History | Settings -->
             <LinearLayout
-                android:id="@+id/bookmarks_title_capsule"
-                android:layout_width="0dp"
+                android:id="@+id/bookmarks_header_carousel"
+                android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
-                android:layout_weight="1"
-                android:gravity="center"
-                android:orientation="horizontal">
+                android:layout_gravity="center"
+                android:orientation="horizontal"
+                android:gravity="center_vertical">
 
+                <!-- Active Bookmarks Capsule -->
                 <LinearLayout
                     android:id="@+id/capsule_bookmarks_center"
                     android:layout_width="wrap_content"
@@ -54,8 +53,8 @@
 
                     <ImageView
                         android:id="@+id/icon_bookmarks_header"
-                        android:layout_width="16dp"
-                        android:layout_height="16dp"
+                        android:layout_width="15dp"
+                        android:layout_height="15dp"
                         android:src="@drawable/ic_menu_bookmark"
                         android:tint="#00E5FF"
                         android:scaleType="fitCenter" />
@@ -65,8 +64,8 @@
                         android:layout_width="wrap_content"
                         android:layout_height="wrap_content"
                         android:layout_marginStart="6dp"
-                        android:text="BOOKMARKS"
-                        android:textColor="#DFE2F0"
+                        android:text="Bookmarks"
+                        android:textColor="#FFFFFF"
                         android:textSize="12sp"
                         android:textStyle="bold" />
 
@@ -75,53 +74,54 @@
                         android:layout_width="wrap_content"
                         android:layout_height="wrap_content"
                         android:layout_marginStart="6dp"
-                        android:background="@drawable/bg_stitch_badge_version"
-                        android:paddingStart="6dp"
-                        android:paddingEnd="6dp"
+                        android:background="@drawable/bg_stitch_action_chip"
+                        android:paddingStart="7dp"
+                        android:paddingEnd="7dp"
                         android:paddingTop="1dp"
                         android:paddingBottom="1dp"
                         android:text="0"
-                        android:textColor="#00E5FF"
+                        android:textColor="#CBD5E1"
                         android:textSize="10sp"
                         android:textStyle="bold" />
                 </LinearLayout>
-            </LinearLayout>
 
-            <!-- Right Header Links: HISTORY | SETTINGS -->
-            <LinearLayout
-                android:layout_width="wrap_content"
-                android:layout_height="wrap_content"
-                android:orientation="horizontal"
-                android:gravity="center_vertical">
-
+                <!-- Inactive History Tab -->
                 <TextView
                     android:id="@+id/btn_bookmarks_goto_history"
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
-                    android:text="HISTORY"
-                    android:textColor="#849396"
-                    android:textSize="11sp"
+                    android:layout_marginStart="14dp"
+                    android:text="History"
+                    android:textColor="#64748B"
+                    android:textSize="12sp"
                     android:textStyle="bold"
-                    android:padding="6dp"
+                    android:paddingStart="12dp"
+                    android:paddingEnd="12dp"
+                    android:paddingTop="6dp"
+                    android:paddingBottom="6dp"
                     android:background="?attr/selectableItemBackgroundBorderless"
                     android:clickable="true"
                     android:focusable="true" />
 
+                <!-- Inactive Settings Tab -->
                 <TextView
                     android:id="@+id/btn_bookmarks_goto_settings"
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
-                    android:layout_marginStart="4dp"
-                    android:text="SETTINGS"
-                    android:textColor="#849396"
-                    android:textSize="11sp"
+                    android:layout_marginStart="14dp"
+                    android:text="Settings"
+                    android:textColor="#64748B"
+                    android:textSize="12sp"
                     android:textStyle="bold"
-                    android:padding="6dp"
+                    android:paddingStart="12dp"
+                    android:paddingEnd="12dp"
+                    android:paddingTop="6dp"
+                    android:paddingBottom="6dp"
                     android:background="?attr/selectableItemBackgroundBorderless"
                     android:clickable="true"
                     android:focusable="true" />
             </LinearLayout>
-        </LinearLayout>
+        </FrameLayout>
 
         <!-- Main Content Area -->
         <ScrollView
@@ -357,34 +357,6 @@
                             android:paddingStart="12dp"
                             android:paddingEnd="12dp"
                             android:text="⭐ FAVORITES"
-                            android:textColor="#DFE2F0"
-                            android:textSize="11sp"
-                            android:textStyle="bold" />
-
-                        <TextView
-                            android:id="@+id/chip_filter_dev"
-                            android:layout_width="wrap_content"
-                            android:layout_height="28dp"
-                            android:layout_marginStart="6dp"
-                            android:gravity="center"
-                            android:background="@drawable/bg_stitch_action_chip"
-                            android:paddingStart="12dp"
-                            android:paddingEnd="12dp"
-                            android:text="DEV &amp; SPECS"
-                            android:textColor="#DFE2F0"
-                            android:textSize="11sp"
-                            android:textStyle="bold" />
-
-                        <TextView
-                            android:id="@+id/chip_filter_ai"
-                            android:layout_width="wrap_content"
-                            android:layout_height="28dp"
-                            android:layout_marginStart="6dp"
-                            android:gravity="center"
-                            android:background="@drawable/bg_stitch_action_chip"
-                            android:paddingStart="12dp"
-                            android:paddingEnd="12dp"
-                            android:text="AI PROMPTS"
                             android:textColor="#DFE2F0"
                             android:textSize="11sp"
                             android:textStyle="bold" />

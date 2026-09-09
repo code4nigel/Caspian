@@ -175,6 +175,55 @@ public class BookmarkManager {
         }
     }
 
+    public synchronized void renameFolder(String oldName, String newName) {
+        if (oldName == null || newName == null) return;
+        String cleanOld = oldName.trim();
+        String cleanNew = newName.trim();
+        if (cleanOld.isEmpty() || cleanNew.isEmpty() || cleanOld.equalsIgnoreCase(cleanNew)) return;
+
+        int idx = -1;
+        for (int i = 0; i < folders.size(); i++) {
+            if (folders.get(i).equalsIgnoreCase(cleanOld)) {
+                idx = i;
+                break;
+            }
+        }
+        if (idx != -1) {
+            folders.set(idx, cleanNew);
+        } else {
+            folders.add(cleanNew);
+        }
+
+        for (BookmarkItem item : bookmarks) {
+            if (item.folder != null && item.folder.equalsIgnoreCase(cleanOld)) {
+                item.folder = cleanNew;
+            }
+        }
+        save();
+    }
+
+    public synchronized void deleteFolder(String folderName) {
+        if (folderName == null) return;
+        String clean = folderName.trim();
+        int idx = -1;
+        for (int i = 0; i < folders.size(); i++) {
+            if (folders.get(i).equalsIgnoreCase(clean)) {
+                idx = i;
+                break;
+            }
+        }
+        if (idx != -1) {
+            folders.remove(idx);
+        }
+
+        for (BookmarkItem item : bookmarks) {
+            if (item.folder != null && item.folder.equalsIgnoreCase(clean)) {
+                item.folder = "Default";
+            }
+        }
+        save();
+    }
+
     public synchronized void addBookmark(String title, String url, String folder, String tag) {
         if (url == null || url.trim().isEmpty()) return;
         String id = "bm_" + System.currentTimeMillis() + "_" + (int)(Math.random() * 1000);

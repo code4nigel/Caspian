@@ -9566,6 +9566,10 @@ public class MainActivity extends AppCompatActivity {
     }
 
     public void showBookmarksDialog() {
+        showBookmarksDialog(0);
+    }
+
+    public void showBookmarksDialog(int enterDirection) {
         playUiFeedbackSound("tap");
         if (bookmarkManager == null) bookmarkManager = new BookmarkManager(this);
         AlertDialog.Builder builder = new AlertDialog.Builder(this, android.R.style.Theme_Black_NoTitleBar_Fullscreen);
@@ -9576,6 +9580,17 @@ public class MainActivity extends AppCompatActivity {
             dialog.getWindow().setBackgroundDrawable(new ColorDrawable(isDarkTheme ? 0xFF0A0E17 : 0xFFF8FAFC));
         }
         dialogView.setBackgroundColor(isDarkTheme ? 0xFF0A0E17 : 0xFFF8FAFC);
+
+        // Slide Entrance Transition Animation
+        if (enterDirection > 0) {
+            dialogView.setTranslationX(dpToPx(130));
+            dialogView.setAlpha(0f);
+            dialogView.animate().translationX(0f).alpha(1f).setDuration(220).setInterpolator(new DecelerateInterpolator(1.6f)).start();
+        } else if (enterDirection < 0) {
+            dialogView.setTranslationX(-dpToPx(130));
+            dialogView.setAlpha(0f);
+            dialogView.animate().translationX(0f).alpha(1f).setDuration(220).setInterpolator(new DecelerateInterpolator(1.6f)).start();
+        }
 
         // Header Views
         View bookmarksRoot = dialogView.findViewById(R.id.bookmarks_root);
@@ -9608,8 +9623,6 @@ public class MainActivity extends AppCompatActivity {
         // Filter Chips
         TextView chipAll = dialogView.findViewById(R.id.chip_filter_all);
         TextView chipFav = dialogView.findViewById(R.id.chip_filter_favorites);
-        TextView chipDev = dialogView.findViewById(R.id.chip_filter_dev);
-        TextView chipAi = dialogView.findViewById(R.id.chip_filter_ai);
         LinearLayout layoutChips = dialogView.findViewById(R.id.layout_filter_chips);
 
         LinearLayout listContainer = dialogView.findViewById(R.id.bookmarks_list_container);
@@ -9631,26 +9644,28 @@ public class MainActivity extends AppCompatActivity {
         if (headerBar != null) headerBar.setBackgroundColor(isDarkTheme ? 0xFF0A0E17 : 0xFFF8FAFC);
         if (btnBack != null) btnBack.setColorFilter(isDarkTheme ? 0xFFBAC9CC : 0xFF334155);
 
+        // Match Top Header Styling with History Dialog
         if (capsuleCenter != null) {
             GradientDrawable capBg = new GradientDrawable();
             capBg.setCornerRadius(dpToPx(16));
-            capBg.setColor(isDarkTheme ? 0xFF141926 : 0xFFFFFFFF);
-            capBg.setStroke(dpToPx(1), isDarkTheme ? 0xFF00E5FF : 0xFFE2E8F0);
+            capBg.setColor(isDarkTheme ? 0xFF1E2838 : 0xFFF1F5F9);
+            capBg.setStroke(dpToPx(1), isDarkTheme ? 0xFF00E5FF : 0xFFCBD5E1);
             capsuleCenter.setBackground(capBg);
         }
-        if (textBookmarksHeader != null) textBookmarksHeader.setTextColor(isDarkTheme ? 0xFFFFFFFF : 0xFF0F172A);
+        if (textBookmarksHeader != null) textBookmarksHeader.setTextColor(isDarkTheme ? 0xFFFFFFFF : 0xFF0284C7);
         if (iconBookmarksHeader != null) iconBookmarksHeader.setColorFilter(isDarkTheme ? 0xFF00E5FF : 0xFF0284C7);
 
         if (badgeHeaderCount != null) {
             GradientDrawable bBg = new GradientDrawable();
             bBg.setCornerRadius(dpToPx(10));
-            bBg.setColor(isDarkTheme ? 0xFF1E2838 : 0xFFE0F2FE);
+            bBg.setColor(isDarkTheme ? 0xFF161B22 : 0xFFE2E8F0);
+            bBg.setStroke(dpToPx(1), isDarkTheme ? 0xFF21262D : 0xFFCBD5E1);
             badgeHeaderCount.setBackground(bBg);
-            badgeHeaderCount.setTextColor(isDarkTheme ? 0xFF00E5FF : 0xFF0284C7);
+            badgeHeaderCount.setTextColor(isDarkTheme ? 0xFFCBD5E1 : 0xFF0F172A);
         }
 
-        if (btnGotoHistory != null) btnGotoHistory.setTextColor(isDarkTheme ? 0xFF849396 : 0xFF64748B);
-        if (btnGotoSettings != null) btnGotoSettings.setTextColor(isDarkTheme ? 0xFF849396 : 0xFF64748B);
+        if (btnGotoHistory != null) btnGotoHistory.setTextColor(isDarkTheme ? 0xFF64748B : 0xFF475569);
+        if (btnGotoSettings != null) btnGotoSettings.setTextColor(isDarkTheme ? 0xFF64748B : 0xFF475569);
 
         if (textVaultTitle != null) textVaultTitle.setTextColor(isDarkTheme ? 0xFFDFE2F0 : 0xFF0F172A);
         if (badgeVaultSaved != null) {
@@ -9722,50 +9737,160 @@ public class MainActivity extends AppCompatActivity {
         // State variables
         final boolean[] isSelectMode = {false};
         final Set<String> selectedBookmarkIds = new HashSet<>();
-        final String[] activeCategory = {"all"}; // "all", "favorites", "dev", "ai", or folder name
+        final String[] activeCategory = {"all"}; // "all", "favorites", or custom folder name
         final String[] activeSort = {"newest"}; // "newest", "oldest", "az", "za"
 
-        // Helper to style chips
-        Runnable updateChipStyles = () -> {
-            TextView[] chips = {chipAll, chipFav, chipDev, chipAi};
-            String[] tags = {"all", "favorites", "dev", "ai"};
-            for (int i = 0; i < chips.length; i++) {
-                TextView chip = chips[i];
-                if (chip == null) continue;
-                boolean isAct = tags[i].equalsIgnoreCase(activeCategory[0]);
+        // References for dynamic refresh
+        final Runnable[] refreshRef = new Runnable[1];
+        final Runnable[] renderChipsRef = new Runnable[1];
+
+        // Dynamic Group Chips Renderer
+        renderChipsRef[0] = () -> {
+            if (layoutChips == null) return;
+            while (layoutChips.getChildCount() > 2) {
+                layoutChips.removeViewAt(2);
+            }
+
+            // Style static chips (All, Favorites)
+            boolean isAllAct = "all".equalsIgnoreCase(activeCategory[0]);
+            GradientDrawable allBg = new GradientDrawable();
+            allBg.setCornerRadius(dpToPx(14));
+            allBg.setColor(isAllAct ? (isDarkTheme ? 0xFF00E5FF : 0xFF0F172A) : (isDarkTheme ? 0xFF161B24 : 0xFFFFFFFF));
+            if (!isAllAct) allBg.setStroke(dpToPx(1), isDarkTheme ? 0xFF232B3E : 0xFFE2E8F0);
+            if (chipAll != null) {
+                chipAll.setBackground(allBg);
+                chipAll.setTextColor(isAllAct ? (isDarkTheme ? 0xFF000000 : 0xFFFFFFFF) : (isDarkTheme ? 0xFFCBD5E1 : 0xFF475569));
+            }
+
+            boolean isFavAct = "favorites".equalsIgnoreCase(activeCategory[0]);
+            GradientDrawable favBg = new GradientDrawable();
+            favBg.setCornerRadius(dpToPx(14));
+            favBg.setColor(isFavAct ? (isDarkTheme ? 0xFF00E5FF : 0xFF0F172A) : (isDarkTheme ? 0xFF161B24 : 0xFFFFFFFF));
+            if (!isFavAct) favBg.setStroke(dpToPx(1), isDarkTheme ? 0xFF232B3E : 0xFFE2E8F0);
+            if (chipFav != null) {
+                chipFav.setBackground(favBg);
+                chipFav.setTextColor(isFavAct ? (isDarkTheme ? 0xFF000000 : 0xFFFFFFFF) : (isDarkTheme ? 0xFFCBD5E1 : 0xFF475569));
+            }
+
+            // Dynamic Custom Groups Chips
+            List<String> folders = bookmarkManager.getFolders();
+            for (String folder : folders) {
+                if ("Favorites".equalsIgnoreCase(folder) || "All".equalsIgnoreCase(folder) || "Default".equalsIgnoreCase(folder)) {
+                    continue;
+                }
+                TextView chip = new TextView(this);
+                chip.setText(folder.toUpperCase(Locale.ROOT));
+                chip.setTextSize(TypedValue.COMPLEX_UNIT_SP, 11f);
+                chip.setTypeface(null, Typeface.BOLD);
+                chip.setGravity(Gravity.CENTER);
+                chip.setPadding(dpToPx(12), 0, dpToPx(12), 0);
+                chip.setClickable(true);
+                chip.setFocusable(true);
+
+                LinearLayout.LayoutParams lp = new LinearLayout.LayoutParams(
+                        ViewGroup.LayoutParams.WRAP_CONTENT, dpToPx(28));
+                lp.setMarginStart(dpToPx(6));
+                chip.setLayoutParams(lp);
+
+                boolean isAct = folder.equalsIgnoreCase(activeCategory[0]);
                 GradientDrawable cBg = new GradientDrawable();
                 cBg.setCornerRadius(dpToPx(14));
-                if (isAct) {
-                    cBg.setColor(isDarkTheme ? 0xFF00E5FF : 0xFF0F172A);
-                    chip.setTextColor(isDarkTheme ? 0xFF000000 : 0xFFFFFFFF);
-                } else {
-                    cBg.setColor(isDarkTheme ? 0xFF161B24 : 0xFFFFFFFF);
-                    cBg.setStroke(dpToPx(1), isDarkTheme ? 0xFF232B3E : 0xFFE2E8F0);
-                    chip.setTextColor(isDarkTheme ? 0xFFCBD5E1 : 0xFF475569);
-                }
+                cBg.setColor(isAct ? (isDarkTheme ? 0xFF00E5FF : 0xFF0F172A) : (isDarkTheme ? 0xFF161B24 : 0xFFFFFFFF));
+                if (!isAct) cBg.setStroke(dpToPx(1), isDarkTheme ? 0xFF232B3E : 0xFFE2E8F0);
                 chip.setBackground(cBg);
+                chip.setTextColor(isAct ? (isDarkTheme ? 0xFF000000 : 0xFFFFFFFF) : (isDarkTheme ? 0xFFCBD5E1 : 0xFF475569));
+
+                chip.setOnClickListener(v -> {
+                    playUiFeedbackSound("tap");
+                    activeCategory[0] = folder;
+                    renderChipsRef[0].run();
+                    if (refreshRef[0] != null) refreshRef[0].run();
+                });
+
+                // Long-press: Rename or Delete Bookmark Group
+                chip.setOnLongClickListener(v -> {
+                    playUiFeedbackSound("tap");
+                    PopupMenu groupMenu = new PopupMenu(this, chip);
+                    groupMenu.getMenu().add(0, 1, 0, "✏️ Rename Group");
+                    groupMenu.getMenu().add(0, 2, 1, "🗑️ Delete Group");
+                    groupMenu.setOnMenuItemClickListener(item -> {
+                        if (item.getItemId() == 1) {
+                            showRenameGroupDialog(folder, () -> {
+                                activeCategory[0] = "all";
+                                renderChipsRef[0].run();
+                                if (refreshRef[0] != null) refreshRef[0].run();
+                            });
+                            return true;
+                        } else if (item.getItemId() == 2) {
+                            showDeleteGroupDialog(folder, () -> {
+                                activeCategory[0] = "all";
+                                renderChipsRef[0].run();
+                                if (refreshRef[0] != null) refreshRef[0].run();
+                            });
+                            return true;
+                        }
+                        return false;
+                    });
+                    groupMenu.show();
+                    return true;
+                });
+
+                layoutChips.addView(chip);
             }
         };
 
-        // Header Navigation Listeners
+        // Static chip click listeners
+        if (chipAll != null) {
+            chipAll.setOnClickListener(v -> {
+                playUiFeedbackSound("tap");
+                activeCategory[0] = "all";
+                renderChipsRef[0].run();
+                if (refreshRef[0] != null) refreshRef[0].run();
+            });
+        }
+        if (chipFav != null) {
+            chipFav.setOnClickListener(v -> {
+                playUiFeedbackSound("tap");
+                activeCategory[0] = "favorites";
+                renderChipsRef[0].run();
+                if (refreshRef[0] != null) refreshRef[0].run();
+            });
+        }
+
+        // Header Navigation Listeners with Smooth Slide Exit Animations
         if (btnBack != null) btnBack.setOnClickListener(v -> dialog.dismiss());
         if (btnGotoHistory != null) {
             btnGotoHistory.setOnClickListener(v -> {
-                dialog.dismiss();
                 playUiFeedbackSound("tap");
-                showHistoryDialog();
+                dialogView.animate()
+                        .translationX(-dpToPx(130))
+                        .alpha(0f)
+                        .setDuration(160)
+                        .setInterpolator(new AccelerateInterpolator())
+                        .withEndAction(() -> {
+                            dialog.dismiss();
+                            showHistoryDialog(1);
+                        })
+                        .start();
             });
         }
         if (btnGotoSettings != null) {
             btnGotoSettings.setOnClickListener(v -> {
-                dialog.dismiss();
                 playUiFeedbackSound("tap");
-                openControlSheet();
+                dialogView.animate()
+                        .translationX(-dpToPx(130))
+                        .alpha(0f)
+                        .setDuration(160)
+                        .setInterpolator(new AccelerateInterpolator())
+                        .withEndAction(() -> {
+                            dialog.dismiss();
+                            openControlSheet();
+                        })
+                        .start();
             });
         }
 
         // Bookmark List Refresh Logic
-        Runnable[] refreshRef = new Runnable[1];
         refreshRef[0] = () -> {
             if (listContainer == null) return;
             listContainer.removeAllViews();
@@ -9781,8 +9906,9 @@ public class MainActivity extends AppCompatActivity {
             List<BookmarkManager.BookmarkItem> filtered = new ArrayList<>();
             for (BookmarkManager.BookmarkItem b : bms) {
                 if (activeCategory[0].equalsIgnoreCase("favorites") && !b.isFavorite) continue;
-                if (activeCategory[0].equalsIgnoreCase("dev") && (b.folder == null || !b.folder.toLowerCase().contains("dev"))) continue;
-                if (activeCategory[0].equalsIgnoreCase("ai") && (b.folder == null || !b.folder.toLowerCase().contains("ai"))) continue;
+                if (!activeCategory[0].equalsIgnoreCase("all") && !activeCategory[0].equalsIgnoreCase("favorites")) {
+                    if (b.folder == null || !b.folder.equalsIgnoreCase(activeCategory[0])) continue;
+                }
 
                 if (!query.isEmpty()) {
                     boolean match = (b.title != null && b.title.toLowerCase().contains(query))
@@ -9888,7 +10014,7 @@ public class MainActivity extends AppCompatActivity {
                     timeView.setTextColor(isDarkTheme ? 0xFF10B981 : 0xFF059669);
                 }
 
-                // Squircle Icon Frame (Pastel background + emoji)
+                // Squircle Icon Frame
                 if (iconFrame != null && iconEmoji != null) {
                     String u = item.url.toLowerCase();
                     String t = item.title.toLowerCase();
@@ -10024,21 +10150,6 @@ public class MainActivity extends AppCompatActivity {
             });
         }
 
-        // Filter Chip Listeners
-        View.OnClickListener chipClick = v -> {
-            playUiFeedbackSound("tap");
-            if (v == chipAll) activeCategory[0] = "all";
-            else if (v == chipFav) activeCategory[0] = "favorites";
-            else if (v == chipDev) activeCategory[0] = "dev";
-            else if (v == chipAi) activeCategory[0] = "ai";
-            updateChipStyles.run();
-            refreshRef[0].run();
-        };
-        if (chipAll != null) chipAll.setOnClickListener(chipClick);
-        if (chipFav != null) chipFav.setOnClickListener(chipClick);
-        if (chipDev != null) chipDev.setOnClickListener(chipClick);
-        if (chipAi != null) chipAi.setOnClickListener(chipClick);
-
         // Sort Button Listener
         if (btnSort != null) {
             btnSort.setOnClickListener(v -> {
@@ -10099,47 +10210,465 @@ public class MainActivity extends AppCompatActivity {
             });
         }
 
-        // Bottom Dock: Add Bookmark Center Plus Button
+        // Bottom Dock: Add Bookmark or Group Plus Button (Presents Action Menu)
         if (btnDockAdd != null) {
             btnDockAdd.setOnClickListener(v -> {
                 playUiFeedbackSound("tap");
-                LinearLayout addLayout = new LinearLayout(this);
-                addLayout.setOrientation(LinearLayout.VERTICAL);
-                addLayout.setPadding(dpToPx(20), dpToPx(16), dpToPx(20), dpToPx(10));
-
-                EditText etTitle = new EditText(this);
-                etTitle.setHint("Title");
-                TabItem activeTab = getActiveOrDominantTab();
-                if (activeTab != null && activeTab.title != null) etTitle.setText(activeTab.title);
-                addLayout.addView(etTitle);
-
-                EditText etUrl = new EditText(this);
-                etUrl.setHint("https://...");
-                if (activeTab != null && activeTab.url != null) etUrl.setText(activeTab.url);
-                addLayout.addView(etUrl);
-
-                new AlertDialog.Builder(this)
-                        .setTitle("Add Bookmark")
-                        .setView(addLayout)
-                        .setPositiveButton("Save", (d, which) -> {
-                            String t = etTitle.getText().toString().trim();
-                            String u = etUrl.getText().toString().trim();
-                            if (!u.isEmpty()) {
-                                if (!u.startsWith("http://") && !u.startsWith("https://")) u = "https://" + u;
-                                if (t.isEmpty()) t = u;
-                                bookmarkManager.addBookmark(t, u, "Default", "");
-                                Toast.makeText(this, "Bookmark added! ✨", Toast.LENGTH_SHORT).show();
-                                refreshRef[0].run();
-                            }
-                        })
-                        .setNegativeButton("Cancel", null)
-                        .show();
+                showAddBookmarkOrGroupMenu(() -> {
+                    renderChipsRef[0].run();
+                    refreshRef[0].run();
+                });
             });
         }
 
-        updateChipStyles.run();
+        renderChipsRef[0].run();
         refreshRef[0].run();
         dialog.show();
+    }
+
+    private void showAddBookmarkOrGroupMenu(Runnable onRefresh) {
+        AlertDialog.Builder builder = new AlertDialog.Builder(this);
+        LinearLayout root = new LinearLayout(this);
+        root.setOrientation(LinearLayout.VERTICAL);
+        root.setPadding(dpToPx(24), dpToPx(22), dpToPx(24), dpToPx(20));
+
+        GradientDrawable rootBg = new GradientDrawable();
+        rootBg.setCornerRadius(dpToPx(24));
+        rootBg.setColor(isDarkTheme ? 0xFF141926 : 0xFFFFFFFF);
+        rootBg.setStroke(dpToPx(1), isDarkTheme ? 0xFF1F293D : 0xFFCBD5E1);
+        root.setBackground(rootBg);
+
+        TextView title = new TextView(this);
+        title.setText("Add to Caspian Vault");
+        title.setTextSize(TypedValue.COMPLEX_UNIT_SP, 17f);
+        title.setTypeface(null, Typeface.BOLD);
+        title.setTextColor(isDarkTheme ? 0xFFFFFFFF : 0xFF0F172A);
+        root.addView(title);
+
+        TextView subtitle = new TextView(this);
+        subtitle.setText("Choose what you would like to create");
+        subtitle.setTextSize(TypedValue.COMPLEX_UNIT_SP, 12f);
+        subtitle.setTextColor(isDarkTheme ? 0xFF849396 : 0xFF64748B);
+        subtitle.setPadding(0, dpToPx(4), 0, dpToPx(18));
+        root.addView(subtitle);
+
+        AlertDialog menuDialog = builder.setView(root).create();
+        if (menuDialog.getWindow() != null) {
+            menuDialog.getWindow().setBackgroundDrawable(new ColorDrawable(Color.TRANSPARENT));
+        }
+
+        // Option 1: New Bookmark
+        LinearLayout cardBookmark = createVaultMenuOptionCard(
+                "🔖", "New Bookmark", "Save active page or enter a custom link",
+                () -> {
+                    menuDialog.dismiss();
+                    showAddBookmarkDialog(onRefresh);
+                }
+        );
+        root.addView(cardBookmark);
+
+        // Option 2: New Bookmark Group
+        LinearLayout cardGroup = createVaultMenuOptionCard(
+                "📁", "New Bookmark Group", "Create a custom category folder for bookmarks",
+                () -> {
+                    menuDialog.dismiss();
+                    showCreateBookmarkGroupDialog(onRefresh);
+                }
+        );
+        root.addView(cardGroup);
+
+        menuDialog.show();
+    }
+
+    private LinearLayout createVaultMenuOptionCard(String emoji, String titleText, String subtitleText, Runnable onClick) {
+        LinearLayout card = new LinearLayout(this);
+        card.setOrientation(LinearLayout.HORIZONTAL);
+        card.setGravity(Gravity.CENTER_VERTICAL);
+        card.setPadding(dpToPx(14), dpToPx(14), dpToPx(14), dpToPx(14));
+        card.setClickable(true);
+        card.setFocusable(true);
+
+        LinearLayout.LayoutParams lp = new LinearLayout.LayoutParams(
+                ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT);
+        lp.bottomMargin = dpToPx(10);
+        card.setLayoutParams(lp);
+
+        GradientDrawable cBg = new GradientDrawable();
+        cBg.setCornerRadius(dpToPx(16));
+        cBg.setColor(isDarkTheme ? 0xFF1B2232 : 0xFFF8FAFC);
+        cBg.setStroke(dpToPx(1), isDarkTheme ? 0xFF27334D : 0xFFE2E8F0);
+        card.setBackground(cBg);
+
+        // Emoji Frame
+        FrameLayout iconFrame = new FrameLayout(this);
+        LinearLayout.LayoutParams ifLp = new LinearLayout.LayoutParams(dpToPx(40), dpToPx(40));
+        ifLp.setMarginEnd(dpToPx(12));
+        iconFrame.setLayoutParams(ifLp);
+
+        GradientDrawable ifBg = new GradientDrawable();
+        ifBg.setCornerRadius(dpToPx(12));
+        ifBg.setColor(isDarkTheme ? 0xFF141926 : 0xFFEEF2F6);
+        iconFrame.setBackground(ifBg);
+
+        TextView tvEmoji = new TextView(this);
+        tvEmoji.setText(emoji);
+        tvEmoji.setTextSize(TypedValue.COMPLEX_UNIT_SP, 18f);
+        tvEmoji.setGravity(Gravity.CENTER);
+        iconFrame.addView(tvEmoji);
+        card.addView(iconFrame);
+
+        // Text details Column
+        LinearLayout col = new LinearLayout(this);
+        col.setOrientation(LinearLayout.VERTICAL);
+        col.setLayoutParams(new LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.WRAP_CONTENT, 1f));
+
+        TextView tvTitle = new TextView(this);
+        tvTitle.setText(titleText);
+        tvTitle.setTextSize(TypedValue.COMPLEX_UNIT_SP, 14f);
+        tvTitle.setTypeface(null, Typeface.BOLD);
+        tvTitle.setTextColor(isDarkTheme ? 0xFFF1F5F9 : 0xFF0F172A);
+        col.addView(tvTitle);
+
+        TextView tvSub = new TextView(this);
+        tvSub.setText(subtitleText);
+        tvSub.setTextSize(TypedValue.COMPLEX_UNIT_SP, 11.5f);
+        tvSub.setTextColor(isDarkTheme ? 0xFF849396 : 0xFF64748B);
+        tvSub.setPadding(0, dpToPx(2), 0, 0);
+        col.addView(tvSub);
+
+        card.addView(col);
+
+        // Right arrow
+        TextView arrow = new TextView(this);
+        arrow.setText("›");
+        arrow.setTextSize(TypedValue.COMPLEX_UNIT_SP, 20f);
+        arrow.setTextColor(isDarkTheme ? 0xFF64748B : 0xFF94A3B8);
+        card.addView(arrow);
+
+        card.setOnClickListener(v -> {
+            playUiFeedbackSound("tap");
+            if (onClick != null) onClick.run();
+        });
+
+        return card;
+    }
+
+    private void showAddBookmarkDialog(Runnable onRefresh) {
+        AlertDialog.Builder builder = new AlertDialog.Builder(this);
+        LinearLayout root = new LinearLayout(this);
+        root.setOrientation(LinearLayout.VERTICAL);
+        root.setPadding(dpToPx(24), dpToPx(22), dpToPx(24), dpToPx(18));
+
+        GradientDrawable rootBg = new GradientDrawable();
+        rootBg.setCornerRadius(dpToPx(22));
+        rootBg.setColor(isDarkTheme ? 0xFF141926 : 0xFFFFFFFF);
+        rootBg.setStroke(dpToPx(1), isDarkTheme ? 0xFF1F293D : 0xFFCBD5E1);
+        root.setBackground(rootBg);
+
+        TextView title = new TextView(this);
+        title.setText("Add Bookmark");
+        title.setTextSize(TypedValue.COMPLEX_UNIT_SP, 17f);
+        title.setTypeface(null, Typeface.BOLD);
+        title.setTextColor(isDarkTheme ? 0xFFFFFFFF : 0xFF0F172A);
+        root.addView(title);
+
+        TabItem activeTab = getActiveOrDominantTab();
+
+        // Title Input
+        TextView lblTitle = new TextView(this);
+        lblTitle.setText("PAGE TITLE");
+        lblTitle.setTextSize(TypedValue.COMPLEX_UNIT_SP, 10.5f);
+        lblTitle.setTypeface(null, Typeface.BOLD);
+        lblTitle.setTextColor(isDarkTheme ? 0xFF849396 : 0xFF64748B);
+        lblTitle.setPadding(0, dpToPx(14), 0, dpToPx(4));
+        root.addView(lblTitle);
+
+        EditText etTitle = new EditText(this);
+        etTitle.setHint("Bookmark Title");
+        if (activeTab != null && activeTab.title != null) etTitle.setText(activeTab.title);
+        etTitle.setTextColor(isDarkTheme ? 0xFFDFE2F0 : 0xFF0F172A);
+        etTitle.setHintTextColor(isDarkTheme ? 0xFF64748B : 0xFF94A3B8);
+        etTitle.setTextSize(TypedValue.COMPLEX_UNIT_SP, 13.5f);
+        root.addView(etTitle);
+
+        // URL Input
+        TextView lblUrl = new TextView(this);
+        lblUrl.setText("WEB URL");
+        lblUrl.setTextSize(TypedValue.COMPLEX_UNIT_SP, 10.5f);
+        lblUrl.setTypeface(null, Typeface.BOLD);
+        lblUrl.setTextColor(isDarkTheme ? 0xFF849396 : 0xFF64748B);
+        lblUrl.setPadding(0, dpToPx(10), 0, dpToPx(4));
+        root.addView(lblUrl);
+
+        EditText etUrl = new EditText(this);
+        etUrl.setHint("https://...");
+        if (activeTab != null && activeTab.url != null) etUrl.setText(activeTab.url);
+        etUrl.setTextColor(isDarkTheme ? 0xFFDFE2F0 : 0xFF0F172A);
+        etUrl.setHintTextColor(isDarkTheme ? 0xFF64748B : 0xFF94A3B8);
+        etUrl.setTextSize(TypedValue.COMPLEX_UNIT_SP, 13.5f);
+        root.addView(etUrl);
+
+        // Group Selector
+        TextView lblGroup = new TextView(this);
+        lblGroup.setText("BOOKMARK GROUP");
+        lblGroup.setTextSize(TypedValue.COMPLEX_UNIT_SP, 10.5f);
+        lblGroup.setTypeface(null, Typeface.BOLD);
+        lblGroup.setTextColor(isDarkTheme ? 0xFF849396 : 0xFF64748B);
+        lblGroup.setPadding(0, dpToPx(10), 0, dpToPx(4));
+        root.addView(lblGroup);
+
+        List<String> folderList = new ArrayList<>();
+        folderList.add("Default");
+        List<String> existing = bookmarkManager.getFolders();
+        for (String f : existing) {
+            if (!f.equalsIgnoreCase("Favorites") && !f.equalsIgnoreCase("All") && !f.equalsIgnoreCase("Default")) {
+                folderList.add(f);
+            }
+        }
+        final String[] selectedFolder = {folderList.get(0)};
+
+        TextView btnGroupPicker = new TextView(this);
+        btnGroupPicker.setText("📁 " + selectedFolder[0]);
+        btnGroupPicker.setTextSize(TypedValue.COMPLEX_UNIT_SP, 13f);
+        btnGroupPicker.setTextColor(isDarkTheme ? 0xFF00E5FF : 0xFF0284C7);
+        btnGroupPicker.setPadding(dpToPx(12), dpToPx(8), dpToPx(12), dpToPx(8));
+
+        GradientDrawable gpBg = new GradientDrawable();
+        gpBg.setCornerRadius(dpToPx(10));
+        gpBg.setColor(isDarkTheme ? 0xFF1E2838 : 0xFFE0F2FE);
+        gpBg.setStroke(dpToPx(1), isDarkTheme ? 0xFF2B3A50 : 0xFFBAE6FD);
+        btnGroupPicker.setBackground(gpBg);
+        btnGroupPicker.setClickable(true);
+        btnGroupPicker.setFocusable(true);
+        btnGroupPicker.setOnClickListener(v -> {
+            playUiFeedbackSound("tap");
+            PopupMenu pm = new PopupMenu(this, btnGroupPicker);
+            for (int i = 0; i < folderList.size(); i++) {
+                pm.getMenu().add(0, i, i, folderList.get(i));
+            }
+            pm.setOnMenuItemClickListener(item -> {
+                int id = item.getItemId();
+                if (id >= 0 && id < folderList.size()) {
+                    selectedFolder[0] = folderList.get(id);
+                    btnGroupPicker.setText("📁 " + selectedFolder[0]);
+                }
+                return true;
+            });
+            pm.show();
+        });
+        root.addView(btnGroupPicker);
+
+        AlertDialog addDialog = builder.setView(root).create();
+        if (addDialog.getWindow() != null) {
+            addDialog.getWindow().setBackgroundDrawable(new ColorDrawable(Color.TRANSPARENT));
+        }
+
+        // Action Buttons Row
+        LinearLayout btnRow = new LinearLayout(this);
+        btnRow.setOrientation(LinearLayout.HORIZONTAL);
+        btnRow.setGravity(Gravity.END);
+        btnRow.setPadding(0, dpToPx(20), 0, 0);
+
+        TextView btnCancel = new TextView(this);
+        btnCancel.setText("Cancel");
+        btnCancel.setTextSize(TypedValue.COMPLEX_UNIT_SP, 13f);
+        btnCancel.setTextColor(isDarkTheme ? 0xFF94A3B8 : 0xFF64748B);
+        btnCancel.setPadding(dpToPx(14), dpToPx(8), dpToPx(14), dpToPx(8));
+        btnCancel.setOnClickListener(v -> addDialog.dismiss());
+        btnRow.addView(btnCancel);
+
+        TextView btnSave = new TextView(this);
+        btnSave.setText("Save Bookmark");
+        btnSave.setTextSize(TypedValue.COMPLEX_UNIT_SP, 13f);
+        btnSave.setTypeface(null, Typeface.BOLD);
+        btnSave.setTextColor(0xFF000000);
+        btnSave.setPadding(dpToPx(16), dpToPx(8), dpToPx(16), dpToPx(8));
+
+        GradientDrawable svBg = new GradientDrawable();
+        svBg.setCornerRadius(dpToPx(10));
+        svBg.setColor(0xFF00E5FF);
+        btnSave.setBackground(svBg);
+        btnSave.setOnClickListener(v -> {
+            playUiFeedbackSound("tap");
+            String t = etTitle.getText().toString().trim();
+            String u = etUrl.getText().toString().trim();
+            if (!u.isEmpty()) {
+                if (!u.startsWith("http://") && !u.startsWith("https://")) u = "https://" + u;
+                if (t.isEmpty()) t = u;
+                bookmarkManager.addBookmark(t, u, selectedFolder[0], "");
+                Toast.makeText(this, "Bookmark saved to " + selectedFolder[0] + "! ✨", Toast.LENGTH_SHORT).show();
+                addDialog.dismiss();
+                if (onRefresh != null) onRefresh.run();
+            }
+        });
+        btnRow.addView(btnSave);
+        root.addView(btnRow);
+
+        addDialog.show();
+    }
+
+    private void showCreateBookmarkGroupDialog(Runnable onRefresh) {
+        AlertDialog.Builder builder = new AlertDialog.Builder(this);
+        LinearLayout root = new LinearLayout(this);
+        root.setOrientation(LinearLayout.VERTICAL);
+        root.setPadding(dpToPx(24), dpToPx(22), dpToPx(24), dpToPx(18));
+
+        GradientDrawable rootBg = new GradientDrawable();
+        rootBg.setCornerRadius(dpToPx(22));
+        rootBg.setColor(isDarkTheme ? 0xFF141926 : 0xFFFFFFFF);
+        rootBg.setStroke(dpToPx(1), isDarkTheme ? 0xFF1F293D : 0xFFCBD5E1);
+        root.setBackground(rootBg);
+
+        TextView title = new TextView(this);
+        title.setText("New Bookmark Group");
+        title.setTextSize(TypedValue.COMPLEX_UNIT_SP, 17f);
+        title.setTypeface(null, Typeface.BOLD);
+        title.setTextColor(isDarkTheme ? 0xFFFFFFFF : 0xFF0F172A);
+        root.addView(title);
+
+        TextView lblName = new TextView(this);
+        lblName.setText("GROUP NAME");
+        lblName.setTextSize(TypedValue.COMPLEX_UNIT_SP, 10.5f);
+        lblName.setTypeface(null, Typeface.BOLD);
+        lblName.setTextColor(isDarkTheme ? 0xFF849396 : 0xFF64748B);
+        lblName.setPadding(0, dpToPx(14), 0, dpToPx(4));
+        root.addView(lblName);
+
+        EditText etName = new EditText(this);
+        etName.setHint("e.g. Research, Work, AI Prompts");
+        etName.setTextColor(isDarkTheme ? 0xFFDFE2F0 : 0xFF0F172A);
+        etName.setHintTextColor(isDarkTheme ? 0xFF64748B : 0xFF94A3B8);
+        etName.setTextSize(TypedValue.COMPLEX_UNIT_SP, 13.5f);
+        root.addView(etName);
+
+        AlertDialog groupDialog = builder.setView(root).create();
+        if (groupDialog.getWindow() != null) {
+            groupDialog.getWindow().setBackgroundDrawable(new ColorDrawable(Color.TRANSPARENT));
+        }
+
+        LinearLayout btnRow = new LinearLayout(this);
+        btnRow.setOrientation(LinearLayout.HORIZONTAL);
+        btnRow.setGravity(Gravity.END);
+        btnRow.setPadding(0, dpToPx(20), 0, 0);
+
+        TextView btnCancel = new TextView(this);
+        btnCancel.setText("Cancel");
+        btnCancel.setTextSize(TypedValue.COMPLEX_UNIT_SP, 13f);
+        btnCancel.setTextColor(isDarkTheme ? 0xFF94A3B8 : 0xFF64748B);
+        btnCancel.setPadding(dpToPx(14), dpToPx(8), dpToPx(14), dpToPx(8));
+        btnCancel.setOnClickListener(v -> groupDialog.dismiss());
+        btnRow.addView(btnCancel);
+
+        TextView btnCreate = new TextView(this);
+        btnCreate.setText("Create Group");
+        btnCreate.setTextSize(TypedValue.COMPLEX_UNIT_SP, 13f);
+        btnCreate.setTypeface(null, Typeface.BOLD);
+        btnCreate.setTextColor(0xFF000000);
+        btnCreate.setPadding(dpToPx(16), dpToPx(8), dpToPx(16), dpToPx(8));
+
+        GradientDrawable crBg = new GradientDrawable();
+        crBg.setCornerRadius(dpToPx(10));
+        crBg.setColor(0xFF00E5FF);
+        btnCreate.setBackground(crBg);
+        btnCreate.setOnClickListener(v -> {
+            playUiFeedbackSound("tap");
+            String gName = etName.getText().toString().trim();
+            if (!gName.isEmpty()) {
+                bookmarkManager.createFolder(gName);
+                Toast.makeText(this, "Group \"" + gName + "\" created! 📁", Toast.LENGTH_SHORT).show();
+                groupDialog.dismiss();
+                if (onRefresh != null) onRefresh.run();
+            }
+        });
+        btnRow.addView(btnCreate);
+        root.addView(btnRow);
+
+        groupDialog.show();
+    }
+
+    private void showRenameGroupDialog(String oldName, Runnable onComplete) {
+        AlertDialog.Builder b = new AlertDialog.Builder(this);
+        LinearLayout l = new LinearLayout(this);
+        l.setOrientation(LinearLayout.VERTICAL);
+        l.setPadding(dpToPx(24), dpToPx(20), dpToPx(24), dpToPx(16));
+
+        GradientDrawable rBg = new GradientDrawable();
+        rBg.setCornerRadius(dpToPx(20));
+        rBg.setColor(isDarkTheme ? 0xFF141926 : 0xFFFFFFFF);
+        rBg.setStroke(dpToPx(1), isDarkTheme ? 0xFF1F293D : 0xFFCBD5E1);
+        l.setBackground(rBg);
+
+        TextView tv = new TextView(this);
+        tv.setText("Rename Bookmark Group");
+        tv.setTextSize(TypedValue.COMPLEX_UNIT_SP, 16f);
+        tv.setTypeface(null, Typeface.BOLD);
+        tv.setTextColor(isDarkTheme ? 0xFFF1F5F9 : 0xFF0F172A);
+        l.addView(tv);
+
+        EditText et = new EditText(this);
+        et.setText(oldName);
+        et.setSelection(oldName.length());
+        et.setTextColor(isDarkTheme ? 0xFFDFE2F0 : 0xFF0F172A);
+        et.setHintTextColor(isDarkTheme ? 0xFF64748B : 0xFF94A3B8);
+        et.setTextSize(TypedValue.COMPLEX_UNIT_SP, 13.5f);
+        l.addView(et);
+
+        AlertDialog renameDialog = b.setView(l).create();
+        if (renameDialog.getWindow() != null) {
+            renameDialog.getWindow().setBackgroundDrawable(new ColorDrawable(Color.TRANSPARENT));
+        }
+
+        LinearLayout btnRow = new LinearLayout(this);
+        btnRow.setOrientation(LinearLayout.HORIZONTAL);
+        btnRow.setGravity(Gravity.END);
+        btnRow.setPadding(0, dpToPx(18), 0, 0);
+
+        TextView btnCancel = new TextView(this);
+        btnCancel.setText("Cancel");
+        btnCancel.setTextSize(TypedValue.COMPLEX_UNIT_SP, 13f);
+        btnCancel.setTextColor(isDarkTheme ? 0xFF94A3B8 : 0xFF64748B);
+        btnCancel.setPadding(dpToPx(14), dpToPx(8), dpToPx(14), dpToPx(8));
+        btnCancel.setOnClickListener(v -> renameDialog.dismiss());
+        btnRow.addView(btnCancel);
+
+        TextView btnRename = new TextView(this);
+        btnRename.setText("Rename");
+        btnRename.setTextSize(TypedValue.COMPLEX_UNIT_SP, 13f);
+        btnRename.setTypeface(null, Typeface.BOLD);
+        btnRename.setTextColor(0xFF000000);
+        btnRename.setPadding(dpToPx(16), dpToPx(8), dpToPx(16), dpToPx(8));
+
+        GradientDrawable rnBg = new GradientDrawable();
+        rnBg.setCornerRadius(dpToPx(10));
+        rnBg.setColor(0xFF00E5FF);
+        btnRename.setBackground(rnBg);
+        btnRename.setOnClickListener(v -> {
+            playUiFeedbackSound("tap");
+            String newName = et.getText().toString().trim();
+            if (!newName.isEmpty() && !newName.equalsIgnoreCase(oldName)) {
+                bookmarkManager.renameFolder(oldName, newName);
+                Toast.makeText(this, "Renamed to \"" + newName + "\"", Toast.LENGTH_SHORT).show();
+                renameDialog.dismiss();
+                if (onComplete != null) onComplete.run();
+            }
+        });
+        btnRow.addView(btnRename);
+        l.addView(btnRow);
+
+        renameDialog.show();
+    }
+
+    private void showDeleteGroupDialog(String folderName, Runnable onComplete) {
+        new AlertDialog.Builder(this)
+                .setTitle("Delete Group")
+                .setMessage("Delete bookmark group \"" + folderName + "\"? Bookmarks inside this group will be moved to Default.")
+                .setPositiveButton("Delete", (d, w) -> {
+                    bookmarkManager.deleteFolder(folderName);
+                    Toast.makeText(this, "Group \"" + folderName + "\" deleted", Toast.LENGTH_SHORT).show();
+                    if (onComplete != null) onComplete.run();
+                })
+                .setNegativeButton("Cancel", null)
+                .show();
     }
 
     private void handleExportBookmarksToFolder(Uri treeUri) {
@@ -10175,7 +10704,11 @@ public class MainActivity extends AppCompatActivity {
         }
     }
 
-    private void showHistoryDialog() {
+    public void showHistoryDialog() {
+        showHistoryDialog(0);
+    }
+
+    public void showHistoryDialog(int enterDirection) {
         playUiFeedbackSound("tap");
         AlertDialog.Builder builder = new AlertDialog.Builder(this, android.R.style.Theme_Black_NoTitleBar_Fullscreen);
         View dialogView = getLayoutInflater().inflate(R.layout.dialog_history, null);
@@ -10185,6 +10718,17 @@ public class MainActivity extends AppCompatActivity {
             dialog.getWindow().setBackgroundDrawable(new ColorDrawable(isDarkTheme ? 0xFF0A0E17 : 0xFFF8FAFC));
         }
         dialogView.setBackgroundColor(isDarkTheme ? 0xFF0A0E17 : 0xFFF8FAFC);
+
+        // Slide Entrance Transition Animation
+        if (enterDirection > 0) {
+            dialogView.setTranslationX(dpToPx(130));
+            dialogView.setAlpha(0f);
+            dialogView.animate().translationX(0f).alpha(1f).setDuration(220).setInterpolator(new DecelerateInterpolator(1.6f)).start();
+        } else if (enterDirection < 0) {
+            dialogView.setTranslationX(-dpToPx(130));
+            dialogView.setAlpha(0f);
+            dialogView.animate().translationX(0f).alpha(1f).setDuration(220).setInterpolator(new DecelerateInterpolator(1.6f)).start();
+        }
 
         View historyRoot = dialogView.findViewById(R.id.history_root);
         View historyHeaderSection = dialogView.findViewById(R.id.history_header_section);
@@ -10671,16 +11215,32 @@ public class MainActivity extends AppCompatActivity {
         // Header Bookmarks & Settings Navigation
         if (tabBookmarks != null) {
             tabBookmarks.setOnClickListener(v -> {
-                dialog.dismiss();
                 playUiFeedbackSound("tap");
-                showBookmarksDialog();
+                dialogView.animate()
+                        .translationX(dpToPx(130))
+                        .alpha(0f)
+                        .setDuration(160)
+                        .setInterpolator(new AccelerateInterpolator())
+                        .withEndAction(() -> {
+                            dialog.dismiss();
+                            showBookmarksDialog(-1);
+                        })
+                        .start();
             });
         }
         if (tabSettings != null) {
             tabSettings.setOnClickListener(v -> {
-                dialog.dismiss();
                 playUiFeedbackSound("tap");
-                openControlSheet();
+                dialogView.animate()
+                        .translationX(-dpToPx(130))
+                        .alpha(0f)
+                        .setDuration(160)
+                        .setInterpolator(new AccelerateInterpolator())
+                        .withEndAction(() -> {
+                            dialog.dismiss();
+                            openControlSheet();
+                        })
+                        .start();
             });
         }
 
@@ -14676,6 +15236,18 @@ public class MainActivity extends AppCompatActivity {
                 }
             } else {
                 tab.webView.loadUrl(url);
+            }
+            if (tab.webView != null) {
+                tab.webView.setAlpha(0.25f);
+                tab.webView.setScaleX(0.96f);
+                tab.webView.setScaleY(0.96f);
+                tab.webView.animate()
+                        .alpha(1.0f)
+                        .scaleX(1.0f)
+                        .scaleY(1.0f)
+                        .setDuration(220)
+                        .setInterpolator(new DecelerateInterpolator(1.6f))
+                        .start();
             }
             updateOmniboxState();
             saveOpenTabsState();
