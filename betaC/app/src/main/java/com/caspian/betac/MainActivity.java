@@ -1919,9 +1919,79 @@ public class MainActivity extends AppCompatActivity {
         tileNewTabClaude.setOnClickListener(tileClick);
     }
 
+    private File getTabSnapshotFile(int tabId) {
+        File dir = new File(getCacheDir(), "tab_snapshots");
+        if (!dir.exists()) dir.mkdirs();
+        return new File(dir, "tab_" + tabId + ".jpg");
+    }
+
+    private void saveTabSnapshotToDisk(int tabId, Bitmap bmp) {
+        if (bmp == null || bmp.isRecycled()) return;
+        new Thread(() -> {
+            try {
+                File file = getTabSnapshotFile(tabId);
+                java.io.FileOutputStream fos = new java.io.FileOutputStream(file);
+                bmp.compress(Bitmap.CompressFormat.JPEG, 85, fos);
+                fos.flush();
+                fos.close();
+            } catch (Exception ignored) {}
+        }).start();
+    }
+
+    private Bitmap getOrLoadTabSnapshot(TabItem tab) {
+        if (tab == null) return null;
+        if (tab.snapshotBitmap != null && !tab.snapshotBitmap.isRecycled()) {
+            return tab.snapshotBitmap;
+        }
+        // Try loading from disk cache
+        try {
+            File file = getTabSnapshotFile(tab.id);
+            if (file.exists() && file.length() > 0) {
+                Bitmap diskBmp = BitmapFactory.decodeFile(file.getAbsolutePath());
+                if (diskBmp != null) {
+                    tab.snapshotBitmap = diskBmp;
+                    return diskBmp;
+                }
+            }
+        } catch (Exception ignored) {}
+
+        // If WebView dimensions are measured, capture immediately!
+        if (tab.webView != null) {
+            try {
+                int w = tab.webView.getWidth();
+                int h = tab.webView.getHeight();
+                if (w > 0 && h > 0) {
+                    Bitmap bmp = Bitmap.createBitmap(w / 2, h / 2, Bitmap.Config.RGB_565);
+                    Canvas canvas = new Canvas(bmp);
+                    canvas.scale(0.5f, 0.5f);
+                    tab.webView.draw(canvas);
+                    tab.snapshotBitmap = bmp;
+                    saveTabSnapshotToDisk(tab.id, bmp);
+                    return bmp;
+                }
+            } catch (Exception ignored) {}
+        }
+        return null;
+    }
+
     private void captureTabSnapshot(TabItem tab) {
         if (tab == null || tab.webView == null) return;
-        tab.webView.postDelayed(() -> {
+        try {
+            if (tab.url != null && tab.url.contains("pdf_viewer.html")) return;
+            int w = tab.webView.getWidth();
+            int h = tab.webView.getHeight();
+            if (w > 0 && h > 0) {
+                Bitmap bmp = Bitmap.createBitmap(w / 2, h / 2, Bitmap.Config.RGB_565);
+                Canvas canvas = new Canvas(bmp);
+                canvas.scale(0.5f, 0.5f);
+                tab.webView.draw(canvas);
+                tab.snapshotBitmap = bmp;
+                saveTabSnapshotToDisk(tab.id, bmp);
+                return;
+            }
+        } catch (Exception ignored) {}
+
+        tab.webView.post(() -> {
             try {
                 if (tab.url != null && tab.url.contains("pdf_viewer.html")) return;
                 int w = tab.webView.getWidth();
@@ -1932,9 +2002,10 @@ public class MainActivity extends AppCompatActivity {
                     canvas.scale(0.5f, 0.5f);
                     tab.webView.draw(canvas);
                     tab.snapshotBitmap = bmp;
+                    saveTabSnapshotToDisk(tab.id, bmp);
                 }
             } catch (Exception ignored) {}
-        }, 500);
+        });
     }
 
     private void setupModernTabGridOverlay() {
@@ -2271,12 +2342,82 @@ public class MainActivity extends AppCompatActivity {
         applyTabGridTheme();
         updateTabGridSelectionUi();
         renderTabGridCards("");
+
+        // iOS Smooth Zoom & Scale Entrance Animation
+        if (omniboxTabsBtn != null && omniboxTabsBtn.getWidth() > 0) {
+            float pivotX = omniboxTabsBtn.getX() + (omniboxTabsBtn.getWidth() / 2f);
+            float pivotY = omniboxTabsBtn.getY() + (omniboxTabsBtn.getHeight() / 2f);
+            tabGridOverlay.setPivotX(pivotX);
+            tabGridOverlay.setPivotY(pivotY);
+        } else {
+            tabGridOverlay.setPivotX(getResources().getDisplayMetrics().widthPixels / 2f);
+            tabGridOverlay.setPivotY(getResources().getDisplayMetrics().heightPixels * 0.85f);
+        }
+        tabGridOverlay.setScaleX(0.86f);
+        tabGridOverlay.setScaleY(0.86f);
+        tabGridOverlay.setAlpha(0.0f);
+        tabGridOverlay.setTranslationY(dpToPx(24));
+
+        tabGridOverlay.animate().cancel();
+        tabGridOverlay.animate()
+                .scaleX(1.0f)
+                .scaleY(1.0f)
+                .alpha(1.0f)
+                .translationY(0f)
+                .setDuration(240)
+                .setInterpolator(new DecelerateInterpolator(2.0f))
+                .start();
+
+        if (browserContentLayout != null) {
+            browserContentLayout.animate().cancel();
+            browserContentLayout.animate()
+                    .scaleX(0.92f)
+                    .scaleY(0.92f)
+                    .translationY(dpToPx(16))
+                    .setDuration(240)
+                    .setInterpolator(new DecelerateInterpolator(2.0f))
+                    .start();
+        }
+
         playAssetSound("sfx/pop_click.mp3");
     }
 
     public void hideTabGridView() {
         if (tabGridOverlay != null) {
-            tabGridOverlay.setVisibility(View.GONE);
+            if (omniboxTabsBtn != null && omniboxTabsBtn.getWidth() > 0) {
+                float pivotX = omniboxTabsBtn.getX() + (omniboxTabsBtn.getWidth() / 2f);
+                float pivotY = omniboxTabsBtn.getY() + (omniboxTabsBtn.getHeight() / 2f);
+                tabGridOverlay.setPivotX(pivotX);
+                tabGridOverlay.setPivotY(pivotY);
+            }
+            tabGridOverlay.animate().cancel();
+            tabGridOverlay.animate()
+                    .scaleX(0.86f)
+                    .scaleY(0.86f)
+                    .alpha(0.0f)
+                    .translationY(dpToPx(24))
+                    .setDuration(190)
+                    .setInterpolator(new PathInterpolator(0.3f, 0f, 0.8f, 0.15f))
+                    .withEndAction(() -> {
+                        tabGridOverlay.setVisibility(View.GONE);
+                        tabGridOverlay.setScaleX(1.0f);
+                        tabGridOverlay.setScaleY(1.0f);
+                        tabGridOverlay.setAlpha(1.0f);
+                        tabGridOverlay.setTranslationY(0f);
+                    })
+                    .start();
+
+            if (browserContentLayout != null) {
+                browserContentLayout.animate().cancel();
+                browserContentLayout.animate()
+                        .scaleX(1.0f)
+                        .scaleY(1.0f)
+                        .translationY(0f)
+                        .setDuration(200)
+                        .setInterpolator(new OvershootInterpolator(1.08f))
+                        .start();
+            }
+
             selectedGridTabIds.clear();
             isGridSelectionMode = false;
             currentGridGroupId = null;
@@ -3026,11 +3167,12 @@ public class MainActivity extends AppCompatActivity {
         // Left Half
         FrameLayout leftFrame = new FrameLayout(this);
         leftFrame.setLayoutParams(new LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.MATCH_PARENT, 1f));
-        if (leftTab.snapshotBitmap != null && !leftTab.snapshotBitmap.isRecycled()) {
+        Bitmap lBmp = getOrLoadTabSnapshot(leftTab);
+        if (lBmp != null && !lBmp.isRecycled()) {
             ImageView img = new ImageView(this);
             img.setLayoutParams(new FrameLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.MATCH_PARENT));
             img.setScaleType(ImageView.ScaleType.CENTER_CROP);
-            img.setImageBitmap(leftTab.snapshotBitmap);
+            img.setImageBitmap(lBmp);
             leftFrame.addView(img);
         } else {
             Bitmap lFav = getTabFaviconBitmap(leftTab);
@@ -3059,11 +3201,12 @@ public class MainActivity extends AppCompatActivity {
         // Right Half
         FrameLayout rightFrame = new FrameLayout(this);
         rightFrame.setLayoutParams(new LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.MATCH_PARENT, 1f));
-        if (rightTab.snapshotBitmap != null && !rightTab.snapshotBitmap.isRecycled()) {
+        Bitmap rBmp = getOrLoadTabSnapshot(rightTab);
+        if (rBmp != null && !rBmp.isRecycled()) {
             ImageView img = new ImageView(this);
             img.setLayoutParams(new FrameLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.MATCH_PARENT));
             img.setScaleType(ImageView.ScaleType.CENTER_CROP);
-            img.setImageBitmap(rightTab.snapshotBitmap);
+            img.setImageBitmap(rBmp);
             rightFrame.addView(img);
         } else {
             Bitmap rFav = getTabFaviconBitmap(rightTab);
@@ -3236,21 +3379,38 @@ public class MainActivity extends AppCompatActivity {
         body.setBackground(bodyGd);
         body.setClipToOutline(true);
 
-        if (tab.snapshotBitmap != null && !tab.snapshotBitmap.isRecycled()) {
+        Bitmap previewBmp = getOrLoadTabSnapshot(tab);
+        if (previewBmp != null && !previewBmp.isRecycled()) {
             ImageView previewImage = new ImageView(this);
             previewImage.setLayoutParams(new FrameLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.MATCH_PARENT));
             previewImage.setScaleType(ImageView.ScaleType.CENTER_CROP);
-            previewImage.setImageBitmap(tab.snapshotBitmap);
+            previewImage.setImageBitmap(previewBmp);
             body.addView(previewImage);
         } else {
-            TextView urlSnippet = new TextView(this);
-            urlSnippet.setLayoutParams(new FrameLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT, Gravity.CENTER));
-            urlSnippet.setText(cleanDisplayUrl(url));
-            urlSnippet.setTextColor(isLight ? 0xFF64748B : 0xFF849396);
-            urlSnippet.setTextSize(10);
-            urlSnippet.setGravity(Gravity.CENTER);
-            urlSnippet.setPadding(dpToPx(8), dpToPx(8), dpToPx(8), dpToPx(8));
-            body.addView(urlSnippet);
+            LinearLayout placeholder = new LinearLayout(this);
+            placeholder.setLayoutParams(new FrameLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.MATCH_PARENT));
+            placeholder.setOrientation(LinearLayout.VERTICAL);
+            placeholder.setGravity(Gravity.CENTER);
+            placeholder.setPadding(dpToPx(12), dpToPx(14), dpToPx(12), dpToPx(14));
+
+            TextView bigIcon = new TextView(this);
+            bigIcon.setText(tab.isIncognito ? "🕶️" : (url.contains("youtube.com") ? "🎬" : (url.contains("chatgpt.com") ? "🤖" : (url.contains("gemini.google.com") ? "♊" : "🌐"))));
+            bigIcon.setTextSize(26);
+            bigIcon.setGravity(Gravity.CENTER);
+            placeholder.addView(bigIcon);
+
+            TextView hostView = new TextView(this);
+            hostView.setLayoutParams(new LinearLayout.LayoutParams(ViewGroup.LayoutParams.WRAP_CONTENT, ViewGroup.LayoutParams.WRAP_CONTENT));
+            hostView.setText(cleanDisplayUrl(url));
+            hostView.setTextColor(isLight ? 0xFF334155 : 0xFFCBD5E1);
+            hostView.setTextSize(TypedValue.COMPLEX_UNIT_SP, 11);
+            hostView.setTypeface(null, android.graphics.Typeface.BOLD);
+            hostView.setSingleLine(true);
+            hostView.setEllipsize(android.text.TextUtils.TruncateAt.END);
+            hostView.setPadding(0, dpToPx(6), 0, 0);
+            placeholder.addView(hostView);
+
+            body.addView(placeholder);
         }
 
         // Domain pill badge pinned at bottom-left

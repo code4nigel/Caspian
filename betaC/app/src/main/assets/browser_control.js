@@ -2909,10 +2909,21 @@
       let isDrag = false;
       let isSwipe = false;
       let cachedTargets = [];
+      let currentTargetSlot = -1;
 
       const idx = parseInt(card.dataset.index);
       const tab = harborTabs[idx];
       const isLocked = tab ? (tab.isLocked === true || tab.service === 'hub') : false;
+
+      const startDragSession = () => {
+        if (isDrag || isLocked) return;
+        isDrag = true;
+        currentTargetSlot = idx;
+        card.classList.add('dragging');
+        card.style.zIndex = '99999';
+        if (navigator.vibrate) navigator.vibrate(30);
+        try { playSFX('tb_clicks'); } catch (err) { }
+      };
 
       const onTouchStart = (e) => {
         const touch = e.touches[0];
@@ -2924,27 +2935,32 @@
         diffY = 0;
         isDrag = false;
         isSwipe = false;
+        currentTargetSlot = idx;
 
         clearTimeout(longPressTimer);
         clearTimeout(pressTimer);
 
         if (isHarborEditing) {
-          // In editing mode: a short hold (~150ms) initiates drag reordering for editable tabs
+          // In editing mode: editable tabs prepare for drag reordering
           if (!isLocked) {
-            cachedTargets = Array.from(grid.querySelectorAll('.harbor-tab-card')).map(el => ({
-              el,
-              rect: el.getBoundingClientRect(),
-              index: parseInt(el.dataset.index)
-            }));
+            cachedTargets = Array.from(grid.querySelectorAll('.harbor-tab-card')).map(el => {
+              const r = el.getBoundingClientRect();
+              return {
+                el,
+                index: parseInt(el.dataset.index),
+                left: r.left,
+                top: r.top,
+                width: r.width,
+                height: r.height,
+                cx: r.left + r.width / 2,
+                cy: r.top + r.height / 2
+              };
+            });
 
+            // Quick hold (~80ms) lifts the card into drag mode
             pressTimer = setTimeout(() => {
-              isDrag = true;
-              card.classList.add('dragging');
-              card.style.zIndex = '999';
-              card.style.animation = 'none'; // pause wiggle while dragging
-              if (navigator.vibrate) navigator.vibrate(35);
-              try { playSFX('tb_clicks'); } catch (err) { }
-            }, 150);
+              startDragSession();
+            }, 80);
           }
         } else {
           // In normal mode: 500ms long press toggles editing mode
@@ -2965,53 +2981,96 @@
         diffY = touch.clientY - touchStartY;
         const moveDist = Math.hypot(diffX, diffY);
 
+        if (isHarborEditing && !isLocked && !isDrag && !isSwipe) {
+          // If in edit mode, movement starts drag unless it's a pronounced horizontal swipe
+          if (moveDist > 10) {
+            if (Math.abs(diffX) > Math.abs(diffY) * 2.2 && Math.abs(diffY) < 16) {
+              isSwipe = true;
+              clearTimeout(pressTimer);
+            } else {
+              clearTimeout(pressTimer);
+              startDragSession();
+            }
+          }
+        }
+
         if (isDrag) {
           try { e.preventDefault(); } catch (err) { }
-          card.style.transform = `translate3d(${diffX}px, ${diffY}px, 0) scale(1.08)`;
+          // Follow the finger precisely with lifting scale
+          card.style.transform = `translate3d(${diffX}px, ${diffY}px, 0) scale(1.12)`;
 
-          // Spatial 2D collision detection with other harbor cards
+          // Spatial 2D collision & slot-shifting
           const touchX = touch.clientX;
           const touchY = touch.clientY;
-          let currentTarget = null;
+
+          let newTargetSlot = idx;
+          let minDistance = Infinity;
 
           for (let i = 0; i < cachedTargets.length; i++) {
             const item = cachedTargets[i];
-            if (item.el === card) continue;
-            // Caspian Hub (index 0) cannot be moved or displaced
+            // Caspian Hub (index 0) cannot be displaced
             if (item.index === 0) continue;
-            const r = item.rect;
-            if (touchX >= r.left && touchX <= r.right && touchY >= r.top && touchY <= r.bottom) {
-              currentTarget = item.el;
+
+            // Check if touch point is inside slot bounding box
+            const pad = 12;
+            if (touchX >= item.left - pad && touchX <= item.left + item.width + pad &&
+                touchY >= item.top - pad && touchY <= item.top + item.height + pad) {
+              newTargetSlot = item.index;
               break;
+            }
+
+            // Fallback: closest center distance
+            const d = Math.hypot(touchX - item.cx, touchY - item.cy);
+            if (d < minDistance) {
+              minDistance = d;
+              if (d < item.width * 0.85) {
+                newTargetSlot = item.index;
+              }
             }
           }
 
-          cachedTargets.forEach(item => {
-            if (item.el === card) return;
-            if (item.el === currentTarget) {
-              if (!item.el.classList.contains('drop-target')) {
-                item.el.classList.add('drop-target');
-              }
-              item.el.style.transform = 'scale(0.92) translateY(4px)';
-              item.el.style.transition = 'transform 0.15s ease-out';
+          if (newTargetSlot !== currentTargetSlot) {
+            currentTargetSlot = newTargetSlot;
+            if (navigator.vibrate) navigator.vibrate(15);
+          }
+
+          // Dynamically shift other cards out of the way to open space for the floating tab
+          cachedTargets.forEach(target => {
+            if (target.index === idx) return; // The card currently being dragged
+            if (target.index === 0) return; // Hub never moves
+
+            const k = target.index;
+            let destIndex = k;
+            if (idx < currentTargetSlot && k > idx && k <= currentTargetSlot) {
+              destIndex = k - 1;
+            } else if (idx > currentTargetSlot && k >= currentTargetSlot && k < idx) {
+              destIndex = k + 1;
+            }
+
+            const originSlot = cachedTargets[k];
+            const destSlot = cachedTargets[destIndex];
+
+            if (originSlot && destSlot && (destIndex !== k)) {
+              const shiftX = destSlot.left - originSlot.left;
+              const shiftY = destSlot.top - originSlot.top;
+              target.el.classList.add('slot-shifted');
+              target.el.style.transform = `translate3d(${shiftX}px, ${shiftY}px, 0)`;
             } else {
-              item.el.classList.remove('drop-target');
-              item.el.style.transform = '';
-              item.el.style.transition = 'transform 0.15s ease-out';
+              target.el.classList.remove('slot-shifted');
+              target.el.style.transform = '';
             }
           });
+
           return;
         }
 
-        // Cancel long press & drag timers on clear movement
+        // Cancel long press if moved in normal mode
         if (moveDist > 10) {
           clearTimeout(longPressTimer);
-          if (!isDrag) clearTimeout(pressTimer);
         }
 
-        // Detect horizontal swipe only when in editing mode
-        if (isHarborEditing && !isDrag && moveDist > 16 && Math.abs(diffX) > Math.abs(diffY) * 1.4) {
-          isSwipe = true;
+        // Detect horizontal swipe only when in editing mode and not dragging
+        if (isHarborEditing && isSwipe) {
           try { e.preventDefault(); } catch (err) { }
           card.style.transform = `translateX(${diffX}px)`;
         }
@@ -3022,52 +3081,46 @@
         clearTimeout(pressTimer);
         const wasDrag = isDrag;
         const wasSwipe = isSwipe;
-
-        // Reset drag visuals on current card
-        card.classList.remove('dragging');
-        card.style.zIndex = '';
-        card.style.transform = '';
-        card.style.animation = '';
-        isDrag = false;
-
-        // Reset drop targets
-        grid.querySelectorAll('.harbor-tab-card').forEach(c => {
-          c.classList.remove('drop-target');
-          c.classList.remove('dragging');
-          c.style.transform = '';
-          c.style.transition = '';
-        });
+        const finalSlot = currentTargetSlot;
 
         // 1. Drag & Drop Reorder (only in editing mode)
         if (isHarborEditing && wasDrag) {
-          const activeDropTarget = grid.querySelector('.harbor-tab-card.drop-target') || (() => {
-            const item = cachedTargets.find(t =>
-              t.el !== card && t.index > 0 &&
-              lastMoveX >= t.rect.left && lastMoveX <= t.rect.right &&
-              lastMoveY >= t.rect.top && lastMoveY <= t.rect.bottom
-            );
-            return item ? item.el : null;
-          })();
+          isDrag = false;
+          card.classList.remove('dragging');
 
-          cachedTargets = [];
+          if (finalSlot > 0 && finalSlot !== idx && cachedTargets[finalSlot] && cachedTargets[idx]) {
+            // Animate the dragged card smoothly landing into its new slot position
+            const destSlot = cachedTargets[finalSlot];
+            const originSlot = cachedTargets[idx];
+            const finalShiftX = destSlot.left - originSlot.left;
+            const finalShiftY = destSlot.top - originSlot.top;
 
-          if (activeDropTarget) {
-            const sourceIdx = parseInt(card.dataset.index);
-            const targetIdx = parseInt(activeDropTarget.dataset.index);
+            card.style.transition = 'transform 0.22s cubic-bezier(0.2, 0.9, 0.3, 1)';
+            card.style.transform = `translate3d(${finalShiftX}px, ${finalShiftY}px, 0) scale(1)`;
 
-            if (sourceIdx !== -1 && targetIdx > 0 && sourceIdx !== targetIdx) {
+            setTimeout(() => {
               pushHarborHistory();
-              const [moved] = harborTabs.splice(sourceIdx, 1);
-              harborTabs.splice(targetIdx, 0, moved);
+              const [moved] = harborTabs.splice(idx, 1);
+              harborTabs.splice(finalSlot, 0, moved);
               saveHarborTabs();
               if (navigator.vibrate) navigator.vibrate(35);
               try { playSFX('tb_clicks'); } catch (err) { }
               renderHarborTabs();
-              return;
-            }
+            }, 220);
+            return;
+          } else {
+            // Dropped back in place: snap back smoothly
+            card.style.transition = 'transform 0.2s ease-out';
+            card.style.transform = 'translate3d(0, 0, 0) scale(1)';
+            cachedTargets.forEach(t => {
+              t.el.classList.remove('slot-shifted');
+              t.el.style.transform = '';
+            });
+            setTimeout(() => {
+              renderHarborTabs();
+            }, 200);
+            return;
           }
-          renderHarborTabs();
-          return;
         }
 
         // 2. Swipe Gestures (strictly only in editing mode)

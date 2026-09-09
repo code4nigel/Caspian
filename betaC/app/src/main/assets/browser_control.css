@@ -1709,12 +1709,12 @@ body.theme-flow .oneui-pill-btn.primary {
 }
 
 /* Touch Lift on Jiggling Card */
-.harbor-tab-card.editing-shake:active,
-.tab-card.editing-shake:active {
-  animation: none !important;
-  transform: scale(1.08) translateY(-4px) !important;
-  box-shadow: 0 16px 32px rgba(0, 0, 0, 0.6), 0 0 20px rgba(0, 229, 255, 0.5) !important;
-  z-index: 100 !important;
+.harbor-tab-card.editing-shake:not(.dragging):active,
+.tab-card.editing-shake:not(.dragging):active {
+  animation: none;
+  transform: scale(1.06) translateY(-3px);
+  box-shadow: 0 14px 28px rgba(0, 0, 0, 0.6), 0 0 18px rgba(0, 229, 255, 0.45);
+  z-index: 100;
 }
 
 /* Delete badge wobble */
@@ -1725,17 +1725,19 @@ body.theme-flow .oneui-pill-btn.primary {
 }
 
 .harbor-tab-card.dragging {
-  z-index: 999 !important;
-  opacity: 0.94;
-  box-shadow: 0 14px 32px rgba(0, 0, 0, 0.7) !important;
+  animation: none !important;
+  z-index: 100000 !important;
+  opacity: 0.96;
+  box-shadow: 0 20px 42px rgba(0, 0, 0, 0.8), 0 0 26px rgba(0, 229, 255, 0.7) !important;
   border-color: #00e5ff !important;
-  pointer-events: none;
+  pointer-events: auto !important;
+  touch-action: none !important;
+  will-change: transform;
 }
 
-.harbor-tab-card.drop-target {
-  border-color: #00e5ff !important;
-  box-shadow: 0 0 16px rgba(0, 229, 255, 0.5) !important;
-  transform: scale(0.92) translateY(4px);
+.harbor-tab-card.slot-shifted {
+  animation: none !important;
+  transition: transform 0.24s cubic-bezier(0.2, 0.9, 0.3, 1) !important;
 }
 
 
