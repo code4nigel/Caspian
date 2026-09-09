@@ -36,6 +36,10 @@
         }
         var density = localStorage.getItem('caspian_interface_density') || 'default';
         document.documentElement.setAttribute('data-density', density);
+        var scale = localStorage.getItem('caspian_ui_scale');
+        if (scale) {
+          document.documentElement.style.zoom = scale;
+        }
       } catch (e) { }
     })();
   </script>
@@ -754,7 +758,7 @@
         </div>
 
         <!-- Dynamic Harbor Tabs Grid Container -->
-        <div id="harbor-tabs-container" class="harbor-container-compact" style="position: relative; transition: max-height 0.35s cubic-bezier(0.4, 0, 0.2, 1); overflow: hidden; max-height: 220px; width: 100%; box-sizing: border-box;">
+        <div id="harbor-tabs-container" class="harbor-container-compact" style="position: relative; transition: max-height 0.35s cubic-bezier(0.4, 0, 0.2, 1); overflow: hidden; max-height: 190px; width: 100%; box-sizing: border-box;">
           <div id="harbor-tabs-grid" class="app-icon-grid" style="margin: 4px 0 10px 0; width: 100%; box-sizing: border-box;">
             <!-- Rendered dynamically by JS -->
           </div>
@@ -1032,6 +1036,27 @@
             <button id="density-compact" class="mode-pill" data-density="compact" title="Compact Pro: Low DPI simulation, fits more cards & tabs">Compact</button>
             <button id="density-default" class="mode-pill active" data-density="default" title="Default: Balanced for standard phone screens">Default</button>
             <button id="density-spacious" class="mode-pill" data-density="spacious" title="Spacious: Larger text & touch targets">Spacious</button>
+          </div>
+        </div>
+
+        <!-- Overall UI Scale Slider Setting -->
+        <div class="setting-row" style="margin-top: 14px; flex-direction: column; align-items: stretch; gap: 8px;">
+          <div style="display: flex; justify-content: space-between; align-items: center;">
+            <div>
+              <div class="setting-label">Overall UI Scale</div>
+              <div class="setting-desc" style="font-size: 10.5px; color: var(--text-muted);">Adjust overall app and sheet zoom level (mimics low DPI)</div>
+            </div>
+            <span id="ui-scale-value" style="font-size: 11px; font-weight: 800; color: var(--accent); background: rgba(0,229,255,0.12); padding: 2px 8px; border-radius: 8px;">100%</span>
+          </div>
+          <div style="display: flex; align-items: center; gap: 10px; width: 100%;">
+            <span style="font-size: 10px; color: var(--text-muted);">75%</span>
+            <input type="range" id="ui-scale-slider" min="75" max="110" step="5" value="100" style="flex: 1; accent-color: var(--accent); cursor: pointer;" />
+            <span style="font-size: 10px; color: var(--text-muted);">110%</span>
+          </div>
+          <div class="pill-grid" style="grid-template-columns: repeat(3, 1fr); gap: 6px; margin-top: 2px;">
+            <button id="scale-pill-80" class="mode-pill" style="font-size: 10px; padding: 4px 6px;">80% (Low DPI)</button>
+            <button id="scale-pill-90" class="mode-pill" style="font-size: 10px; padding: 4px 6px;">90% (Balanced)</button>
+            <button id="scale-pill-100" class="mode-pill active" style="font-size: 10px; padding: 4px 6px;">100% (Default)</button>
           </div>
         </div>
       </div>
@@ -2189,7 +2214,7 @@
 
       <!-- Casks List -->
       <div id="control-casks-list"
-        style="display: flex; flex-direction: column; gap: 8px; max-height: 220px; overflow-y: auto; margin-bottom: 14px; padding-right: 2px; box-sizing: border-box; width: 100%;">
+        style="display: flex; flex-direction: column; gap: 8px; max-height: 190px; overflow-y: auto; margin-bottom: 14px; padding-right: 2px; box-sizing: border-box; width: 100%;">
         <!-- Rendered via JS -->
       </div>
 
