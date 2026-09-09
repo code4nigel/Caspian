@@ -2533,14 +2533,22 @@
       const touch = e.touches[0];
       lastClientY = touch.clientY;
       const deltaY = startY - touch.clientY;
-      const newHeight = startHeight + deltaY;
-      pendingHeightVh = Math.max(20, Math.min(95, (newHeight / window.innerHeight) * 100));
+      let newHeight = startHeight + deltaY;
+
+      // iOS Rubber-band elasticity past 90vh
+      const maxNormalHeight = window.innerHeight * 0.90;
+      if (newHeight > maxNormalHeight) {
+        const excess = newHeight - maxNormalHeight;
+        newHeight = maxNormalHeight + (excess * 0.32);
+      }
+
+      pendingHeightVh = Math.max(20, Math.min(96, (newHeight / window.innerHeight) * 100));
 
       if (!dragRafId) {
         dragRafId = requestAnimationFrame(() => {
           if (isDragging && pendingHeightVh !== null) {
             bottomSheet.style.height = pendingHeightVh + 'vh';
-            bottomSheet.style.maxHeight = '95vh';
+            bottomSheet.style.maxHeight = '96vh';
           }
           dragRafId = null;
         });
@@ -2553,7 +2561,7 @@
         cancelAnimationFrame(dragRafId);
         dragRafId = null;
       }
-      bottomSheet.style.transition = 'transform 0.3s cubic-bezier(0.16, 1, 0.3, 1), height 0.26s cubic-bezier(0.16, 1, 0.3, 1)';
+      bottomSheet.style.transition = 'transform 0.36s cubic-bezier(0.175, 0.885, 0.32, 1.275), height 0.32s cubic-bezier(0.175, 0.885, 0.32, 1.275)';
       const displacementY = lastClientY - startY;
       const timeElapsed = Date.now() - startTime;
       const velocityY = displacementY / timeElapsed; // px/ms

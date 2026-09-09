@@ -10,8 +10,8 @@ android {
         applicationId = "com.caspian.betac"
         minSdk = 24
         targetSdk = 34
-        versionCode = 155
-        versionName = "1.2.44-BetaC"
+        versionCode = 156
+        versionName = "1.2.45-BetaC"
     }
 
     buildTypes {
@@ -45,5 +45,6 @@ dependencies {
     implementation("androidx.documentfile:documentfile:1.0.1")
     implementation("androidx.media:media:1.7.0")
     implementation("com.google.android.gms:play-services-mlkit-text-recognition:19.0.0")
+    implementation("androidx.dynamicanimation:dynamicanimation:1.0.0")
 }
 

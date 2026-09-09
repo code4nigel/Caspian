@@ -38,6 +38,7 @@ import android.graphics.drawable.ColorDrawable;
 import android.graphics.drawable.GradientDrawable;
 import android.view.LayoutInflater;
 import android.view.PixelCopy;
+import android.view.VelocityTracker;
 import android.webkit.RenderProcessGoneDetail;
 import java.util.function.Consumer;
 import java.util.zip.ZipInputStream;
@@ -391,6 +392,7 @@ public class MainActivity extends AppCompatActivity {
     private MediaPlayer splashPlayer;
 
     private CardView floatingCaspianCard;
+    private VelocityTracker cabVelocityTracker;
     private ImageView floatingCaspianIcon;
     private CabRadialMenuView cabRadialMenu;
     private WhirlpoolOverlayView currentWhirlpoolOverlay;
@@ -4906,8 +4908,7 @@ public class MainActivity extends AppCompatActivity {
 
             chatgptDockShrinkBtn.setOnClickListener(v -> {
                 playUiFeedbackSound("tap");
-                chatgptDockScroll.setVisibility(View.GONE);
-                chatgptDockBall.setVisibility(View.VISIBLE);
+                CaspianPhysics.collapseDockWithSpring(chatgptDockContainer, chatgptDockBall, chatgptDockScroll);
             });
 
             chatgptDockBall.setOnTouchListener(new View.OnTouchListener() {
@@ -4930,19 +4931,15 @@ public class MainActivity extends AppCompatActivity {
                             float deltaY = Math.abs(event.getRawY() - startY);
                             if (deltaX > 10 || deltaY > 10) {
                                 isBallDragging = true;
-                                chatgptDockContainer.animate()
-                                        .x(event.getRawX() + ballDX)
-                                        .y(event.getRawY() + ballDY)
-                                        .setDuration(0)
-                                        .start();
+                                chatgptDockContainer.setX(event.getRawX() + ballDX);
+                                chatgptDockContainer.setY(event.getRawY() + ballDY);
                             }
                             return true;
 
                         case MotionEvent.ACTION_UP:
                             if (!isBallDragging) {
                                 playUiFeedbackSound("tap");
-                                chatgptDockBall.setVisibility(View.GONE);
-                                chatgptDockScroll.setVisibility(View.VISIBLE);
+                                CaspianPhysics.expandDockWithSpring(chatgptDockContainer, chatgptDockBall, chatgptDockScroll);
                             }
                             return true;
                     }
@@ -5147,8 +5144,7 @@ public class MainActivity extends AppCompatActivity {
 
             geminiDockShrinkBtn.setOnClickListener(v -> {
                 playUiFeedbackSound("tap");
-                geminiDockScroll.setVisibility(View.GONE);
-                geminiDockBall.setVisibility(View.VISIBLE);
+                CaspianPhysics.collapseDockWithSpring(geminiDockContainer, geminiDockBall, geminiDockScroll);
             });
 
             geminiDockBall.setOnTouchListener(new View.OnTouchListener() {
@@ -5171,19 +5167,15 @@ public class MainActivity extends AppCompatActivity {
                             float deltaY = Math.abs(event.getRawY() - startY);
                             if (deltaX > 10 || deltaY > 10) {
                                 isBallDragging = true;
-                                geminiDockContainer.animate()
-                                        .x(event.getRawX() + ballDX)
-                                        .y(event.getRawY() + ballDY)
-                                        .setDuration(0)
-                                        .start();
+                                geminiDockContainer.setX(event.getRawX() + ballDX);
+                                geminiDockContainer.setY(event.getRawY() + ballDY);
                             }
                             return true;
 
                         case MotionEvent.ACTION_UP:
                             if (!isBallDragging) {
                                 playUiFeedbackSound("tap");
-                                geminiDockBall.setVisibility(View.GONE);
-                                geminiDockScroll.setVisibility(View.VISIBLE);
+                                CaspianPhysics.expandDockWithSpring(geminiDockContainer, geminiDockBall, geminiDockScroll);
                             }
                             return true;
                     }
@@ -5659,8 +5651,7 @@ public class MainActivity extends AppCompatActivity {
 
             navDockShrinkBtn.setOnClickListener(v -> {
                 playUiFeedbackSound("tap");
-                searchDockScroll.setVisibility(View.GONE);
-                searchNavBall.setVisibility(View.VISIBLE);
+                CaspianPhysics.collapseDockWithSpring(searchNavContainer, searchNavBall, searchDockScroll);
             });
 
             searchNavBall.setOnTouchListener(new View.OnTouchListener() {
@@ -5683,19 +5674,15 @@ public class MainActivity extends AppCompatActivity {
                             float deltaY = Math.abs(event.getRawY() - startY);
                             if (deltaX > 10 || deltaY > 10) {
                                 isBallDragging = true;
-                                searchNavContainer.animate()
-                                        .x(event.getRawX() + ballDX)
-                                        .y(event.getRawY() + ballDY)
-                                        .setDuration(0)
-                                        .start();
+                                searchNavContainer.setX(event.getRawX() + ballDX);
+                                searchNavContainer.setY(event.getRawY() + ballDY);
                             }
                             return true;
 
                         case MotionEvent.ACTION_UP:
                             if (!isBallDragging) {
                                 playUiFeedbackSound("tap");
-                                searchNavBall.setVisibility(View.GONE);
-                                searchDockScroll.setVisibility(View.VISIBLE);
+                                CaspianPhysics.expandDockWithSpring(searchNavContainer, searchNavBall, searchDockScroll);
                             }
                             return true;
                     }
@@ -16688,6 +16675,13 @@ public class MainActivity extends AppCompatActivity {
                         return true;
                     }
 
+                    if (cabVelocityTracker == null) {
+                        cabVelocityTracker = VelocityTracker.obtain();
+                    } else {
+                        cabVelocityTracker.clear();
+                    }
+                    cabVelocityTracker.addMovement(event);
+
                     dX = view.getX() - event.getRawX();
                     dY = view.getY() - event.getRawY();
                     startRawX = event.getRawX();
@@ -16696,10 +16690,13 @@ public class MainActivity extends AppCompatActivity {
                     isLongPressed = false;
                     isLongPressedInThisGesture = false;
 
+                    CaspianPhysics.applyPressSquish(view);
+
                     longPressRunnable = () -> {
                         if (!isDragging) {
                             isLongPressed = true;
                             isLongPressedInThisGesture = true;
+                            CaspianPhysics.applyReleasePop(view);
                             view.performHapticFeedback(HapticFeedbackConstants.LONG_PRESS);
                             playAssetSound("sfx/pop_button_v2.mp3");
 
@@ -16714,6 +16711,10 @@ public class MainActivity extends AppCompatActivity {
                     return true;
 
                 case MotionEvent.ACTION_MOVE:
+                    if (cabVelocityTracker != null) {
+                        cabVelocityTracker.addMovement(event);
+                    }
+
                     if (isLongPressed && cabRadialMenu != null) {
                         cabRadialMenu.updateTouch(event.getRawX(), event.getRawY());
                         return true;
@@ -16722,18 +16723,30 @@ public class MainActivity extends AppCompatActivity {
                     float deltaX = Math.abs(event.getRawX() - startRawX);
                     float deltaY = Math.abs(event.getRawY() - startRawY);
                     if (deltaX > 10 || deltaY > 10) {
-                        isDragging = true;
+                        if (!isDragging) {
+                            isDragging = true;
+                            CaspianPhysics.applyReleasePop(view);
+                        }
                         if (longPressRunnable != null) longPressHandler.removeCallbacks(longPressRunnable);
-                        view.animate()
-                                .x(event.getRawX() + dX)
-                                .y(event.getRawY() + dY)
-                                .setDuration(0)
-                                .start();
+
+                        view.setX(event.getRawX() + dX);
+                        view.setY(event.getRawY() + dY);
+
+                        if (cabVelocityTracker != null) {
+                            cabVelocityTracker.computeCurrentVelocity(1000);
+                            float vx = cabVelocityTracker.getXVelocity();
+                            CaspianPhysics.applyDragTilt(view, vx, 14f);
+                        }
                     }
                     return true;
 
                 case MotionEvent.ACTION_UP:
                     if (longPressRunnable != null) longPressHandler.removeCallbacks(longPressRunnable);
+
+                    if (cabVelocityTracker != null) {
+                        cabVelocityTracker.addMovement(event);
+                        cabVelocityTracker.computeCurrentVelocity(1000);
+                    }
 
                     if (isLongPressed && cabRadialMenu != null) {
                         cabRadialMenu.finishGesture(new CabRadialMenuView.OnRadialActionSelectedListener() {
@@ -16755,40 +16768,56 @@ public class MainActivity extends AppCompatActivity {
                         cabRadialMenu = null;
                         isLongPressed = false;
                         isLongPressedInThisGesture = false;
+                        if (cabVelocityTracker != null) {
+                            cabVelocityTracker.recycle();
+                            cabVelocityTracker = null;
+                        }
                         return true;
                     }
 
                     if (isLongPressedInThisGesture) {
                         isLongPressedInThisGesture = false;
+                        if (cabVelocityTracker != null) {
+                            cabVelocityTracker.recycle();
+                            cabVelocityTracker = null;
+                        }
                         return true;
                     }
 
                     if (!isDragging && !isLongPressed) {
+                        CaspianPhysics.applyReleasePop(view);
+                        CaspianPhysics.resetDragTilt(view);
+                        view.performHapticFeedback(HapticFeedbackConstants.KEYBOARD_TAP);
+
                         if (currentWhirlpoolOverlay != null) {
                             currentWhirlpoolOverlay.dismiss();
                             currentWhirlpoolOverlay = null;
+                            if (cabVelocityTracker != null) {
+                                cabVelocityTracker.recycle();
+                                cabVelocityTracker = null;
+                            }
                             return true;
                         }
                         actionButtonClickCount++;
                         SharedPreferences appPrefs = getSharedPreferences(PREFS_NAME, MODE_PRIVATE);
                         appPrefs.edit().putInt("action_btn_click_count", actionButtonClickCount).apply();
 
-                        floatingCaspianCard.animate()
-                                .scaleX(0.88f)
-                                .scaleY(0.88f)
-                                .setDuration(100)
-                                .withEndAction(() -> {
-                                    floatingCaspianCard.animate()
-                                            .scaleX(1.0f)
-                                            .scaleY(1.0f)
-                                            .setDuration(100)
-                                            .setInterpolator(new OvershootInterpolator(1.2f))
-                                            .start();
-                                })
-                                .start();
                         toggleControlSheet();
                     } else if (isDragging) {
-                        // Roam freely anywhere on screen - no edge snapping
+                        DisplayMetrics dm = getResources().getDisplayMetrics();
+                        float minX = dpToPx(8);
+                        float maxX = dm.widthPixels - view.getWidth() - dpToPx(8);
+                        float minY = dpToPx(24);
+                        float maxY = dm.heightPixels - view.getHeight() - dpToPx(24);
+                        float velX = cabVelocityTracker != null ? cabVelocityTracker.getXVelocity() : 0f;
+                        float velY = cabVelocityTracker != null ? cabVelocityTracker.getYVelocity() : 0f;
+
+                        CaspianPhysics.flingToRestWithSpring(view, velX, velY, minX, maxX, minY, maxY);
+                    }
+
+                    if (cabVelocityTracker != null) {
+                        cabVelocityTracker.recycle();
+                        cabVelocityTracker = null;
                     }
                     return true;
 
@@ -16971,6 +17000,17 @@ public class MainActivity extends AppCompatActivity {
                 .setDuration(openDuration)
                 .start();
 
+        if (browserContentLayout != null) {
+            browserContentLayout.animate().cancel();
+            browserContentLayout.animate()
+                    .scaleX(0.94f)
+                    .scaleY(0.94f)
+                    .translationY(dpToPx(14))
+                    .setDuration(openDuration)
+                    .setInterpolator(new DecelerateInterpolator(1.8f))
+                    .start();
+        }
+
         Runnable onOpenComplete = () -> {
             controlWebView.evaluateJavascript("if (typeof renderOpenTabs === 'function') renderOpenTabs(); if (typeof syncAppVersion === 'function') syncAppVersion(); if (typeof restoreSavedSettings === 'function') restoreSavedSettings(); if (typeof updateDevHudCounters === 'function') updateDevHudCounters();", null);
         };
@@ -17067,6 +17107,17 @@ public class MainActivity extends AppCompatActivity {
                 .alpha(0f)
                 .setDuration(closeDuration)
                 .start();
+
+        if (browserContentLayout != null) {
+            browserContentLayout.animate().cancel();
+            browserContentLayout.animate()
+                    .scaleX(1.0f)
+                    .scaleY(1.0f)
+                    .translationY(0f)
+                    .setDuration(closeDuration)
+                    .setInterpolator(new OvershootInterpolator(1.08f))
+                    .start();
+        }
 
         // 2. Animate Control WebView independently
         controlWebView.animate().cancel();

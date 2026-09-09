@@ -380,11 +380,13 @@ body {
   align-items: center;
   justify-content: center;
   cursor: pointer;
-  transition: all 0.2s ease;
+  transition: transform 0.28s cubic-bezier(0.175, 0.885, 0.32, 1.275), background 0.2s ease, border-color 0.2s ease;
+  will-change: transform;
 }
 
 .icon-btn:active {
-  transform: scale(0.92);
+  transform: scale(0.88) !important;
+  transition: transform 0.08s cubic-bezier(0.2, 0.9, 0.3, 1) !important;
   background: var(--accent-glow);
 }
 
@@ -449,7 +451,13 @@ body {
   justify-content: center;
   gap: 6px;
   cursor: pointer;
-  transition: all 0.2s ease;
+  transition: transform 0.28s cubic-bezier(0.175, 0.885, 0.32, 1.275), background 0.2s ease, color 0.2s ease, box-shadow 0.2s ease;
+  will-change: transform;
+}
+
+.tab-nav-btn:active {
+  transform: scale(0.92) !important;
+  transition: transform 0.08s cubic-bezier(0.2, 0.9, 0.3, 1) !important;
 }
 
 .tab-nav-btn.active {
@@ -586,7 +594,8 @@ body {
   justify-content: center;
   gap: 6px;
   cursor: pointer;
-  transition: all 0.2s ease;
+  transition: transform 0.28s cubic-bezier(0.175, 0.885, 0.32, 1.275), background 0.2s ease, box-shadow 0.2s ease, border-color 0.2s ease;
+  will-change: transform;
 }
 
 .oneui-pill-btn.primary {
@@ -608,7 +617,8 @@ body {
 }
 
 .oneui-pill-btn:active {
-  transform: scale(0.95);
+  transform: scale(0.92) !important;
+  transition: transform 0.08s cubic-bezier(0.2, 0.9, 0.3, 1) !important;
 }
 
 .preset-dropdown-item {
@@ -1644,16 +1654,74 @@ body.theme-flow .oneui-pill-btn.primary {
   -webkit-touch-callout: none;
 }
 
-.harbor-tab-card.editing-shake {
-  animation: harborWiggle 0.4s infinite ease-in-out;
-  border-color: rgba(0, 229, 255, 0.6) !important;
-  box-shadow: 0 0 14px rgba(0, 229, 255, 0.25) !important;
+/* ==========================================================================
+   AUTHENTIC IOS SPRINGBOARD MULTI-FREQUENCY JIGGLE PHYSICS
+   ========================================================================== */
+@keyframes iosJiggleLeft {
+  0% { transform: rotate(-1.3deg) translateY(-0.6px); }
+  50% { transform: rotate(1.1deg) translateY(0.6px); }
+  100% { transform: rotate(-1.3deg) translateY(-0.6px); }
 }
 
-@keyframes harborWiggle {
-  0% { transform: rotate(-0.8deg); }
-  50% { transform: rotate(1deg); }
-  100% { transform: rotate(-0.8deg); }
+@keyframes iosJiggleRight {
+  0% { transform: rotate(1.2deg) translateY(0.5px); }
+  50% { transform: rotate(-1.2deg) translateY(-0.5px); }
+  100% { transform: rotate(1.2deg) translateY(0.5px); }
+}
+
+@keyframes badgeWobble {
+  0% { transform: scale(1) rotate(-2.5deg); }
+  50% { transform: scale(1.08) rotate(2.5deg); }
+  100% { transform: scale(1) rotate(-2.5deg); }
+}
+
+.harbor-tab-card.editing-shake,
+.tab-card.editing-shake {
+  animation: iosJiggleLeft 0.32s infinite ease-in-out !important;
+  border-color: rgba(0, 229, 255, 0.65) !important;
+  box-shadow: 0 4px 18px rgba(0, 229, 255, 0.3) !important;
+  transform-origin: 50% 50%;
+  will-change: transform;
+}
+
+.harbor-tab-card.editing-shake:nth-child(2n),
+.tab-card.editing-shake:nth-child(2n) {
+  animation: iosJiggleRight 0.35s infinite ease-in-out !important;
+  animation-delay: -0.11s !important;
+}
+
+.harbor-tab-card.editing-shake:nth-child(3n),
+.tab-card.editing-shake:nth-child(3n) {
+  animation: iosJiggleLeft 0.31s infinite ease-in-out !important;
+  animation-delay: -0.22s !important;
+}
+
+.harbor-tab-card.editing-shake:nth-child(4n),
+.tab-card.editing-shake:nth-child(4n) {
+  animation: iosJiggleRight 0.37s infinite ease-in-out !important;
+  animation-delay: -0.07s !important;
+}
+
+.harbor-tab-card.editing-shake:nth-child(5n),
+.tab-card.editing-shake:nth-child(5n) {
+  animation: iosJiggleLeft 0.34s infinite ease-in-out !important;
+  animation-delay: -0.17s !important;
+}
+
+/* Touch Lift on Jiggling Card */
+.harbor-tab-card.editing-shake:active,
+.tab-card.editing-shake:active {
+  animation: none !important;
+  transform: scale(1.08) translateY(-4px) !important;
+  box-shadow: 0 16px 32px rgba(0, 0, 0, 0.6), 0 0 20px rgba(0, 229, 255, 0.5) !important;
+  z-index: 100 !important;
+}
+
+/* Delete badge wobble */
+.harbor-tab-card.editing-shake .harbor-card-delete-badge,
+.tab-card.editing-shake .tab-card-delete-badge,
+.editing-shake .delete-badge {
+  animation: badgeWobble 0.28s infinite ease-in-out !important;
 }
 
 .harbor-tab-card.dragging {
