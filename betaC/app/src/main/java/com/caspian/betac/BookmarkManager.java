@@ -283,6 +283,21 @@ public class BookmarkManager {
         }
     }
 
+    public synchronized void moveBookmarkToFolder(String id, String newFolder) {
+        if (id == null) return;
+        String clean = (newFolder != null && !newFolder.trim().isEmpty()) ? newFolder.trim() : "Default";
+        for (BookmarkItem item : bookmarks) {
+            if (id.equals(item.id)) {
+                item.folder = clean;
+                if (!clean.equalsIgnoreCase("Default") && !folders.contains(clean)) {
+                    folders.add(clean);
+                }
+                save();
+                break;
+            }
+        }
+    }
+
     // Export Netscape HTML Format (Chrome, Edge, Brave, Firefox, Safari compatible)
     public synchronized void exportNetscapeHtml(OutputStream out) throws Exception {
         OutputStreamWriter writer = new OutputStreamWriter(out, StandardCharsets.UTF_8);

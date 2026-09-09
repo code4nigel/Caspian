@@ -211,51 +211,6 @@
                         android:focusable="true" />
                 </LinearLayout>
 
-                <!-- Caspian Section Segmenter -->
-                <LinearLayout
-                    android:id="@+id/segmenter_container"
-                    android:layout_width="match_parent"
-                    android:layout_height="38dp"
-                    android:layout_marginTop="12dp"
-                    android:background="@drawable/bg_stitch_history_search"
-                    android:orientation="horizontal"
-                    android:padding="3dp">
-
-                    <TextView
-                        android:id="@+id/btn_segment_bookmarks"
-                        android:layout_width="0dp"
-                        android:layout_height="match_parent"
-                        android:layout_weight="1"
-                        android:gravity="center"
-                        android:text="BOOKMARKS"
-                        android:textColor="#00E5FF"
-                        android:textSize="11sp"
-                        android:textStyle="bold"
-                        android:background="@drawable/bg_stitch_history_entry" />
-
-                    <TextView
-                        android:id="@+id/btn_segment_reading_list"
-                        android:layout_width="0dp"
-                        android:layout_height="match_parent"
-                        android:layout_weight="1"
-                        android:gravity="center"
-                        android:text="READING LIST"
-                        android:textColor="#849396"
-                        android:textSize="11sp"
-                        android:textStyle="bold" />
-
-                    <TextView
-                        android:id="@+id/btn_segment_ai_digests"
-                        android:layout_width="0dp"
-                        android:layout_height="match_parent"
-                        android:layout_weight="1"
-                        android:gravity="center"
-                        android:text="AI DIGESTS"
-                        android:textColor="#849396"
-                        android:textSize="11sp"
-                        android:textStyle="bold" />
-                </LinearLayout>
-
                 <!-- Search & Sort Filter Bar -->
                 <LinearLayout
                     android:id="@+id/bookmarks_search_bar"
