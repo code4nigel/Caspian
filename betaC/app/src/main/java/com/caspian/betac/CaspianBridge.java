@@ -1243,21 +1243,6 @@ public class CaspianBridge {
     }
 
     @JavascriptInterface
-    public void setUiScale(float scale) {
-        if (activity != null) {
-            activity.runOnUiThread(() -> activity.setUiScale(scale));
-        }
-    }
-
-    @JavascriptInterface
-    public float getUiScale() {
-        if (activity != null) {
-            return activity.getUiScale();
-        }
-        return 1.0f;
-    }
-
-    @JavascriptInterface
     public void showBrowserActionGrid() {
         if (activity != null) {
             activity.runOnUiThread(activity::showBrowserActionGrid);

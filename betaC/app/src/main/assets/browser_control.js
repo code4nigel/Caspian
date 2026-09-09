@@ -2509,80 +2509,10 @@
   const densityDefault = document.getElementById('density-default');
   const densitySpacious = document.getElementById('density-spacious');
 
-  // Overall UI Scale Management (mimics low-DPI / high real-estate mode)
-  function applyUiScale(scale, notifyBridge = true) {
-    scale = parseFloat(scale) || 1.0;
-    scale = Math.max(0.70, Math.min(1.20, scale));
-    document.documentElement.style.zoom = scale;
-    localStorage.setItem('caspian_ui_scale', scale);
-
-    const slider = document.getElementById('ui-scale-slider');
-    const valBadge = document.getElementById('ui-scale-value');
-    if (slider) slider.value = Math.round(scale * 100);
-    if (valBadge) valBadge.textContent = Math.round(scale * 100) + '%';
-
-    const p80 = document.getElementById('scale-pill-80');
-    const p90 = document.getElementById('scale-pill-90');
-    const p100 = document.getElementById('scale-pill-100');
-    if (p80) p80.classList.toggle('active', Math.abs(scale - 0.80) < 0.04);
-    if (p90) p90.classList.toggle('active', Math.abs(scale - 0.90) < 0.04);
-    if (p100) p100.classList.toggle('active', Math.abs(scale - 1.00) < 0.04);
-
-    if (notifyBridge && window.CaspianBridge && typeof window.CaspianBridge.setUiScale === 'function') {
-      try { window.CaspianBridge.setUiScale(scale); } catch (e) {}
-    }
-  }
-  window.applyUiScale = applyUiScale;
-
-  const uiScaleSlider = document.getElementById('ui-scale-slider');
-  if (uiScaleSlider) {
-    uiScaleSlider.addEventListener('input', (e) => {
-      const s = parseInt(e.target.value, 10) / 100;
-      applyUiScale(s, true);
-    });
-  }
-
-  const p80 = document.getElementById('scale-pill-80');
-  if (p80) p80.addEventListener('click', () => {
-    try { playSFX('tm_header'); } catch (e) {}
-    applyUiScale(0.80, true);
-    if (window.CaspianBridge && typeof window.CaspianBridge.showToast === 'function') {
-      window.CaspianBridge.showToast('UI Scale: 80% (Low DPI mode)');
-    }
-  });
-
-  const p90 = document.getElementById('scale-pill-90');
-  if (p90) p90.addEventListener('click', () => {
-    try { playSFX('tm_header'); } catch (e) {}
-    applyUiScale(0.90, true);
-    if (window.CaspianBridge && typeof window.CaspianBridge.showToast === 'function') {
-      window.CaspianBridge.showToast('UI Scale: 90% (Balanced)');
-    }
-  });
-
-  const p100 = document.getElementById('scale-pill-100');
-  if (p100) p100.addEventListener('click', () => {
-    try { playSFX('tm_header'); } catch (e) {}
-    applyUiScale(1.00, true);
-    if (window.CaspianBridge && typeof window.CaspianBridge.showToast === 'function') {
-      window.CaspianBridge.showToast('UI Scale: 100% (Default)');
-    }
-  });
-
-  const savedInitScale = parseFloat(localStorage.getItem('caspian_ui_scale')) || 1.0;
-  applyUiScale(savedInitScale, false);
-
   function applyInterfaceDensity(density) {
     density = density || 'default';
     document.documentElement.setAttribute('data-density', density);
     localStorage.setItem('caspian_interface_density', density);
-    if (density === 'compact') {
-      applyUiScale(0.85, true);
-    } else if (density === 'default') {
-      applyUiScale(1.00, true);
-    } else if (density === 'spacious') {
-      applyUiScale(1.05, true);
-    }
     if (window.CaspianBridge && typeof window.CaspianBridge.setInterfaceDensity === 'function') {
       try { window.CaspianBridge.setInterfaceDensity(density); } catch (e) {}
     }

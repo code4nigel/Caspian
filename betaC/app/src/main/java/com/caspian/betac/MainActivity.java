@@ -9567,32 +9567,6 @@ public class MainActivity extends AppCompatActivity {
         }
     }
 
-    public void setUiScale(float scale) {
-        float s = Math.max(0.70f, Math.min(1.20f, scale));
-        try {
-            getSharedPreferences(PREFS_NAME, MODE_PRIVATE)
-                    .edit()
-                    .putFloat("caspian_ui_scale", s)
-                    .apply();
-        } catch (Throwable ignored) {}
-        if (floatingCaspianCard != null) {
-            floatingCaspianCard.setScaleX(s);
-            floatingCaspianCard.setScaleY(s);
-        }
-        if (controlWebView != null) {
-            controlWebView.evaluateJavascript("if (typeof applyUiScale === 'function') applyUiScale(" + s + ");", null);
-        }
-    }
-
-    public float getUiScale() {
-        try {
-            return getSharedPreferences(PREFS_NAME, MODE_PRIVATE)
-                    .getFloat("caspian_ui_scale", 1.0f);
-        } catch (Throwable ignored) {
-            return 1.0f;
-        }
-    }
-
     public void launchDualAIAsk() {
         playUiFeedbackSound("tap");
         int gptId = nextTabId++;
@@ -18014,9 +17988,6 @@ public class MainActivity extends AppCompatActivity {
         sheetOverlayContainer.setFocusable(true);
 
         if (floatingCaspianCard != null) {
-            float s = getUiScale();
-            floatingCaspianCard.setScaleX(s);
-            floatingCaspianCard.setScaleY(s);
             floatingCaspianCard.bringToFront();
             float topElevation = TypedValue.applyDimension(TypedValue.COMPLEX_UNIT_DIP, 600, getResources().getDisplayMetrics());
             floatingCaspianCard.setElevation(topElevation);
@@ -18055,8 +18026,7 @@ public class MainActivity extends AppCompatActivity {
 
         Runnable onOpenComplete = () -> {
             String density = getInterfaceDensity();
-            float scale = getUiScale();
-            controlWebView.evaluateJavascript("if (typeof renderOpenTabs === 'function') renderOpenTabs(); if (typeof syncAppVersion === 'function') syncAppVersion(); if (typeof restoreSavedSettings === 'function') restoreSavedSettings(); if (typeof updateDevHudCounters === 'function') updateDevHudCounters(); if (typeof applyInterfaceDensity === 'function') applyInterfaceDensity('" + density + "'); if (typeof applyUiScale === 'function') applyUiScale(" + scale + ");", null);
+            controlWebView.evaluateJavascript("if (typeof renderOpenTabs === 'function') renderOpenTabs(); if (typeof syncAppVersion === 'function') syncAppVersion(); if (typeof restoreSavedSettings === 'function') restoreSavedSettings(); if (typeof updateDevHudCounters === 'function') updateDevHudCounters(); if (typeof applyInterfaceDensity === 'function') applyInterfaceDensity('" + density + "');", null);
         };
 
         // 2. Animate Control WebView independently
