@@ -1228,6 +1228,21 @@ public class CaspianBridge {
     }
 
     @JavascriptInterface
+    public void setInterfaceDensity(String density) {
+        if (activity != null) {
+            activity.runOnUiThread(() -> activity.setInterfaceDensity(density));
+        }
+    }
+
+    @JavascriptInterface
+    public String getInterfaceDensity() {
+        if (activity != null) {
+            return activity.getInterfaceDensity();
+        }
+        return "default";
+    }
+
+    @JavascriptInterface
     public void showBrowserActionGrid() {
         if (activity != null) {
             activity.runOnUiThread(activity::showBrowserActionGrid);

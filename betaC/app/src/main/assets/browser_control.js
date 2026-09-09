@@ -2504,6 +2504,63 @@
   if (tabStripToggleOff) tabStripToggleOff.addEventListener('click', () => setTabStripSetting(false));
   updateTabStripSettingUI();
 
+  // Interface Density Setting
+  const densityCompact = document.getElementById('density-compact');
+  const densityDefault = document.getElementById('density-default');
+  const densitySpacious = document.getElementById('density-spacious');
+
+  function applyInterfaceDensity(density) {
+    density = density || 'default';
+    document.documentElement.setAttribute('data-density', density);
+    localStorage.setItem('caspian_interface_density', density);
+    if (window.CaspianBridge && typeof window.CaspianBridge.setInterfaceDensity === 'function') {
+      try { window.CaspianBridge.setInterfaceDensity(density); } catch (e) {}
+    }
+    updateInterfaceDensityUI(density);
+  }
+
+  function updateInterfaceDensityUI(density) {
+    if (!density) {
+      if (window.CaspianBridge && typeof window.CaspianBridge.getInterfaceDensity === 'function') {
+        try { density = window.CaspianBridge.getInterfaceDensity(); } catch (e) {}
+      }
+      if (!density) {
+        density = localStorage.getItem('caspian_interface_density') || 'default';
+      }
+    }
+    if (densityCompact) densityCompact.classList.toggle('active', density === 'compact');
+    if (densityDefault) densityDefault.classList.toggle('active', density === 'default');
+    if (densitySpacious) densitySpacious.classList.toggle('active', density === 'spacious');
+  }
+
+  if (densityCompact) densityCompact.addEventListener('click', () => {
+    try { playSFX('tm_header'); } catch (e) {}
+    applyInterfaceDensity('compact');
+    if (window.CaspianBridge && typeof window.CaspianBridge.showToast === 'function') {
+      window.CaspianBridge.showToast('Interface Density: Compact (Pro)');
+    }
+  });
+  if (densityDefault) densityDefault.addEventListener('click', () => {
+    try { playSFX('tm_header'); } catch (e) {}
+    applyInterfaceDensity('default');
+    if (window.CaspianBridge && typeof window.CaspianBridge.showToast === 'function') {
+      window.CaspianBridge.showToast('Interface Density: Default');
+    }
+  });
+  if (densitySpacious) densitySpacious.addEventListener('click', () => {
+    try { playSFX('tm_header'); } catch (e) {}
+    applyInterfaceDensity('spacious');
+    if (window.CaspianBridge && typeof window.CaspianBridge.showToast === 'function') {
+      window.CaspianBridge.showToast('Interface Density: Spacious');
+    }
+  });
+
+  const initDensity = localStorage.getItem('caspian_interface_density') || 'default';
+  document.documentElement.setAttribute('data-density', initDensity);
+  updateInterfaceDensityUI(initDensity);
+  window.applyInterfaceDensity = applyInterfaceDensity;
+  window.updateInterfaceDensityUI = updateInterfaceDensityUI;
+
 
   // Resizable Drag Area Hitbox
   const targetDragArea = dragArea || document.querySelector('.sheet-drag-area') || document.querySelector('.sheet-drag-handle');

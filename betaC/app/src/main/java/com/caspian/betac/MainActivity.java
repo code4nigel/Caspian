@@ -9541,6 +9541,28 @@ public class MainActivity extends AppCompatActivity {
         return this.omniboxMenuStyle;
     }
 
+    public void setInterfaceDensity(String density) {
+        String d = (density != null && (density.equalsIgnoreCase("compact") || density.equalsIgnoreCase("spacious"))) ? density.toLowerCase() : "default";
+        try {
+            getSharedPreferences(PREFS_NAME, MODE_PRIVATE)
+                    .edit()
+                    .putString("interface_density", d)
+                    .apply();
+        } catch (Throwable ignored) {}
+        if (controlWebView != null) {
+            controlWebView.evaluateJavascript("document.documentElement.setAttribute('data-density', '" + d + "');", null);
+        }
+    }
+
+    public String getInterfaceDensity() {
+        try {
+            return getSharedPreferences(PREFS_NAME, MODE_PRIVATE)
+                    .getString("interface_density", "default");
+        } catch (Throwable ignored) {
+            return "default";
+        }
+    }
+
     public void launchDualAIAsk() {
         playUiFeedbackSound("tap");
         int gptId = nextTabId++;
@@ -17999,7 +18021,8 @@ public class MainActivity extends AppCompatActivity {
         }
 
         Runnable onOpenComplete = () -> {
-            controlWebView.evaluateJavascript("if (typeof renderOpenTabs === 'function') renderOpenTabs(); if (typeof syncAppVersion === 'function') syncAppVersion(); if (typeof restoreSavedSettings === 'function') restoreSavedSettings(); if (typeof updateDevHudCounters === 'function') updateDevHudCounters();", null);
+            String density = getInterfaceDensity();
+            controlWebView.evaluateJavascript("if (typeof renderOpenTabs === 'function') renderOpenTabs(); if (typeof syncAppVersion === 'function') syncAppVersion(); if (typeof restoreSavedSettings === 'function') restoreSavedSettings(); if (typeof updateDevHudCounters === 'function') updateDevHudCounters(); if (typeof applyInterfaceDensity === 'function') applyInterfaceDensity('" + density + "');", null);
         };
 
         // 2. Animate Control WebView independently
