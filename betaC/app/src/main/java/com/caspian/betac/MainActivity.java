@@ -15647,9 +15647,14 @@ public class MainActivity extends AppCompatActivity {
                     view.evaluateJavascript(
                             "(function() {" +
                             "  try {" +
+                            "    var meta = document.querySelector('meta[name=\\'viewport\\']');" +
+                            "    if (!meta) { meta = document.createElement('meta'); meta.name = 'viewport'; document.head.appendChild(meta); }" +
+                            "    meta.setAttribute('content', 'width=1280, initial-scale=0.6, user-scalable=yes');" +
                             "    if (navigator.userAgentData) {" +
                             "      Object.defineProperty(navigator.userAgentData, 'mobile', { get: () => false, configurable: true });" +
+                            "      Object.defineProperty(navigator.userAgentData, 'platform', { get: () => 'Windows', configurable: true });" +
                             "    }" +
+                            "    window.dispatchEvent(new Event('resize'));" +
                             "  } catch(e) {}" +
                             "})();", null);
                 }
@@ -16698,6 +16703,9 @@ public class MainActivity extends AppCompatActivity {
         tab.webView.getSettings().setUserAgentString(tab.isDesktop ? DESKTOP_UA : MOBILE_UA);
         tab.webView.getSettings().setUseWideViewPort(tab.isDesktop);
         tab.webView.getSettings().setLoadWithOverviewMode(tab.isDesktop);
+        tab.webView.getSettings().setSupportZoom(true);
+        tab.webView.getSettings().setBuiltInZoomControls(true);
+        tab.webView.getSettings().setDisplayZoomControls(false);
 
         String url = tab.webView.getUrl();
         if (url != null) {
