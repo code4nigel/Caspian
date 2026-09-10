@@ -443,6 +443,9 @@ public class MainActivity extends AppCompatActivity {
     private int currentMediaShuffleMode = PlaybackStateCompat.SHUFFLE_MODE_NONE;
     private String currentMediaThumbUrl = "";
     private Bitmap currentMediaThumbBitmap = null;
+    private final android.util.LruCache<String, Bitmap> mediaArtworkCache = new android.util.LruCache<>(40);
+    private final java.util.concurrent.ExecutorService mediaArtworkExecutor = java.util.concurrent.Executors.newSingleThreadExecutor();
+    private long mediaArtworkToken = 0;
     private boolean isDebugRecordingPaused = false;
     private boolean hasYouTubePlaybackStarted = false;
     private Boolean lastNotifIsPlaying = null;
@@ -4683,6 +4686,8 @@ public class MainActivity extends AppCompatActivity {
     }
 
     public void previousYouTubeTrack() {
+        currentMediaThumbUrl = "";
+        mediaArtworkToken++;
         TabItem currentTab = getYouTubeTab();
         if (currentTab != null && currentTab.webView != null) {
             currentTab.webView.evaluateJavascript(
@@ -4694,6 +4699,8 @@ public class MainActivity extends AppCompatActivity {
     }
 
     public void nextYouTubeTrack() {
+        currentMediaThumbUrl = "";
+        mediaArtworkToken++;
         TabItem currentTab = getYouTubeTab();
         if (currentTab != null && currentTab.webView != null) {
             currentTab.webView.evaluateJavascript(
@@ -19760,47 +19767,71 @@ public class MainActivity extends AppCompatActivity {
 
     private Bitmap downloadHighQualityThumbnail(String urlStr) {
         if (urlStr == null || urlStr.trim().isEmpty()) return null;
-        String hqUrl = urlStr;
-        // Upgrade Google User Content / YouTube Music album art to 800x800 high definition
-        if (hqUrl.contains("googleusercontent.com") || hqUrl.contains("ggpht.com")) {
-            hqUrl = hqUrl.replaceAll("=w\\d+-h\\d+[^&?]*", "=w800-h800-l90-rj")
-                         .replaceAll("=s\\d+[^&?]*", "=s800");
-        } else if (hqUrl.contains("i.ytimg.com/vi/")) {
-            hqUrl = hqUrl.replaceAll("/(?:default|mqdefault|hqdefault|sddefault)\\.jpg", "/maxresdefault.jpg");
-        }
+        urlStr = urlStr.trim();
 
-        try {
-            java.net.HttpURLConnection conn = (java.net.HttpURLConnection) new java.net.URL(hqUrl).openConnection();
-            conn.setRequestProperty("User-Agent", "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/122.0.0.0 Safari/537.36");
-            conn.setConnectTimeout(4000);
-            conn.setReadTimeout(4000);
-            conn.connect();
-            if (conn.getResponseCode() == 200) {
-                return BitmapFactory.decodeStream(conn.getInputStream());
+        // 1. Check memory cache first (instant hit)
+        synchronized (mediaArtworkCache) {
+            Bitmap cached = mediaArtworkCache.get(urlStr);
+            if (cached != null && !cached.isRecycled()) {
+                return cached;
             }
-        } catch (Exception ignored) {}
-
-        // Fallback to original URL or hqdefault if upgraded URL failed
-        if (!hqUrl.equals(urlStr)) {
-            try {
-                java.net.HttpURLConnection conn = (java.net.HttpURLConnection) new java.net.URL(urlStr).openConnection();
-                conn.setConnectTimeout(4000);
-                conn.setReadTimeout(4000);
-                conn.connect();
-                if (conn.getResponseCode() == 200) {
-                    return BitmapFactory.decodeStream(conn.getInputStream());
-                }
-            } catch (Exception ignored) {}
         }
-        if (urlStr.contains("maxresdefault.jpg")) {
+
+        List<String> candidates = new ArrayList<>();
+        if (urlStr.contains("googleusercontent.com") || urlStr.contains("ggpht.com")) {
+            // High-res 800x800
+            String hq800 = urlStr.replaceAll("=w\\d+-h\\d+[^&?]*", "=w800-h800-l90-rj")
+                                 .replaceAll("=s\\d+[^&?]*", "=s800");
+            candidates.add(hq800);
+            // Standard YouTube Music High-Res 544x544 (always exists on YTM)
+            String hq544 = urlStr.replaceAll("=w\\d+-h\\d+[^&?]*", "=w544-h544-l90-rj")
+                                 .replaceAll("=s\\d+[^&?]*", "=s544");
+            if (!candidates.contains(hq544)) candidates.add(hq544);
+            // Medium res 226x226
+            String med = urlStr.replaceAll("=w\\d+-h\\d+[^&?]*", "=w226-h226-l90-rj")
+                               .replaceAll("=s\\d+[^&?]*", "=s226");
+            if (!candidates.contains(med)) candidates.add(med);
+            // Original raw URL
+            if (!candidates.contains(urlStr)) candidates.add(urlStr);
+        } else if (urlStr.contains("i.ytimg.com/vi/")) {
+            // Extract video ID if possible
+            java.util.regex.Matcher m = java.util.regex.Pattern.compile("/vi/([^/?]+)/").matcher(urlStr);
+            if (m.find()) {
+                String vidId = m.group(1);
+                candidates.add("https://i.ytimg.com/vi/" + vidId + "/maxresdefault.jpg");
+                candidates.add("https://i.ytimg.com/vi/" + vidId + "/sddefault.jpg");
+                candidates.add("https://i.ytimg.com/vi/" + vidId + "/hqdefault.jpg");
+            } else {
+                candidates.add(urlStr.replaceAll("/(?:default|mqdefault|hqdefault|sddefault)\\.jpg", "/maxresdefault.jpg"));
+                candidates.add(urlStr.replaceAll("/(?:default|mqdefault|hqdefault|maxresdefault)\\.jpg", "/sddefault.jpg"));
+                candidates.add(urlStr.replaceAll("/(?:default|mqdefault|sddefault|maxresdefault)\\.jpg", "/hqdefault.jpg"));
+            }
+            if (!candidates.contains(urlStr)) candidates.add(urlStr);
+        } else {
+            candidates.add(urlStr);
+        }
+
+        for (String candidate : candidates) {
             try {
-                String altUrl = urlStr.replace("maxresdefault.jpg", "hqdefault.jpg");
-                java.net.HttpURLConnection conn = (java.net.HttpURLConnection) new java.net.URL(altUrl).openConnection();
-                conn.setConnectTimeout(4000);
-                conn.setReadTimeout(4000);
+                HttpURLConnection conn = (HttpURLConnection) new URL(candidate).openConnection();
+                conn.setRequestProperty("User-Agent", "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/122.0.0.0 Safari/537.36");
+                conn.setConnectTimeout(2500);
+                conn.setReadTimeout(2500);
+                conn.setInstanceFollowRedirects(true);
                 conn.connect();
-                if (conn.getResponseCode() == 200) {
-                    return BitmapFactory.decodeStream(conn.getInputStream());
+                int code = conn.getResponseCode();
+                if (code == 200) {
+                    InputStream in = conn.getInputStream();
+                    Bitmap bmp = BitmapFactory.decodeStream(in);
+                    if (bmp != null) {
+                        synchronized (mediaArtworkCache) {
+                            mediaArtworkCache.put(urlStr, bmp);
+                            if (!candidate.equals(urlStr)) {
+                                mediaArtworkCache.put(candidate, bmp);
+                            }
+                        }
+                        return bmp;
+                    }
                 }
             } catch (Exception ignored) {}
         }
@@ -19837,20 +19868,52 @@ public class MainActivity extends AppCompatActivity {
         } else if (titleChanged) {
             this.currentMediaArtist = "";
         }
-        if (thumbUrl != null && !thumbUrl.trim().isEmpty() && !thumbUrl.equals(currentMediaThumbUrl)) {
-            this.currentMediaThumbUrl = thumbUrl.trim();
-            new Thread(() -> {
-                Bitmap bmp = downloadHighQualityThumbnail(currentMediaThumbUrl);
-                if (bmp != null) {
-                    runOnUiThread(() -> {
-                        currentMediaThumbBitmap = bmp;
-                        TabItem yt = getYouTubeTab();
-                        boolean isPlaying = yt != null && yt.isPlayingAudio;
-                        updateMediaPlaybackNotification(isPlaying);
-                    });
+
+        String targetThumbUrl = (thumbUrl != null && !thumbUrl.trim().isEmpty()) ? thumbUrl.trim() : "";
+        boolean thumbUrlChanged = !targetThumbUrl.isEmpty() && !targetThumbUrl.equals(this.currentMediaThumbUrl);
+
+        if (titleChanged || thumbUrlChanged) {
+            if (!targetThumbUrl.isEmpty()) {
+                this.currentMediaThumbUrl = targetThumbUrl;
+
+                // Check cache immediately (0ms hit!)
+                Bitmap cached = null;
+                synchronized (mediaArtworkCache) {
+                    cached = mediaArtworkCache.get(targetThumbUrl);
                 }
-            }).start();
+                if (cached != null && !cached.isRecycled()) {
+                    currentMediaThumbBitmap = cached;
+                    TabItem yt = getYouTubeTab();
+                    boolean isPlaying = yt != null && yt.isPlayingAudio;
+                    updateMediaPlaybackNotification(isPlaying);
+                    return;
+                }
+            }
+
+            if (titleChanged) {
+                // Instantly clear old artwork so it NEVER stays stuck on previous song!
+                currentMediaThumbBitmap = null;
+            }
+
+            if (!targetThumbUrl.isEmpty()) {
+                final long token = ++mediaArtworkToken;
+                final String fetchUrl = targetThumbUrl;
+                mediaArtworkExecutor.execute(() -> {
+                    Bitmap bmp = downloadHighQualityThumbnail(fetchUrl);
+                    if (bmp != null) {
+                        runOnUiThread(() -> {
+                            if (token == mediaArtworkToken) {
+                                currentMediaThumbBitmap = bmp;
+                                TabItem yt = getYouTubeTab();
+                                boolean isPlaying = yt != null && yt.isPlayingAudio;
+                                updateMediaPlaybackNotification(isPlaying);
+                            }
+                        });
+                    }
+                });
+            }
         }
+
         TabItem yt = getYouTubeTab();
         boolean isPlaying = yt != null && yt.isPlayingAudio;
         updateMediaPlaybackNotification(isPlaying);
