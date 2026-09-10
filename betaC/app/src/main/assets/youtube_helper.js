@@ -22,14 +22,22 @@
       };
     }
     if (navigator.mediaSession) {
+      var proto = Object.getPrototypeOf(navigator.mediaSession) || {};
+      var origMetaDesc = Object.getOwnPropertyDescriptor(proto, 'metadata') || Object.getOwnPropertyDescriptor(navigator.mediaSession, 'metadata');
       var _rawMeta = navigator.mediaSession.metadata;
       Object.defineProperty(navigator.mediaSession, 'metadata', {
         get: function() {
+          if (origMetaDesc && origMetaDesc.get) {
+            try { return origMetaDesc.get.call(navigator.mediaSession); } catch(e){}
+          }
           return _rawMeta;
         },
         set: function(newMeta) {
           _rawMeta = newMeta;
           __caspian_captured_media_metadata = newMeta;
+          if (origMetaDesc && origMetaDesc.set) {
+            try { origMetaDesc.set.call(navigator.mediaSession, newMeta); } catch(e){}
+          }
           if (newMeta && (newMeta.title || newMeta.artist)) {
             var tabId = window.__caspian_tab_id || 0;
             var t = (newMeta.title || '').trim();
@@ -419,7 +427,7 @@
             }
           }
           if (!title || title === 'YouTube Music' || title === 'YouTube') {
-            var cleanDocTitle = (document.title || '').replace(/\\s*-\\s*YouTube\\s+Music$/i, '').replace(/\\s*-\\s*YouTube$/i, '').trim();
+            var cleanDocTitle = (document.title || '').replace(/\s*-\s*YouTube\s+Music$/i, '').replace(/\s*-\s*YouTube$/i, '').trim();
             if (cleanDocTitle && cleanDocTitle !== 'YouTube Music' && cleanDocTitle !== 'YouTube') {
               title = cleanDocTitle;
             }
@@ -450,7 +458,7 @@
             }
           }
           if (!title || title === 'YouTube') {
-            var cleanDocTitle = (document.title || '').replace(/\\s*-\\s*YouTube$/i, '').trim();
+            var cleanDocTitle = (document.title || '').replace(/\s*-\s*YouTube$/i, '').trim();
             if (cleanDocTitle && cleanDocTitle !== 'YouTube') {
               title = cleanDocTitle;
             }
@@ -474,7 +482,7 @@
             if (vMatch && vMatch[1]) {
               videoId = vMatch[1];
             } else {
-              var pMatch = location.pathname.match(/\\/(?:shorts|embed|v)\\/([^/?]+)/);
+              var pMatch = location.pathname.match(/\/(?:shorts|embed|v)\/([^/?]+)/);
               if (pMatch && pMatch[1]) videoId = pMatch[1];
             }
             if (videoId) {
@@ -487,8 +495,8 @@
         }
 
         if (thumbUrl) {
-          thumbUrl = thumbUrl.replace(/=w\\d+-h\\d+[^&?]*/, '=w800-h800-l90-rj')
-                             .replace(/=s\\d+[^&?]*/, '=s800');
+          thumbUrl = thumbUrl.replace(/=w\d+-h\d+[^&?]*/, '=w800-h800-l90-rj')
+                             .replace(/=s\d+[^&?]*/, '=s800');
         }
 
         if (title && window.CaspianBridge) {
@@ -1233,6 +1241,7 @@
       const isPlaying = !!(v && !v.paused && v.currentTime > 0 && !v.ended && v.readyState > 1);
       const isMuted = !!(v && v.muted);
       const tabId = window.__caspian_tab_id || 0;
+      const isYtMusic = location.hostname.includes('music.youtube.com');
 
       if (window.__CaspianYouTube) {
         window.__CaspianYouTube.notifyState();

@@ -16202,6 +16202,17 @@ public class MainActivity extends AppCompatActivity {
             }
 
             @Override
+            public void onPageCommitVisible(WebView view, String pageUrl) {
+                super.onPageCommitVisible(view, pageUrl);
+                if (pageUrl != null && pageUrl.toLowerCase().contains("youtube.com")) {
+                    String ytHelperJs = readAssetScript("youtube_helper.js");
+                    if (!ytHelperJs.isEmpty()) {
+                        view.evaluateJavascript("window.__caspian_tab_id = " + id + ";\n" + ytHelperJs, null);
+                    }
+                }
+            }
+
+            @Override
             public void onPageFinished(WebView view, String pageUrl) {
                 tabItem.url = pageUrl;
                 tabItem.title = view.getTitle() != null ? view.getTitle() : "Caspian Flow";
