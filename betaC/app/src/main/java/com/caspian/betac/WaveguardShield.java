@@ -310,22 +310,41 @@ public class WaveguardShield {
 
     public boolean isSiteWhitelisted(String host) {
         if (host == null) return false;
-        String cleanHost = host.toLowerCase().trim();
+        String cleanHost = host.toLowerCase(java.util.Locale.ROOT).trim();
         if (cleanHost.startsWith("www.")) cleanHost = cleanHost.substring(4);
-        return whitelistedHosts.contains(cleanHost);
+        if (cleanHost.isEmpty()) return false;
+        if (whitelistedHosts.contains(cleanHost)) return true;
+
+        // Check if any parent / root domain is whitelisted
+        // e.g. "music.youtube.com" matches if "youtube.com" is whitelisted
+        int dotIndex = cleanHost.indexOf('.');
+        while (dotIndex > 0 && dotIndex < cleanHost.length() - 1) {
+            String parent = cleanHost.substring(dotIndex + 1);
+            if (whitelistedHosts.contains(parent)) {
+                return true;
+            }
+            dotIndex = cleanHost.indexOf('.', dotIndex + 1);
+        }
+        return false;
     }
 
     public void setSiteWhitelisted(String host, boolean whitelisted) {
         if (host == null) return;
-        String cleanHost = host.toLowerCase().trim();
+        String cleanHost = host.toLowerCase(java.util.Locale.ROOT).trim();
         if (cleanHost.startsWith("www.")) cleanHost = cleanHost.substring(4);
+        if (cleanHost.isEmpty()) return;
+        final String targetHost = cleanHost;
 
-        if (whitelisted) {
-            whitelistedHosts.add(cleanHost);
-        } else {
-            whitelistedHosts.remove(cleanHost);
+        synchronized (whitelistedHosts) {
+            if (whitelisted) {
+                whitelistedHosts.add(targetHost);
+            } else {
+                whitelistedHosts.remove(targetHost);
+                whitelistedHosts.removeIf(h -> targetHost.equals(h) || targetHost.endsWith("." + h) || h.endsWith("." + targetHost));
+            }
+            prefs.edit().putStringSet(KEY_WHITELIST, new HashSet<>(whitelistedHosts)).apply();
         }
-        prefs.edit().putStringSet(KEY_WHITELIST, new HashSet<>(whitelistedHosts)).apply();
+        Log.d(TAG, "setSiteWhitelisted: " + targetHost + " -> " + whitelisted + " (total whitelisted=" + whitelistedHosts.size() + ")");
     }
 
     public Set<String> getWhitelistedHosts() {

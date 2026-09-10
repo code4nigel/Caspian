@@ -7164,27 +7164,56 @@ public class MainActivity extends AppCompatActivity {
         // 5. Waveguard Shield
         View rowWaveguard = dialogView.findViewById(R.id.row_dock_waveguard);
         androidx.appcompat.widget.SwitchCompat switchWaveguard = dialogView.findViewById(R.id.switch_dock_waveguard);
+        TextView titleWaveguard = dialogView.findViewById(R.id.title_dock_waveguard);
+        TextView subWaveguard = dialogView.findViewById(R.id.sub_dock_waveguard);
+
+        TabItem qTab = getActiveOrDominantTab();
+        String qUrl = qTab != null ? (qTab.url != null ? qTab.url : (qTab.webView != null ? qTab.webView.getUrl() : null)) : null;
+        String qHost = null;
+        if (qUrl != null && !qUrl.startsWith("caspian:") && !qUrl.startsWith("about:") && !qUrl.startsWith("file:")) {
+            try { qHost = Uri.parse(qUrl).getHost(); } catch (Exception ignored) {}
+        }
+        final String activeSiteHost = qHost;
+
+        boolean isSiteShieldActive;
+        if (waveguardShield != null && waveguardShield.isGlobalEnabled()) {
+            isSiteShieldActive = (activeSiteHost == null || !waveguardShield.isSiteWhitelisted(activeSiteHost));
+        } else {
+            isSiteShieldActive = false;
+        }
+
+        if (activeSiteHost != null && !activeSiteHost.isEmpty() && activeSiteHost.contains(".")) {
+            String cleanH = activeSiteHost.startsWith("www.") ? activeSiteHost.substring(4) : activeSiteHost;
+            if (titleWaveguard != null) titleWaveguard.setText("Shield on " + cleanH);
+            if (subWaveguard != null) subWaveguard.setText(isSiteShieldActive ? "Shields UP (Blocking ads & trackers)" : "Shields DOWN (Paused for this site)");
+        }
+
         if (switchWaveguard != null) {
-            switchWaveguard.setChecked(waveguardShield != null && waveguardShield.isGlobalEnabled());
-            switchWaveguard.setOnClickListener(v -> {
+            switchWaveguard.setChecked(isSiteShieldActive);
+            Runnable performWaveguardToggle = () -> {
                 playUiFeedbackSound("tap");
                 if (waveguardShield != null) {
                     boolean target = switchWaveguard.isChecked();
-                    waveguardShield.setGlobalEnabled(target);
+                    if (activeSiteHost != null && activeSiteHost.contains(".")) {
+                        waveguardShield.setSiteWhitelisted(activeSiteHost, !target);
+                        if (subWaveguard != null) subWaveguard.setText(target ? "Shields UP (Blocking ads & trackers)" : "Shields DOWN (Paused for this site)");
+                        if (qTab != null && qTab.webView != null) {
+                            qTab.webView.reload();
+                        }
+                    } else {
+                        waveguardShield.setGlobalEnabled(target);
+                    }
                     updateOmniboxState();
+                    syncWaveguardToControlWeb();
                 }
-            });
-        }
-        if (rowWaveguard != null) {
-            rowWaveguard.setOnClickListener(v -> {
-                playUiFeedbackSound("tap");
-                if (waveguardShield != null) {
-                    boolean target = !waveguardShield.isGlobalEnabled();
-                    waveguardShield.setGlobalEnabled(target);
-                    updateOmniboxState();
-                    if (switchWaveguard != null) switchWaveguard.setChecked(target);
-                }
-            });
+            };
+            switchWaveguard.setOnClickListener(v -> performWaveguardToggle.run());
+            if (rowWaveguard != null) {
+                rowWaveguard.setOnClickListener(v -> {
+                    switchWaveguard.toggle();
+                    performWaveguardToggle.run();
+                });
+            }
         }
 
         applyQuickToolbarsTheme(dialogView, isDarkTheme);
@@ -7414,7 +7443,7 @@ public class MainActivity extends AppCompatActivity {
             }
 
             TabItem currentTab = getActiveOrDominantTab();
-            String currentUrl = currentTab != null ? currentTab.url : null;
+            String currentUrl = currentTab != null ? (currentTab.url != null ? currentTab.url : (currentTab.webView != null ? currentTab.webView.getUrl() : null)) : null;
             String host = "";
             if (currentUrl != null && !currentUrl.isEmpty()) {
                 try {
@@ -7489,6 +7518,11 @@ public class MainActivity extends AppCompatActivity {
                         currentTab.webView.reload();
                     }
                 });
+            }
+
+            View siteShieldToggleRow = popupView.findViewById(R.id.site_shield_toggle_row);
+            if (siteShieldToggleRow != null && siteShieldSwitch != null) {
+                siteShieldToggleRow.setOnClickListener(v -> siteShieldSwitch.toggle());
             }
 
             View headerAdv = popupView.findViewById(R.id.header_advanced_settings);
@@ -16073,9 +16107,16 @@ public class MainActivity extends AppCompatActivity {
                     }
                 try {
                     String pageHost = null;
-                    if (tabItem != null && tabItem.url != null) {
+                    if (request != null && request.isForMainFrame() && request.getUrl() != null) {
+                        pageHost = request.getUrl().getHost();
+                    } else if (tabItem != null && tabItem.url != null) {
                         try {
                             pageHost = Uri.parse(tabItem.url).getHost();
+                        } catch (Exception ignored) {}
+                    }
+                    if (pageHost == null && view != null && view.getUrl() != null) {
+                        try {
+                            pageHost = Uri.parse(view.getUrl()).getHost();
                         } catch (Exception ignored) {}
                     }
                     if (isDebugRecording && request != null && request.getUrl() != null) {

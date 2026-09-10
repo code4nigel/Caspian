@@ -5,9 +5,10 @@
   if (window.__CASPIAN_YT_DEFUSER_INITIALIZED__) return;
   window.__CASPIAN_YT_DEFUSER_INITIALIZED__ = true;
 
-  // Intercept and preserve native MediaSession action handlers from YouTube Music
+  // Intercept and preserve native MediaSession action handlers & metadata from YouTube Music
   var __caspian_ytm_next_handler = null;
   var __caspian_ytm_prev_handler = null;
+  var __caspian_captured_media_metadata = null;
   try {
     if (navigator.mediaSession && typeof navigator.mediaSession.setActionHandler === 'function') {
       var origSetActionHandler = navigator.mediaSession.setActionHandler.bind(navigator.mediaSession);
@@ -19,6 +20,38 @@
         }
         return origSetActionHandler(action, handler);
       };
+    }
+    if (navigator.mediaSession) {
+      var _rawMeta = navigator.mediaSession.metadata;
+      Object.defineProperty(navigator.mediaSession, 'metadata', {
+        get: function() {
+          return _rawMeta;
+        },
+        set: function(newMeta) {
+          _rawMeta = newMeta;
+          __caspian_captured_media_metadata = newMeta;
+          if (newMeta && (newMeta.title || newMeta.artist)) {
+            var tabId = window.__caspian_tab_id || 0;
+            var t = (newMeta.title || '').trim();
+            var a = (newMeta.artist || '').trim();
+            var art = '';
+            if (newMeta.artwork && newMeta.artwork.length > 0) {
+              var best = newMeta.artwork[newMeta.artwork.length - 1];
+              if (best && best.src) art = best.src;
+            }
+            if (art) {
+              art = art.replace(/=w\d+-h\d+[^&?]*/, '=w800-h800-l90-rj').replace(/=s\d+[^&?]*/, '=s800');
+            }
+            if (t && t !== 'YouTube Music' && t !== 'YouTube') {
+              if (window.CaspianBridge && typeof window.CaspianBridge.updateTabMediaMetadataExtended === 'function') {
+                window.CaspianBridge.updateTabMediaMetadataExtended(tabId, t, a, art);
+              }
+            }
+          }
+        },
+        configurable: true,
+        enumerable: true
+      });
     }
   } catch(e) {}
 
@@ -253,6 +286,11 @@
       this.previousTrack();
     },
     previousTrack: function () {
+      var self = this;
+      var triggerSync = function() {
+        setTimeout(function() { if (self.syncMediaMetadata) self.syncMediaMetadata(); }, 150);
+        setTimeout(function() { if (self.syncMediaMetadata) self.syncMediaMetadata(); }, 600);
+      };
       try {
         var v = this.getVideo();
         if (v && v.currentTime > 10) {
@@ -263,6 +301,7 @@
       if (typeof __caspian_ytm_prev_handler === 'function') {
         try {
           __caspian_ytm_prev_handler();
+          triggerSync();
           return;
         } catch(e){}
       }
@@ -284,6 +323,7 @@
             try { btn.dispatchEvent(new MouseEvent(evt, { bubbles: true, cancelable: true, view: window })); } catch(e){}
           });
           try { if (typeof btn.click === 'function') btn.click(); } catch(e){}
+          triggerSync();
           return;
         }
       }
@@ -292,6 +332,7 @@
           var p = document.getElementById('movie_player') || document.querySelector('.html5-video-player');
           if (p && typeof p.previousVideo === 'function') {
             p.previousVideo();
+            triggerSync();
           }
         } catch(e){}
       }
@@ -300,9 +341,15 @@
       this.nextTrack();
     },
     nextTrack: function () {
+      var self = this;
+      var triggerSync = function() {
+        setTimeout(function() { if (self.syncMediaMetadata) self.syncMediaMetadata(); }, 150);
+        setTimeout(function() { if (self.syncMediaMetadata) self.syncMediaMetadata(); }, 600);
+      };
       if (typeof __caspian_ytm_next_handler === 'function') {
         try {
           __caspian_ytm_next_handler();
+          triggerSync();
           return;
         } catch(e){}
       }
@@ -325,6 +372,7 @@
             try { btn.dispatchEvent(new MouseEvent(evt, { bubbles: true, cancelable: true, view: window })); } catch(e){}
           });
           try { if (typeof btn.click === 'function') btn.click(); } catch(e){}
+          triggerSync();
           return;
         }
       }
@@ -333,9 +381,126 @@
           var p = document.getElementById('movie_player') || document.querySelector('.html5-video-player');
           if (p && typeof p.nextVideo === 'function') {
             p.nextVideo();
+            triggerSync();
           }
         } catch(e){}
       }
+    },
+    syncMediaMetadata: function () {
+      try {
+        var tabId = window.__caspian_tab_id || 0;
+        var title = '';
+        var artist = '';
+        var thumbUrl = '';
+        var isYtMusic = location.hostname.includes('music.youtube.com');
+
+        // 1. Check navigator.mediaSession / captured metadata
+        try {
+          var meta = (navigator.mediaSession && navigator.mediaSession.metadata) || __caspian_captured_media_metadata;
+          if (meta) {
+            if (meta.title && meta.title.trim()) title = meta.title.trim();
+            if (meta.artist && meta.artist.trim()) artist = meta.artist.trim();
+            if (meta.artwork && meta.artwork.length > 0) {
+              var bestArt = meta.artwork[meta.artwork.length - 1];
+              thumbUrl = (bestArt && bestArt.src) ? bestArt.src : '';
+            }
+          }
+        } catch(e){}
+
+        // 2. Dedicated YouTube Music DOM extraction
+        if (isYtMusic) {
+          if (!title || title === 'YouTube Music' || title === 'YouTube') {
+            var ytmTitleEl = document.querySelector('ytmusic-player-bar .content-info-wrapper yt-formatted-string.title, ytmusic-player-bar .middle-controls yt-formatted-string.title, ytmusic-player-bar yt-formatted-string.title, ytm-player-bar .player-bar-title, ytm-player-bar .title');
+            if (ytmTitleEl) {
+              var cand = (ytmTitleEl.getAttribute('title') || ytmTitleEl.textContent || ytmTitleEl.innerText || '').trim();
+              if (cand && cand !== 'YouTube Music' && cand !== 'YouTube') {
+                title = cand;
+              }
+            }
+          }
+          if (!title || title === 'YouTube Music' || title === 'YouTube') {
+            var cleanDocTitle = (document.title || '').replace(/\\s*-\\s*YouTube\\s+Music$/i, '').replace(/\\s*-\\s*YouTube$/i, '').trim();
+            if (cleanDocTitle && cleanDocTitle !== 'YouTube Music' && cleanDocTitle !== 'YouTube') {
+              title = cleanDocTitle;
+            }
+          }
+          if (!title) {
+            var qSel = document.querySelector('ytmusic-player-queue-item[selected] .song-title, ytmusic-player-queue-item[play-button-state="playing"] .song-title');
+            if (qSel) {
+              var qText = (qSel.getAttribute('title') || qSel.textContent || '').trim();
+              if (qText) title = qText;
+            }
+          }
+
+          if (!artist || artist === 'YouTube Music') {
+            var ytmArtistEl = document.querySelector('ytmusic-player-bar .content-info-wrapper yt-formatted-string.byline, ytmusic-player-bar .middle-controls yt-formatted-string.byline, ytmusic-player-bar .byline a, ytmusic-player-bar .byline, ytm-player-bar .player-bar-subtitle, ytm-player-bar .subtitle');
+            if (ytmArtistEl) {
+              var aCand = (ytmArtistEl.getAttribute('title') || ytmArtistEl.textContent || ytmArtistEl.innerText || '').trim();
+              if (aCand.includes('•')) aCand = aCand.split('•')[0].trim();
+              if (aCand && aCand !== 'YouTube Music') artist = aCand;
+            }
+          }
+        } else {
+          // Standard YouTube extraction
+          if (!title || title === 'YouTube') {
+            var ytTitleEl = document.querySelector('ytd-watch-metadata #title h1 yt-formatted-string, h1.ytd-video-primary-info-renderer, ytm-slim-video-metadata-renderer .slim-video-metadata-title, .slim-video-metadata-title');
+            if (ytTitleEl) {
+              var tText = (ytTitleEl.textContent || ytTitleEl.innerText || '').trim();
+              if (tText && tText !== 'YouTube') title = tText;
+            }
+          }
+          if (!title || title === 'YouTube') {
+            var cleanDocTitle = (document.title || '').replace(/\\s*-\\s*YouTube$/i, '').trim();
+            if (cleanDocTitle && cleanDocTitle !== 'YouTube') {
+              title = cleanDocTitle;
+            }
+          }
+          if (!artist) {
+            var chanEl = document.querySelector('ytd-video-owner-renderer #channel-name a, ytm-channel-info-renderer .channel-title, #owner #channel-name, #upload-info #channel-name, ytd-channel-name a');
+            if (chanEl) {
+              var cText = chanEl.textContent.trim();
+              if (cText) artist = cText;
+            }
+          }
+        }
+
+        if (!thumbUrl) {
+          var ytmImg = document.querySelector('ytmusic-player-bar img#img, .thumbnail-image-wrapper img, img.ytmusic-player-bar, ytm-player-bar img, #player-thumbnail img');
+          if (ytmImg && ytmImg.src) {
+            thumbUrl = ytmImg.src;
+          } else {
+            var videoId = '';
+            var vMatch = location.search.match(/[?&]v=([^&]+)/);
+            if (vMatch && vMatch[1]) {
+              videoId = vMatch[1];
+            } else {
+              var pMatch = location.pathname.match(/\\/(?:shorts|embed|v)\\/([^/?]+)/);
+              if (pMatch && pMatch[1]) videoId = pMatch[1];
+            }
+            if (videoId) {
+              thumbUrl = 'https://i.ytimg.com/vi/' + videoId + '/maxresdefault.jpg';
+            } else {
+              var ogImage = document.querySelector('meta[property="og:image"]');
+              if (ogImage) thumbUrl = ogImage.getAttribute('content') || '';
+            }
+          }
+        }
+
+        if (thumbUrl) {
+          thumbUrl = thumbUrl.replace(/=w\\d+-h\\d+[^&?]*/, '=w800-h800-l90-rj')
+                             .replace(/=s\\d+[^&?]*/, '=s800');
+        }
+
+        if (title && window.CaspianBridge) {
+          if (typeof window.CaspianBridge.updateTabMediaMetadataExtended === 'function') {
+            window.CaspianBridge.updateTabMediaMetadataExtended(tabId, title, artist, thumbUrl);
+          } else if (typeof window.CaspianBridge.updateTabMediaMetadata === 'function') {
+            window.CaspianBridge.updateTabMediaMetadata(tabId, title, thumbUrl);
+          } else if (typeof window.CaspianBridge.updateMediaMetadata === 'function') {
+            window.CaspianBridge.updateMediaMetadata(title, thumbUrl);
+          }
+        }
+      } catch(e){}
     },
     toggleRepeat: function () {
       var selectors = [
@@ -1082,94 +1247,8 @@
       }
 
       if (v && (isPlaying || v.currentTime > 0)) {
-        var title = '';
-        var artist = '';
-        var thumbUrl = '';
-
-        // 1. Check navigator.mediaSession metadata (standard for YouTube and YouTube Music)
-        try {
-          if (navigator.mediaSession && navigator.mediaSession.metadata) {
-            var meta = navigator.mediaSession.metadata;
-            if (meta.title && meta.title.trim()) title = meta.title.trim();
-            if (meta.artist && meta.artist.trim()) artist = meta.artist.trim();
-            if (meta.artwork && meta.artwork.length > 0) {
-              var bestArt = meta.artwork[meta.artwork.length - 1];
-              thumbUrl = (bestArt && bestArt.src) ? bestArt.src : '';
-            }
-          }
-        } catch(e){}
-
-        // 2. DOM extraction fallback (covers desktop/mobile music.youtube.com and youtube.com)
-        var isYtMusic = location.hostname.includes('music.youtube.com');
-        if (!title || title === 'YouTube Music' || title === 'YouTube') {
-          var titleEl = document.querySelector('ytmusic-player-bar .title, ytmusic-player-bar yt-formatted-string.title, ytmusic-player-bar .middle-controls .title, ytm-custom-index-item .title, ytm-player-bar .title, .player-bar-title, .ytmusic-player-bar.title, h1.title, h1.title yt-formatted-string, .slim-video-metadata-title, ytm-slim-video-metadata-renderer .title, #title h1, meta[name="title"]');
-          if (titleEl) {
-            var tText = (titleEl.textContent || titleEl.getAttribute('content') || '').trim();
-            if (tText && tText !== 'YouTube Music' && tText !== 'YouTube') title = tText;
-          }
-        }
-        if (!title || title === 'YouTube Music' || title === 'YouTube') {
-          var cleanDocTitle = (document.title || '').replace(/\s*-\s*YouTube\s+Music$/i, '').replace(/\s*-\s*YouTube$/i, '').trim();
-          if (cleanDocTitle && cleanDocTitle !== 'YouTube Music' && cleanDocTitle !== 'YouTube') {
-            title = cleanDocTitle;
-          }
-        }
-
-        if (!artist) {
-          if (isYtMusic) {
-            var artistEl = document.querySelector('ytmusic-player-bar .subtitle a, ytmusic-player-bar .byline a, ytmusic-player-bar .byline yt-formatted-string, ytmusic-player-bar .byline, .ytmusic-player-bar .byline, ytm-player-bar .subtitle, ytm-custom-index-item .subtitle, .player-bar-subtitle');
-            if (artistEl) {
-              var aText = artistEl.textContent.trim();
-              if (aText.includes('•')) {
-                aText = aText.split('•')[0].trim();
-              }
-              if (aText) artist = aText;
-            }
-          } else {
-            var chanEl = document.querySelector('ytd-video-owner-renderer #channel-name a, ytm-channel-info-renderer .channel-title, #owner #channel-name, #upload-info #channel-name, ytd-channel-name a');
-            if (chanEl) {
-              var cText = chanEl.textContent.trim();
-              if (cText) artist = cText;
-            }
-          }
-        }
-
-        if (!thumbUrl) {
-          var ytmImg = document.querySelector('ytmusic-player-bar img#img, .thumbnail-image-wrapper img, img.ytmusic-player-bar, ytm-player-bar img, #player-thumbnail img');
-          if (ytmImg && ytmImg.src) {
-            thumbUrl = ytmImg.src;
-          } else {
-            var videoId = '';
-            var vMatch = location.search.match(/[?&]v=([^&]+)/);
-            if (vMatch && vMatch[1]) {
-              videoId = vMatch[1];
-            } else {
-              var pMatch = location.pathname.match(/\/(?:shorts|embed|v)\/([^/?]+)/);
-              if (pMatch && pMatch[1]) videoId = pMatch[1];
-            }
-            if (videoId) {
-              thumbUrl = 'https://i.ytimg.com/vi/' + videoId + '/maxresdefault.jpg';
-            } else {
-              var ogImage = document.querySelector('meta[property="og:image"]');
-              if (ogImage) thumbUrl = ogImage.getAttribute('content') || '';
-            }
-          }
-        }
-
-        // Upgrade thumbnail URL to crystal-clear high resolution (800x800)
-        if (thumbUrl) {
-          thumbUrl = thumbUrl.replace(/=w\d+-h\d+[^&?]*/, '=w800-h800-l90-rj')
-                             .replace(/=s\d+[^&?]*/, '=s800');
-        }
-
-        if (title && window.CaspianBridge) {
-          if (typeof window.CaspianBridge.updateTabMediaMetadataExtended === 'function') {
-            window.CaspianBridge.updateTabMediaMetadataExtended(tabId, title, artist, thumbUrl);
-          } else if (typeof window.CaspianBridge.updateTabMediaMetadata === 'function') {
-            window.CaspianBridge.updateTabMediaMetadata(tabId, title, thumbUrl);
-          } else if (typeof window.CaspianBridge.updateMediaMetadata === 'function') {
-            window.CaspianBridge.updateMediaMetadata(title, thumbUrl);
-          }
+        if (window.__CaspianYouTube && typeof window.__CaspianYouTube.syncMediaMetadata === 'function') {
+          window.__CaspianYouTube.syncMediaMetadata();
         }
 
         // Sync actual YouTube Music repeat and shuffle modes to Android ONLY when buttons are present
