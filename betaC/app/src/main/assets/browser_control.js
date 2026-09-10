@@ -4678,7 +4678,7 @@
 
     // Helper to update card states
     function updateEngineCardUI(card, toggleBtn, body, dotEl, key) {
-      const isEnabled = key === 'google_dock_enabled'
+      const isEnabled = (key === 'google_dock_enabled' || key === 'chat_limit_enabled')
         ? (localStorage.getItem(key) === 'true')
         : (localStorage.getItem(key) !== 'false');
       if (card) {
@@ -4760,7 +4760,7 @@
       toggleCLBtn.addEventListener('click', (e) => {
         e.stopPropagation();
         playSFX('tb_clicks');
-        let current = localStorage.getItem('chat_limit_enabled') !== 'false';
+        let current = localStorage.getItem('chat_limit_enabled') === 'true';
         let next = !current;
         localStorage.setItem('chat_limit_enabled', next ? 'true' : 'false');
         if (window.CaspianBridge && typeof window.CaspianBridge.saveSetting === 'function') {
@@ -4789,7 +4789,7 @@
           window.CaspianBridge.saveSetting('chat_pruning_mode', currentPrunerMode);
         }
         if (window.CaspianBridge && typeof window.CaspianBridge.applyPruningSettings === 'function') {
-          window.CaspianBridge.applyPruningSettings(parseInt(limitVal, 10), currentPrunerMode, localStorage.getItem('chat_limit_enabled') !== 'false');
+          window.CaspianBridge.applyPruningSettings(parseInt(limitVal, 10), currentPrunerMode, localStorage.getItem('chat_limit_enabled') === 'true');
         }
         if (window.CaspianBridge && typeof window.CaspianBridge.showToast === 'function') {
           window.CaspianBridge.showToast(`Pruning Mode: ${pill.textContent.trim()}`);
@@ -4819,7 +4819,7 @@
           window.CaspianBridge.saveSetting('chat_message_limit', String(limitVal));
         }
         if (window.CaspianBridge && typeof window.CaspianBridge.applyPruningSettings === 'function') {
-          window.CaspianBridge.applyPruningSettings(limitVal, currentPrunerMode, localStorage.getItem('chat_limit_enabled') !== 'false');
+          window.CaspianBridge.applyPruningSettings(limitVal, currentPrunerMode, localStorage.getItem('chat_limit_enabled') === 'true');
         }
         if (window.CaspianBridge && typeof window.CaspianBridge.showToast === 'function') {
           window.CaspianBridge.showToast(`Message Limit: ${limitVal >= 9999 ? 'Unlimited' : limitVal + ' messages'}`);
@@ -5826,7 +5826,7 @@
         e.stopPropagation();
         playSFX('tb_power');
         let anyOn = (localStorage.getItem('temp_saver_enabled') !== 'false' ||
-          localStorage.getItem('chat_limit_enabled') !== 'false' ||
+          localStorage.getItem('chat_limit_enabled') === 'true' ||
           localStorage.getItem('caspian_current_enabled') !== 'false' ||
           localStorage.getItem('adblock_enabled') !== 'false' ||
           localStorage.getItem('yt_engine_enabled') !== 'false' ||

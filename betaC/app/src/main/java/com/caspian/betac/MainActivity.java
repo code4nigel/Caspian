@@ -4688,8 +4688,8 @@ public class MainActivity extends AppCompatActivity {
         TabItem currentTab = getYouTubeTab();
         if (currentTab != null && currentTab.webView != null) {
             currentTab.webView.evaluateJavascript(
-                    "if (window.__CaspianYouTube) window.__CaspianYouTube.previousTrack(); " +
-                    "else { var p = document.getElementById('movie_player'); if (p && typeof p.previousVideo === 'function') p.previousVideo(); " +
+                    "if (window.__CaspianYouTube) { window.__CaspianYouTube.previousTrack(); } " +
+                    "else { var v = document.querySelector('video'); if (v && v.currentTime > 10) { v.currentTime = 0; } " +
                     "else { var b = document.querySelector('ytmusic-player-bar .previous-button, .previous-button, [aria-label*=\"Previous\" i], .ytp-prev-button'); if (b) b.click(); } }", null
             );
         }
@@ -4958,7 +4958,8 @@ public class MainActivity extends AppCompatActivity {
     }
 
     public void updateYouTubeTimeLive(Integer tabId, double currentTime, double duration) {
-        if (tabId != null && tabId > 0 && tabId != activeTabId) {
+        TabItem ytTab = getYouTubeTab();
+        if (tabId != null && tabId > 0 && ytTab != null && tabId != ytTab.id && tabId != activeTabId) {
             return;
         }
         updateYouTubeTimeLive(currentTime, duration);
@@ -4980,10 +4981,10 @@ public class MainActivity extends AppCompatActivity {
         }
 
         long now = android.os.SystemClock.elapsedRealtime();
-        if (mediaSession != null && (now - lastMediaSessionTimeUpdateMs > 10000)) {
+        if (mediaSession != null && (now - lastMediaSessionTimeUpdateMs > 8000)) {
             lastMediaSessionTimeUpdateMs = now;
-            TabItem cur = getTabById(activeTabId);
-            boolean isPlaying = cur != null && cur.isPlayingAudio;
+            TabItem yt = getYouTubeTab();
+            boolean isPlaying = yt != null && yt.isPlayingAudio;
             long posMs = (long)(currentTime * 1000);
             mediaSession.setPlaybackState(buildPlaybackState(isPlaying, posMs, isPlaying ? ytCurrentSpeed : 0.0f));
         }
@@ -15692,7 +15693,7 @@ public class MainActivity extends AppCompatActivity {
                             limit = Integer.parseInt(prefs.getString("chat_message_limit", "5"));
                         } catch (Exception ignored) {}
                         String mode = prefs.getString("chat_pruning_mode", "sliding_window");
-                        boolean enabled = !"false".equalsIgnoreCase(prefs.getString("chat_limit_enabled", "true"));
+                        boolean enabled = "true".equalsIgnoreCase(prefs.getString("chat_limit_enabled", "false"));
                         view.evaluateJavascript(prunerJs + "\nif (window.__CASPIAN_PRUNER_UPDATE) window.__CASPIAN_PRUNER_UPDATE(" + limit + ", '" + mode + "', " + enabled + ");", null);
                     }
                 }
@@ -19202,11 +19203,15 @@ public class MainActivity extends AppCompatActivity {
     }
 
     public void updateMediaMetadata(String title, String artist, String thumbUrl) {
-        if (title != null && !title.trim().isEmpty()) {
+        boolean titleChanged = false;
+        if (title != null && !title.trim().isEmpty() && !title.trim().equals(this.currentMediaTitle)) {
             this.currentMediaTitle = title.trim();
+            titleChanged = true;
         }
         if (artist != null && !artist.trim().isEmpty()) {
             this.currentMediaArtist = artist.trim();
+        } else if (titleChanged) {
+            this.currentMediaArtist = "";
         }
         if (thumbUrl != null && !thumbUrl.trim().isEmpty() && !thumbUrl.equals(currentMediaThumbUrl)) {
             this.currentMediaThumbUrl = thumbUrl.trim();
@@ -19222,8 +19227,8 @@ public class MainActivity extends AppCompatActivity {
                 }
             }).start();
         }
-        TabItem cur = getTabById(activeTabId);
-        boolean isPlaying = cur != null && cur.isPlayingAudio;
+        TabItem yt = getYouTubeTab();
+        boolean isPlaying = yt != null && yt.isPlayingAudio;
         updateMediaPlaybackNotification(isPlaying);
     }
 
@@ -19296,10 +19301,16 @@ public class MainActivity extends AppCompatActivity {
             TabItem ytTab = getYouTubeTab();
             boolean isYtMusic = ytTab != null && ((ytTab.url != null && ytTab.url.toLowerCase().contains("music.youtube.com")) || "youtubemusic".equalsIgnoreCase(ytTab.service));
             String serviceLabel = isYtMusic ? "YouTube Music" : "YouTube";
-            String displayArtist = (currentMediaArtist != null && !currentMediaArtist.trim().isEmpty())
-                    ? (currentMediaArtist.trim() + " • " + serviceLabel + " • Caspian Flow")
+
+            String songTitle = (currentMediaTitle != null && !currentMediaTitle.trim().isEmpty() && !currentMediaTitle.equalsIgnoreCase("YouTube Music") && !currentMediaTitle.equalsIgnoreCase("YouTube"))
+                    ? currentMediaTitle.trim()
+                    : serviceLabel;
+            String songArtist = (currentMediaArtist != null && !currentMediaArtist.trim().isEmpty())
+                    ? currentMediaArtist.trim()
+                    : serviceLabel;
+            String notifSubtitle = (currentMediaArtist != null && !currentMediaArtist.trim().isEmpty())
+                    ? (currentMediaArtist.trim() + " • " + serviceLabel)
                     : (serviceLabel + " • Caspian Flow");
-            String displayTitle = (currentMediaTitle != null && !currentMediaTitle.trim().isEmpty()) ? currentMediaTitle.trim() : serviceLabel;
 
             if (mediaSession != null) {
                 if (!mediaSession.isActive()) {
@@ -19310,14 +19321,21 @@ public class MainActivity extends AppCompatActivity {
                 mediaSession.setPlaybackState(buildPlaybackState(isPlaying, posMs, speed));
 
                 MediaMetadataCompat.Builder metaBuilder = new MediaMetadataCompat.Builder()
-                        .putString(MediaMetadataCompat.METADATA_KEY_TITLE, displayTitle)
-                        .putString(MediaMetadataCompat.METADATA_KEY_ARTIST, displayArtist)
-                        .putString(MediaMetadataCompat.METADATA_KEY_ALBUM, "Caspian Flow")
-                        .putString(MediaMetadataCompat.METADATA_KEY_DISPLAY_TITLE, displayTitle)
-                        .putString(MediaMetadataCompat.METADATA_KEY_DISPLAY_SUBTITLE, displayArtist)
+                        .putString(MediaMetadataCompat.METADATA_KEY_TITLE, songTitle)
+                        .putString(MediaMetadataCompat.METADATA_KEY_ARTIST, songArtist)
+                        .putString(MediaMetadataCompat.METADATA_KEY_ALBUM, isYtMusic ? "YouTube Music" : "Caspian Flow")
+                        .putString(MediaMetadataCompat.METADATA_KEY_ALBUM_ARTIST, songArtist)
+                        .putString(MediaMetadataCompat.METADATA_KEY_AUTHOR, songArtist)
+                        .putString(MediaMetadataCompat.METADATA_KEY_COMPOSER, songArtist)
+                        .putString(MediaMetadataCompat.METADATA_KEY_WRITER, songArtist)
+                        .putString(MediaMetadataCompat.METADATA_KEY_DISPLAY_TITLE, songTitle)
+                        .putString(MediaMetadataCompat.METADATA_KEY_DISPLAY_SUBTITLE, songArtist)
+                        .putString(MediaMetadataCompat.METADATA_KEY_DISPLAY_DESCRIPTION, isYtMusic ? "YouTube Music" : "Caspian Flow")
                         .putLong(MediaMetadataCompat.METADATA_KEY_DURATION, (long)(currentVideoDuration * 1000));
                 if (currentMediaThumbBitmap != null) {
                     metaBuilder.putBitmap(MediaMetadataCompat.METADATA_KEY_ALBUM_ART, currentMediaThumbBitmap);
+                    metaBuilder.putBitmap(MediaMetadataCompat.METADATA_KEY_ART, currentMediaThumbBitmap);
+                    metaBuilder.putBitmap(MediaMetadataCompat.METADATA_KEY_DISPLAY_ICON, currentMediaThumbBitmap);
                 }
                 mediaSession.setMetadata(metaBuilder.build());
                 mediaSession.setRepeatMode(currentMediaRepeatMode);
@@ -19369,8 +19387,9 @@ public class MainActivity extends AppCompatActivity {
 
             NotificationCompat.Builder notif = new NotificationCompat.Builder(this, CHANNEL_MEDIA_ID)
                     .setSmallIcon(R.drawable.ic_caspian_notification)
-                    .setContentTitle(displayTitle)
-                    .setContentText(displayArtist)
+                    .setContentTitle(songTitle)
+                    .setContentText(notifSubtitle)
+                    .setSubText(serviceLabel)
                     .setContentIntent(pAppIntent)
                     .setDeleteIntent(pDismiss)
                     .setVisibility(NotificationCompat.VISIBILITY_PUBLIC)

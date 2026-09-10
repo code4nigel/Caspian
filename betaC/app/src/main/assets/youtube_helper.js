@@ -253,6 +253,13 @@
       this.previousTrack();
     },
     previousTrack: function () {
+      try {
+        var v = this.getVideo();
+        if (v && v.currentTime > 10) {
+          v.currentTime = 0;
+          return;
+        }
+      } catch(e){}
       if (typeof __caspian_ytm_prev_handler === 'function') {
         try {
           __caspian_ytm_prev_handler();
@@ -1074,7 +1081,7 @@
         }
       }
 
-      if (isPlaying) {
+      if (v && (isPlaying || v.currentTime > 0)) {
         var title = '';
         var artist = '';
         var thumbUrl = '';
@@ -1083,8 +1090,8 @@
         try {
           if (navigator.mediaSession && navigator.mediaSession.metadata) {
             var meta = navigator.mediaSession.metadata;
-            if (meta.title) title = meta.title.trim();
-            if (meta.artist) artist = meta.artist.trim();
+            if (meta.title && meta.title.trim()) title = meta.title.trim();
+            if (meta.artist && meta.artist.trim()) artist = meta.artist.trim();
             if (meta.artwork && meta.artwork.length > 0) {
               var bestArt = meta.artwork[meta.artwork.length - 1];
               thumbUrl = (bestArt && bestArt.src) ? bestArt.src : '';
@@ -1092,23 +1099,43 @@
           }
         } catch(e){}
 
-        // 2. DOM extraction fallback (covers m.youtube.com, youtube.com, music.youtube.com)
+        // 2. DOM extraction fallback (covers desktop/mobile music.youtube.com and youtube.com)
         var isYtMusic = location.hostname.includes('music.youtube.com');
-        if (!title) {
-          var titleEl = document.querySelector('ytmusic-player-bar .title, .ytmusic-player-bar.title, h1.title, .slim-video-metadata-title, ytm-slim-video-metadata-renderer .title, meta[name="title"]');
-          if (titleEl) title = (titleEl.textContent || titleEl.getAttribute('content') || '').trim();
+        if (!title || title === 'YouTube Music' || title === 'YouTube') {
+          var titleEl = document.querySelector('ytmusic-player-bar .title, ytmusic-player-bar yt-formatted-string.title, ytmusic-player-bar .middle-controls .title, ytm-custom-index-item .title, ytm-player-bar .title, .player-bar-title, .ytmusic-player-bar.title, h1.title, h1.title yt-formatted-string, .slim-video-metadata-title, ytm-slim-video-metadata-renderer .title, #title h1, meta[name="title"]');
+          if (titleEl) {
+            var tText = (titleEl.textContent || titleEl.getAttribute('content') || '').trim();
+            if (tText && tText !== 'YouTube Music' && tText !== 'YouTube') title = tText;
+          }
         }
-        if (!title) {
-          title = (document.title || '').replace(' - YouTube Music', '').replace(' - YouTube', '').trim();
+        if (!title || title === 'YouTube Music' || title === 'YouTube') {
+          var cleanDocTitle = (document.title || '').replace(/\s*-\s*YouTube\s+Music$/i, '').replace(/\s*-\s*YouTube$/i, '').trim();
+          if (cleanDocTitle && cleanDocTitle !== 'YouTube Music' && cleanDocTitle !== 'YouTube') {
+            title = cleanDocTitle;
+          }
         }
 
-        if (!artist && isYtMusic) {
-          var artistEl = document.querySelector('ytmusic-player-bar .subtitle a, ytmusic-player-bar .byline a, ytmusic-player-bar .byline, .ytmusic-player-bar .byline');
-          if (artistEl) artist = artistEl.textContent.trim();
+        if (!artist) {
+          if (isYtMusic) {
+            var artistEl = document.querySelector('ytmusic-player-bar .subtitle a, ytmusic-player-bar .byline a, ytmusic-player-bar .byline yt-formatted-string, ytmusic-player-bar .byline, .ytmusic-player-bar .byline, ytm-player-bar .subtitle, ytm-custom-index-item .subtitle, .player-bar-subtitle');
+            if (artistEl) {
+              var aText = artistEl.textContent.trim();
+              if (aText.includes('•')) {
+                aText = aText.split('•')[0].trim();
+              }
+              if (aText) artist = aText;
+            }
+          } else {
+            var chanEl = document.querySelector('ytd-video-owner-renderer #channel-name a, ytm-channel-info-renderer .channel-title, #owner #channel-name, #upload-info #channel-name, ytd-channel-name a');
+            if (chanEl) {
+              var cText = chanEl.textContent.trim();
+              if (cText) artist = cText;
+            }
+          }
         }
 
         if (!thumbUrl) {
-          var ytmImg = document.querySelector('ytmusic-player-bar img#img, .thumbnail-image-wrapper img, img.ytmusic-player-bar');
+          var ytmImg = document.querySelector('ytmusic-player-bar img#img, .thumbnail-image-wrapper img, img.ytmusic-player-bar, ytm-player-bar img, #player-thumbnail img');
           if (ytmImg && ytmImg.src) {
             thumbUrl = ytmImg.src;
           } else {
