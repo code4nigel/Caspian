@@ -1375,9 +1375,13 @@ select option {
 .tab-pane {
   display: none;
   opacity: 0;
-  contain: layout style paint;
+  contain: layout style;
   will-change: opacity;
   transition: opacity 0.12s cubic-bezier(0.2, 0, 0, 1);
+}
+
+#tabs-list-container {
+  min-height: 120px;
 }
 
 .tab-pane.active {

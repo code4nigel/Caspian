@@ -2397,7 +2397,6 @@ public class MainActivity extends AppCompatActivity {
     private void showTabGridFilterPopup(View anchor) {
         final String[] filterKeys = {"all", "groups", "single"};
         final String[] filterNames = {"All Tabs", "Tab Groups", "Single Tabs"};
-        final String[] filterIcons = {"🌐", "📁", "📑"};
 
         LinearLayout layout = new LinearLayout(this);
         layout.setOrientation(LinearLayout.VERTICAL);
@@ -2409,13 +2408,12 @@ public class MainActivity extends AppCompatActivity {
         bg.setStroke(dpToPx(1.2f), isDarkTheme ? 0x2AFFFFFF : 0xFFCBD5E1);
         layout.setBackground(bg);
 
-        android.widget.PopupWindow popup = new android.widget.PopupWindow(layout, dpToPx(145), ViewGroup.LayoutParams.WRAP_CONTENT, true);
+        android.widget.PopupWindow popup = new android.widget.PopupWindow(layout, dpToPx(125), ViewGroup.LayoutParams.WRAP_CONTENT, true);
         popup.setElevation(dpToPx(14));
 
         for (int i = 0; i < filterKeys.length; i++) {
             final String key = filterKeys[i];
             final String name = filterNames[i];
-            final String icon = filterIcons[i];
             final boolean isSelected = key.equalsIgnoreCase(currentTabGridFilter);
 
             LinearLayout row = new LinearLayout(this);
@@ -2432,18 +2430,12 @@ public class MainActivity extends AppCompatActivity {
             }
             row.setBackground(rowGd);
 
-            TextView iconTv = new TextView(this);
-            iconTv.setText(icon);
-            iconTv.setTextSize(TypedValue.COMPLEX_UNIT_SP, 13);
-            row.addView(iconTv);
-
             TextView nameTv = new TextView(this);
             nameTv.setText(name);
             nameTv.setTextSize(TypedValue.COMPLEX_UNIT_SP, 12);
             nameTv.setTypeface(null, isSelected ? android.graphics.Typeface.BOLD : android.graphics.Typeface.NORMAL);
             nameTv.setTextColor(isSelected ? (isDarkTheme ? 0xFF00E5FF : 0xFF0284C7) : (isDarkTheme ? 0xFFDFE2F0 : 0xFF334155));
             LinearLayout.LayoutParams nLp = new LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.WRAP_CONTENT, 1f);
-            nLp.setMarginStart(dpToPx(8));
             nameTv.setLayoutParams(nLp);
             row.addView(nameTv);
 
@@ -17472,9 +17464,14 @@ public class MainActivity extends AppCompatActivity {
     }
 
     public void updateOmniboxTabStrip() {
+        updateOmniboxTabStrip(true);
+    }
+
+    public void updateOmniboxTabStrip(boolean scrollToActive) {
         runOnUiThread(() -> {
             try {
                 if (omniboxTabStripTabs == null || omniboxTabStripScroll == null) return;
+                final int prevScrollX = omniboxTabStripScroll.getScrollX();
                 omniboxTabStripTabs.removeAllViews();
 
                 if (!isTabStripEnabled || tabsList.isEmpty()) {
@@ -17571,7 +17568,7 @@ public class MainActivity extends AppCompatActivity {
                         } else {
                             collapsedStripGroupIds.add(group.id);
                         }
-                        updateOmniboxTabStrip();
+                        updateOmniboxTabStrip(false);
                     });
 
                     omniboxTabStripTabs.addView(groupChip);
@@ -17892,11 +17889,15 @@ public class MainActivity extends AppCompatActivity {
                     omniboxTabStripTabs.addView(tabView);
                 }
 
-                if (activeTabView != null) {
+                if (scrollToActive && activeTabView != null) {
                     final View target = activeTabView;
                     omniboxTabStripScroll.post(() -> {
                         int scrollX = target.getLeft() - (omniboxTabStripScroll.getWidth() / 2) + (target.getWidth() / 2);
                         omniboxTabStripScroll.smoothScrollTo(Math.max(0, scrollX), 0);
+                    });
+                } else {
+                    omniboxTabStripScroll.post(() -> {
+                        omniboxTabStripScroll.scrollTo(prevScrollX, 0);
                     });
                 }
             } catch (Throwable ignored) {}

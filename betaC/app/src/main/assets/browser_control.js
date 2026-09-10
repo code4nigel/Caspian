@@ -709,6 +709,7 @@
     }
 
     let html = '<div class="tab-card-grid">';
+    let itemsRenderedCount = 0;
 
     let selectedGroupColor = '#ef4444';
     let selectedGroupEmoji = '📁';
@@ -718,6 +719,7 @@
       tabGroups.forEach(group => {
         const groupTabs = tabs.filter(t => group.tabIds.includes(t.id));
         if (groupTabs.length === 0) return; // Skip empty groups
+        itemsRenderedCount++;
 
         const isGroupActive = groupTabs.some(t => t.active);
         const activeBadge = isGroupActive ? '<span style="font-size: 9px; font-weight: 800; color: #10b981; background: rgba(16,185,129,0.15); padding: 2px 6px; border-radius: 6px;">ACTIVE</span>' : '';
@@ -774,6 +776,7 @@
 
       displayTabs.forEach(tab => {
         if (processedSplitTabs.has(tab.id)) return;
+        itemsRenderedCount++;
 
         const partnerId = tab.splitPartnerId;
         const partnerTab = (partnerId && partnerId !== -1) ? tabs.find(t => t.id === partnerId) : null;
@@ -914,6 +917,32 @@
           </div>
         `;
       });
+    }
+
+    if (itemsRenderedCount === 0) {
+      if (activeTabFilter === 'groups') {
+        html += `
+          <div style="grid-column: 1 / -1; display: flex; flex-direction: column; align-items: center; justify-content: center; padding: 32px 12px; font-size: 11.5px; color: var(--text-sub); gap: 6px; text-align: center;">
+            <span style="font-size: 24px; opacity: 0.7;">📁</span>
+            <span style="font-weight: 600;">No tab groups created yet</span>
+            <span style="font-size: 10px; opacity: 0.7;">Select tabs to create a group or switch filter</span>
+          </div>
+        `;
+      } else if (activeTabFilter === 'single') {
+        html += `
+          <div style="grid-column: 1 / -1; display: flex; flex-direction: column; align-items: center; justify-content: center; padding: 32px 12px; font-size: 11.5px; color: var(--text-sub); gap: 6px; text-align: center;">
+            <span style="font-size: 24px; opacity: 0.7;">📑</span>
+            <span style="font-weight: 600;">No single tabs</span>
+            <span style="font-size: 10px; opacity: 0.7;">All tabs are grouped</span>
+          </div>
+        `;
+      } else {
+        html += `
+          <div style="grid-column: 1 / -1; display: flex; flex-direction: column; align-items: center; justify-content: center; padding: 32px 12px; font-size: 11.5px; color: var(--text-sub); gap: 6px; text-align: center;">
+            <span>No tabs matching filter</span>
+          </div>
+        `;
+      }
     }
 
     html += '</div>';
