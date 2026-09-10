@@ -232,24 +232,60 @@
       } catch (e) { }
     },
     previousVideo: function () {
+      this.previousTrack();
+    },
+    previousTrack: function () {
       try {
-        const prevBtn = document.querySelector('.ytp-prev-button, button.ytp-prev-button');
+        const p = document.getElementById('movie_player') || document.querySelector('.html5-video-player');
+        if (p && typeof p.previousVideo === 'function') {
+          p.previousVideo();
+          return;
+        }
+      } catch (e) { }
+      try {
+        const prevBtn = document.querySelector('ytmusic-player-bar .previous-button, .previous-button, [aria-label*="Previous" i], [aria-label*="previous" i], .ytp-prev-button, button.ytp-prev-button');
         if (prevBtn && typeof prevBtn.click === 'function') {
           prevBtn.click();
-        } else if (window.history.length > 1) {
-          window.history.back();
+          return;
         }
       } catch (e) { }
+      if (window.history.length > 1) {
+        window.history.back();
+      }
     },
     nextVideo: function () {
+      this.nextTrack();
+    },
+    nextTrack: function () {
       try {
-        const nextBtn = document.querySelector('.ytp-next-button, button.ytp-next-button, ytm-next-button');
-        if (nextBtn && typeof nextBtn.click === 'function') {
-          nextBtn.click();
-        } else if (window.history.length > 1) {
-          window.history.forward();
+        const p = document.getElementById('movie_player') || document.querySelector('.html5-video-player');
+        if (p && typeof p.nextVideo === 'function') {
+          p.nextVideo();
+          return;
         }
       } catch (e) { }
+      try {
+        const nextBtn = document.querySelector('ytmusic-player-bar .next-button, .next-button, [aria-label*="Next" i], [aria-label*="next" i], .ytp-next-button, button.ytp-next-button, ytm-next-button');
+        if (nextBtn && typeof nextBtn.click === 'function') {
+          nextBtn.click();
+          return;
+        }
+      } catch (e) { }
+      if (window.history.length > 1) {
+        window.history.forward();
+      }
+    },
+    toggleRepeat: function () {
+      try {
+        const repBtn = document.querySelector('ytmusic-player-bar .repeat, [aria-label*="repeat" i], [aria-label*="Repeat" i], button.repeat');
+        if (repBtn) repBtn.click();
+      } catch(e){}
+    },
+    toggleShuffle: function () {
+      try {
+        const shufBtn = document.querySelector('ytmusic-player-bar .shuffle, [aria-label*="shuffle" i], [aria-label*="Shuffle" i], button.shuffle');
+        if (shufBtn) shufBtn.click();
+      } catch(e){}
     },
     seekTo: function (sec) {
       try {
@@ -957,35 +993,39 @@
 
       if (isPlaying) {
         var title = '';
+        var artist = '';
         var thumbUrl = '';
 
         // 1. Check navigator.mediaSession metadata (standard for YouTube and YouTube Music)
         try {
           if (navigator.mediaSession && navigator.mediaSession.metadata) {
             var meta = navigator.mediaSession.metadata;
-            if (meta.title) {
-              title = meta.title;
-              if (meta.artist) {
-                title = title + ' • ' + meta.artist;
-              }
-            }
+            if (meta.title) title = meta.title.trim();
+            if (meta.artist) artist = meta.artist.trim();
             if (meta.artwork && meta.artwork.length > 0) {
-              thumbUrl = meta.artwork[meta.artwork.length - 1].src || '';
+              var bestArt = meta.artwork[meta.artwork.length - 1];
+              thumbUrl = (bestArt && bestArt.src) ? bestArt.src : '';
             }
           }
         } catch(e){}
 
         // 2. DOM extraction fallback (covers m.youtube.com, youtube.com, music.youtube.com)
+        var isYtMusic = location.hostname.includes('music.youtube.com');
         if (!title) {
           var titleEl = document.querySelector('ytmusic-player-bar .title, .ytmusic-player-bar.title, h1.title, .slim-video-metadata-title, ytm-slim-video-metadata-renderer .title, meta[name="title"]');
-          if (titleEl) title = titleEl.textContent || titleEl.getAttribute('content') || '';
+          if (titleEl) title = (titleEl.textContent || titleEl.getAttribute('content') || '').trim();
         }
         if (!title) {
           title = (document.title || '').replace(' - YouTube Music', '').replace(' - YouTube', '').trim();
         }
 
+        if (!artist && isYtMusic) {
+          var artistEl = document.querySelector('ytmusic-player-bar .subtitle a, ytmusic-player-bar .byline a, ytmusic-player-bar .byline, .ytmusic-player-bar .byline');
+          if (artistEl) artist = artistEl.textContent.trim();
+        }
+
         if (!thumbUrl) {
-          var ytmImg = document.querySelector('ytmusic-player-bar img#img, .thumbnail-image-wrapper img');
+          var ytmImg = document.querySelector('ytmusic-player-bar img#img, .thumbnail-image-wrapper img, img.ytmusic-player-bar');
           if (ytmImg && ytmImg.src) {
             thumbUrl = ytmImg.src;
           } else {
@@ -1006,13 +1046,51 @@
           }
         }
 
+        // Upgrade thumbnail URL to crystal-clear high resolution (800x800)
+        if (thumbUrl) {
+          thumbUrl = thumbUrl.replace(/=w\d+-h\d+[^&?]*/, '=w800-h800-l90-rj')
+                             .replace(/=s\d+[^&?]*/, '=s800');
+        }
+
         if (title && window.CaspianBridge) {
-          if (typeof window.CaspianBridge.updateTabMediaMetadata === 'function') {
+          if (typeof window.CaspianBridge.updateTabMediaMetadataExtended === 'function') {
+            window.CaspianBridge.updateTabMediaMetadataExtended(tabId, title, artist, thumbUrl);
+          } else if (typeof window.CaspianBridge.updateTabMediaMetadata === 'function') {
             window.CaspianBridge.updateTabMediaMetadata(tabId, title, thumbUrl);
           } else if (typeof window.CaspianBridge.updateMediaMetadata === 'function') {
             window.CaspianBridge.updateMediaMetadata(title, thumbUrl);
           }
         }
+
+        // Register navigator.mediaSession action handlers if available
+        try {
+          if (navigator.mediaSession && !window.__caspian_media_handlers_registered) {
+            window.__caspian_media_handlers_registered = true;
+            navigator.mediaSession.setActionHandler('previoustrack', function() {
+              window.__CaspianYouTube.previousTrack();
+            });
+            navigator.mediaSession.setActionHandler('nexttrack', function() {
+              window.__CaspianYouTube.nextTrack();
+            });
+          }
+        } catch(e){}
+
+        // Continuous Background Auto-Advance Watcher:
+        // When video ends, if in background or screen off, ensure next track starts within 2.5s
+        try {
+          var vidEl = window.__CaspianYouTube.getVideo();
+          if (vidEl && !vidEl.__caspian_advance_hooked) {
+            vidEl.__caspian_advance_hooked = true;
+            vidEl.addEventListener('ended', function() {
+              setTimeout(function() {
+                var curV = window.__CaspianYouTube.getVideo();
+                if (curV && (curV.ended || curV.paused)) {
+                  window.__CaspianYouTube.nextTrack();
+                }
+              }, 2200);
+            }, { passive: true });
+          }
+        } catch(e){}
       }
     } catch (e) { }
   }, 1000);

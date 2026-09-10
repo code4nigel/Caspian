@@ -334,6 +334,14 @@ public class CaspianBridge {
     }
 
     @JavascriptInterface
+    public void updateTabMediaMetadataExtended(int tabId, String title, String artist, String thumbnailUrl) {
+        if (activity != null && title != null) {
+            Integer effectiveId = (tabId > 0) ? tabId : boundTabId;
+            activity.runOnUiThread(() -> activity.updateMediaMetadata(effectiveId, title, artist, thumbnailUrl));
+        }
+    }
+
+    @JavascriptInterface
     public void openInOtherSplit(String url) {
         if (activity != null) {
             activity.runOnUiThread(() -> activity.openInOtherSplitPane(url));

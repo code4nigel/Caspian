@@ -421,6 +421,10 @@ public class MainActivity extends AppCompatActivity {
     public static final String ACTION_PIP_REWIND = "com.caspian.betac.ACTION_PIP_REWIND";
     public static final String ACTION_PIP_FORWARD = "com.caspian.betac.ACTION_PIP_FORWARD";
     public static final String ACTION_MEDIA_PLAY_PAUSE = "com.caspian.betac.MEDIA_PLAY_PAUSE";
+    public static final String ACTION_MEDIA_PREVIOUS = "com.caspian.betac.MEDIA_PREVIOUS";
+    public static final String ACTION_MEDIA_NEXT = "com.caspian.betac.MEDIA_NEXT";
+    public static final String ACTION_MEDIA_REPEAT = "com.caspian.betac.MEDIA_REPEAT";
+    public static final String ACTION_MEDIA_SHUFFLE = "com.caspian.betac.MEDIA_SHUFFLE";
     public static final String ACTION_MEDIA_REWIND = "com.caspian.betac.MEDIA_REWIND";
     public static final String ACTION_MEDIA_FORWARD = "com.caspian.betac.MEDIA_FORWARD";
     public static final String ACTION_MEDIA_DISMISS = "com.caspian.betac.MEDIA_DISMISS";
@@ -434,6 +438,9 @@ public class MainActivity extends AppCompatActivity {
 
     private MediaSessionCompat mediaSession;
     private String currentMediaTitle = "YouTube";
+    private String currentMediaArtist = "";
+    private int currentMediaRepeatMode = PlaybackStateCompat.REPEAT_MODE_NONE;
+    private int currentMediaShuffleMode = PlaybackStateCompat.SHUFFLE_MODE_NONE;
     private String currentMediaThumbUrl = "";
     private Bitmap currentMediaThumbBitmap = null;
     private boolean isDebugRecordingPaused = false;
@@ -2190,6 +2197,12 @@ public class MainActivity extends AppCompatActivity {
         int selCount = selectedGridTabIds.size();
         if (tabGridTopActions != null) {
             tabGridTopActions.setVisibility(selCount > 0 ? View.VISIBLE : View.GONE);
+            if (selCount > 0) {
+                tabGridTopActions.bringToFront();
+            }
+        }
+        if (tabGridSearchInput != null) {
+            tabGridSearchInput.setHint(selCount > 0 ? "" : "Search your tabs");
         }
         if (btnTabGridTopSplit != null) {
             btnTabGridTopSplit.setVisibility(selCount == 2 ? View.VISIBLE : View.GONE);
@@ -2255,7 +2268,12 @@ public class MainActivity extends AppCompatActivity {
 
         // Top actions
         if (tabGridTopActions != null) {
-            tabGridTopActions.setElevation(dpToPx(4));
+            GradientDrawable aGd = new GradientDrawable();
+            aGd.setColor(isLight ? 0xFFFFFFFF : 0xF50D111A);
+            aGd.setCornerRadius(dpToPx(18));
+            aGd.setStroke(dpToPx(1.2f), isLight ? 0xFFCBD5E1 : 0x3300E5FF);
+            tabGridTopActions.setBackground(aGd);
+            tabGridTopActions.setElevation(dpToPx(20));
         }
 
         if (btnTabGridTopSplit != null) {
@@ -2373,7 +2391,7 @@ public class MainActivity extends AppCompatActivity {
         boolean isFav = activeTab != null && activeTab.isFavorite;
         btnTabGridFavorite.setText(isFav ? "★" : "☆");
         btnTabGridFavorite.setTextColor(isFav ? 0xFFFBBF24 : (isDarkTheme ? 0xFFA2A9A9 : 0xFF64748B));
-        btnTabGridFavorite.setTextSize(TypedValue.COMPLEX_UNIT_SP, isFav ? 18 : 17);
+        btnTabGridFavorite.setTextSize(TypedValue.COMPLEX_UNIT_SP, isFav ? 25 : 24);
     }
 
     private void showTabGridFilterPopup(View anchor) {
@@ -4180,9 +4198,19 @@ public class MainActivity extends AppCompatActivity {
         manageYouTubeWakeLock(isPlaying);
     }
 
+    private final Handler ytWakeLockHandler = new Handler(Looper.getMainLooper());
+    private final Runnable ytWakeLockReleaseRunnable = () -> {
+        try {
+            if (youtubeWakeLock != null && youtubeWakeLock.isHeld()) {
+                youtubeWakeLock.release();
+            }
+        } catch (Exception ignored) {}
+    };
+
     private void manageYouTubeWakeLock(boolean acquire) {
         try {
             if (acquire) {
+                ytWakeLockHandler.removeCallbacks(ytWakeLockReleaseRunnable);
                 if (youtubeWakeLock == null) {
                     PowerManager pm = (PowerManager) getSystemService(Context.POWER_SERVICE);
                     if (pm != null) {
@@ -4193,8 +4221,15 @@ public class MainActivity extends AppCompatActivity {
                     youtubeWakeLock.acquire(4 * 60 * 60 * 1000L); // 4-hour max safety timeout
                 }
             } else {
-                if (youtubeWakeLock != null && youtubeWakeLock.isHeld()) {
-                    youtubeWakeLock.release();
+                if (hasYouTubePlaybackStarted && hasAnyYouTubeTab()) {
+                    // Retain wake lock for 10-minute grace period during track transitions and lock screen pause
+                    ytWakeLockHandler.removeCallbacks(ytWakeLockReleaseRunnable);
+                    ytWakeLockHandler.postDelayed(ytWakeLockReleaseRunnable, 10 * 60 * 1000L);
+                } else {
+                    ytWakeLockHandler.removeCallbacks(ytWakeLockReleaseRunnable);
+                    if (youtubeWakeLock != null && youtubeWakeLock.isHeld()) {
+                        youtubeWakeLock.release();
+                    }
                 }
             }
         } catch (Exception ignored) {}
@@ -4614,6 +4649,70 @@ public class MainActivity extends AppCompatActivity {
             }
         }
         return null;
+    }
+
+    public void previousYouTubeTrack() {
+        TabItem currentTab = getYouTubeTab();
+        if (currentTab != null && currentTab.webView != null) {
+            currentTab.webView.evaluateJavascript(
+                    "if (window.__CaspianYouTube) window.__CaspianYouTube.previousTrack(); " +
+                    "else { var p = document.getElementById('movie_player'); if (p && typeof p.previousVideo === 'function') p.previousVideo(); " +
+                    "else { var b = document.querySelector('ytmusic-player-bar .previous-button, .previous-button, [aria-label*=\"Previous\" i], .ytp-prev-button'); if (b) b.click(); } }", null
+            );
+        }
+    }
+
+    public void nextYouTubeTrack() {
+        TabItem currentTab = getYouTubeTab();
+        if (currentTab != null && currentTab.webView != null) {
+            currentTab.webView.evaluateJavascript(
+                    "if (window.__CaspianYouTube) window.__CaspianYouTube.nextTrack(); " +
+                    "else { var p = document.getElementById('movie_player'); if (p && typeof p.nextVideo === 'function') p.nextVideo(); " +
+                    "else { var b = document.querySelector('ytmusic-player-bar .next-button, .next-button, [aria-label*=\"Next\" i], .ytp-next-button'); if (b) b.click(); } }", null
+            );
+        }
+    }
+
+    public void toggleYouTubeRepeat() {
+        TabItem currentTab = getYouTubeTab();
+        if (currentTab != null && currentTab.webView != null) {
+            currentTab.webView.evaluateJavascript(
+                    "if (window.__CaspianYouTube) window.__CaspianYouTube.toggleRepeat(); " +
+                    "else { var b = document.querySelector('ytmusic-player-bar .repeat, [aria-label*=\"repeat\" i], [aria-label*=\"Repeat\" i]'); if (b) b.click(); }", null
+            );
+            if (currentMediaRepeatMode == PlaybackStateCompat.REPEAT_MODE_NONE) {
+                currentMediaRepeatMode = PlaybackStateCompat.REPEAT_MODE_ALL;
+            } else if (currentMediaRepeatMode == PlaybackStateCompat.REPEAT_MODE_ALL) {
+                currentMediaRepeatMode = PlaybackStateCompat.REPEAT_MODE_ONE;
+            } else {
+                currentMediaRepeatMode = PlaybackStateCompat.REPEAT_MODE_NONE;
+            }
+            if (mediaSession != null) {
+                mediaSession.setRepeatMode(currentMediaRepeatMode);
+            }
+            TabItem yt = getYouTubeTab();
+            boolean isPlaying = yt != null && yt.isPlayingAudio;
+            updateMediaPlaybackNotification(isPlaying);
+        }
+    }
+
+    public void toggleYouTubeShuffle() {
+        TabItem currentTab = getYouTubeTab();
+        if (currentTab != null && currentTab.webView != null) {
+            currentTab.webView.evaluateJavascript(
+                    "if (window.__CaspianYouTube) window.__CaspianYouTube.toggleShuffle(); " +
+                    "else { var b = document.querySelector('ytmusic-player-bar .shuffle, [aria-label*=\"shuffle\" i], [aria-label*=\"Shuffle\" i]'); if (b) b.click(); }", null
+            );
+            currentMediaShuffleMode = (currentMediaShuffleMode == PlaybackStateCompat.SHUFFLE_MODE_NONE)
+                    ? PlaybackStateCompat.SHUFFLE_MODE_ALL
+                    : PlaybackStateCompat.SHUFFLE_MODE_NONE;
+            if (mediaSession != null) {
+                mediaSession.setShuffleMode(currentMediaShuffleMode);
+            }
+            TabItem yt = getYouTubeTab();
+            boolean isPlaying = yt != null && yt.isPlayingAudio;
+            updateMediaPlaybackNotification(isPlaying);
+        }
     }
 
     public void togglePlayYouTube() {
@@ -18845,6 +18944,14 @@ public class MainActivity extends AppCompatActivity {
                 if (ACTION_PIP_PLAY_PAUSE.equals(action) || ACTION_MEDIA_PLAY_PAUSE.equals(action)) {
                     togglePlayYouTube();
                     updatePiPActions();
+                } else if (ACTION_MEDIA_PREVIOUS.equals(action)) {
+                    previousYouTubeTrack();
+                } else if (ACTION_MEDIA_NEXT.equals(action)) {
+                    nextYouTubeTrack();
+                } else if (ACTION_MEDIA_REPEAT.equals(action)) {
+                    toggleYouTubeRepeat();
+                } else if (ACTION_MEDIA_SHUFFLE.equals(action)) {
+                    toggleYouTubeShuffle();
                 } else if (ACTION_PIP_REWIND.equals(action) || ACTION_MEDIA_REWIND.equals(action)) {
                     seekYouTube(-10);
                 } else if (ACTION_PIP_FORWARD.equals(action) || ACTION_MEDIA_FORWARD.equals(action)) {
@@ -18866,6 +18973,10 @@ public class MainActivity extends AppCompatActivity {
         filter.addAction(ACTION_PIP_REWIND);
         filter.addAction(ACTION_PIP_FORWARD);
         filter.addAction(ACTION_MEDIA_PLAY_PAUSE);
+        filter.addAction(ACTION_MEDIA_PREVIOUS);
+        filter.addAction(ACTION_MEDIA_NEXT);
+        filter.addAction(ACTION_MEDIA_REPEAT);
+        filter.addAction(ACTION_MEDIA_SHUFFLE);
         filter.addAction(ACTION_MEDIA_REWIND);
         filter.addAction(ACTION_MEDIA_FORWARD);
         filter.addAction(ACTION_MEDIA_DISMISS);
@@ -18921,12 +19032,31 @@ public class MainActivity extends AppCompatActivity {
 
                 @Override
                 public void onSkipToPrevious() {
-                    seekYouTube(-10);
+                    previousYouTubeTrack();
                 }
 
                 @Override
                 public void onSkipToNext() {
-                    seekYouTube(10);
+                    nextYouTubeTrack();
+                }
+
+                @Override
+                public void onSetRepeatMode(int repeatMode) {
+                    toggleYouTubeRepeat();
+                }
+
+                @Override
+                public void onSetShuffleMode(int shuffleMode) {
+                    toggleYouTubeShuffle();
+                }
+
+                @Override
+                public void onCustomAction(String action, Bundle extras) {
+                    if ("ACTION_TOGGLE_REPEAT".equals(action)) {
+                        toggleYouTubeRepeat();
+                    } else if ("ACTION_TOGGLE_SHUFFLE".equals(action)) {
+                        toggleYouTubeShuffle();
+                    }
                 }
 
                 @Override
@@ -18942,8 +19072,18 @@ public class MainActivity extends AppCompatActivity {
 
     private Bitmap downloadHighQualityThumbnail(String urlStr) {
         if (urlStr == null || urlStr.trim().isEmpty()) return null;
+        String hqUrl = urlStr;
+        // Upgrade Google User Content / YouTube Music album art to 800x800 high definition
+        if (hqUrl.contains("googleusercontent.com") || hqUrl.contains("ggpht.com")) {
+            hqUrl = hqUrl.replaceAll("=w\\d+-h\\d+[^&?]*", "=w800-h800-l90-rj")
+                         .replaceAll("=s\\d+[^&?]*", "=s800");
+        } else if (hqUrl.contains("i.ytimg.com/vi/")) {
+            hqUrl = hqUrl.replaceAll("/(?:default|mqdefault|hqdefault|sddefault)\\.jpg", "/maxresdefault.jpg");
+        }
+
         try {
-            java.net.HttpURLConnection conn = (java.net.HttpURLConnection) new java.net.URL(urlStr).openConnection();
+            java.net.HttpURLConnection conn = (java.net.HttpURLConnection) new java.net.URL(hqUrl).openConnection();
+            conn.setRequestProperty("User-Agent", "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/122.0.0.0 Safari/537.36");
             conn.setConnectTimeout(4000);
             conn.setReadTimeout(4000);
             conn.connect();
@@ -18952,10 +19092,22 @@ public class MainActivity extends AppCompatActivity {
             }
         } catch (Exception ignored) {}
 
+        // Fallback to original URL or hqdefault if upgraded URL failed
+        if (!hqUrl.equals(urlStr)) {
+            try {
+                java.net.HttpURLConnection conn = (java.net.HttpURLConnection) new java.net.URL(urlStr).openConnection();
+                conn.setConnectTimeout(4000);
+                conn.setReadTimeout(4000);
+                conn.connect();
+                if (conn.getResponseCode() == 200) {
+                    return BitmapFactory.decodeStream(conn.getInputStream());
+                }
+            } catch (Exception ignored) {}
+        }
         if (urlStr.contains("maxresdefault.jpg")) {
             try {
-                String hqUrl = urlStr.replace("maxresdefault.jpg", "hqdefault.jpg");
-                java.net.HttpURLConnection conn = (java.net.HttpURLConnection) new java.net.URL(hqUrl).openConnection();
+                String altUrl = urlStr.replace("maxresdefault.jpg", "hqdefault.jpg");
+                java.net.HttpURLConnection conn = (java.net.HttpURLConnection) new java.net.URL(altUrl).openConnection();
                 conn.setConnectTimeout(4000);
                 conn.setReadTimeout(4000);
                 conn.connect();
@@ -18968,6 +19120,10 @@ public class MainActivity extends AppCompatActivity {
     }
 
     public void updateMediaMetadata(Integer tabId, String title, String thumbUrl) {
+        updateMediaMetadata(tabId, title, "", thumbUrl);
+    }
+
+    public void updateMediaMetadata(Integer tabId, String title, String artist, String thumbUrl) {
         if (tabId != null && tabId > 0 && tabId != activeTabId) {
             TabItem activeTab = getTabById(activeTabId);
             boolean activeIsYt = activeTab != null && activeTab.url != null && (activeTab.url.toLowerCase().contains("youtube.com") || "youtube".equalsIgnoreCase(activeTab.service) || "youtubemusic".equalsIgnoreCase(activeTab.service));
@@ -18975,12 +19131,19 @@ public class MainActivity extends AppCompatActivity {
                 return;
             }
         }
-        updateMediaMetadata(title, thumbUrl);
+        updateMediaMetadata(title, artist, thumbUrl);
     }
 
     public void updateMediaMetadata(String title, String thumbUrl) {
+        updateMediaMetadata(title, "", thumbUrl);
+    }
+
+    public void updateMediaMetadata(String title, String artist, String thumbUrl) {
         if (title != null && !title.trim().isEmpty()) {
             this.currentMediaTitle = title.trim();
+        }
+        if (artist != null && !artist.trim().isEmpty()) {
+            this.currentMediaArtist = artist.trim();
         }
         if (thumbUrl != null && !thumbUrl.trim().isEmpty() && !thumbUrl.equals(currentMediaThumbUrl)) {
             this.currentMediaThumbUrl = thumbUrl.trim();
@@ -19077,51 +19240,84 @@ public class MainActivity extends AppCompatActivity {
                 PlaybackStateCompat.Builder stateBuilder = new PlaybackStateCompat.Builder()
                         .setActions(PlaybackStateCompat.ACTION_PLAY | PlaybackStateCompat.ACTION_PAUSE
                                 | PlaybackStateCompat.ACTION_PLAY_PAUSE | PlaybackStateCompat.ACTION_SKIP_TO_PREVIOUS
-                                | PlaybackStateCompat.ACTION_SKIP_TO_NEXT | PlaybackStateCompat.ACTION_SEEK_TO)
+                                | PlaybackStateCompat.ACTION_SKIP_TO_NEXT | PlaybackStateCompat.ACTION_SEEK_TO
+                                | PlaybackStateCompat.ACTION_SET_REPEAT_MODE | PlaybackStateCompat.ACTION_SET_SHUFFLE_MODE)
+                        .addCustomAction(new PlaybackStateCompat.CustomAction.Builder(
+                                "ACTION_TOGGLE_SHUFFLE",
+                                currentMediaShuffleMode == PlaybackStateCompat.SHUFFLE_MODE_ALL ? "Shuffle: On" : "Shuffle: Off",
+                                R.drawable.ic_pod_shuffle
+                        ).build())
+                        .addCustomAction(new PlaybackStateCompat.CustomAction.Builder(
+                                "ACTION_TOGGLE_REPEAT",
+                                currentMediaRepeatMode == PlaybackStateCompat.REPEAT_MODE_ONE ? "Repeat: One" : (currentMediaRepeatMode == PlaybackStateCompat.REPEAT_MODE_ALL ? "Repeat: All" : "Repeat: Off"),
+                                R.drawable.ic_pod_repeat
+                        ).build())
                         .setState(state, posMs, speed, android.os.SystemClock.elapsedRealtime());
                 mediaSession.setPlaybackState(stateBuilder.build());
 
+                TabItem ytTab = getYouTubeTab();
+                boolean isYtMusic = ytTab != null && ((ytTab.url != null && ytTab.url.toLowerCase().contains("music.youtube.com")) || "youtubemusic".equalsIgnoreCase(ytTab.service));
+                String serviceLabel = isYtMusic ? "YouTube Music" : "YouTube";
+                String displayArtist = (currentMediaArtist != null && !currentMediaArtist.trim().isEmpty()) ? currentMediaArtist.trim() : serviceLabel;
+                String displaySubText = (currentMediaArtist != null && !currentMediaArtist.trim().isEmpty()) ? (currentMediaArtist.trim() + " • " + serviceLabel) : (serviceLabel + " • Caspian Flow");
+                String displayTitle = (currentMediaTitle != null && !currentMediaTitle.trim().isEmpty()) ? currentMediaTitle.trim() : serviceLabel;
+
                 MediaMetadataCompat.Builder metaBuilder = new MediaMetadataCompat.Builder()
-                        .putString(MediaMetadataCompat.METADATA_KEY_TITLE, currentMediaTitle != null && !currentMediaTitle.isEmpty() ? currentMediaTitle : "YouTube")
-                        .putString(MediaMetadataCompat.METADATA_KEY_ARTIST, "YouTube • Caspian Flow")
-                        .putString(MediaMetadataCompat.METADATA_KEY_ALBUM, "Caspian Flow")
+                        .putString(MediaMetadataCompat.METADATA_KEY_TITLE, displayTitle)
+                        .putString(MediaMetadataCompat.METADATA_KEY_ARTIST, displayArtist)
+                        .putString(MediaMetadataCompat.METADATA_KEY_ALBUM, serviceLabel)
                         .putLong(MediaMetadataCompat.METADATA_KEY_DURATION, (long)(currentVideoDuration * 1000));
                 if (currentMediaThumbBitmap != null) {
                     metaBuilder.putBitmap(MediaMetadataCompat.METADATA_KEY_ALBUM_ART, currentMediaThumbBitmap);
                 }
                 mediaSession.setMetadata(metaBuilder.build());
+                mediaSession.setRepeatMode(currentMediaRepeatMode);
+                mediaSession.setShuffleMode(currentMediaShuffleMode);
             }
+
+            TabItem ytTabForNotif = getYouTubeTab();
+            boolean isYtMusicNotif = ytTabForNotif != null && ((ytTabForNotif.url != null && ytTabForNotif.url.toLowerCase().contains("music.youtube.com")) || "youtubemusic".equalsIgnoreCase(ytTabForNotif.service));
+            String serviceLabelNotif = isYtMusicNotif ? "YouTube Music" : "YouTube";
+            String displaySubTextNotif = (currentMediaArtist != null && !currentMediaArtist.trim().isEmpty()) ? (currentMediaArtist.trim() + " • " + serviceLabelNotif) : (serviceLabelNotif + " • Caspian Flow");
+            String displayTitleNotif = (currentMediaTitle != null && !currentMediaTitle.trim().isEmpty()) ? currentMediaTitle.trim() : serviceLabelNotif;
 
             Intent appIntent = new Intent(this, MainActivity.class);
             PendingIntent pAppIntent = PendingIntent.getActivity(
                     this, 0, appIntent, PendingIntent.FLAG_UPDATE_CURRENT | PendingIntent.FLAG_IMMUTABLE
             );
 
-            Intent rewIntent = new Intent(ACTION_MEDIA_REWIND).setPackage(getPackageName());
-            PendingIntent pRew = PendingIntent.getBroadcast(this, 201, rewIntent, PendingIntent.FLAG_UPDATE_CURRENT | PendingIntent.FLAG_IMMUTABLE);
+            Intent prevIntent = new Intent(ACTION_MEDIA_PREVIOUS).setPackage(getPackageName());
+            PendingIntent pPrev = PendingIntent.getBroadcast(this, 201, prevIntent, PendingIntent.FLAG_UPDATE_CURRENT | PendingIntent.FLAG_IMMUTABLE);
 
             Intent ppIntent = new Intent(ACTION_MEDIA_PLAY_PAUSE).setPackage(getPackageName());
             PendingIntent pPlayPause = PendingIntent.getBroadcast(this, 202, ppIntent, PendingIntent.FLAG_UPDATE_CURRENT | PendingIntent.FLAG_IMMUTABLE);
 
-            Intent fwdIntent = new Intent(ACTION_MEDIA_FORWARD).setPackage(getPackageName());
-            PendingIntent pFwd = PendingIntent.getBroadcast(this, 203, fwdIntent, PendingIntent.FLAG_UPDATE_CURRENT | PendingIntent.FLAG_IMMUTABLE);
+            Intent nextIntent = new Intent(ACTION_MEDIA_NEXT).setPackage(getPackageName());
+            PendingIntent pNext = PendingIntent.getBroadcast(this, 203, nextIntent, PendingIntent.FLAG_UPDATE_CURRENT | PendingIntent.FLAG_IMMUTABLE);
+
+            Intent shufIntent = new Intent(ACTION_MEDIA_SHUFFLE).setPackage(getPackageName());
+            PendingIntent pShuffle = PendingIntent.getBroadcast(this, 205, shufIntent, PendingIntent.FLAG_UPDATE_CURRENT | PendingIntent.FLAG_IMMUTABLE);
+
+            Intent repIntent = new Intent(ACTION_MEDIA_REPEAT).setPackage(getPackageName());
+            PendingIntent pRepeat = PendingIntent.getBroadcast(this, 206, repIntent, PendingIntent.FLAG_UPDATE_CURRENT | PendingIntent.FLAG_IMMUTABLE);
 
             Intent dismissIntent = new Intent(ACTION_MEDIA_DISMISS).setPackage(getPackageName());
             PendingIntent pDismiss = PendingIntent.getBroadcast(this, 204, dismissIntent, PendingIntent.FLAG_UPDATE_CURRENT | PendingIntent.FLAG_IMMUTABLE);
 
             NotificationCompat.Builder notif = new NotificationCompat.Builder(this, CHANNEL_MEDIA_ID)
                     .setSmallIcon(R.drawable.ic_pod_play)
-                    .setContentTitle(currentMediaTitle != null && !currentMediaTitle.isEmpty() ? currentMediaTitle : "YouTube")
-                    .setContentText("YouTube • Caspian Flow")
+                    .setContentTitle(displayTitleNotif)
+                    .setContentText(displaySubTextNotif)
                     .setContentIntent(pAppIntent)
                     .setDeleteIntent(pDismiss)
                     .setVisibility(NotificationCompat.VISIBILITY_PUBLIC)
                     .setOngoing(isPlaying)
                     .setShowWhen(false)
-                    .addAction(R.drawable.ic_pod_rewind, "Rewind 10s", pRew)
+                    .addAction(R.drawable.ic_pod_prev, "Previous", pPrev)
                     .addAction(isPlaying ? R.drawable.ic_pod_pause : R.drawable.ic_pod_play, isPlaying ? "Pause" : "Play", pPlayPause)
-                    .addAction(R.drawable.ic_pod_fastfwd, "Forward 10s", pFwd)
-                    .addAction(R.drawable.ic_pod_close, "Dismiss", pDismiss)
+                    .addAction(R.drawable.ic_pod_next, "Next", pNext)
+                    .addAction(R.drawable.ic_pod_shuffle, "Shuffle", pShuffle)
+                    .addAction(R.drawable.ic_pod_repeat, "Repeat", pRepeat)
                     .setStyle(new androidx.media.app.NotificationCompat.MediaStyle()
                             .setMediaSession(mediaSession != null ? mediaSession.getSessionToken() : null)
                             .setShowActionsInCompactView(0, 1, 2));

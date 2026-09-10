@@ -730,7 +730,8 @@
                     android:gravity="center"
                     android:text="☆"
                     android:textColor="#A2A9A9"
-                    android:textSize="18sp"
+                    android:textSize="24sp"
+                    android:includeFontPadding="false"
                     android:background="@drawable/bg_liquid_glass_pill"
                     android:clickable="true"
                     android:focusable="true"
@@ -829,7 +830,7 @@
                     android:gravity="center_vertical"
                     android:paddingStart="14dp"
                     android:paddingEnd="14dp"
-                    android:elevation="12dp">
+                    android:elevation="4dp">
 
                     <ImageView
                         android:id="@+id/tab_grid_search_icon"
@@ -851,16 +852,19 @@
                         android:singleLine="true" />
                 </LinearLayout>
 
-                <!-- Multi-Select Action Pills Overlay (Floating over right side of search bar) -->
+                <!-- Multi-Select Action Pills Overlay (Floating cleanly over right side of search bar) -->
                 <LinearLayout
                     android:id="@+id/tab_grid_top_actions"
                     android:layout_width="wrap_content"
-                    android:layout_height="32dp"
+                    android:layout_height="34dp"
                     android:layout_gravity="end|center_vertical"
-                    android:layout_marginEnd="6dp"
+                    android:layout_marginEnd="4dp"
+                    android:background="@drawable/bg_liquid_glass_pill"
                     android:orientation="horizontal"
                     android:gravity="center_vertical"
-                    android:elevation="16dp"
+                    android:paddingStart="4dp"
+                    android:paddingEnd="4dp"
+                    android:elevation="20dp"
                     android:visibility="gone">
 
                     <TextView

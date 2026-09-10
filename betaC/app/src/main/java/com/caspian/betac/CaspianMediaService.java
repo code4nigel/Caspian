@@ -105,11 +105,15 @@ public class CaspianMediaService extends Service {
         } catch (Exception ignored) {}
     }
 
+    private final android.os.Handler releaseHandler = new android.os.Handler(android.os.Looper.getMainLooper());
+    private final Runnable releaseLocksRunnable = this::releaseLocks;
+
     @Override
     public int onStartCommand(Intent intent, int flags, int startId) {
         if (intent != null) {
             String action = intent.getAction();
             if (ACTION_START_FOREGROUND.equals(action)) {
+                releaseHandler.removeCallbacks(releaseLocksRunnable);
                 Notification notification;
                 if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
                     notification = intent.getParcelableExtra(EXTRA_NOTIFICATION, Notification.class);
@@ -128,15 +132,13 @@ public class CaspianMediaService extends Service {
                     } catch (Exception ignored) {}
                 }
             } else if (ACTION_PAUSE_FOREGROUND.equals(action)) {
-                try {
-                    if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.N) {
-                        stopForeground(STOP_FOREGROUND_DETACH);
-                    } else {
-                        stopForeground(false);
-                    }
-                } catch (Exception ignored) {}
-                releaseLocks();
+                // Do NOT immediately release locks or detach foreground on brief pause/song transition!
+                // During track changes, playback pauses briefly while fetching next audio buffer.
+                // Maintain locks for a 10-minute grace period so network and CPU do not sleep when locked.
+                releaseHandler.removeCallbacks(releaseLocksRunnable);
+                releaseHandler.postDelayed(releaseLocksRunnable, 10 * 60 * 1000L);
             } else if (ACTION_STOP_FOREGROUND.equals(action)) {
+                releaseHandler.removeCallbacks(releaseLocksRunnable);
                 try {
                     if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.N) {
                         stopForeground(STOP_FOREGROUND_REMOVE);
@@ -155,6 +157,7 @@ public class CaspianMediaService extends Service {
     @Override
     public void onDestroy() {
         super.onDestroy();
+        releaseHandler.removeCallbacks(releaseLocksRunnable);
         releaseLocks();
         isServiceRunning = false;
     }
