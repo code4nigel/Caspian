@@ -7358,11 +7358,67 @@ public class MainActivity extends AppCompatActivity {
             );
             popupWindow.setBackgroundDrawable(new android.graphics.drawable.ColorDrawable(android.graphics.Color.TRANSPARENT));
             popupWindow.setElevation(28f);
-            popupWindow.setOutsideTouchable(true);
+            popupWindow.setOutsideTouchable(false);
+
+            final boolean[] isWgClosing = {false};
+            Runnable performWaveguardExit = () -> {
+                if (isWgClosing[0]) return;
+                isWgClosing[0] = true;
+                boolean isBottom = "bottom".equalsIgnoreCase(omniboxPosition);
+                float startY = isBottom ? dpToPx(85) : -dpToPx(85);
+
+                android.animation.ValueAnimator exitAnim = android.animation.ValueAnimator.ofFloat(0f, 1f);
+                exitAnim.setDuration(240);
+                exitAnim.setInterpolator(new android.view.animation.PathInterpolator(0.38f, 0.0f, 0.20f, 1.0f));
+                exitAnim.addUpdateListener(anim -> {
+                    float f = anim.getAnimatedFraction();
+                    float sX = (float) -Math.sin(f * Math.PI) * (1f - f) * dpToPx(isBottom ? 22 : -22);
+                    float rot = (isBottom ? -1.8f : 1.8f) * f;
+                    popupView.setTranslationX(sX);
+                    popupView.setTranslationY(startY * f);
+                    popupView.setRotation(rot);
+                    popupView.setScaleX(1.0f - (0.08f * f));
+                    popupView.setScaleY(1.0f - (0.08f * f));
+                    popupView.setAlpha(1.0f - f);
+                });
+                exitAnim.addListener(new android.animation.AnimatorListenerAdapter() {
+                    @Override
+                    public void onAnimationEnd(android.animation.Animator animation) {
+                        try {
+                            popupWindow.dismiss();
+                        } catch (Exception ignored) {}
+                    }
+                });
+                exitAnim.start();
+            };
+
+            popupWindow.setTouchInterceptor((v, event) -> {
+                if (event.getAction() == android.view.MotionEvent.ACTION_DOWN) {
+                    android.graphics.Rect rect = new android.graphics.Rect();
+                    popupView.getGlobalVisibleRect(rect);
+                    if (!rect.contains((int) event.getRawX(), (int) event.getRawY())) {
+                        performWaveguardExit.run();
+                        return true;
+                    }
+                }
+                return false;
+            });
+
+            popupView.setFocusableInTouchMode(true);
+            popupView.requestFocus();
+            popupView.setOnKeyListener((v, keyCode, event) -> {
+                if (keyCode == android.view.KeyEvent.KEYCODE_BACK && event.getAction() == android.view.KeyEvent.ACTION_UP) {
+                    if (!isWgClosing[0]) {
+                        performWaveguardExit.run();
+                        return true;
+                    }
+                }
+                return false;
+            });
 
             View btnClose = popupView.findViewById(R.id.btn_close_waveguard_popup);
             if (btnClose != null) {
-                btnClose.setOnClickListener(v -> popupWindow.dismiss());
+                btnClose.setOnClickListener(v -> performWaveguardExit.run());
             }
 
             TabItem currentTab = getActiveOrDominantTab();
@@ -7530,6 +7586,61 @@ public class MainActivity extends AppCompatActivity {
             int gravity = (isBottom ? Gravity.BOTTOM : Gravity.TOP) | Gravity.CENTER_HORIZONTAL;
             int yOffset = isBottom ? dpToPx(72) : dpToPx(64);
             popupWindow.showAtLocation(targetParent, gravity, 0, yOffset);
+
+            // Smooth Apple-like S-shaped entrance animation
+            float startY = isBottom ? dpToPx(85) : -dpToPx(85);
+            popupView.setAlpha(0f);
+            popupView.setTranslationY(startY);
+            popupView.setScaleX(0.88f);
+            popupView.setScaleY(0.88f);
+            popupView.setRotation(isBottom ? 2.2f : -2.2f);
+
+            android.animation.ValueAnimator openAnim = android.animation.ValueAnimator.ofFloat(0f, 1f);
+            openAnim.setDuration(360);
+            openAnim.setInterpolator(new android.view.animation.PathInterpolator(0.24f, 1.0f, 0.32f, 1.0f));
+            openAnim.addUpdateListener(anim -> {
+                float f = anim.getAnimatedFraction();
+                float sX = (float) Math.sin(f * Math.PI) * (1f - f) * dpToPx(isBottom ? 24 : -24);
+                float rot = (isBottom ? 2.2f : -2.2f) * (1f - f) * (float) Math.cos(f * Math.PI * 0.75f);
+                popupView.setTranslationX(sX);
+                popupView.setTranslationY(startY * (1f - f));
+                popupView.setRotation(rot);
+                popupView.setScaleX(0.88f + (0.12f * f));
+                popupView.setScaleY(0.88f + (0.12f * f));
+                popupView.setAlpha(Math.min(1f, f * 2.2f));
+            });
+            openAnim.start();
+
+            // Cascading entrance for WaveGuard internal cards
+            View[] wgItems = {
+                    popupView.findViewById(R.id.squircle_waveguard_brand),
+                    popupView.findViewById(R.id.pill_active_domain),
+                    popupView.findViewById(R.id.site_shield_toggle_row),
+                    popupView.findViewById(R.id.stats_panel),
+                    popupView.findViewById(R.id.header_advanced_settings)
+            };
+            for (int i = 0; i < wgItems.length; i++) {
+                View item = wgItems[i];
+                if (item != null) {
+                    item.setAlpha(0f);
+                    item.setTranslationX(dpToPx(12));
+                    item.animate()
+                            .alpha(1f)
+                            .translationX(0f)
+                            .setStartDelay(60 + (i * 25))
+                            .setDuration(240)
+                            .setInterpolator(new android.view.animation.DecelerateInterpolator(1.4f))
+                            .start();
+                }
+            }
+
+            // Spring touch physics on interactive Waveguard components
+            attachSpringPhysics(btnClose);
+            attachSpringPhysics(popupView.findViewById(R.id.pill_active_domain));
+            attachSpringPhysics(popupView.findViewById(R.id.site_shield_toggle_row));
+            attachSpringPhysics(popupView.findViewById(R.id.stats_panel));
+            attachSpringPhysics(popupView.findViewById(R.id.btn_update_rules));
+            attachSpringPhysics(popupView.findViewById(R.id.header_advanced_settings));
         } catch (Exception e) {
             Log.e(TAG, "Failed to show Waveguard flyout: ", e);
             showShieldStatusDialog();
@@ -8216,6 +8327,85 @@ public class MainActivity extends AppCompatActivity {
         } catch (Throwable ignored) {}
     }
 
+    private void attachSpringPhysics(View v) {
+        if (v == null) return;
+        v.setOnTouchListener((view, event) -> {
+            switch (event.getAction()) {
+                case android.view.MotionEvent.ACTION_DOWN:
+                    view.animate()
+                            .scaleX(0.92f)
+                            .scaleY(0.92f)
+                            .setDuration(110)
+                            .setInterpolator(new DecelerateInterpolator())
+                            .start();
+                    break;
+                case android.view.MotionEvent.ACTION_UP:
+                case android.view.MotionEvent.ACTION_CANCEL:
+                    view.animate()
+                            .scaleX(1.0f)
+                            .scaleY(1.0f)
+                            .setDuration(240)
+                            .setInterpolator(new OvershootInterpolator(1.8f))
+                            .start();
+                    break;
+            }
+            return false;
+        });
+    }
+
+    private void animateGridTilesEntrance(SwipeableViewFlipper flipper) {
+        if (flipper == null) return;
+        View current = flipper.getCurrentView();
+        if (!(current instanceof ViewGroup)) return;
+        ViewGroup page = (ViewGroup) current;
+
+        int tileIndex = 0;
+        for (int i = 0; i < page.getChildCount(); i++) {
+            View child = page.getChildAt(i);
+            if (child instanceof TableLayout) {
+                TableLayout table = (TableLayout) child;
+                for (int r = 0; r < table.getChildCount(); r++) {
+                    View row = table.getChildAt(r);
+                    if (row instanceof TableRow) {
+                        TableRow tr = (TableRow) row;
+                        for (int c = 0; c < tr.getChildCount(); c++) {
+                            View tile = tr.getChildAt(c);
+                            if (tile != null && tile.getVisibility() == View.VISIBLE) {
+                                tile.setAlpha(0f);
+                                tile.setTranslationX(dpToPx(14));
+                                tile.setTranslationY(dpToPx(16));
+                                tile.setScaleX(0.88f);
+                                tile.setScaleY(0.88f);
+                                tile.animate()
+                                        .alpha(1f)
+                                        .translationX(0f)
+                                        .translationY(0f)
+                                        .scaleX(1f)
+                                        .scaleY(1f)
+                                        .setStartDelay(60 + (tileIndex * 22))
+                                        .setDuration(280)
+                                        .setInterpolator(new OvershootInterpolator(1.25f))
+                                        .start();
+                                tileIndex++;
+                            }
+                        }
+                    }
+                }
+            } else if (child != null && child.getVisibility() == View.VISIBLE) {
+                child.setAlpha(0f);
+                child.setTranslationY(dpToPx(14));
+                child.animate()
+                        .alpha(1f)
+                        .translationY(0f)
+                        .setStartDelay(60 + (tileIndex * 22))
+                        .setDuration(280)
+                        .setInterpolator(new OvershootInterpolator(1.25f))
+                        .start();
+                tileIndex++;
+            }
+        }
+    }
+
     public void showBrowserActionGrid() {
         TabItem currentTab = getActiveOrDominantTab();
         com.google.android.material.bottomsheet.BottomSheetDialog dialog =
@@ -8227,6 +8417,93 @@ public class MainActivity extends AppCompatActivity {
             View bs = dialog.getWindow().findViewById(com.google.android.material.R.id.design_bottom_sheet);
             if (bs != null) bs.setBackgroundResource(android.R.color.transparent);
         }
+
+        final boolean[] isClosing = {false};
+        Runnable performSClosing = () -> {
+            if (isClosing[0]) return;
+            isClosing[0] = true;
+            ValueAnimator closeAnim = ValueAnimator.ofFloat(0f, 1f);
+            closeAnim.setDuration(240);
+            closeAnim.setInterpolator(new PathInterpolator(0.38f, 0.0f, 0.20f, 1.0f));
+            closeAnim.addUpdateListener(anim -> {
+                float f = anim.getAnimatedFraction();
+                float sX = (float) -Math.sin(f * Math.PI) * (1f - f) * dpToPx(24);
+                float rot = -2.0f * f;
+                dialogView.setTranslationX(sX);
+                dialogView.setTranslationY(dpToPx(380) * f);
+                dialogView.setRotation(rot);
+                dialogView.setScaleX(1.0f - (0.08f * f));
+                dialogView.setScaleY(1.0f - (0.08f * f));
+                dialogView.setAlpha(1.0f - f);
+            });
+            closeAnim.addListener(new android.animation.AnimatorListenerAdapter() {
+                @Override
+                public void onAnimationEnd(android.animation.Animator animation) {
+                    try {
+                        dialog.dismiss();
+                    } catch (Exception ignored) {}
+                }
+            });
+            closeAnim.start();
+        };
+
+        java.util.function.Consumer<Runnable> dismissWithAction = action -> {
+            if (isClosing[0]) return;
+            isClosing[0] = true;
+            ValueAnimator closeAnim = ValueAnimator.ofFloat(0f, 1f);
+            closeAnim.setDuration(220);
+            closeAnim.setInterpolator(new PathInterpolator(0.38f, 0.0f, 0.20f, 1.0f));
+            closeAnim.addUpdateListener(anim -> {
+                float f = anim.getAnimatedFraction();
+                float sX = (float) -Math.sin(f * Math.PI) * (1f - f) * dpToPx(24);
+                float rot = -2.0f * f;
+                dialogView.setTranslationX(sX);
+                dialogView.setTranslationY(dpToPx(380) * f);
+                dialogView.setRotation(rot);
+                dialogView.setScaleX(1.0f - (0.08f * f));
+                dialogView.setScaleY(1.0f - (0.08f * f));
+                dialogView.setAlpha(1.0f - f);
+            });
+            closeAnim.addListener(new android.animation.AnimatorListenerAdapter() {
+                @Override
+                public void onAnimationEnd(android.animation.Animator animation) {
+                    try {
+                        dialog.dismiss();
+                    } catch (Exception ignored) {}
+                    if (action != null) action.run();
+                }
+            });
+            closeAnim.start();
+        };
+
+        // Top drag handle tap dismiss
+        View dragHandle = dialogView.findViewById(R.id.action_grid_drag_handle);
+        if (dragHandle != null) {
+            dragHandle.setOnClickListener(v -> performSClosing.run());
+        }
+
+        // Back key intercept
+        dialog.setOnKeyListener((dialogInterface, keyCode, event) -> {
+            if (keyCode == android.view.KeyEvent.KEYCODE_BACK && event.getAction() == android.view.KeyEvent.ACTION_UP) {
+                if (!isClosing[0]) {
+                    performSClosing.run();
+                    return true;
+                }
+            }
+            return false;
+        });
+
+        // Outside backdrop tap intercept
+        if (dialog.getWindow() != null) {
+            View touchOutside = dialog.getWindow().findViewById(com.google.android.material.R.id.touch_outside);
+            if (touchOutside != null) {
+                touchOutside.setOnClickListener(v -> performSClosing.run());
+            }
+        }
+
+        // SwipeableViewFlipper Page Switcher & Dynamic Indicator Dots
+        SwipeableViewFlipper flipper = dialogView.findViewById(R.id.action_grid_flipper);
+        LinearLayout dotsLayout = dialogView.findViewById(R.id.action_grid_dots_layout);
 
         dialog.setOnShowListener(dialogInterface -> {
             com.google.android.material.bottomsheet.BottomSheetDialog d = (com.google.android.material.bottomsheet.BottomSheetDialog) dialogInterface;
@@ -8243,11 +8520,32 @@ public class MainActivity extends AppCompatActivity {
                 behavior.setSkipCollapsed(true);
                 behavior.setState(com.google.android.material.bottomsheet.BottomSheetBehavior.STATE_EXPANDED);
             }
-        });
 
-        // SwipeableViewFlipper Page Switcher & Dynamic Indicator Dots
-        SwipeableViewFlipper flipper = dialogView.findViewById(R.id.action_grid_flipper);
-        LinearLayout dotsLayout = dialogView.findViewById(R.id.action_grid_dots_layout);
+            // Smooth Apple-like S-shaped entrance animation
+            dialogView.setAlpha(0f);
+            dialogView.setTranslationY(dpToPx(380));
+            dialogView.setScaleX(0.90f);
+            dialogView.setScaleY(0.90f);
+
+            ValueAnimator sAnim = ValueAnimator.ofFloat(0f, 1f);
+            sAnim.setDuration(380);
+            sAnim.setInterpolator(new PathInterpolator(0.24f, 1.0f, 0.32f, 1.0f));
+            sAnim.addUpdateListener(anim -> {
+                float f = anim.getAnimatedFraction(); // 0 -> 1
+                float sX = (float) Math.sin(f * Math.PI) * (1f - f) * dpToPx(30);
+                float rot = 2.2f * (1f - f) * (float) Math.cos(f * Math.PI * 0.75f);
+                dialogView.setTranslationX(sX);
+                dialogView.setTranslationY(dpToPx(380) * (1f - f));
+                dialogView.setRotation(rot);
+                dialogView.setScaleX(0.90f + (0.10f * f));
+                dialogView.setScaleY(0.90f + (0.10f * f));
+                dialogView.setAlpha(Math.min(1f, f * 2.2f));
+            });
+            sAnim.start();
+
+            // Button physics cascade: tiles and widgets react to the momentum!
+            animateGridTilesEntrance(flipper);
+        });
 
         List<List<String>> pages = getCardGridAllPages();
 
@@ -8257,11 +8555,10 @@ public class MainActivity extends AppCompatActivity {
                 String vName = getPackageManager().getPackageInfo(getPackageName(), 0).versionName;
                 badgeVersion.setText("v" + vName);
             } catch (Exception ignored) {}
-            badgeVersion.setOnClickListener(v -> {
-                dialog.dismiss();
+            badgeVersion.setOnClickListener(v -> dismissWithAction.accept(() -> {
                 playUiFeedbackSound("tap");
                 openCaspianUpdateMenu();
-            });
+            }));
         }
 
         // Caspian Cask Interactive Pill on Page 1
@@ -8282,11 +8579,10 @@ public class MainActivity extends AppCompatActivity {
             textCaskName.setText(activeCask.name);
         }
 
-        View.OnClickListener caskSwitchListener = v -> {
-            dialog.dismiss();
+        View.OnClickListener caskSwitchListener = v -> dismissWithAction.accept(() -> {
             playUiFeedbackSound("tap");
             showCaskSwitcherDialog(currentTab);
-        };
+        });
         if (btnCaskSwitch != null) btnCaskSwitch.setOnClickListener(caskSwitchListener);
         if (widgetCaskBar != null) widgetCaskBar.setOnClickListener(caskSwitchListener);
 
@@ -8379,69 +8675,50 @@ public class MainActivity extends AppCompatActivity {
 
         updateDynamicIndicatorDots(dotsLayout, flipper, initialPage, pages.size(), isDarkTheme);
 
-        // Wire tile click actions
+        // Wire tile click actions with smooth dismiss and spring physics
         View tileNight = tileMap.get("night_mode");
         if (tileNight != null) {
-            tileNight.setOnClickListener(v -> {
-                dialog.dismiss();
-                toggleHostTheme(!isDarkTheme);
-            });
+            tileNight.setOnClickListener(v -> dismissWithAction.accept(() -> toggleHostTheme(!isDarkTheme)));
         }
         View tileDesktop = tileMap.get("desktop_site");
         if (tileDesktop != null) {
-            tileDesktop.setOnClickListener(v -> {
-                dialog.dismiss();
+            tileDesktop.setOnClickListener(v -> dismissWithAction.accept(() -> {
                 if (currentTab != null) toggleDesktopMode(currentTab.id);
-            });
+            }));
         }
         View tileBookmarks = tileMap.get("bookmarks");
         if (tileBookmarks != null) {
-            tileBookmarks.setOnClickListener(v -> {
-                dialog.dismiss();
+            tileBookmarks.setOnClickListener(v -> dismissWithAction.accept(() -> {
                 if (bookmarkManager == null) bookmarkManager = new BookmarkManager(this);
                 showAddBookmarkDialog(null);
-            });
+            }));
         }
         View tileViewBookmarks = tileMap.get("view_bookmarks");
         if (tileViewBookmarks != null) {
-            tileViewBookmarks.setOnClickListener(v -> {
-                dialog.dismiss();
-                showBookmarksDialog();
-            });
+            tileViewBookmarks.setOnClickListener(v -> dismissWithAction.accept(this::showBookmarksDialog));
         }
         View tileHistory = tileMap.get("history");
         if (tileHistory != null) {
-            tileHistory.setOnClickListener(v -> {
-                dialog.dismiss();
-                showHistoryDialog();
-            });
+            tileHistory.setOnClickListener(v -> dismissWithAction.accept(this::showHistoryDialog));
         }
         View tileDownloads = tileMap.get("downloads");
         if (tileDownloads != null) {
-            tileDownloads.setOnClickListener(v -> {
-                dialog.dismiss();
-                openDownloadsManagerModal();
-            });
+            tileDownloads.setOnClickListener(v -> dismissWithAction.accept(this::openDownloadsManagerModal));
         }
         View tileIncognito = tileMap.get("incognito");
         if (tileIncognito != null) {
-            tileIncognito.setOnClickListener(v -> {
-                dialog.dismiss();
+            tileIncognito.setOnClickListener(v -> dismissWithAction.accept(() -> {
                 addNewTab("web", null, "https://www.google.com", true);
                 Toast.makeText(this, "🕶️ Incognito tab opened", Toast.LENGTH_SHORT).show();
-            });
+            }));
         }
         View tileFind = tileMap.get("find");
         if (tileFind != null) {
-            tileFind.setOnClickListener(v -> {
-                dialog.dismiss();
-                showOmniboxFinder();
-            });
+            tileFind.setOnClickListener(v -> dismissWithAction.accept(this::showOmniboxFinder));
         }
         View tileShare = tileMap.get("share");
         if (tileShare != null) {
-            tileShare.setOnClickListener(v -> {
-                dialog.dismiss();
+            tileShare.setOnClickListener(v -> dismissWithAction.accept(() -> {
                 playUiFeedbackSound("tap");
                 if (currentTab != null) {
                     Intent shareIntent = new Intent(Intent.ACTION_SEND);
@@ -8452,58 +8729,39 @@ public class MainActivity extends AppCompatActivity {
                     shareIntent.putExtra(Intent.EXTRA_TEXT, (shareUrl != null && !shareUrl.isEmpty()) ? shareUrl : shareTitle);
                     startActivity(Intent.createChooser(shareIntent, "Share Page via"));
                 }
-            });
+            }));
         }
         View tileSplit = tileMap.get("split");
         if (tileSplit != null) {
-            tileSplit.setOnClickListener(v -> {
-                dialog.dismiss();
-                cycleSplitViewMode();
-            });
+            tileSplit.setOnClickListener(v -> dismissWithAction.accept(this::cycleSplitViewMode));
         }
         View tileSettings = tileMap.get("settings");
         if (tileSettings != null) {
-            tileSettings.setOnClickListener(v -> {
-                dialog.dismiss();
-                openControlSheet();
-            });
+            tileSettings.setOnClickListener(v -> dismissWithAction.accept(this::openControlSheet));
         }
 
         View tileNewTab = tileMap.get("new_tab");
         if (tileNewTab != null) {
-            tileNewTab.setOnClickListener(v -> {
-                dialog.dismiss();
-                addNewTab("hub", null);
-            });
+            tileNewTab.setOnClickListener(v -> dismissWithAction.accept(() -> addNewTab("hub", null)));
         }
         View tileDualAi = tileMap.get("dual_ai");
         if (tileDualAi != null) {
-            tileDualAi.setOnClickListener(v -> {
-                dialog.dismiss();
-                launchDualAIAsk();
-            });
+            tileDualAi.setOnClickListener(v -> dismissWithAction.accept(this::launchDualAIAsk));
         }
         View tilePdf = tileMap.get("pdf");
         if (tilePdf != null) {
-            tilePdf.setOnClickListener(v -> {
-                dialog.dismiss();
-                openPdfPicker();
-            });
+            tilePdf.setOnClickListener(v -> dismissWithAction.accept(this::openPdfPicker));
         }
         View tilePrint = tileMap.get("print");
         if (tilePrint != null) {
-            tilePrint.setOnClickListener(v -> {
-                dialog.dismiss();
+            tilePrint.setOnClickListener(v -> dismissWithAction.accept(() -> {
                 playUiFeedbackSound("tap");
                 showPrintAndExportDialog(currentTab);
-            });
+            }));
         }
         View tileShield = tileMap.get("shield");
         if (tileShield != null) {
-            tileShield.setOnClickListener(v -> {
-                dialog.dismiss();
-                showWaveguardFlyout(dialogView);
-            });
+            tileShield.setOnClickListener(v -> dismissWithAction.accept(() -> showWaveguardFlyout(dialogView)));
             tileShield.setOnLongClickListener(v -> {
                 if (waveguardShield != null) {
                     boolean nextState = !waveguardShield.isGlobalEnabled();
@@ -8522,8 +8780,7 @@ public class MainActivity extends AppCompatActivity {
         }
         View tileClearData = tileMap.get("clear_data");
         if (tileClearData != null) {
-            tileClearData.setOnClickListener(v -> {
-                dialog.dismiss();
+            tileClearData.setOnClickListener(v -> dismissWithAction.accept(() -> {
                 new AlertDialog.Builder(this)
                         .setTitle("Clear Browsing Data")
                         .setMessage("Clear browser cache and history?")
@@ -8533,14 +8790,11 @@ public class MainActivity extends AppCompatActivity {
                         })
                         .setNegativeButton("Cancel", null)
                         .show();
-            });
+            }));
         }
         View tileEdit = tileMap.get("edit_layout");
         if (tileEdit != null) {
-            tileEdit.setOnClickListener(v -> {
-                dialog.dismiss();
-                showCardGridEditDialog();
-            });
+            tileEdit.setOnClickListener(v -> dismissWithAction.accept(this::showCardGridEditDialog));
         }
 
         // Zoom Stepper Controls
@@ -8581,29 +8835,38 @@ public class MainActivity extends AppCompatActivity {
                 textZoomVal.setText("100%");
             });
         }
-        // Note: widget_grid_zoom_stepper click listener removed so tapping elsewhere does nothing!
 
         // Bottom Bar Controls
         View btnExit = dialogView.findViewById(R.id.btn_action_exit_app);
         if (btnExit != null) {
-            btnExit.setOnClickListener(v -> {
-                dialog.dismiss();
-                finishAffinity();
-            });
+            btnExit.setOnClickListener(v -> dismissWithAction.accept(this::finishAffinity));
         }
 
         View btnCloseGrid = dialogView.findViewById(R.id.btn_action_close_grid);
         if (btnCloseGrid != null) {
-            btnCloseGrid.setOnClickListener(v -> dialog.dismiss());
+            btnCloseGrid.setOnClickListener(v -> performSClosing.run());
         }
 
         View capsuleWg = dialogView.findViewById(R.id.waveguard_status_capsule);
         if (capsuleWg != null) {
-            capsuleWg.setOnClickListener(v -> {
-                dialog.dismiss();
-                showWaveguardFlyout(dialogView);
-            });
+            capsuleWg.setOnClickListener(v -> dismissWithAction.accept(() -> showWaveguardFlyout(dialogView)));
         }
+
+        // Attach tactile spring physics to all buttons and tiles
+        for (View tileView : tileMap.values()) {
+            if (tileView != null) {
+                attachSpringPhysics(tileView);
+            }
+        }
+        attachSpringPhysics(btnExit);
+        attachSpringPhysics(btnCloseGrid);
+        attachSpringPhysics(capsuleWg);
+        attachSpringPhysics(widgetCaskBar);
+        attachSpringPhysics(btnCaskSwitch);
+        attachSpringPhysics(btnZoomMinus);
+        attachSpringPhysics(btnZoomPlus);
+        attachSpringPhysics(btnZoomReset);
+        attachSpringPhysics(badgeVersion);
 
         applyGridTheme(dialogView, isDarkTheme);
         dialog.show();
