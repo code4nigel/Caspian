@@ -366,6 +366,10 @@ public class MainActivity extends AppCompatActivity {
     private LinearLayout tabGridSearchBox;
     private ImageView tabGridSearchIcon;
     private EditText tabGridSearchInput;
+    private TextView btnTabGridFavorite;
+    private View btnTabGridFilter;
+    private TextView tabGridFilterLabel;
+    private String currentTabGridFilter = "all"; // "all", "groups", "single"
     private LinearLayout tabGridGroupBanner;
     private View tabGridGroupColorDot;
     private TextView tabGridGroupBannerTitle;
@@ -1762,6 +1766,9 @@ public class MainActivity extends AppCompatActivity {
             tabGridSearchBox = findViewById(R.id.tab_grid_search_box);
             tabGridSearchIcon = findViewById(R.id.tab_grid_search_icon);
             tabGridSearchInput = findViewById(R.id.tab_grid_search_input);
+            btnTabGridFavorite = findViewById(R.id.btn_tab_grid_favorite);
+            btnTabGridFilter = findViewById(R.id.btn_tab_grid_filter);
+            tabGridFilterLabel = findViewById(R.id.tab_grid_filter_label);
             tabGridGroupBanner = findViewById(R.id.tab_grid_group_banner);
             tabGridGroupColorDot = findViewById(R.id.tab_grid_group_color_dot);
             tabGridGroupBannerTitle = findViewById(R.id.tab_grid_group_banner_title);
@@ -2024,6 +2031,26 @@ public class MainActivity extends AppCompatActivity {
             hideTabGridView();
         });
 
+        if (btnTabGridFavorite != null) {
+            btnTabGridFavorite.setOnClickListener(v -> {
+                playUiFeedbackSound("tap");
+                TabItem activeTab = getTabById(activeTabId);
+                if (activeTab != null) {
+                    toggleTabFavorite(activeTabId);
+                    updateTabGridFavoriteButton();
+                    updateControlSheetTabs();
+                    renderTabGridCards(tabGridSearchInput != null ? tabGridSearchInput.getText().toString() : "");
+                }
+            });
+        }
+
+        if (btnTabGridFilter != null) {
+            btnTabGridFilter.setOnClickListener(v -> {
+                playUiFeedbackSound("tap");
+                showTabGridFilterPopup(btnTabGridFilter);
+            });
+        }
+
         if (btnTabGridGroupClose != null) {
             btnTabGridGroupClose.setOnClickListener(v -> {
                 playUiFeedbackSound("tap");
@@ -2185,6 +2212,25 @@ public class MainActivity extends AppCompatActivity {
         boolean isLight = !isDarkTheme;
         tabGridOverlay.setBackgroundColor(isLight ? 0xFFF1F5F9 : 0xFF050811);
 
+        // Favorite & Filter Top Buttons
+        if (btnTabGridFavorite != null) {
+            GradientDrawable favGd = new GradientDrawable();
+            favGd.setColor(isLight ? 0xFFFFFFFF : 0xE60F131D);
+            favGd.setCornerRadius(dpToPx(20));
+            favGd.setStroke(dpToPx(1.2f), isLight ? 0xFFCBD5E1 : 0x26FFFFFF);
+            btnTabGridFavorite.setBackground(favGd);
+        }
+        if (btnTabGridFilter != null) {
+            GradientDrawable filGd = new GradientDrawable();
+            filGd.setColor(isLight ? 0xFFFFFFFF : 0xE60F131D);
+            filGd.setCornerRadius(dpToPx(20));
+            filGd.setStroke(dpToPx(1.2f), isLight ? 0xFFCBD5E1 : 0x26FFFFFF);
+            btnTabGridFilter.setBackground(filGd);
+        }
+        if (tabGridFilterLabel != null) {
+            tabGridFilterLabel.setTextColor(isLight ? 0xFF0F172A : 0xFFDFE2F0);
+        }
+
         // Header Capsule
         if (tabGridHeaderCapsule != null) {
             GradientDrawable hGd = new GradientDrawable();
@@ -2321,6 +2367,93 @@ public class MainActivity extends AppCompatActivity {
         showModernTabGroupDialog(null);
     }
 
+    public void updateTabGridFavoriteButton() {
+        if (btnTabGridFavorite == null) return;
+        TabItem activeTab = getTabById(activeTabId);
+        boolean isFav = activeTab != null && activeTab.isFavorite;
+        btnTabGridFavorite.setText(isFav ? "★" : "☆");
+        btnTabGridFavorite.setTextColor(isFav ? 0xFFFBBF24 : (isDarkTheme ? 0xFFA2A9A9 : 0xFF64748B));
+        btnTabGridFavorite.setTextSize(TypedValue.COMPLEX_UNIT_SP, isFav ? 18 : 17);
+    }
+
+    private void showTabGridFilterPopup(View anchor) {
+        final String[] filterKeys = {"all", "groups", "single"};
+        final String[] filterNames = {"All Tabs", "Tab Groups", "Single Tabs"};
+        final String[] filterIcons = {"🌐", "📁", "📑"};
+
+        LinearLayout layout = new LinearLayout(this);
+        layout.setOrientation(LinearLayout.VERTICAL);
+        layout.setPadding(dpToPx(6), dpToPx(6), dpToPx(6), dpToPx(6));
+
+        GradientDrawable bg = new GradientDrawable();
+        bg.setColor(isDarkTheme ? 0xF0161E31 : 0xFFFFFFFF);
+        bg.setCornerRadius(dpToPx(16));
+        bg.setStroke(dpToPx(1.2f), isDarkTheme ? 0x2AFFFFFF : 0xFFCBD5E1);
+        layout.setBackground(bg);
+
+        android.widget.PopupWindow popup = new android.widget.PopupWindow(layout, dpToPx(145), ViewGroup.LayoutParams.WRAP_CONTENT, true);
+        popup.setElevation(dpToPx(14));
+
+        for (int i = 0; i < filterKeys.length; i++) {
+            final String key = filterKeys[i];
+            final String name = filterNames[i];
+            final String icon = filterIcons[i];
+            final boolean isSelected = key.equalsIgnoreCase(currentTabGridFilter);
+
+            LinearLayout row = new LinearLayout(this);
+            row.setOrientation(LinearLayout.HORIZONTAL);
+            row.setGravity(Gravity.CENTER_VERTICAL);
+            row.setPadding(dpToPx(10), dpToPx(8), dpToPx(10), dpToPx(8));
+
+            GradientDrawable rowGd = new GradientDrawable();
+            rowGd.setCornerRadius(dpToPx(10));
+            if (isSelected) {
+                rowGd.setColor(isDarkTheme ? 0x3300E5FF : 0xFFE0F2FE);
+            } else {
+                rowGd.setColor(Color.TRANSPARENT);
+            }
+            row.setBackground(rowGd);
+
+            TextView iconTv = new TextView(this);
+            iconTv.setText(icon);
+            iconTv.setTextSize(TypedValue.COMPLEX_UNIT_SP, 13);
+            row.addView(iconTv);
+
+            TextView nameTv = new TextView(this);
+            nameTv.setText(name);
+            nameTv.setTextSize(TypedValue.COMPLEX_UNIT_SP, 12);
+            nameTv.setTypeface(null, isSelected ? android.graphics.Typeface.BOLD : android.graphics.Typeface.NORMAL);
+            nameTv.setTextColor(isSelected ? (isDarkTheme ? 0xFF00E5FF : 0xFF0284C7) : (isDarkTheme ? 0xFFDFE2F0 : 0xFF334155));
+            LinearLayout.LayoutParams nLp = new LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.WRAP_CONTENT, 1f);
+            nLp.setMarginStart(dpToPx(8));
+            nameTv.setLayoutParams(nLp);
+            row.addView(nameTv);
+
+            if (isSelected) {
+                TextView checkTv = new TextView(this);
+                checkTv.setText("✓");
+                checkTv.setTextColor(isDarkTheme ? 0xFF00E5FF : 0xFF0284C7);
+                checkTv.setTextSize(TypedValue.COMPLEX_UNIT_SP, 12);
+                checkTv.setTypeface(null, android.graphics.Typeface.BOLD);
+                row.addView(checkTv);
+            }
+
+            row.setOnClickListener(v -> {
+                playUiFeedbackSound("tap");
+                currentTabGridFilter = key;
+                if (tabGridFilterLabel != null) {
+                    tabGridFilterLabel.setText(key.equals("all") ? "All" : (key.equals("groups") ? "Groups" : "Single"));
+                }
+                renderTabGridCards(tabGridSearchInput != null ? tabGridSearchInput.getText().toString() : "");
+                popup.dismiss();
+            });
+
+            layout.addView(row);
+        }
+
+        popup.showAsDropDown(anchor, 0, dpToPx(4));
+    }
+
     public void showTabGridView() {
         if (tabGridOverlay == null) return;
         TabItem currentTab = getTabById(activeTabId);
@@ -2336,6 +2469,7 @@ public class MainActivity extends AppCompatActivity {
         currentGridGroupId = null;
         applyTabGridTheme();
         updateTabGridSelectionUi();
+        updateTabGridFavoriteButton();
         renderTabGridCards("");
 
         // iOS Smooth Zoom & Scale Entrance Animation
@@ -2601,7 +2735,8 @@ public class MainActivity extends AppCompatActivity {
         grid.setUseDefaultMargins(false);
 
         Set<Integer> handledSplitTabIds = new HashSet<>();
-        for (TabItem tab : tabsList) {
+        if (!"groups".equalsIgnoreCase(currentTabGridFilter)) {
+            for (TabItem tab : tabsList) {
             if (groupedTabIds.contains(tab.id) || handledSplitTabIds.contains(tab.id)) continue;
 
             // Check if this tab is part of an active split pair
@@ -2623,10 +2758,14 @@ public class MainActivity extends AppCompatActivity {
             }
         }
 
-        for (TabGroup group : tabGroupsList) {
-            if (group.tabIds.isEmpty()) continue;
-            if (!matchesGroupFilter(group, filterQuery)) continue;
-            grid.addView(createEdgeTabGroupCard(group, cardWidth, filterQuery));
+        }
+
+        if (!"single".equalsIgnoreCase(currentTabGridFilter)) {
+            for (TabGroup group : tabGroupsList) {
+                if (group.tabIds.isEmpty()) continue;
+                if (!matchesGroupFilter(group, filterQuery)) continue;
+                grid.addView(createEdgeTabGroupCard(group, cardWidth, filterQuery));
+            }
         }
 
         if (grid.getChildCount() == 0) {

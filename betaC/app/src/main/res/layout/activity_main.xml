@@ -710,7 +710,7 @@
             android:paddingStart="14dp"
             android:paddingEnd="14dp">
 
-            <!-- Top Header Controls Bar (Center Capsule + Top-Right Multi-Select Actions) -->
+            <!-- Top Header Controls Bar (Left: Star Favorite, Center: Count Capsule, Right: Filter Dropdown) -->
             <RelativeLayout
                 android:id="@+id/tab_grid_header_row"
                 android:layout_width="match_parent"
@@ -719,6 +719,23 @@
                 android:paddingTop="2dp"
                 android:paddingBottom="2dp"
                 android:elevation="12dp">
+
+                <!-- Top Left Favorite Star Button -->
+                <TextView
+                    android:id="@+id/btn_tab_grid_favorite"
+                    android:layout_width="40dp"
+                    android:layout_height="40dp"
+                    android:layout_alignParentStart="true"
+                    android:layout_centerVertical="true"
+                    android:gravity="center"
+                    android:text="☆"
+                    android:textColor="#A2A9A9"
+                    android:textSize="18sp"
+                    android:background="@drawable/bg_liquid_glass_pill"
+                    android:clickable="true"
+                    android:focusable="true"
+                    android:elevation="4dp"
+                    android:contentDescription="Favorite Active Tab" />
 
                 <!-- Center Capsule (Touch isolated, Fix 8) -->
                 <LinearLayout
@@ -761,22 +778,95 @@
                         android:contentDescription="Close Tab Grid" />
                 </LinearLayout>
 
-                <!-- Top Right Selection Actions (Split, Deselect & Delete - without emoji) -->
+                <!-- Top Right Filter Dropdown Button -->
+                <LinearLayout
+                    android:id="@+id/btn_tab_grid_filter"
+                    android:layout_width="wrap_content"
+                    android:layout_height="40dp"
+                    android:layout_alignParentEnd="true"
+                    android:layout_centerVertical="true"
+                    android:background="@drawable/bg_liquid_glass_pill"
+                    android:orientation="horizontal"
+                    android:gravity="center_vertical"
+                    android:paddingStart="12dp"
+                    android:paddingEnd="10dp"
+                    android:clickable="true"
+                    android:focusable="true"
+                    android:elevation="4dp"
+                    android:contentDescription="Filter Tabs">
+
+                    <TextView
+                        android:id="@+id/tab_grid_filter_label"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:text="All"
+                        android:textColor="#DFE2F0"
+                        android:textSize="11.5sp"
+                        android:textStyle="bold" />
+
+                    <TextView
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:layout_marginStart="4dp"
+                        android:text="▾"
+                        android:textColor="#A2A9A9"
+                        android:textSize="11sp" />
+                </LinearLayout>
+            </RelativeLayout>
+
+            <!-- Search Bar + Floating Multi-Select Actions (Overlayed on Right Side of Search Bar) -->
+            <FrameLayout
+                android:layout_width="match_parent"
+                android:layout_height="42dp"
+                android:layout_marginTop="12dp">
+
+                <LinearLayout
+                    android:id="@+id/tab_grid_search_box"
+                    android:layout_width="match_parent"
+                    android:layout_height="match_parent"
+                    android:background="@drawable/bg_liquid_glass_pill"
+                    android:orientation="horizontal"
+                    android:gravity="center_vertical"
+                    android:paddingStart="14dp"
+                    android:paddingEnd="14dp"
+                    android:elevation="12dp">
+
+                    <ImageView
+                        android:id="@+id/tab_grid_search_icon"
+                        android:layout_width="16dp"
+                        android:layout_height="16dp"
+                        android:src="@drawable/ic_pod_search"
+                        android:tint="#88A2A9A9" />
+
+                    <EditText
+                        android:id="@+id/tab_grid_search_input"
+                        android:layout_width="match_parent"
+                        android:layout_height="match_parent"
+                        android:layout_marginStart="8dp"
+                        android:background="@android:color/transparent"
+                        android:hint="Search your tabs"
+                        android:textColorHint="#88A2A9A9"
+                        android:textColor="#FFFFFF"
+                        android:textSize="13sp"
+                        android:singleLine="true" />
+                </LinearLayout>
+
+                <!-- Multi-Select Action Pills Overlay (Floating over right side of search bar) -->
                 <LinearLayout
                     android:id="@+id/tab_grid_top_actions"
                     android:layout_width="wrap_content"
-                    android:layout_height="36dp"
-                    android:layout_alignParentEnd="true"
-                    android:layout_centerVertical="true"
+                    android:layout_height="32dp"
+                    android:layout_gravity="end|center_vertical"
+                    android:layout_marginEnd="6dp"
                     android:orientation="horizontal"
                     android:gravity="center_vertical"
-                    android:elevation="4dp"
+                    android:elevation="16dp"
                     android:visibility="gone">
 
                     <TextView
                         android:id="@+id/btn_tab_grid_top_split"
                         android:layout_width="wrap_content"
-                        android:layout_height="32dp"
+                        android:layout_height="30dp"
                         android:layout_marginEnd="6dp"
                         android:background="@drawable/bg_liquid_glass_pill"
                         android:text="Split"
@@ -793,7 +883,7 @@
                     <TextView
                         android:id="@+id/btn_tab_grid_top_deselect"
                         android:layout_width="wrap_content"
-                        android:layout_height="32dp"
+                        android:layout_height="30dp"
                         android:background="@drawable/bg_liquid_glass_pill"
                         android:text="Deselect"
                         android:textColor="#A2A9A9"
@@ -808,7 +898,7 @@
                     <TextView
                         android:id="@+id/btn_tab_grid_top_delete"
                         android:layout_width="wrap_content"
-                        android:layout_height="32dp"
+                        android:layout_height="30dp"
                         android:layout_marginStart="6dp"
                         android:background="@drawable/bg_liquid_glass_pill"
                         android:text="Delete"
@@ -821,40 +911,7 @@
                         android:clickable="true"
                         android:focusable="true" />
                 </LinearLayout>
-            </RelativeLayout>
-
-            <!-- "Search your tabs" Filter Bar -->
-            <LinearLayout
-                android:id="@+id/tab_grid_search_box"
-                android:layout_width="match_parent"
-                android:layout_height="42dp"
-                android:layout_marginTop="14dp"
-                android:background="@drawable/bg_liquid_glass_pill"
-                android:orientation="horizontal"
-                android:gravity="center_vertical"
-                android:paddingStart="14dp"
-                android:paddingEnd="14dp"
-                android:elevation="12dp">
-
-                <ImageView
-                    android:id="@+id/tab_grid_search_icon"
-                    android:layout_width="16dp"
-                    android:layout_height="16dp"
-                    android:src="@drawable/ic_pod_search"
-                    android:tint="#88A2A9A9" />
-
-                <EditText
-                    android:id="@+id/tab_grid_search_input"
-                    android:layout_width="match_parent"
-                    android:layout_height="match_parent"
-                    android:layout_marginStart="8dp"
-                    android:background="@android:color/transparent"
-                    android:hint="Search your tabs"
-                    android:textColorHint="#88A2A9A9"
-                    android:textColor="#FFFFFF"
-                    android:textSize="13sp"
-                    android:singleLine="true" />
-            </LinearLayout>
+            </FrameLayout>
 
             <!-- Inside Group Header Banner (2-row clean layout shown when inside a Tab Group) -->
             <LinearLayout
