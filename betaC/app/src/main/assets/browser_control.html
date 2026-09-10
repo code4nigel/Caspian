@@ -816,37 +816,39 @@
             </div>
           </div>
         </div>
-        <!-- Inside Group Banner (Single-row compact design) -->
+        <!-- Inside Group Banner (2-row clean layout: Row 1 info + close, Row 2 options without emojis) -->
         <div id="inside-group-header" class="inside-group-banner"
-          style="display: none; margin-top: 4px; margin-bottom: 8px; padding: 6px 10px; border-radius: 14px; background: var(--input-bg); border: 1px solid var(--border-glass); align-items: center; justify-content: space-between; gap: 6px; flex-wrap: nowrap;">
+          style="display: none; margin-top: 4px; margin-bottom: 8px; padding: 8px 12px; border-radius: 14px; background: var(--input-bg); border: 1px solid var(--border-glass); flex-direction: column; gap: 6px;">
           
-          <!-- Left: Group Color Dot + Title + Count Badge -->
-          <div style="display: flex; align-items: center; gap: 6px; min-width: 0; flex: 1;">
-            <span id="group-banner-color-dot"
-              style="width: 10px; height: 10px; border-radius: 50%; background: #3b82f6; display: inline-block; flex-shrink: 0;"></span>
-            <strong id="group-banner-title"
-              style="font-size: 12px; color: var(--text-main); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 85px;">Group Name</strong>
-            <span id="group-banner-count" class="m3-badge"
-              style="font-size: 9.5px; padding: 1px 6px; flex-shrink: 0; background: rgba(255,255,255,0.06); color: var(--text-sub);">3 Tabs</span>
+          <!-- Row 1: Tab Color + Tab Title + Tab Count Badge + Far Right Cross Button -->
+          <div style="display: flex; align-items: center; justify-content: space-between; gap: 8px; width: 100%;">
+            <div style="display: flex; align-items: center; gap: 7px; min-width: 0; flex: 1;">
+              <span id="group-banner-color-dot"
+                style="width: 10px; height: 10px; border-radius: 50%; background: #3b82f6; display: inline-block; flex-shrink: 0;"></span>
+              <strong id="group-banner-title"
+                style="font-size: 13px; font-weight: 700; color: var(--text-main); white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">Group Name</strong>
+              <span id="group-banner-count" class="m3-badge"
+                style="font-size: 9.5px; padding: 1px 7px; flex-shrink: 0; background: rgba(255,255,255,0.06); color: var(--text-sub); border-radius: 10px;">3 Tabs</span>
+            </div>
+
+            <!-- Far Right: Close Group View Button (Back to all tabs) -->
+            <button id="btn-close-group-view" class="icon-btn" title="Back to All Tabs"
+              style="font-size: 11px; width: 24px; height: 24px; border-radius: 12px; display: inline-flex; align-items: center; justify-content: center; background: transparent; border: 1px solid var(--border-glass); color: var(--text-sub); cursor: pointer; padding: 0; flex-shrink: 0;">✕</button>
           </div>
 
-          <!-- Right Action Cluster: Edit -> Ungroup -> Delete (Recycle Bin) -> Close Group View -->
-          <div style="display: flex; align-items: center; gap: 4px; flex-shrink: 0;">
-            <!-- 1. Edit Button: Just text 'Edit' without pencil icon -->
+          <!-- Row 2: Tab Options (Edit, Ungroup, Delete) without emojis -->
+          <div style="display: flex; align-items: center; gap: 6px; width: 100%;">
+            <!-- 1. Edit Button -->
             <button id="btn-edit-group" class="oneui-pill-btn secondary"
-              style="font-size: 10px; font-weight: 700; height: 24px; padding: 2px 7px; border-radius: 12px; white-space: nowrap; cursor: pointer;">Edit</button>
+              style="font-size: 10.5px; font-weight: 700; height: 26px; padding: 0 12px; border-radius: 13px; white-space: nowrap; cursor: pointer;">Edit</button>
 
-            <!-- 2. Ungroup Button: Just text 'Ungroup' -->
+            <!-- 2. Ungroup Button -->
             <button id="btn-leave-group" class="oneui-pill-btn secondary"
-              style="font-size: 10px; font-weight: 700; height: 24px; padding: 2px 7px; border-radius: 12px; white-space: nowrap; cursor: pointer;">Ungroup</button>
+              style="font-size: 10.5px; font-weight: 700; height: 26px; padding: 0 12px; border-radius: 13px; white-space: nowrap; cursor: pointer;">Ungroup</button>
 
-            <!-- 3. Delete Button: Just recycle bin icon -->
+            <!-- 3. Delete Button -->
             <button id="btn-delete-group" class="oneui-pill-btn danger" title="Delete Group & Tabs"
-              style="height: 24px; width: 26px; padding: 0; border-radius: 12px; display: inline-flex; align-items: center; justify-content: center; font-size: 11px; color: #ef4444; border-color: rgba(239,68,68,0.35); background: rgba(239,68,68,0.08); cursor: pointer;">🗑️</button>
-
-            <!-- 4. Close Group View (Back to all tabs) -->
-            <button id="btn-close-group-view" class="icon-btn" title="Back to All Tabs"
-              style="font-size: 11px; width: 24px; height: 24px; border-radius: 12px; display: inline-flex; align-items: center; justify-content: center; background: transparent; border: 1px solid var(--border-glass); color: var(--text-sub); cursor: pointer; padding: 0;">✕</button>
+              style="font-size: 10.5px; font-weight: 700; height: 26px; padding: 0 12px; border-radius: 13px; display: inline-flex; align-items: center; justify-content: center; color: #ef4444; border-color: rgba(239,68,68,0.35); background: rgba(239,68,68,0.08); cursor: pointer; white-space: nowrap;">Delete</button>
           </div>
         </div>
 

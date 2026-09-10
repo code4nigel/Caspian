@@ -404,15 +404,15 @@
                     android:background="@drawable/bg_liquid_glass"
                     android:orientation="horizontal"
                     android:gravity="center_vertical"
-                    android:paddingStart="2dp"
-                    android:paddingEnd="2dp">
+                    android:paddingStart="3dp"
+                    android:paddingEnd="3dp">
 
                 <!-- Nav Back Button -->
                 <ImageButton
                     android:id="@+id/omnibox_back_btn"
-                    android:layout_width="22dp"
-                    android:layout_height="22dp"
-                    android:padding="2dp"
+                    android:layout_width="23dp"
+                    android:layout_height="23dp"
+                    android:padding="2.5dp"
                     android:background="?attr/selectableItemBackgroundBorderless"
                     android:src="@drawable/ic_pod_back"
                     android:tint="#A2A9A9"
@@ -421,10 +421,10 @@
                 <!-- Nav Forward Button -->
                 <ImageButton
                     android:id="@+id/omnibox_forward_btn"
-                    android:layout_width="22dp"
-                    android:layout_height="22dp"
-                    android:layout_marginStart="1dp"
-                    android:padding="2dp"
+                    android:layout_width="23dp"
+                    android:layout_height="23dp"
+                    android:layout_marginStart="1.5dp"
+                    android:padding="2.5dp"
                     android:background="?attr/selectableItemBackgroundBorderless"
                     android:src="@drawable/ic_pod_fwd"
                     android:tint="#A2A9A9"
@@ -433,10 +433,10 @@
                 <!-- Reload Active Tab Button (Moved to Left) -->
                 <ImageButton
                     android:id="@+id/omnibox_reload_btn"
-                    android:layout_width="22dp"
-                    android:layout_height="22dp"
-                    android:layout_marginStart="1dp"
-                    android:padding="2dp"
+                    android:layout_width="23dp"
+                    android:layout_height="23dp"
+                    android:layout_marginStart="1.5dp"
+                    android:padding="2.5dp"
                     android:background="?attr/selectableItemBackgroundBorderless"
                     android:src="@drawable/ic_pod_reload"
                     android:tint="#A2A9A9"
@@ -446,8 +446,8 @@
                     android:id="@+id/omnibox_divider_left"
                     android:layout_width="1dp"
                     android:layout_height="14dp"
-                    android:layout_marginStart="2dp"
-                    android:layout_marginEnd="2dp"
+                    android:layout_marginStart="3dp"
+                    android:layout_marginEnd="3dp"
                     android:background="#33FFFFFF" />
 
                 <!-- Center URL / In-Omnibox Morphing Finder Capsule -->
@@ -456,8 +456,8 @@
                     android:layout_width="0dp"
                     android:layout_height="34dp"
                     android:layout_weight="1"
-                    android:layout_marginStart="2dp"
-                    android:layout_marginEnd="2dp"
+                    android:layout_marginStart="3dp"
+                    android:layout_marginEnd="4dp"
                     android:background="@drawable/bg_omnibox_capsule">
 
                     <!-- Default URL Mode View -->
@@ -627,16 +627,16 @@
                     android:id="@+id/omnibox_divider_right"
                     android:layout_width="1dp"
                     android:layout_height="14dp"
-                    android:layout_marginStart="2dp"
-                    android:layout_marginEnd="2dp"
+                    android:layout_marginStart="3dp"
+                    android:layout_marginEnd="4dp"
                     android:background="#33FFFFFF" />
 
                 <!-- Quick Toolbars Manager Popup Button -->
                 <ImageButton
                     android:id="@+id/omnibox_toolbars_btn"
-                    android:layout_width="22dp"
-                    android:layout_height="22dp"
-                    android:padding="2dp"
+                    android:layout_width="24dp"
+                    android:layout_height="24dp"
+                    android:padding="2.5dp"
                     android:background="?attr/selectableItemBackgroundBorderless"
                     android:src="@drawable/ic_shrink_bubble"
                     android:tint="#A2A9A9"
@@ -645,10 +645,10 @@
                 <!-- AI Split Screen Button -->
                 <ImageButton
                     android:id="@+id/omnibox_split_btn"
-                    android:layout_width="22dp"
-                    android:layout_height="22dp"
-                    android:layout_marginStart="1dp"
-                    android:padding="2dp"
+                    android:layout_width="24dp"
+                    android:layout_height="24dp"
+                    android:layout_marginStart="2dp"
+                    android:padding="2.5dp"
                     android:background="?attr/selectableItemBackgroundBorderless"
                     android:src="@drawable/ic_browser_split"
                     android:tint="#A2A9A9"
@@ -657,10 +657,10 @@
                 <!-- Chrome Rounded Square Tab Counter Box -->
                 <FrameLayout
                     android:id="@+id/omnibox_tabs_btn"
-                    android:layout_width="21dp"
-                    android:layout_height="21dp"
-                    android:layout_marginStart="3dp"
-                    android:layout_marginEnd="1dp"
+                    android:layout_width="22dp"
+                    android:layout_height="22dp"
+                    android:layout_marginStart="4dp"
+                    android:layout_marginEnd="2dp"
                     android:background="@drawable/bg_chrome_tab_box"
                     android:contentDescription="Tab Switcher">
 
@@ -678,10 +678,10 @@
                 <!-- Chrome 3-Dot Overflow Menu Button -->
                 <ImageButton
                     android:id="@+id/omnibox_menu_btn"
-                    android:layout_width="22dp"
-                    android:layout_height="22dp"
-                    android:layout_marginStart="1dp"
-                    android:padding="2dp"
+                    android:layout_width="24dp"
+                    android:layout_height="24dp"
+                    android:layout_marginStart="2dp"
+                    android:padding="2.5dp"
                     android:background="?attr/selectableItemBackgroundBorderless"
                     android:src="@drawable/ic_browser_menu"
                     android:tint="#FFFFFF"
