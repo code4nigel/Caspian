@@ -7021,14 +7021,72 @@ public class MainActivity extends AppCompatActivity {
         dialog.setContentView(dialogView);
 
         if (dialog.getWindow() != null) {
+            dialog.getWindow().setWindowAnimations(0); // Disable generic window animation in favor of S-shaped animation
             View bs = dialog.getWindow().findViewById(com.google.android.material.R.id.design_bottom_sheet);
             if (bs != null) bs.setBackgroundResource(android.R.color.transparent);
         }
 
+        final boolean[] isClosing = new boolean[]{false};
+        final Runnable performSClosing = () -> {
+            if (isClosing[0]) return;
+            isClosing[0] = true;
+            playUiFeedbackSound("tap");
+
+            android.animation.ValueAnimator closeAnim = android.animation.ValueAnimator.ofFloat(0f, 1f);
+            closeAnim.setDuration(280);
+            closeAnim.setInterpolator(new android.view.animation.PathInterpolator(0.38f, 0.0f, 0.22f, 1.0f));
+            closeAnim.addUpdateListener(anim -> {
+                float f = anim.getAnimatedFraction(); // 0 -> 1
+                // S-wave exit trajectory
+                float sX = -(float) Math.sin(f * Math.PI) * dpToPx(26);
+                float rot = -2.2f * (float) Math.sin(f * Math.PI);
+                dialogView.setTranslationX(sX);
+                dialogView.setTranslationY(dpToPx(380) * f);
+                dialogView.setRotation(rot);
+                dialogView.setScaleX(1.0f - (0.08f * f));
+                dialogView.setScaleY(1.0f - (0.08f * f));
+                dialogView.setAlpha(1f - f);
+            });
+            closeAnim.addListener(new android.animation.AnimatorListenerAdapter() {
+                @Override
+                public void onAnimationEnd(android.animation.Animator animation) {
+                    try {
+                        dialog.dismiss();
+                    } catch (Exception ignored) {}
+                }
+            });
+            closeAnim.start();
+        };
+
         // Close button
         View btnClose = dialogView.findViewById(R.id.btn_close_quick_toolbars);
         if (btnClose != null) {
-            btnClose.setOnClickListener(v -> dialog.dismiss());
+            btnClose.setOnClickListener(v -> performSClosing.run());
+        }
+
+        // Drag handle tap dismiss
+        View dragHandle = dialogView.findViewById(R.id.quick_toolbars_drag_handle);
+        if (dragHandle != null) {
+            dragHandle.setOnClickListener(v -> performSClosing.run());
+        }
+
+        // Back key intercept
+        dialog.setOnKeyListener((dialogInterface, keyCode, event) -> {
+            if (keyCode == android.view.KeyEvent.KEYCODE_BACK && event.getAction() == android.view.KeyEvent.ACTION_UP) {
+                if (!isClosing[0]) {
+                    performSClosing.run();
+                    return true;
+                }
+            }
+            return false;
+        });
+
+        // Outside backdrop tap intercept
+        if (dialog.getWindow() != null) {
+            View touchOutside = dialog.getWindow().findViewById(com.google.android.material.R.id.touch_outside);
+            if (touchOutside != null) {
+                touchOutside.setOnClickListener(v -> performSClosing.run());
+            }
         }
 
         // 1. ChatGPT Dock
@@ -7138,6 +7196,49 @@ public class MainActivity extends AppCompatActivity {
         }
 
         applyQuickToolbarsTheme(dialogView, isDarkTheme);
+
+        // Fluid S-shaped entrance animation on show
+        dialog.setOnShowListener(d -> {
+            dialogView.setAlpha(0f);
+            dialogView.setTranslationY(dpToPx(380));
+            dialogView.setScaleX(0.90f);
+            dialogView.setScaleY(0.90f);
+
+            android.animation.ValueAnimator sAnim = android.animation.ValueAnimator.ofFloat(0f, 1f);
+            sAnim.setDuration(400);
+            sAnim.setInterpolator(new android.view.animation.PathInterpolator(0.34f, 0.05f, 0.18f, 1.0f));
+            sAnim.addUpdateListener(anim -> {
+                float f = anim.getAnimatedFraction(); // 0 -> 1
+                // Dynamic S-curve lateral wave: swings out and settles back smoothly
+                float sX = (float) Math.sin(f * Math.PI) * (1f - f) * dpToPx(30);
+                float rot = 2.4f * (1f - f) * (float) Math.cos(f * Math.PI * 0.7f);
+                dialogView.setTranslationX(sX);
+                dialogView.setTranslationY(dpToPx(380) * (1f - f));
+                dialogView.setRotation(rot);
+                dialogView.setScaleX(0.90f + (0.10f * f));
+                dialogView.setScaleY(0.90f + (0.10f * f));
+                dialogView.setAlpha(Math.min(1f, f * 2.2f));
+            });
+            sAnim.start();
+
+            // Cascading entrance for dock rows
+            int[] rows = {R.id.row_dock_chatgpt, R.id.row_dock_gemini, R.id.row_dock_youtube, R.id.row_dock_google, R.id.row_dock_waveguard};
+            for (int i = 0; i < rows.length; i++) {
+                View row = dialogView.findViewById(rows[i]);
+                if (row != null) {
+                    row.setAlpha(0f);
+                    row.setTranslationX(dpToPx(24));
+                    row.animate()
+                            .alpha(1f)
+                            .translationX(0f)
+                            .setStartDelay(100 + (i * 35))
+                            .setDuration(260)
+                            .setInterpolator(new android.view.animation.DecelerateInterpolator(1.4f))
+                            .start();
+                }
+            }
+        });
+
         dialog.show();
     }
 
@@ -7178,7 +7279,7 @@ public class MainActivity extends AppCompatActivity {
                     if (row != null) {
                         GradientDrawable rowGd = new GradientDrawable();
                         rowGd.setColor(rowBg);
-                        rowGd.setCornerRadius(dpToPx(12));
+                        rowGd.setCornerRadius(dpToPx(14));
                         rowGd.setStroke(dpToPx(1), 0xFFE2E8F0);
                         row.setBackground(rowGd);
                     }
@@ -7192,6 +7293,24 @@ public class MainActivity extends AppCompatActivity {
                         sqGd.setColor(0xFFE2E8F0);
                         sqGd.setCornerRadius(dpToPx(10));
                         squircle.setBackground(sqGd);
+                    }
+                }
+            } else {
+                GradientDrawable rootGd = new GradientDrawable();
+                rootGd.setColor(0xFF0C131D);
+                rootGd.setCornerRadii(new float[]{dpToPx(24), dpToPx(24), dpToPx(24), dpToPx(24), 0, 0, 0, 0});
+                rootGd.setStroke(dpToPx(1), 0xFF192535);
+                root.setBackground(rootGd);
+
+                int[] rowIds = {R.id.row_dock_chatgpt, R.id.row_dock_gemini, R.id.row_dock_youtube, R.id.row_dock_google, R.id.row_dock_waveguard};
+                for (int rowId : rowIds) {
+                    View row = root.findViewById(rowId);
+                    if (row != null) {
+                        GradientDrawable rowGd = new GradientDrawable();
+                        rowGd.setColor(0xFF141D2A);
+                        rowGd.setCornerRadius(dpToPx(14));
+                        rowGd.setStroke(dpToPx(1), 0xFF1E2B3D);
+                        row.setBackground(rowGd);
                     }
                 }
             }

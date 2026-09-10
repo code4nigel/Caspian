@@ -234,8 +234,11 @@
                     android:layout_alignParentEnd="true"
                     android:layout_centerVertical="true"
                     android:checked="true"
-                    app:thumbTint="@color/switch_thumb_waveguard"
-                    app:trackTint="@color/switch_track_waveguard" />
+                    android:thumb="@drawable/bg_switch_modern_thumb"
+                    android:track="@drawable/bg_switch_modern_track"
+                    app:splitTrack="false"
+                    app:showText="false"
+                    app:switchMinWidth="48dp" />
             </RelativeLayout>
 
             <!-- 4. Stats Counter Card: Threats & Ads Blocked -->
@@ -372,8 +375,11 @@
                         android:layout_alignParentEnd="true"
                         android:layout_centerVertical="true"
                         android:checked="true"
-                        app:thumbTint="@color/switch_thumb_waveguard"
-                        app:trackTint="@color/switch_track_waveguard" />
+                        android:thumb="@drawable/bg_switch_modern_thumb"
+                        android:track="@drawable/bg_switch_modern_track"
+                        app:splitTrack="false"
+                        app:showText="false"
+                        app:switchMinWidth="48dp" />
                 </RelativeLayout>
 
                 <View
@@ -420,8 +426,11 @@
                         android:layout_alignParentEnd="true"
                         android:layout_centerVertical="true"
                         android:checked="true"
-                        app:thumbTint="@color/switch_thumb_waveguard"
-                        app:trackTint="@color/switch_track_waveguard" />
+                        android:thumb="@drawable/bg_switch_modern_thumb"
+                        android:track="@drawable/bg_switch_modern_track"
+                        app:splitTrack="false"
+                        app:showText="false"
+                        app:switchMinWidth="48dp" />
                 </RelativeLayout>
 
                 <View
@@ -468,8 +477,11 @@
                         android:layout_alignParentEnd="true"
                         android:layout_centerVertical="true"
                         android:checked="true"
-                        app:thumbTint="@color/switch_thumb_waveguard"
-                        app:trackTint="@color/switch_track_waveguard" />
+                        android:thumb="@drawable/bg_switch_modern_thumb"
+                        android:track="@drawable/bg_switch_modern_track"
+                        app:splitTrack="false"
+                        app:showText="false"
+                        app:switchMinWidth="48dp" />
                 </RelativeLayout>
 
                 <View
@@ -516,8 +528,11 @@
                         android:layout_alignParentEnd="true"
                         android:layout_centerVertical="true"
                         android:checked="true"
-                        app:thumbTint="@color/switch_thumb_waveguard"
-                        app:trackTint="@color/switch_track_waveguard" />
+                        android:thumb="@drawable/bg_switch_modern_thumb"
+                        android:track="@drawable/bg_switch_modern_track"
+                        app:splitTrack="false"
+                        app:showText="false"
+                        app:switchMinWidth="48dp" />
                 </RelativeLayout>
 
                 <View
@@ -564,8 +579,11 @@
                         android:layout_alignParentEnd="true"
                         android:layout_centerVertical="true"
                         android:checked="true"
-                        app:thumbTint="@color/switch_thumb_waveguard"
-                        app:trackTint="@color/switch_track_waveguard" />
+                        android:thumb="@drawable/bg_switch_modern_thumb"
+                        android:track="@drawable/bg_switch_modern_track"
+                        app:splitTrack="false"
+                        app:showText="false"
+                        app:switchMinWidth="48dp" />
                 </RelativeLayout>
 
             </LinearLayout>

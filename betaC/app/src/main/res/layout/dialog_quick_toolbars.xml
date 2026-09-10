@@ -134,8 +134,11 @@
                 android:id="@+id/switch_dock_chatgpt"
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
-                app:thumbTint="#00E5FF"
-                app:trackTint="#3300E5FF" />
+                android:thumb="@drawable/bg_switch_modern_thumb"
+                android:track="@drawable/bg_switch_modern_track"
+                app:splitTrack="false"
+                app:showText="false"
+                app:switchMinWidth="48dp" />
         </LinearLayout>
 
         <!-- 2. Gemini Dock -->
@@ -196,8 +199,11 @@
                 android:id="@+id/switch_dock_gemini"
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
-                app:thumbTint="#00E5FF"
-                app:trackTint="#3300E5FF" />
+                android:thumb="@drawable/bg_switch_modern_thumb"
+                android:track="@drawable/bg_switch_modern_track"
+                app:splitTrack="false"
+                app:showText="false"
+                app:switchMinWidth="48dp" />
         </LinearLayout>
 
         <!-- 3. YouTube Remote -->
@@ -258,8 +264,11 @@
                 android:id="@+id/switch_dock_youtube"
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
-                app:thumbTint="#00E5FF"
-                app:trackTint="#3300E5FF" />
+                android:thumb="@drawable/bg_switch_modern_thumb"
+                android:track="@drawable/bg_switch_modern_track"
+                app:splitTrack="false"
+                app:showText="false"
+                app:switchMinWidth="48dp" />
         </LinearLayout>
 
         <!-- 4. Google Dock -->
@@ -320,8 +329,11 @@
                 android:id="@+id/switch_dock_google"
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
-                app:thumbTint="#00E5FF"
-                app:trackTint="#3300E5FF" />
+                android:thumb="@drawable/bg_switch_modern_thumb"
+                android:track="@drawable/bg_switch_modern_track"
+                app:splitTrack="false"
+                app:showText="false"
+                app:switchMinWidth="48dp" />
         </LinearLayout>
 
         <!-- 5. Waveguard Shield -->
@@ -382,8 +394,11 @@
                 android:id="@+id/switch_dock_waveguard"
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
-                app:thumbTint="#00E5FF"
-                app:trackTint="#3300E5FF" />
+                android:thumb="@drawable/bg_switch_modern_thumb"
+                android:track="@drawable/bg_switch_modern_track"
+                app:splitTrack="false"
+                app:showText="false"
+                app:switchMinWidth="48dp" />
         </LinearLayout>
     </LinearLayout>
 </LinearLayout>
