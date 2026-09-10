@@ -666,7 +666,7 @@
     const activeGroup = tabGroups.find(g => g.id === activeGroupId);
     if (activeGroup && insideHeader) {
       const groupTabs = tabs.filter(t => activeGroup.tabIds.includes(t.id));
-      insideHeader.style.display = 'block';
+      insideHeader.style.display = 'flex';
       const colorDot = document.getElementById('group-banner-color-dot');
       const titleLabel = document.getElementById('group-banner-title');
       const countLabel = document.getElementById('group-banner-count');

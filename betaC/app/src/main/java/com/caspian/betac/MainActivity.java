@@ -5740,7 +5740,11 @@ public class MainActivity extends AppCompatActivity {
             searchDockUrl.setOnClickListener(v -> {
                 playUiFeedbackSound("tap");
                 omniboxEditText.requestFocus();
-                omniboxEditText.selectAll();
+                if (omniboxEditText.getText() != null) {
+                    int len = omniboxEditText.getText().length();
+                    android.text.Selection.setSelection(omniboxEditText.getText(), len, 0);
+                }
+                omniboxEditText.scrollTo(0, 0);
                 InputMethodManager imm = (InputMethodManager) getSystemService(Context.INPUT_METHOD_SERVICE);
                 if (imm != null) imm.showSoftInput(omniboxEditText, InputMethodManager.SHOW_IMPLICIT);
             });
@@ -5920,10 +5924,19 @@ public class MainActivity extends AppCompatActivity {
                     if (!omniboxEditText.hasFocus()) {
                         omniboxEditText.requestFocus();
                         omniboxEditText.post(() -> {
-                            omniboxEditText.selectAll();
+                            if (omniboxEditText.getText() != null) {
+                                int len = omniboxEditText.getText().length();
+                                android.text.Selection.setSelection(omniboxEditText.getText(), len, 0);
+                            }
+                            omniboxEditText.scrollTo(0, 0);
                             InputMethodManager imm = (InputMethodManager) getSystemService(Context.INPUT_METHOD_SERVICE);
                             if (imm != null) imm.showSoftInput(omniboxEditText, InputMethodManager.SHOW_IMPLICIT);
                         });
+                        omniboxEditText.postDelayed(() -> {
+                            if (omniboxEditText != null) {
+                                omniboxEditText.scrollTo(0, 0);
+                            }
+                        }, 240);
                         lastTapTime = now;
                         return true;
                     } else if (now - lastTapTime > 400 && omniboxEditText.getSelectionStart() == 0 && omniboxEditText.getSelectionEnd() == omniboxEditText.getText().length()) {
@@ -6116,6 +6129,14 @@ public class MainActivity extends AppCompatActivity {
                 android.transition.ChangeBounds changeBounds = new android.transition.ChangeBounds();
                 changeBounds.setDuration(220);
                 changeBounds.setInterpolator(new DecelerateInterpolator(1.8f));
+                changeBounds.addListener(new android.transition.TransitionListenerAdapter() {
+                    @Override
+                    public void onTransitionEnd(android.transition.Transition transition) {
+                        if (omniboxEditText != null) {
+                            omniboxEditText.scrollTo(0, 0);
+                        }
+                    }
+                });
                 android.transition.Fade fade = new android.transition.Fade();
                 fade.setDuration(160);
                 transition.addTransition(changeBounds);
@@ -6142,10 +6163,19 @@ public class MainActivity extends AppCompatActivity {
                 if (omniboxSuggestionsContainer != null) omniboxSuggestionsContainer.setVisibility(View.GONE);
 
                 omniboxEditText.post(() -> {
-                    omniboxEditText.selectAll();
+                    if (omniboxEditText.getText() != null) {
+                        int len = omniboxEditText.getText().length();
+                        android.text.Selection.setSelection(omniboxEditText.getText(), len, 0);
+                    }
+                    omniboxEditText.scrollTo(0, 0);
                     InputMethodManager imm = (InputMethodManager) getSystemService(Context.INPUT_METHOD_SERVICE);
                     if (imm != null) imm.showSoftInput(omniboxEditText, InputMethodManager.SHOW_IMPLICIT);
                 });
+                omniboxEditText.postDelayed(() -> {
+                    if (omniboxEditText != null) {
+                        omniboxEditText.scrollTo(0, 0);
+                    }
+                }, 240);
             } else {
                 // Restore toolbar icon buttons when focus is lost
                 if (omniboxBackBtn != null) omniboxBackBtn.setVisibility(View.VISIBLE);
