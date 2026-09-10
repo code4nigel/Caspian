@@ -155,6 +155,35 @@ public class CaspianMediaService extends Service {
     }
 
     @Override
+    public void onTaskRemoved(Intent rootIntent) {
+        super.onTaskRemoved(rootIntent);
+        releaseHandler.removeCallbacks(releaseLocksRunnable);
+        try {
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.N) {
+                stopForeground(STOP_FOREGROUND_REMOVE);
+            } else {
+                stopForeground(true);
+            }
+        } catch (Exception ignored) {}
+        releaseLocks();
+        isServiceRunning = false;
+
+        try {
+            Intent dismissIntent = new Intent(MainActivity.ACTION_MEDIA_DISMISS).setPackage(getPackageName());
+            sendBroadcast(dismissIntent);
+        } catch (Exception ignored) {}
+
+        stopSelf();
+
+        new android.os.Handler(android.os.Looper.getMainLooper()).postDelayed(() -> {
+            try {
+                android.os.Process.killProcess(android.os.Process.myPid());
+                System.exit(0);
+            } catch (Exception ignored) {}
+        }, 200);
+    }
+
+    @Override
     public void onDestroy() {
         super.onDestroy();
         releaseHandler.removeCallbacks(releaseLocksRunnable);

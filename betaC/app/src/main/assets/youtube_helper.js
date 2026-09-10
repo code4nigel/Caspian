@@ -198,6 +198,20 @@
         setTimeout(() => this.notifyState(true), 150);
       }
     },
+    pauseVideo: function () {
+      window.__caspian_explicit_pause = true;
+      const v = this.getVideo();
+      if (v) {
+        try { v.pause(); } catch(e){}
+      }
+      try {
+        const p = document.getElementById('movie_player');
+        if (p && typeof p.pauseVideo === 'function') {
+          p.pauseVideo();
+        }
+      } catch(e){}
+      this.notifyState(true);
+    },
     toggleMute: function () {
       const v = this.getVideo();
       if (v) {
@@ -296,6 +310,7 @@
     previousTrack: function () {
       var self = this;
       var triggerSync = function() {
+        self._lastTitle = null;
         setTimeout(function() { if (self.syncMediaMetadata) self.syncMediaMetadata(); }, 150);
         setTimeout(function() { if (self.syncMediaMetadata) self.syncMediaMetadata(); }, 600);
       };
@@ -351,6 +366,7 @@
     nextTrack: function () {
       var self = this;
       var triggerSync = function() {
+        self._lastTitle = null;
         setTimeout(function() { if (self.syncMediaMetadata) self.syncMediaMetadata(); }, 150);
         setTimeout(function() { if (self.syncMediaMetadata) self.syncMediaMetadata(); }, 600);
       };
@@ -499,13 +515,18 @@
                              .replace(/=s\d+[^&?]*/, '=s800');
         }
 
-        if (title && window.CaspianBridge) {
-          if (typeof window.CaspianBridge.updateTabMediaMetadataExtended === 'function') {
-            window.CaspianBridge.updateTabMediaMetadataExtended(tabId, title, artist, thumbUrl);
-          } else if (typeof window.CaspianBridge.updateTabMediaMetadata === 'function') {
-            window.CaspianBridge.updateTabMediaMetadata(tabId, title, thumbUrl);
-          } else if (typeof window.CaspianBridge.updateMediaMetadata === 'function') {
-            window.CaspianBridge.updateMediaMetadata(title, thumbUrl);
+        if (title && (this._lastTitle !== title || this._lastArtist !== artist || this._lastThumb !== thumbUrl)) {
+          this._lastTitle = title;
+          this._lastArtist = artist;
+          this._lastThumb = thumbUrl;
+          if (window.CaspianBridge) {
+            if (typeof window.CaspianBridge.updateTabMediaMetadataExtended === 'function') {
+              window.CaspianBridge.updateTabMediaMetadataExtended(tabId, title, artist, thumbUrl);
+            } else if (typeof window.CaspianBridge.updateTabMediaMetadata === 'function') {
+              window.CaspianBridge.updateTabMediaMetadata(tabId, title, thumbUrl);
+            } else if (typeof window.CaspianBridge.updateMediaMetadata === 'function') {
+              window.CaspianBridge.updateMediaMetadata(title, thumbUrl);
+            }
           }
         }
       } catch(e){}
@@ -1247,14 +1268,6 @@
         window.__CaspianYouTube.notifyState();
       }
 
-      if (window.CaspianBridge) {
-        if (typeof window.CaspianBridge.updateTabYouTubeState === 'function') {
-          window.CaspianBridge.updateTabYouTubeState(tabId, isPlaying, isMuted);
-        } else if (typeof window.CaspianBridge.updateYouTubeState === 'function') {
-          window.CaspianBridge.updateYouTubeState(isPlaying, isMuted);
-        }
-      }
-
       if (v && (isPlaying || v.currentTime > 0)) {
         if (window.__CaspianYouTube && typeof window.__CaspianYouTube.syncMediaMetadata === 'function') {
           window.__CaspianYouTube.syncMediaMetadata();
@@ -1286,7 +1299,13 @@
                 }
               }
 
-              window.CaspianBridge.updateTabMediaPlaybackModes(tabId, repMode, shufOn);
+              if (!window.__CaspianYouTube || window.__CaspianYouTube._lastRepMode !== repMode || window.__CaspianYouTube._lastShufOn !== shufOn) {
+                if (window.__CaspianYouTube) {
+                  window.__CaspianYouTube._lastRepMode = repMode;
+                  window.__CaspianYouTube._lastShufOn = shufOn;
+                }
+                window.CaspianBridge.updateTabMediaPlaybackModes(tabId, repMode, shufOn);
+              }
             }
           } catch(e){}
         }

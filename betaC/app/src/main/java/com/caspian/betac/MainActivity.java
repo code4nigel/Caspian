@@ -445,6 +445,7 @@ public class MainActivity extends AppCompatActivity {
     private Bitmap currentMediaThumbBitmap = null;
     private boolean isDebugRecordingPaused = false;
     private boolean hasYouTubePlaybackStarted = false;
+    private Boolean lastNotifIsPlaying = null;
     private BroadcastReceiver pipActionReceiver;
     private ImageButton ytRemoteLock;
     private ImageButton ytRemoteSettings;
@@ -4150,17 +4151,24 @@ public class MainActivity extends AppCompatActivity {
         if (isPlaying) {
             hasYouTubePlaybackStarted = true;
         }
+        boolean stateChanged = false;
         if (tabId != null && tabId > 0) {
             TabItem tab = getTabById(tabId);
             if (tab != null) {
-                tab.isPlayingAudio = isPlaying;
-                tab.isMuted = isMuted;
+                if (tab.isPlayingAudio != isPlaying || tab.isMuted != isMuted) {
+                    tab.isPlayingAudio = isPlaying;
+                    tab.isMuted = isMuted;
+                    stateChanged = true;
+                }
             }
         } else {
             TabItem cur = getTabById(activeTabId);
             if (cur != null) {
-                cur.isPlayingAudio = isPlaying;
-                cur.isMuted = isMuted;
+                if (cur.isPlayingAudio != isPlaying || cur.isMuted != isMuted) {
+                    cur.isPlayingAudio = isPlaying;
+                    cur.isMuted = isMuted;
+                    stateChanged = true;
+                }
             }
         }
         if (tabId == null || tabId <= 0 || tabId == activeTabId) {
@@ -4177,15 +4185,13 @@ public class MainActivity extends AppCompatActivity {
                 updatePiPActions();
             }
         }
-        if (isPlaying) {
-            hasYouTubePlaybackStarted = true;
-        }
-        if (hasYouTubePlaybackStarted) {
-            updateMediaPlaybackNotification(isPlaying);
-        }
         if (!hasAnyYouTubeTab()) {
             hasYouTubePlaybackStarted = false;
             dismissMediaNotification();
+            return;
+        }
+        if (hasYouTubePlaybackStarted && (stateChanged || lastNotifIsPlaying == null)) {
+            updateMediaPlaybackNotification(isPlaying);
         }
         manageYouTubeWakeLock(isPlaying);
     }
@@ -4774,6 +4780,37 @@ public class MainActivity extends AppCompatActivity {
             currentTab.webView.evaluateJavascript(
                     "if (window.__CaspianYouTube) window.__CaspianYouTube.togglePlay(); else { var v = document.querySelector('video'); if (v) { if (v.paused) v.play(); else v.pause(); } }", null
             );
+        }
+    }
+
+    public void pauseAllYouTubePlayback() {
+        hasYouTubePlaybackStarted = false;
+        dismissMediaNotification();
+        if (tabsList != null) {
+            for (TabItem tab : tabsList) {
+                if (tab != null && tab.webView != null) {
+                    tab.isPlayingAudio = false;
+                    tab.webView.evaluateJavascript(
+                            "(function() {" +
+                            "  try {" +
+                            "    window.__caspian_explicit_pause = true;" +
+                            "    if (window.__CaspianYouTube && typeof window.__CaspianYouTube.pauseVideo === 'function') {" +
+                            "      window.__CaspianYouTube.pauseVideo();" +
+                            "    } else {" +
+                            "      var v = document.querySelectorAll('video, audio');" +
+                            "      for (var i = 0; i < v.length; i++) { try { v[i].pause(); } catch(e){} }" +
+                            "    }" +
+                            "  } catch(e) {}" +
+                            "})();", null
+                    );
+                }
+            }
+        }
+        if (ytRemotePlayPause != null) {
+            ytRemotePlayPause.setImageResource(R.drawable.ic_pod_play);
+        }
+        if (ytTimelinePlayPause != null) {
+            ytTimelinePlayPause.setImageResource(R.drawable.ic_pod_play);
         }
     }
 
@@ -19609,8 +19646,7 @@ public class MainActivity extends AppCompatActivity {
                 } else if (ACTION_PIP_FORWARD.equals(action) || ACTION_MEDIA_FORWARD.equals(action)) {
                     seekYouTube(10);
                 } else if (ACTION_MEDIA_DISMISS.equals(action)) {
-                    hasYouTubePlaybackStarted = false;
-                    dismissMediaNotification();
+                    pauseAllYouTubePlayback();
                 } else if (ACTION_LOG_PAUSE_RESUME.equals(action)) {
                     isDebugRecordingPaused = !isDebugRecordingPaused;
                     Toast.makeText(MainActivity.this, isDebugRecordingPaused ? "Logger Paused" : "Logger Resumed", Toast.LENGTH_SHORT).show();
@@ -20006,6 +20042,7 @@ public class MainActivity extends AppCompatActivity {
 
             try {
                 NotificationManagerCompat.from(this).notify(NOTIFICATION_ID_MEDIA, builtNotif);
+                lastNotifIsPlaying = isPlaying;
             } catch (Exception ignored) {}
         } catch (Exception e) {
             Log.e(TAG, "updateMediaPlaybackNotification error", e);
@@ -20013,6 +20050,7 @@ public class MainActivity extends AppCompatActivity {
     }
 
     public void dismissMediaNotification() {
+        lastNotifIsPlaying = null;
         try {
             CaspianMediaService.stopMediaForeground(this);
             NotificationManagerCompat.from(this).cancel(NOTIFICATION_ID_MEDIA);
