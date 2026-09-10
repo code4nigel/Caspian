@@ -17,6 +17,7 @@
         android:fillViewport="true">
 
         <LinearLayout
+            android:id="@+id/waveguard_scroll_content"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:orientation="vertical"
@@ -41,6 +42,7 @@
                     android:orientation="horizontal">
 
                     <FrameLayout
+                        android:id="@+id/squircle_waveguard_brand"
                         android:layout_width="42dp"
                         android:layout_height="42dp"
                         android:background="@drawable/bg_waveguard_logo_squircle"
@@ -130,6 +132,7 @@
                         android:focusable="true">
 
                         <ImageView
+                            android:id="@+id/icon_close_waveguard"
                             android:layout_width="14dp"
                             android:layout_height="14dp"
                             android:layout_gravity="center"
@@ -147,6 +150,7 @@
                 android:layout_marginBottom="12dp">
 
                 <TextView
+                    android:id="@+id/label_active_tab"
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
                     android:layout_alignParentStart="true"
@@ -171,6 +175,7 @@
                     android:paddingBottom="4dp">
 
                     <ImageView
+                        android:id="@+id/icon_lock_domain"
                         android:layout_width="11dp"
                         android:layout_height="11dp"
                         android:layout_marginEnd="6dp"
@@ -253,6 +258,7 @@
                 android:layout_marginBottom="12dp">
 
                 <FrameLayout
+                    android:id="@+id/squircle_blocked_count"
                     android:layout_width="38dp"
                     android:layout_height="38dp"
                     android:background="@drawable/bg_waveguard_count_squircle">
@@ -276,6 +282,7 @@
                     android:orientation="vertical">
 
                     <TextView
+                        android:id="@+id/label_threats_blocked"
                         android:layout_width="wrap_content"
                         android:layout_height="wrap_content"
                         android:text="Threats &amp; Ads Blocked"

@@ -7295,6 +7295,15 @@ public class MainActivity extends AppCompatActivity {
                         squircle.setBackground(sqGd);
                     }
                 }
+
+                int[] switchIds = {R.id.switch_dock_chatgpt, R.id.switch_dock_gemini, R.id.switch_dock_youtube, R.id.switch_dock_google, R.id.switch_dock_waveguard};
+                for (int sId : switchIds) {
+                    androidx.appcompat.widget.SwitchCompat sw = root.findViewById(sId);
+                    if (sw != null) {
+                        sw.setTrackResource(R.drawable.bg_switch_modern_track_light);
+                        sw.setThumbResource(R.drawable.bg_switch_modern_thumb_light);
+                    }
+                }
             } else {
                 GradientDrawable rootGd = new GradientDrawable();
                 rootGd.setColor(0xFF0C131D);
@@ -7393,7 +7402,11 @@ public class MainActivity extends AppCompatActivity {
                 boolean active = waveguardShield.isGlobalEnabled() && !waveguardShield.isSiteWhitelisted(cleanHost);
                 if (statusBadge != null) {
                     statusBadge.setText(active ? "PROTECTED" : "PAUSED");
-                    statusBadge.setTextColor(active ? 0xFF00E5FF : 0xFFEF4444);
+                    if (!isDarkTheme) {
+                        statusBadge.setTextColor(active ? 0xFF0284C7 : 0xFFDC2626);
+                    } else {
+                        statusBadge.setTextColor(active ? 0xFF00E5FF : 0xFFEF4444);
+                    }
                 }
                 if (statusDot != null) {
                     statusDot.setBackgroundResource(active ? R.drawable.bg_circle_cyan : R.drawable.bg_circle_red);
@@ -7401,8 +7414,13 @@ public class MainActivity extends AppCompatActivity {
                 if (statusPill != null) {
                     GradientDrawable gd = new GradientDrawable();
                     gd.setCornerRadius(dpToPx(14));
-                    gd.setColor(active ? 0xFF082635 : 0xFF2A1215);
-                    gd.setStroke(dpToPx(1), active ? 0xFF0E495C : 0xFFEF4444);
+                    if (!isDarkTheme) {
+                        gd.setColor(active ? 0xFFE0F2FE : 0xFFFEE2E2);
+                        gd.setStroke(dpToPx(1), active ? 0xFFBAE6FD : 0xFFFECACA);
+                    } else {
+                        gd.setColor(active ? 0xFF082635 : 0xFF2A1215);
+                        gd.setStroke(dpToPx(1), active ? 0xFF0E495C : 0xFFEF4444);
+                    }
                     statusPill.setBackground(gd);
                 }
             };
@@ -7504,6 +7522,8 @@ public class MainActivity extends AppCompatActivity {
                 });
             }
 
+            applyWaveguardTheme(popupView, isDarkTheme);
+
             // Screen Positioning: always horizontally centered, upward when bottom omnibox
             boolean isBottom = "bottom".equalsIgnoreCase(omniboxPosition);
             View targetParent = rootContainer != null ? rootContainer : getWindow().getDecorView();
@@ -7514,6 +7534,186 @@ public class MainActivity extends AppCompatActivity {
             Log.e(TAG, "Failed to show Waveguard flyout: ", e);
             showShieldStatusDialog();
         }
+    }
+
+    private void applyWaveguardTheme(View root, boolean isDark) {
+        if (root == null) return;
+        try {
+            if (!isDark) {
+                // 1. Root CardView & Scroll Container
+                if (root instanceof androidx.cardview.widget.CardView) {
+                    ((androidx.cardview.widget.CardView) root).setCardBackgroundColor(0xFFFFFFFF);
+                }
+                View scrollContent = root.findViewById(R.id.waveguard_scroll_content);
+                if (scrollContent != null) {
+                    GradientDrawable bg = new GradientDrawable();
+                    bg.setColor(0xFFFFFFFF);
+                    bg.setCornerRadius(dpToPx(22));
+                    bg.setStroke(dpToPx(1), 0xFFE2E8F0);
+                    scrollContent.setBackground(bg);
+                }
+
+                // 2. Header & Brand
+                View brandSq = root.findViewById(R.id.squircle_waveguard_brand);
+                if (brandSq != null) {
+                    GradientDrawable sq = new GradientDrawable();
+                    sq.setColor(0xFFE0F7FA);
+                    sq.setCornerRadius(dpToPx(13));
+                    sq.setStroke(dpToPx(1), 0xFFBAE6FD);
+                    brandSq.setBackground(sq);
+                }
+                ImageView shieldLogo = root.findViewById(R.id.shield_logo);
+                if (shieldLogo != null) shieldLogo.setColorFilter(0xFF0284C7);
+
+                TextView shieldTitle = root.findViewById(R.id.shield_title);
+                if (shieldTitle != null) shieldTitle.setTextColor(0xFF0F172A);
+
+                TextView shieldSubtitle = root.findViewById(R.id.shield_subtitle);
+                if (shieldSubtitle != null) shieldSubtitle.setTextColor(0xFF64748B);
+
+                View btnClose = root.findViewById(R.id.btn_close_waveguard_popup);
+                if (btnClose != null) {
+                    GradientDrawable closeBg = new GradientDrawable();
+                    closeBg.setColor(0xFFF1F5F9);
+                    closeBg.setCornerRadius(dpToPx(10));
+                    btnClose.setBackground(closeBg);
+                }
+                ImageView iconClose = root.findViewById(R.id.icon_close_waveguard);
+                if (iconClose != null) iconClose.setColorFilter(0xFF64748B);
+
+                // 3. Active Tab Row
+                TextView labelActiveTab = root.findViewById(R.id.label_active_tab);
+                if (labelActiveTab != null) labelActiveTab.setTextColor(0xFF475569);
+
+                View pillDomain = root.findViewById(R.id.pill_active_domain);
+                if (pillDomain != null) {
+                    GradientDrawable dPill = new GradientDrawable();
+                    dPill.setColor(0xFFF1F5F9);
+                    dPill.setCornerRadius(dpToPx(12));
+                    dPill.setStroke(dpToPx(1), 0xFFE2E8F0);
+                    pillDomain.setBackground(dPill);
+                }
+                ImageView iconLock = root.findViewById(R.id.icon_lock_domain);
+                if (iconLock != null) iconLock.setColorFilter(0xFF0284C7);
+
+                TextView domainText = root.findViewById(R.id.current_site_domain);
+                if (domainText != null) domainText.setTextColor(0xFF0F172A);
+
+                // 4. Master Toggle Card
+                View masterCard = root.findViewById(R.id.site_shield_toggle_row);
+                if (masterCard != null) {
+                    GradientDrawable cBg = new GradientDrawable();
+                    cBg.setColor(0xFFF8FAFC);
+                    cBg.setCornerRadius(dpToPx(16));
+                    cBg.setStroke(dpToPx(1), 0xFFE2E8F0);
+                    masterCard.setBackground(cBg);
+                }
+                TextView siteLabel = root.findViewById(R.id.site_shield_label);
+                if (siteLabel != null) siteLabel.setTextColor(0xFF0F172A);
+
+                TextView siteSublabel = root.findViewById(R.id.site_shield_sublabel);
+                if (siteSublabel != null) siteSublabel.setTextColor(0xFF64748B);
+
+                // 5. Stats Panel
+                View statsCard = root.findViewById(R.id.stats_panel);
+                if (statsCard != null) {
+                    GradientDrawable cBg = new GradientDrawable();
+                    cBg.setColor(0xFFF8FAFC);
+                    cBg.setCornerRadius(dpToPx(16));
+                    cBg.setStroke(dpToPx(1), 0xFFE2E8F0);
+                    statsCard.setBackground(cBg);
+                }
+                View countSq = root.findViewById(R.id.squircle_blocked_count);
+                if (countSq != null) {
+                    GradientDrawable cSq = new GradientDrawable();
+                    cSq.setColor(0xFFE0F2FE);
+                    cSq.setCornerRadius(dpToPx(12));
+                    cSq.setStroke(dpToPx(1), 0xFFBAE6FD);
+                    countSq.setBackground(cSq);
+                }
+                TextView countBadge = root.findViewById(R.id.blocked_count_badge);
+                if (countBadge != null) countBadge.setTextColor(0xFF0284C7);
+
+                TextView labelThreats = root.findViewById(R.id.label_threats_blocked);
+                if (labelThreats != null) labelThreats.setTextColor(0xFF0F172A);
+
+                TextView totalText = root.findViewById(R.id.blocked_total_text);
+                if (totalText != null) totalText.setTextColor(0xFF64748B);
+
+                // 6. Advanced Settings
+                TextView advTitle = root.findViewById(R.id.text_advanced_settings_title);
+                if (advTitle != null) advTitle.setTextColor(0xFF64748B);
+
+                ImageView advChevron = root.findViewById(R.id.icon_advanced_chevron);
+                if (advChevron != null) advChevron.setColorFilter(0xFF64748B);
+
+                View advContainer = root.findViewById(R.id.container_advanced_settings);
+                if (advContainer != null) {
+                    GradientDrawable aBg = new GradientDrawable();
+                    aBg.setColor(0xFFF8FAFC);
+                    aBg.setCornerRadius(dpToPx(16));
+                    aBg.setStroke(dpToPx(1), 0xFFE2E8F0);
+                    advContainer.setBackground(aBg);
+                }
+
+                if (advContainer instanceof ViewGroup) {
+                    ViewGroup vg = (ViewGroup) advContainer;
+                    for (int i = 0; i < vg.getChildCount(); i++) {
+                        View child = vg.getChildAt(i);
+                        if (child instanceof RelativeLayout) {
+                            ViewGroup rel = (ViewGroup) child;
+                            for (int j = 0; j < rel.getChildCount(); j++) {
+                                View rc = rel.getChildAt(j);
+                                if (rc instanceof LinearLayout) {
+                                    ViewGroup ll = (ViewGroup) rc;
+                                    for (int k = 0; k < ll.getChildCount(); k++) {
+                                        View lvc = ll.getChildAt(k);
+                                        if (lvc instanceof TextView) {
+                                            TextView tv = (TextView) lvc;
+                                            if (k == 0) tv.setTextColor(0xFF0F172A);
+                                            else tv.setTextColor(0xFF64748B);
+                                        }
+                                    }
+                                }
+                            }
+                        } else if (child != null && child.getLayoutParams() != null && child.getLayoutParams().height == 1) {
+                            child.setBackgroundColor(0xFFE2E8F0);
+                        }
+                    }
+                }
+
+                // 7. Footer
+                TextView rulesText = root.findViewById(R.id.rules_version_text);
+                if (rulesText != null) rulesText.setTextColor(0xFF475569);
+
+                TextView btnUpdate = root.findViewById(R.id.btn_update_rules);
+                if (btnUpdate != null) {
+                    GradientDrawable uBg = new GradientDrawable();
+                    uBg.setColor(0xFFF0F9FF);
+                    uBg.setCornerRadius(dpToPx(10));
+                    uBg.setStroke(dpToPx(1), 0xFFBAE6FD);
+                    btnUpdate.setBackground(uBg);
+                    btnUpdate.setTextColor(0xFF0284C7);
+                }
+
+                // 8. Update Switches with Light Theme Drawables
+                int[] switchIds = {
+                        R.id.site_shield_switch,
+                        R.id.switch_adblock,
+                        R.id.switch_cosmetic,
+                        R.id.switch_defuser,
+                        R.id.switch_popups,
+                        R.id.switch_fingerprint
+                };
+                for (int swId : switchIds) {
+                    androidx.appcompat.widget.SwitchCompat sw = root.findViewById(swId);
+                    if (sw != null) {
+                        sw.setTrackResource(R.drawable.bg_switch_modern_track_light);
+                        sw.setThumbResource(R.drawable.bg_switch_modern_thumb_light);
+                    }
+                }
+            }
+        } catch (Throwable ignored) {}
     }
 
     private void showShieldStatusDialog() {

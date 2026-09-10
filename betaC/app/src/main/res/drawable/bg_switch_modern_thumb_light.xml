@@ -1,0 +1,33 @@
+<?xml version="1.0" encoding="utf-8"?>
+<selector xmlns:android="http://schemas.android.com/apk/res/android">
+    <!-- ON: Pure crisp white circle -->
+    <item android:state_checked="true">
+        <layer-list>
+            <item
+                android:top="3dp"
+                android:bottom="3dp"
+                android:left="3dp"
+                android:right="3dp">
+                <shape android:shape="oval">
+                    <size android:width="20dp" android:height="20dp" />
+                    <solid android:color="#FFFFFF" />
+                </shape>
+            </item>
+        </layer-list>
+    </item>
+    <!-- OFF: Soft slate-400 circle -->
+    <item>
+        <layer-list>
+            <item
+                android:top="3dp"
+                android:bottom="3dp"
+                android:left="3dp"
+                android:right="3dp">
+                <shape android:shape="oval">
+                    <size android:width="20dp" android:height="20dp" />
+                    <solid android:color="#94A3B8" />
+                </shape>
+            </item>
+        </layer-list>
+    </item>
+</selector>
