@@ -754,41 +754,39 @@
         </div>
 
         <!-- Dynamic Harbor Tabs Grid Container -->
-        <div id="harbor-tabs-container" class="harbor-container-compact" style="position: relative; transition: max-height 0.35s cubic-bezier(0.4, 0, 0.2, 1); overflow: hidden; max-height: 220px; width: 100%; box-sizing: border-box;">
+        <div id="harbor-tabs-container" class="harbor-container-compact" style="position: relative; transition: max-height 0.35s cubic-bezier(0.4, 0, 0.2, 1); overflow: hidden; max-height: 195px; width: 100%; box-sizing: border-box;">
           <div id="harbor-tabs-grid" class="app-icon-grid" style="margin: 4px 0 10px 0; width: 100%; box-sizing: border-box;">
             <!-- Rendered dynamically by JS -->
           </div>
         </div>
       </div>
 
-      <div class="m3-card" style="margin-top: 14px;">
+      <div class="m3-card" style="margin-top: 4px; padding: 10px 14px 14px 14px;">
         <!-- Active Tabs Container Header with Filter Pills -->
         <div class="m3-card-row"
-          style="margin-top: 16px; margin-bottom: 6px; display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 6px;">
-          <div style="display: flex; align-items: center; gap: 6px;">
-            <div class="setting-section-header" style="margin: 0;">Active Tabs</div>
-            <span id="tab-count-badge" class="m3-badge" style="background: rgba(0,0,0,0.06); color: var(--text-sub);">1
-              Tab</span>
+          style="margin-top: 0; margin-bottom: 8px; display: flex; align-items: center; justify-content: space-between; gap: 4px;">
+          <div style="display: flex; align-items: center; gap: 5px;">
+            <div class="setting-section-header" style="margin: 0; font-size: 11.5px;">Active Tabs</div>
+            <span id="tab-count-badge" class="m3-badge" style="background: rgba(0,0,0,0.06); color: var(--text-sub); font-size: 9.5px; padding: 1px 5px;">1 Tab</span>
           </div>
 
           <!-- Tab Filter Pills (All / Groups / Single) -->
           <div id="tab-filter-pill-bar"
-            style="display: flex; background: var(--input-bg); border: 1px solid var(--border-glass); border-radius: 14px; padding: 2px; gap: 2px;">
+            style="display: flex; background: var(--input-bg); border: 1px solid var(--border-glass); border-radius: 12px; padding: 1px; gap: 2px;">
             <button class="tab-filter-pill active" data-filter="all"
-              style="font-size: 10px; font-weight: 700; padding: 3px 8px; border-radius: 12px; border: none; background: var(--accent); color: #fff; cursor: pointer;">All</button>
+              style="font-size: 9.5px; font-weight: 700; padding: 2px 6px; border-radius: 10px; border: none; background: var(--accent); color: #fff; cursor: pointer;">All</button>
             <button class="tab-filter-pill" data-filter="groups"
-              style="font-size: 10px; font-weight: 700; padding: 3px 8px; border-radius: 12px; border: none; background: transparent; color: var(--text-sub); cursor: pointer;">Groups</button>
+              style="font-size: 9.5px; font-weight: 700; padding: 2px 6px; border-radius: 10px; border: none; background: transparent; color: var(--text-sub); cursor: pointer;">Groups</button>
             <button class="tab-filter-pill" data-filter="single"
-              style="font-size: 10px; font-weight: 700; padding: 3px 8px; border-radius: 12px; border: none; background: transparent; color: var(--text-sub); cursor: pointer;">Single</button>
+              style="font-size: 9.5px; font-weight: 700; padding: 2px 6px; border-radius: 10px; border: none; background: transparent; color: var(--text-sub); cursor: pointer;">Single</button>
           </div>
 
-          <div style="display: flex; align-items: center; gap: 8px;">
+          <div style="display: flex; align-items: center; gap: 4px;">
             <button id="close-all-tabs-btn" class="oneui-pill-btn secondary"
-              style="padding: 4px 10px; font-size: 11px; color: #ef4444; border-color: rgba(239,68,68,0.3); cursor: pointer;">Close
-              All</button>
+              style="padding: 2px 7px; height: 24px; font-size: 10px; color: #ef4444; border-color: rgba(239,68,68,0.3); cursor: pointer;">Close All</button>
             <button id="undo-closed-tab-btn" class="oneui-pill-btn secondary"
-              style="display: none; padding: 4px 10px; font-size: 11px; color: #38bdf8; border-color: rgba(56,189,248,0.35); background: rgba(56,189,248,0.08); cursor: pointer; align-items: center; gap: 4px;">
-              <span>↺ Undo</span>
+              style="display: none; padding: 2px 7px; height: 24px; font-size: 10px; color: #38bdf8; border-color: rgba(56,189,248,0.35); background: rgba(56,189,248,0.08); cursor: pointer; align-items: center; gap: 3px;">
+              <span>↺</span>
             </button>
           </div>
         </div>
@@ -839,81 +837,6 @@
           </div>
         </div>
 
-      </div>
-    </div>
-
-    <!-- Create / Edit Tab Group Modal Dialog -->
-    <div id="modal-create-group" class="modal-overlay" style="display: none;">
-      <div class="modal-card">
-        <div class="modal-header">
-          <span id="modal-group-title-label" class="modal-title">Create Tab Group</span>
-          <button id="modal-close-group-btn" class="modal-close-btn">&times;</button>
-        </div>
-        <div class="modal-body" style="padding: 14px 0;">
-          <div class="limit-section-title" style="margin-bottom: 6px;">GROUP NAME</div>
-          <input type="text" id="input-group-title" class="caspian-text-input"
-            placeholder="e.g. Research, Work, Videos..."
-            style="width: 100%; padding: 8px 12px; font-size: 12px; border-radius: 8px; background: var(--input-bg); border: 1px solid var(--border-glass); color: var(--text-main); margin-bottom: 14px;" />
-
-          <div class="limit-section-title" style="margin-bottom: 6px;">GROUP EMOJI ICON</div>
-          <div id="group-emoji-palette" style="display: flex; gap: 8px; flex-wrap: wrap; margin-bottom: 14px;">
-            <div class="group-emoji-dot active" data-emoji="📁"
-              style="font-size: 18px; width: 32px; height: 32px; border-radius: 8px; display: flex; align-items: center; justify-content: center; cursor: pointer; background: var(--bg-card); border: 1px solid var(--border-glass);">
-              📁</div>
-            <div class="group-emoji-dot" data-emoji="🚀"
-              style="font-size: 18px; width: 32px; height: 32px; border-radius: 8px; display: flex; align-items: center; justify-content: center; cursor: pointer; background: var(--bg-card); border: 1px solid var(--border-glass);">
-              🚀</div>
-            <div class="group-emoji-dot" data-emoji="🔥"
-              style="font-size: 18px; width: 32px; height: 32px; border-radius: 8px; display: flex; align-items: center; justify-content: center; cursor: pointer; background: var(--bg-card); border: 1px solid var(--border-glass);">
-              🔥</div>
-            <div class="group-emoji-dot" data-emoji="⭐"
-              style="font-size: 18px; width: 32px; height: 32px; border-radius: 8px; display: flex; align-items: center; justify-content: center; cursor: pointer; background: var(--bg-card); border: 1px solid var(--border-glass);">
-              ⭐</div>
-            <div class="group-emoji-dot" data-emoji="🎨"
-              style="font-size: 18px; width: 32px; height: 32px; border-radius: 8px; display: flex; align-items: center; justify-content: center; cursor: pointer; background: var(--bg-card); border: 1px solid var(--border-glass);">
-              🎨</div>
-            <div class="group-emoji-dot" data-emoji="📚"
-              style="font-size: 18px; width: 32px; height: 32px; border-radius: 8px; display: flex; align-items: center; justify-content: center; cursor: pointer; background: var(--bg-card); border: 1px solid var(--border-glass);">
-              📚</div>
-            <div class="group-emoji-dot" data-emoji="🎮"
-              style="font-size: 18px; width: 32px; height: 32px; border-radius: 8px; display: flex; align-items: center; justify-content: center; cursor: pointer; background: var(--bg-card); border: 1px solid var(--border-glass);">
-              🎮</div>
-            <div class="group-emoji-dot" data-emoji="💡"
-              style="font-size: 18px; width: 32px; height: 32px; border-radius: 8px; display: flex; align-items: center; justify-content: center; cursor: pointer; background: var(--bg-card); border: 1px solid var(--border-glass);">
-              💡</div>
-            <div class="group-emoji-dot" data-emoji="💼"
-              style="font-size: 18px; width: 32px; height: 32px; border-radius: 8px; display: flex; align-items: center; justify-content: center; cursor: pointer; background: var(--bg-card); border: 1px solid var(--border-glass);">
-              💼</div>
-            <div class="group-emoji-dot" data-emoji="⚡"
-              style="font-size: 18px; width: 32px; height: 32px; border-radius: 8px; display: flex; align-items: center; justify-content: center; cursor: pointer; background: var(--bg-card); border: 1px solid var(--border-glass);">
-              ⚡</div>
-          </div>
-
-          <div class="limit-section-title" style="margin-bottom: 6px;">GROUP COLOR ACCENT</div>
-          <div id="group-color-palette" class="color-palette-grid"
-            style="display: flex; gap: 8px; justify-content: space-between; margin-bottom: 16px;">
-            <div class="group-color-dot active" data-color="#ef4444"
-              style="background: #ef4444; width: 26px; height: 26px; border-radius: 50%; cursor: pointer;"></div>
-            <div class="group-color-dot" data-color="#f97316"
-              style="background: #f97316; width: 26px; height: 26px; border-radius: 50%; cursor: pointer;"></div>
-            <div class="group-color-dot" data-color="#eab308"
-              style="background: #eab308; width: 26px; height: 26px; border-radius: 50%; cursor: pointer;"></div>
-            <div class="group-color-dot" data-color="#10b981"
-              style="background: #10b981; width: 26px; height: 26px; border-radius: 50%; cursor: pointer;"></div>
-            <div class="group-color-dot" data-color="#06b6d4"
-              style="background: #06b6d4; width: 26px; height: 26px; border-radius: 50%; cursor: pointer;"></div>
-            <div class="group-color-dot" data-color="#3b82f6"
-              style="background: #3b82f6; width: 26px; height: 26px; border-radius: 50%; cursor: pointer;"></div>
-            <div class="group-color-dot" data-color="#8b5cf6"
-              style="background: #8b5cf6; width: 26px; height: 26px; border-radius: 50%; cursor: pointer;"></div>
-            <div class="group-color-dot" data-color="#ec4899"
-              style="background: #ec4899; width: 26px; height: 26px; border-radius: 50%; cursor: pointer;"></div>
-          </div>
-        </div>
-        <div class="modal-footer" style="display: flex; justify-content: flex-end; gap: 8px;">
-          <button id="btn-cancel-create-group" class="oneui-pill-btn secondary">Cancel</button>
-          <button id="btn-confirm-create-group" class="oneui-pill-btn primary">Save Group</button>
-        </div>
       </div>
     </div>
 
@@ -1786,6 +1709,81 @@
 
   </div>
 
+  <!-- Create / Edit Tab Group Modal Dialog -->
+    <div id="modal-create-group" class="modal-overlay" style="display: none; z-index: 20000010;">
+      <div class="modal-card">
+        <div class="modal-header">
+          <span id="modal-group-title-label" class="modal-title">Create Tab Group</span>
+          <button id="modal-close-group-btn" class="modal-close-btn">&times;</button>
+        </div>
+        <div class="modal-body" style="padding: 14px 0;">
+          <div class="limit-section-title" style="margin-bottom: 6px;">GROUP NAME</div>
+          <input type="text" id="input-group-title" class="caspian-text-input"
+            placeholder="e.g. Research, Work, Videos..."
+            style="width: 100%; padding: 8px 12px; font-size: 12px; border-radius: 8px; background: var(--input-bg); border: 1px solid var(--border-glass); color: var(--text-main); margin-bottom: 14px;" />
+
+          <div class="limit-section-title" style="margin-bottom: 6px;">GROUP EMOJI ICON</div>
+          <div id="group-emoji-palette" style="display: flex; gap: 8px; flex-wrap: wrap; margin-bottom: 14px;">
+            <div class="group-emoji-dot active" data-emoji="📁"
+              style="font-size: 18px; width: 32px; height: 32px; border-radius: 8px; display: flex; align-items: center; justify-content: center; cursor: pointer; background: var(--bg-card); border: 1px solid var(--border-glass);">
+              📁</div>
+            <div class="group-emoji-dot" data-emoji="🚀"
+              style="font-size: 18px; width: 32px; height: 32px; border-radius: 8px; display: flex; align-items: center; justify-content: center; cursor: pointer; background: var(--bg-card); border: 1px solid var(--border-glass);">
+              🚀</div>
+            <div class="group-emoji-dot" data-emoji="🔥"
+              style="font-size: 18px; width: 32px; height: 32px; border-radius: 8px; display: flex; align-items: center; justify-content: center; cursor: pointer; background: var(--bg-card); border: 1px solid var(--border-glass);">
+              🔥</div>
+            <div class="group-emoji-dot" data-emoji="⭐"
+              style="font-size: 18px; width: 32px; height: 32px; border-radius: 8px; display: flex; align-items: center; justify-content: center; cursor: pointer; background: var(--bg-card); border: 1px solid var(--border-glass);">
+              ⭐</div>
+            <div class="group-emoji-dot" data-emoji="🎨"
+              style="font-size: 18px; width: 32px; height: 32px; border-radius: 8px; display: flex; align-items: center; justify-content: center; cursor: pointer; background: var(--bg-card); border: 1px solid var(--border-glass);">
+              🎨</div>
+            <div class="group-emoji-dot" data-emoji="📚"
+              style="font-size: 18px; width: 32px; height: 32px; border-radius: 8px; display: flex; align-items: center; justify-content: center; cursor: pointer; background: var(--bg-card); border: 1px solid var(--border-glass);">
+              📚</div>
+            <div class="group-emoji-dot" data-emoji="🎮"
+              style="font-size: 18px; width: 32px; height: 32px; border-radius: 8px; display: flex; align-items: center; justify-content: center; cursor: pointer; background: var(--bg-card); border: 1px solid var(--border-glass);">
+              🎮</div>
+            <div class="group-emoji-dot" data-emoji="💡"
+              style="font-size: 18px; width: 32px; height: 32px; border-radius: 8px; display: flex; align-items: center; justify-content: center; cursor: pointer; background: var(--bg-card); border: 1px solid var(--border-glass);">
+              💡</div>
+            <div class="group-emoji-dot" data-emoji="💼"
+              style="font-size: 18px; width: 32px; height: 32px; border-radius: 8px; display: flex; align-items: center; justify-content: center; cursor: pointer; background: var(--bg-card); border: 1px solid var(--border-glass);">
+              💼</div>
+            <div class="group-emoji-dot" data-emoji="⚡"
+              style="font-size: 18px; width: 32px; height: 32px; border-radius: 8px; display: flex; align-items: center; justify-content: center; cursor: pointer; background: var(--bg-card); border: 1px solid var(--border-glass);">
+              ⚡</div>
+          </div>
+
+          <div class="limit-section-title" style="margin-bottom: 6px;">GROUP COLOR ACCENT</div>
+          <div id="group-color-palette" class="color-palette-grid"
+            style="display: flex; gap: 8px; justify-content: space-between; margin-bottom: 16px;">
+            <div class="group-color-dot active" data-color="#ef4444"
+              style="background: #ef4444; width: 26px; height: 26px; border-radius: 50%; cursor: pointer;"></div>
+            <div class="group-color-dot" data-color="#f97316"
+              style="background: #f97316; width: 26px; height: 26px; border-radius: 50%; cursor: pointer;"></div>
+            <div class="group-color-dot" data-color="#eab308"
+              style="background: #eab308; width: 26px; height: 26px; border-radius: 50%; cursor: pointer;"></div>
+            <div class="group-color-dot" data-color="#10b981"
+              style="background: #10b981; width: 26px; height: 26px; border-radius: 50%; cursor: pointer;"></div>
+            <div class="group-color-dot" data-color="#06b6d4"
+              style="background: #06b6d4; width: 26px; height: 26px; border-radius: 50%; cursor: pointer;"></div>
+            <div class="group-color-dot" data-color="#3b82f6"
+              style="background: #3b82f6; width: 26px; height: 26px; border-radius: 50%; cursor: pointer;"></div>
+            <div class="group-color-dot" data-color="#8b5cf6"
+              style="background: #8b5cf6; width: 26px; height: 26px; border-radius: 50%; cursor: pointer;"></div>
+            <div class="group-color-dot" data-color="#ec4899"
+              style="background: #ec4899; width: 26px; height: 26px; border-radius: 50%; cursor: pointer;"></div>
+          </div>
+        </div>
+        <div class="modal-footer" style="display: flex; justify-content: flex-end; gap: 8px;">
+          <button id="btn-cancel-create-group" class="oneui-pill-btn secondary">Cancel</button>
+          <button id="btn-confirm-create-group" class="oneui-pill-btn primary">Save Group</button>
+        </div>
+      </div>
+    </div>
+
   <!-- Tab Options Menu Modal (Global Overlay - Out of Bottom Sheet) -->
   <div id="tab-options-modal" class="modal-overlay" style="display: none; z-index: 20000000;">
     <div class="modal-card"
@@ -2189,7 +2187,7 @@
 
       <!-- Casks List -->
       <div id="control-casks-list"
-        style="display: flex; flex-direction: column; gap: 8px; max-height: 220px; overflow-y: auto; margin-bottom: 14px; padding-right: 2px; box-sizing: border-box; width: 100%;">
+        style="display: flex; flex-direction: column; gap: 8px; max-height: 195px; overflow-y: auto; margin-bottom: 14px; padding-right: 2px; box-sizing: border-box; width: 100%;">
         <!-- Rendered via JS -->
       </div>
 

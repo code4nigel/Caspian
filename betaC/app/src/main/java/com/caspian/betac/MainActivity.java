@@ -7423,8 +7423,14 @@ public class MainActivity extends AppCompatActivity {
                 pageWrapper.addView(pageTable);
 
                 if (p == 0 && widgetCaskBar != null) {
+                    if (widgetCaskBar.getParent() instanceof ViewGroup) {
+                        ((ViewGroup) widgetCaskBar.getParent()).removeView(widgetCaskBar);
+                    }
                     pageWrapper.addView(widgetCaskBar);
                 } else if (p == 1 && widgetZoom != null) {
+                    if (widgetZoom.getParent() instanceof ViewGroup) {
+                        ((ViewGroup) widgetZoom.getParent()).removeView(widgetZoom);
+                    }
                     pageWrapper.addView(widgetZoom);
                 }
 
@@ -8528,6 +8534,19 @@ public class MainActivity extends AppCompatActivity {
                     }
                 }
                 cascadeOverfill(pages, 0);
+                Set<String> seenKeys = new HashSet<>();
+                for (List<String> p : pages) {
+                    java.util.Iterator<String> it = p.iterator();
+                    while (it.hasNext()) {
+                        String k = it.next();
+                        if (seenKeys.contains(k)) {
+                            it.remove();
+                        } else {
+                            seenKeys.add(k);
+                        }
+                    }
+                }
+                pruneEmptyPages(pages);
                 return pages;
             } catch (Exception ignored) {}
         }
@@ -8631,6 +8650,9 @@ public class MainActivity extends AppCompatActivity {
             String key = keys.get(i);
             View tile = tileMap.get(key);
             if (tile != null && currentRow != null) {
+                if (tile.getParent() instanceof ViewGroup) {
+                    ((ViewGroup) tile.getParent()).removeView(tile);
+                }
                 TableRow.LayoutParams tLp = new TableRow.LayoutParams(0, TableRow.LayoutParams.WRAP_CONTENT, 1f);
                 tile.setLayoutParams(tLp);
                 currentRow.addView(tile);

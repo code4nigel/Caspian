@@ -850,7 +850,7 @@
           `;
         }
 
-        const ytMicBadge = (isYoutubeTab && tab.isPlayingAudio) ? `<span style="font-size: 11px; margin-right: 2px;" title="${isBgAudio ? 'YouTube Audio Playing in Background' : 'YouTube Audio Playing'}">🎙️</span>` : '';
+        const ytMicBadge = '';
 
         const isDefaultCask = !tab.caskId || tab.caskId === 'cask_caspian' || (tab.caskName && (tab.caskName.toLowerCase().includes('caspian') || tab.caskName.toLowerCase().includes('default')));
         const caskBadge = (!isDefaultCask && tab.caskIcon) ? `<span style="font-size: 9.5px; font-weight: 600; color: var(--text-muted); background: var(--input-bg, rgba(128,128,128,0.1)); border: none; padding: 2px 7px; border-radius: 6px; display: inline-flex; align-items: center; gap: 3px;" title="Container Vault: ${tab.caskName || 'Cask'}"><span>${tab.caskIcon}</span><span>${tab.caskName ? tab.caskName.split(' ')[0] : 'Cask'}</span></span>` : '';
@@ -865,7 +865,6 @@
             <div class="chrome-tab-header">
               <div style="display: flex; align-items: center; gap: 6px; overflow: hidden;">
                 ${selectCheckbox}
-                ${ytMicBadge}
                 ${favStarBadge}
                 ${pdfBadge}
                 ${(!isPdf && iconB64) ? `<img src="${iconB64}" style="width: 16px; height: 16px; border-radius: 4px; object-fit: cover;" onerror="this.style.display='none'" />` : ''}
