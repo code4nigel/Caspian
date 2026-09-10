@@ -4651,6 +4651,39 @@ public class MainActivity extends AppCompatActivity {
         return null;
     }
 
+    public PlaybackStateCompat buildPlaybackState(boolean isPlaying, long posMs, float speed) {
+        int state = isPlaying ? PlaybackStateCompat.STATE_PLAYING : PlaybackStateCompat.STATE_PAUSED;
+        int repeatResId;
+        String repeatLabel;
+        if (currentMediaRepeatMode == PlaybackStateCompat.REPEAT_MODE_ONE) {
+            repeatResId = R.drawable.ic_pod_repeat_one;
+            repeatLabel = "Repeat: One";
+        } else if (currentMediaRepeatMode == PlaybackStateCompat.REPEAT_MODE_ALL) {
+            repeatResId = R.drawable.ic_pod_repeat;
+            repeatLabel = "Repeat: All";
+        } else {
+            repeatResId = R.drawable.ic_pod_repeat_off;
+            repeatLabel = "Repeat: Off";
+        }
+
+        int shuffleResId = (currentMediaShuffleMode == PlaybackStateCompat.SHUFFLE_MODE_ALL)
+                ? R.drawable.ic_pod_shuffle
+                : R.drawable.ic_pod_shuffle_off;
+        String shuffleLabel = (currentMediaShuffleMode == PlaybackStateCompat.SHUFFLE_MODE_ALL)
+                ? "Shuffle: On"
+                : "Shuffle: Off";
+
+        return new PlaybackStateCompat.Builder()
+                .setActions(PlaybackStateCompat.ACTION_PLAY | PlaybackStateCompat.ACTION_PAUSE
+                        | PlaybackStateCompat.ACTION_PLAY_PAUSE | PlaybackStateCompat.ACTION_SKIP_TO_PREVIOUS
+                        | PlaybackStateCompat.ACTION_SKIP_TO_NEXT | PlaybackStateCompat.ACTION_SEEK_TO
+                        | PlaybackStateCompat.ACTION_SET_REPEAT_MODE | PlaybackStateCompat.ACTION_SET_SHUFFLE_MODE)
+                .addCustomAction(new PlaybackStateCompat.CustomAction.Builder("ACTION_TOGGLE_SHUFFLE", shuffleLabel, shuffleResId).build())
+                .addCustomAction(new PlaybackStateCompat.CustomAction.Builder("ACTION_TOGGLE_REPEAT", repeatLabel, repeatResId).build())
+                .setState(state, posMs, speed, android.os.SystemClock.elapsedRealtime())
+                .build();
+    }
+
     public void previousYouTubeTrack() {
         TabItem currentTab = getYouTubeTab();
         if (currentTab != null && currentTab.webView != null) {
@@ -4680,20 +4713,24 @@ public class MainActivity extends AppCompatActivity {
                     "if (window.__CaspianYouTube) window.__CaspianYouTube.toggleRepeat(); " +
                     "else { var b = document.querySelector('ytmusic-player-bar .repeat, [aria-label*=\"repeat\" i], [aria-label*=\"Repeat\" i]'); if (b) b.click(); }", null
             );
-            if (currentMediaRepeatMode == PlaybackStateCompat.REPEAT_MODE_NONE) {
-                currentMediaRepeatMode = PlaybackStateCompat.REPEAT_MODE_ALL;
-            } else if (currentMediaRepeatMode == PlaybackStateCompat.REPEAT_MODE_ALL) {
-                currentMediaRepeatMode = PlaybackStateCompat.REPEAT_MODE_ONE;
-            } else {
-                currentMediaRepeatMode = PlaybackStateCompat.REPEAT_MODE_NONE;
-            }
-            if (mediaSession != null) {
-                mediaSession.setRepeatMode(currentMediaRepeatMode);
-            }
+        }
+        if (currentMediaRepeatMode == PlaybackStateCompat.REPEAT_MODE_NONE) {
+            currentMediaRepeatMode = PlaybackStateCompat.REPEAT_MODE_ALL;
+        } else if (currentMediaRepeatMode == PlaybackStateCompat.REPEAT_MODE_ALL) {
+            currentMediaRepeatMode = PlaybackStateCompat.REPEAT_MODE_ONE;
+        } else {
+            currentMediaRepeatMode = PlaybackStateCompat.REPEAT_MODE_NONE;
+        }
+        if (mediaSession != null) {
+            mediaSession.setRepeatMode(currentMediaRepeatMode);
             TabItem yt = getYouTubeTab();
             boolean isPlaying = yt != null && yt.isPlayingAudio;
-            updateMediaPlaybackNotification(isPlaying);
+            long posMs = (long)(currentVideoTime * 1000);
+            mediaSession.setPlaybackState(buildPlaybackState(isPlaying, posMs, isPlaying ? ytCurrentSpeed : 0.0f));
         }
+        TabItem yt = getYouTubeTab();
+        boolean isPlaying = yt != null && yt.isPlayingAudio;
+        updateMediaPlaybackNotification(isPlaying);
     }
 
     public void toggleYouTubeShuffle() {
@@ -4703,11 +4740,35 @@ public class MainActivity extends AppCompatActivity {
                     "if (window.__CaspianYouTube) window.__CaspianYouTube.toggleShuffle(); " +
                     "else { var b = document.querySelector('ytmusic-player-bar .shuffle, [aria-label*=\"shuffle\" i], [aria-label*=\"Shuffle\" i]'); if (b) b.click(); }", null
             );
-            currentMediaShuffleMode = (currentMediaShuffleMode == PlaybackStateCompat.SHUFFLE_MODE_NONE)
-                    ? PlaybackStateCompat.SHUFFLE_MODE_ALL
-                    : PlaybackStateCompat.SHUFFLE_MODE_NONE;
+        }
+        currentMediaShuffleMode = (currentMediaShuffleMode == PlaybackStateCompat.SHUFFLE_MODE_NONE)
+                ? PlaybackStateCompat.SHUFFLE_MODE_ALL
+                : PlaybackStateCompat.SHUFFLE_MODE_NONE;
+        if (mediaSession != null) {
+            mediaSession.setShuffleMode(currentMediaShuffleMode);
+            TabItem yt = getYouTubeTab();
+            boolean isPlaying = yt != null && yt.isPlayingAudio;
+            long posMs = (long)(currentVideoTime * 1000);
+            mediaSession.setPlaybackState(buildPlaybackState(isPlaying, posMs, isPlaying ? ytCurrentSpeed : 0.0f));
+        }
+        TabItem yt = getYouTubeTab();
+        boolean isPlaying = yt != null && yt.isPlayingAudio;
+        updateMediaPlaybackNotification(isPlaying);
+    }
+
+    public void updateMediaPlaybackModes(int repeatMode, boolean shuffleOn) {
+        int newRepeat = (repeatMode == 2) ? PlaybackStateCompat.REPEAT_MODE_ONE : ((repeatMode == 1) ? PlaybackStateCompat.REPEAT_MODE_ALL : PlaybackStateCompat.REPEAT_MODE_NONE);
+        int newShuffle = shuffleOn ? PlaybackStateCompat.SHUFFLE_MODE_ALL : PlaybackStateCompat.SHUFFLE_MODE_NONE;
+        if (newRepeat != currentMediaRepeatMode || newShuffle != currentMediaShuffleMode) {
+            currentMediaRepeatMode = newRepeat;
+            currentMediaShuffleMode = newShuffle;
             if (mediaSession != null) {
+                mediaSession.setRepeatMode(currentMediaRepeatMode);
                 mediaSession.setShuffleMode(currentMediaShuffleMode);
+                TabItem yt = getYouTubeTab();
+                boolean isPlaying = yt != null && yt.isPlayingAudio;
+                long posMs = (long)(currentVideoTime * 1000);
+                mediaSession.setPlaybackState(buildPlaybackState(isPlaying, posMs, isPlaying ? ytCurrentSpeed : 0.0f));
             }
             TabItem yt = getYouTubeTab();
             boolean isPlaying = yt != null && yt.isPlayingAudio;
@@ -4919,18 +4980,12 @@ public class MainActivity extends AppCompatActivity {
         }
 
         long now = android.os.SystemClock.elapsedRealtime();
-        if (mediaSession != null && (now - lastMediaSessionTimeUpdateMs > 1000)) {
+        if (mediaSession != null && (now - lastMediaSessionTimeUpdateMs > 10000)) {
             lastMediaSessionTimeUpdateMs = now;
             TabItem cur = getTabById(activeTabId);
             boolean isPlaying = cur != null && cur.isPlayingAudio;
-            int state = isPlaying ? PlaybackStateCompat.STATE_PLAYING : PlaybackStateCompat.STATE_PAUSED;
             long posMs = (long)(currentTime * 1000);
-            PlaybackStateCompat.Builder stateBuilder = new PlaybackStateCompat.Builder()
-                    .setActions(PlaybackStateCompat.ACTION_PLAY | PlaybackStateCompat.ACTION_PAUSE
-                            | PlaybackStateCompat.ACTION_PLAY_PAUSE | PlaybackStateCompat.ACTION_SKIP_TO_PREVIOUS
-                            | PlaybackStateCompat.ACTION_SKIP_TO_NEXT | PlaybackStateCompat.ACTION_SEEK_TO)
-                    .setState(state, posMs, isPlaying ? ytCurrentSpeed : 0.0f, android.os.SystemClock.elapsedRealtime());
-            mediaSession.setPlaybackState(stateBuilder.build());
+            mediaSession.setPlaybackState(buildPlaybackState(isPlaying, posMs, isPlaying ? ytCurrentSpeed : 0.0f));
         }
     }
 
@@ -19230,42 +19285,28 @@ public class MainActivity extends AppCompatActivity {
         try {
             createNotificationChannels();
 
+            TabItem ytTab = getYouTubeTab();
+            boolean isYtMusic = ytTab != null && ((ytTab.url != null && ytTab.url.toLowerCase().contains("music.youtube.com")) || "youtubemusic".equalsIgnoreCase(ytTab.service));
+            String serviceLabel = isYtMusic ? "YouTube Music" : "YouTube";
+            String displayArtist = (currentMediaArtist != null && !currentMediaArtist.trim().isEmpty())
+                    ? (currentMediaArtist.trim() + " • " + serviceLabel + " • Caspian Flow")
+                    : (serviceLabel + " • Caspian Flow");
+            String displayTitle = (currentMediaTitle != null && !currentMediaTitle.trim().isEmpty()) ? currentMediaTitle.trim() : serviceLabel;
+
             if (mediaSession != null) {
                 if (!mediaSession.isActive()) {
                     mediaSession.setActive(true);
                 }
-                int state = isPlaying ? PlaybackStateCompat.STATE_PLAYING : PlaybackStateCompat.STATE_PAUSED;
                 long posMs = (long)(currentVideoTime * 1000);
                 float speed = isPlaying ? ytCurrentSpeed : 0.0f;
-                PlaybackStateCompat.Builder stateBuilder = new PlaybackStateCompat.Builder()
-                        .setActions(PlaybackStateCompat.ACTION_PLAY | PlaybackStateCompat.ACTION_PAUSE
-                                | PlaybackStateCompat.ACTION_PLAY_PAUSE | PlaybackStateCompat.ACTION_SKIP_TO_PREVIOUS
-                                | PlaybackStateCompat.ACTION_SKIP_TO_NEXT | PlaybackStateCompat.ACTION_SEEK_TO
-                                | PlaybackStateCompat.ACTION_SET_REPEAT_MODE | PlaybackStateCompat.ACTION_SET_SHUFFLE_MODE)
-                        .addCustomAction(new PlaybackStateCompat.CustomAction.Builder(
-                                "ACTION_TOGGLE_SHUFFLE",
-                                currentMediaShuffleMode == PlaybackStateCompat.SHUFFLE_MODE_ALL ? "Shuffle: On" : "Shuffle: Off",
-                                R.drawable.ic_pod_shuffle
-                        ).build())
-                        .addCustomAction(new PlaybackStateCompat.CustomAction.Builder(
-                                "ACTION_TOGGLE_REPEAT",
-                                currentMediaRepeatMode == PlaybackStateCompat.REPEAT_MODE_ONE ? "Repeat: One" : (currentMediaRepeatMode == PlaybackStateCompat.REPEAT_MODE_ALL ? "Repeat: All" : "Repeat: Off"),
-                                R.drawable.ic_pod_repeat
-                        ).build())
-                        .setState(state, posMs, speed, android.os.SystemClock.elapsedRealtime());
-                mediaSession.setPlaybackState(stateBuilder.build());
-
-                TabItem ytTab = getYouTubeTab();
-                boolean isYtMusic = ytTab != null && ((ytTab.url != null && ytTab.url.toLowerCase().contains("music.youtube.com")) || "youtubemusic".equalsIgnoreCase(ytTab.service));
-                String serviceLabel = isYtMusic ? "YouTube Music" : "YouTube";
-                String displayArtist = (currentMediaArtist != null && !currentMediaArtist.trim().isEmpty()) ? currentMediaArtist.trim() : serviceLabel;
-                String displaySubText = (currentMediaArtist != null && !currentMediaArtist.trim().isEmpty()) ? (currentMediaArtist.trim() + " • " + serviceLabel) : (serviceLabel + " • Caspian Flow");
-                String displayTitle = (currentMediaTitle != null && !currentMediaTitle.trim().isEmpty()) ? currentMediaTitle.trim() : serviceLabel;
+                mediaSession.setPlaybackState(buildPlaybackState(isPlaying, posMs, speed));
 
                 MediaMetadataCompat.Builder metaBuilder = new MediaMetadataCompat.Builder()
                         .putString(MediaMetadataCompat.METADATA_KEY_TITLE, displayTitle)
                         .putString(MediaMetadataCompat.METADATA_KEY_ARTIST, displayArtist)
-                        .putString(MediaMetadataCompat.METADATA_KEY_ALBUM, serviceLabel)
+                        .putString(MediaMetadataCompat.METADATA_KEY_ALBUM, "Caspian Flow")
+                        .putString(MediaMetadataCompat.METADATA_KEY_DISPLAY_TITLE, displayTitle)
+                        .putString(MediaMetadataCompat.METADATA_KEY_DISPLAY_SUBTITLE, displayArtist)
                         .putLong(MediaMetadataCompat.METADATA_KEY_DURATION, (long)(currentVideoDuration * 1000));
                 if (currentMediaThumbBitmap != null) {
                     metaBuilder.putBitmap(MediaMetadataCompat.METADATA_KEY_ALBUM_ART, currentMediaThumbBitmap);
@@ -19274,12 +19315,6 @@ public class MainActivity extends AppCompatActivity {
                 mediaSession.setRepeatMode(currentMediaRepeatMode);
                 mediaSession.setShuffleMode(currentMediaShuffleMode);
             }
-
-            TabItem ytTabForNotif = getYouTubeTab();
-            boolean isYtMusicNotif = ytTabForNotif != null && ((ytTabForNotif.url != null && ytTabForNotif.url.toLowerCase().contains("music.youtube.com")) || "youtubemusic".equalsIgnoreCase(ytTabForNotif.service));
-            String serviceLabelNotif = isYtMusicNotif ? "YouTube Music" : "YouTube";
-            String displaySubTextNotif = (currentMediaArtist != null && !currentMediaArtist.trim().isEmpty()) ? (currentMediaArtist.trim() + " • " + serviceLabelNotif) : (serviceLabelNotif + " • Caspian Flow");
-            String displayTitleNotif = (currentMediaTitle != null && !currentMediaTitle.trim().isEmpty()) ? currentMediaTitle.trim() : serviceLabelNotif;
 
             Intent appIntent = new Intent(this, MainActivity.class);
             PendingIntent pAppIntent = PendingIntent.getActivity(
@@ -19304,10 +19339,30 @@ public class MainActivity extends AppCompatActivity {
             Intent dismissIntent = new Intent(ACTION_MEDIA_DISMISS).setPackage(getPackageName());
             PendingIntent pDismiss = PendingIntent.getBroadcast(this, 204, dismissIntent, PendingIntent.FLAG_UPDATE_CURRENT | PendingIntent.FLAG_IMMUTABLE);
 
+            int repeatResId;
+            String repeatLabel;
+            if (currentMediaRepeatMode == PlaybackStateCompat.REPEAT_MODE_ONE) {
+                repeatResId = R.drawable.ic_pod_repeat_one;
+                repeatLabel = "Repeat One";
+            } else if (currentMediaRepeatMode == PlaybackStateCompat.REPEAT_MODE_ALL) {
+                repeatResId = R.drawable.ic_pod_repeat;
+                repeatLabel = "Repeat All";
+            } else {
+                repeatResId = R.drawable.ic_pod_repeat_off;
+                repeatLabel = "Repeat Off";
+            }
+
+            int shuffleResId = (currentMediaShuffleMode == PlaybackStateCompat.SHUFFLE_MODE_ALL)
+                    ? R.drawable.ic_pod_shuffle
+                    : R.drawable.ic_pod_shuffle_off;
+            String shuffleLabel = (currentMediaShuffleMode == PlaybackStateCompat.SHUFFLE_MODE_ALL)
+                    ? "Shuffle On"
+                    : "Shuffle Off";
+
             NotificationCompat.Builder notif = new NotificationCompat.Builder(this, CHANNEL_MEDIA_ID)
-                    .setSmallIcon(R.drawable.ic_pod_play)
-                    .setContentTitle(displayTitleNotif)
-                    .setContentText(displaySubTextNotif)
+                    .setSmallIcon(R.drawable.ic_caspian_notification)
+                    .setContentTitle(displayTitle)
+                    .setContentText(displayArtist)
                     .setContentIntent(pAppIntent)
                     .setDeleteIntent(pDismiss)
                     .setVisibility(NotificationCompat.VISIBILITY_PUBLIC)
@@ -19316,8 +19371,8 @@ public class MainActivity extends AppCompatActivity {
                     .addAction(R.drawable.ic_pod_prev, "Previous", pPrev)
                     .addAction(isPlaying ? R.drawable.ic_pod_pause : R.drawable.ic_pod_play, isPlaying ? "Pause" : "Play", pPlayPause)
                     .addAction(R.drawable.ic_pod_next, "Next", pNext)
-                    .addAction(R.drawable.ic_pod_shuffle, "Shuffle", pShuffle)
-                    .addAction(R.drawable.ic_pod_repeat, "Repeat", pRepeat)
+                    .addAction(shuffleResId, shuffleLabel, pShuffle)
+                    .addAction(repeatResId, repeatLabel, pRepeat)
                     .setStyle(new androidx.media.app.NotificationCompat.MediaStyle()
                             .setMediaSession(mediaSession != null ? mediaSession.getSessionToken() : null)
                             .setShowActionsInCompactView(0, 1, 2));

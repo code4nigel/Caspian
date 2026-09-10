@@ -342,6 +342,13 @@ public class CaspianBridge {
     }
 
     @JavascriptInterface
+    public void updateTabMediaPlaybackModes(int tabId, int repeatMode, boolean shuffleOn) {
+        if (activity != null) {
+            activity.runOnUiThread(() -> activity.updateMediaPlaybackModes(repeatMode, shuffleOn));
+        }
+    }
+
+    @JavascriptInterface
     public void openInOtherSplit(String url) {
         if (activity != null) {
             activity.runOnUiThread(() -> activity.openInOtherSplitPane(url));

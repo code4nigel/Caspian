@@ -1062,6 +1062,31 @@
           }
         }
 
+        // Sync actual YouTube Music repeat and shuffle modes to Android
+        if (isYtMusic && window.CaspianBridge && typeof window.CaspianBridge.updateTabMediaPlaybackModes === 'function') {
+          var repMode = 0;
+          try {
+            var repBtn = document.querySelector('ytmusic-player-bar .repeat, [aria-label*="repeat" i], [aria-label*="Repeat" i]');
+            if (repBtn) {
+              var rAria = (repBtn.getAttribute('aria-label') || '').toLowerCase();
+              if (rAria.includes('one')) repMode = 2;
+              else if (rAria.includes('all') || repBtn.getAttribute('aria-pressed') === 'true') repMode = 1;
+              else repMode = 0;
+            }
+          } catch(e){}
+
+          var shufOn = false;
+          try {
+            var shufBtn = document.querySelector('ytmusic-player-bar .shuffle, [aria-label*="shuffle" i], [aria-label*="Shuffle" i]');
+            if (shufBtn) {
+              var sAria = (shufBtn.getAttribute('aria-label') || '').toLowerCase();
+              if (shufBtn.getAttribute('aria-pressed') === 'true' || sAria.includes('on')) shufOn = true;
+            }
+          } catch(e){}
+
+          window.CaspianBridge.updateTabMediaPlaybackModes(tabId, repMode, shufOn);
+        }
+
         // Register navigator.mediaSession action handlers if available
         try {
           if (navigator.mediaSession && !window.__caspian_media_handlers_registered) {
