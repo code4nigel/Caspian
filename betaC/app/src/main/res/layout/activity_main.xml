@@ -856,51 +856,120 @@
                     android:singleLine="true" />
             </LinearLayout>
 
-            <!-- Inside Group Header Banner (Shown when inside a Tab Group) -->
+            <!-- Inside Group Header Banner (2-row clean layout shown when inside a Tab Group) -->
             <LinearLayout
                 android:id="@+id/tab_grid_group_banner"
                 android:layout_width="match_parent"
-                android:layout_height="38dp"
-                android:layout_marginTop="10dp"
-                android:background="@drawable/bg_liquid_glass_pill"
-                android:orientation="horizontal"
-                android:gravity="center_vertical"
-                android:paddingStart="10dp"
-                android:paddingEnd="10dp"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="8dp"
+                android:background="@drawable/bg_liquid_glass"
+                android:orientation="vertical"
+                android:paddingStart="12dp"
+                android:paddingEnd="12dp"
+                android:paddingTop="8dp"
+                android:paddingBottom="8dp"
                 android:elevation="10dp"
                 android:visibility="gone">
 
-                <ImageButton
-                    android:id="@+id/btn_tab_grid_group_back"
-                    android:layout_width="24dp"
-                    android:layout_height="24dp"
-                    android:background="?attr/selectableItemBackgroundBorderless"
-                    android:src="@drawable/ic_pod_back"
-                    android:tint="#00E5FF"
-                    android:contentDescription="Back to All Tabs" />
-
-                <TextView
-                    android:id="@+id/tab_grid_group_banner_title"
-                    android:layout_width="0dp"
+                <!-- Row 1: Color Dot + Title + Tab Count Badge + Far Right Cross Button -->
+                <LinearLayout
+                    android:layout_width="match_parent"
                     android:layout_height="wrap_content"
-                    android:layout_weight="1"
-                    android:layout_marginStart="8dp"
-                    android:text="Group Name (2 tabs)"
-                    android:textColor="#FFFFFF"
-                    android:textSize="12sp"
-                    android:textStyle="bold"
-                    android:singleLine="true" />
+                    android:orientation="horizontal"
+                    android:gravity="center_vertical">
 
-                <Button
-                    android:id="@+id/btn_tab_grid_group_ungroup"
-                    android:layout_width="wrap_content"
-                    android:layout_height="26dp"
-                    android:background="@drawable/bg_liquid_glass_pill"
-                    android:text="Ungroup"
-                    android:textColor="#A2A9A9"
-                    android:textSize="10sp"
-                    android:paddingStart="8dp"
-                    android:paddingEnd="8dp" />
+                    <View
+                        android:id="@+id/tab_grid_group_color_dot"
+                        android:layout_width="10dp"
+                        android:layout_height="10dp"
+                        android:background="@drawable/bg_chrome_tab_box" />
+
+                    <TextView
+                        android:id="@+id/tab_grid_group_banner_title"
+                        android:layout_width="0dp"
+                        android:layout_height="wrap_content"
+                        android:layout_weight="1"
+                        android:layout_marginStart="8dp"
+                        android:text="Group Name"
+                        android:textColor="#FFFFFF"
+                        android:textSize="13sp"
+                        android:textStyle="bold"
+                        android:singleLine="true" />
+
+                    <TextView
+                        android:id="@+id/tab_grid_group_count_badge"
+                        android:layout_width="wrap_content"
+                        android:layout_height="20dp"
+                        android:layout_marginStart="6dp"
+                        android:layout_marginEnd="6dp"
+                        android:gravity="center"
+                        android:paddingStart="8dp"
+                        android:paddingEnd="8dp"
+                        android:text="3 Tabs"
+                        android:textColor="#38BDF8"
+                        android:textSize="10.5sp"
+                        android:textStyle="bold"
+                        android:background="@drawable/bg_liquid_glass_pill" />
+
+                    <TextView
+                        android:id="@+id/btn_tab_grid_group_close"
+                        android:layout_width="24dp"
+                        android:layout_height="24dp"
+                        android:gravity="center"
+                        android:text="✕"
+                        android:textColor="#A2A9A9"
+                        android:textSize="12sp"
+                        android:textStyle="bold"
+                        android:background="?attr/selectableItemBackgroundBorderless"
+                        android:contentDescription="Exit Group" />
+                </LinearLayout>
+
+                <!-- Row 2: Tab Options (Edit, Ungroup, Delete) without emojis -->
+                <LinearLayout
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="6dp"
+                    android:orientation="horizontal"
+                    android:gravity="center_vertical">
+
+                    <Button
+                        android:id="@+id/btn_tab_grid_group_edit"
+                        android:layout_width="wrap_content"
+                        android:layout_height="26dp"
+                        android:background="@drawable/bg_liquid_glass_pill"
+                        android:text="Edit"
+                        android:textColor="#DFE2F0"
+                        android:textSize="10.5sp"
+                        android:textStyle="bold"
+                        android:paddingStart="12dp"
+                        android:paddingEnd="12dp" />
+
+                    <Button
+                        android:id="@+id/btn_tab_grid_group_ungroup"
+                        android:layout_width="wrap_content"
+                        android:layout_height="26dp"
+                        android:layout_marginStart="6dp"
+                        android:background="@drawable/bg_liquid_glass_pill"
+                        android:text="Ungroup"
+                        android:textColor="#DFE2F0"
+                        android:textSize="10.5sp"
+                        android:textStyle="bold"
+                        android:paddingStart="12dp"
+                        android:paddingEnd="12dp" />
+
+                    <Button
+                        android:id="@+id/btn_tab_grid_group_delete"
+                        android:layout_width="wrap_content"
+                        android:layout_height="26dp"
+                        android:layout_marginStart="6dp"
+                        android:background="@drawable/bg_liquid_glass_pill"
+                        android:text="Delete"
+                        android:textColor="#EF4444"
+                        android:textSize="10.5sp"
+                        android:textStyle="bold"
+                        android:paddingStart="12dp"
+                        android:paddingEnd="12dp" />
+                </LinearLayout>
             </LinearLayout>
 
             <!-- Scrollable 2-Column Tabs Grid Container -->

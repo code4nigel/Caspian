@@ -277,11 +277,11 @@
       }
       if (glyph) {
         glyph.textContent = '⏸';
-        glyph.style.fontSize = '14px';
+        glyph.style.fontSize = '16px';
       }
       if (badge) {
-        badge.style.background = 'rgba(0,229,255,0.18)';
-        badge.style.borderColor = 'rgba(0,229,255,0.4)';
+        badge.style.background = 'transparent';
+        badge.style.border = 'none';
       }
       if (progressContainer) progressContainer.style.display = 'block';
       if (actionBtn) {
@@ -326,6 +326,12 @@
 
   function showUpdateModal(info) {
     if (!info) return;
+    if (info.changelogBody) {
+      try {
+        localStorage.setItem('caspian_saved_changelog', info.changelogBody);
+        if (info.cleanVersion) localStorage.setItem('caspian_saved_changelog_ver', info.cleanVersion);
+      } catch (e) {}
+    }
     const modal = document.getElementById('caspian-update-modal');
     if (!modal) return;
 
@@ -365,6 +371,29 @@
 
     const gitEl = document.getElementById('uptodate-github-tag');
     if (gitEl) gitEl.textContent = tag;
+
+    // Cache changelog if present
+    if (info && info.changelogBody) {
+      try {
+        localStorage.setItem('caspian_saved_changelog', info.changelogBody);
+        if (info.cleanVersion) localStorage.setItem('caspian_saved_changelog_ver', info.cleanVersion);
+      } catch (e) {}
+    }
+
+    // Retrieve cached or passed changelog
+    let changelog = (info && info.changelogBody) ? info.changelogBody : null;
+    if (!changelog) {
+      try { changelog = localStorage.getItem('caspian_saved_changelog'); } catch (e) {}
+    }
+
+    const changelogEl = document.getElementById('uptodate-changelog');
+    if (changelogEl) {
+      if (changelog && changelog.trim()) {
+        changelogEl.innerHTML = formatMarkdown(changelog);
+      } else {
+        changelogEl.innerHTML = '<div style="color: var(--text-muted); font-style: italic;">No release notes cached for this build yet. Check updates again to fetch notes.</div>';
+      }
+    }
 
     modal.style.display = 'flex';
   }

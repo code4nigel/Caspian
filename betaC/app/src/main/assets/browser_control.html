@@ -2042,12 +2042,12 @@
       <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 12px;">
         <div style="display: flex; align-items: center; gap: 10px;">
           <div id="update-status-icon-badge"
-            style="position: relative; width: 44px; height: 44px; border-radius: 14px; background: rgba(0,229,255,0.12); border: 1.5px solid var(--accent, #00e5ff); display: flex; align-items: center; justify-content: center; cursor: pointer; flex-shrink: 0; box-shadow: 0 4px 14px rgba(0,229,255,0.2);">
+            style="position: relative; width: 44px; height: 44px; border-radius: 50%; background: transparent; border: none; display: flex; align-items: center; justify-content: center; cursor: pointer; flex-shrink: 0;">
             <svg id="update-status-ring-svg" style="display: none; position: absolute; inset: 0; width: 44px; height: 44px; transform: rotate(-90deg);" viewBox="0 0 44 44">
               <circle cx="22" cy="22" r="18" fill="none" stroke="rgba(128,128,128,0.25)" stroke-width="3"></circle>
               <circle id="update-status-ring-circle" cx="22" cy="22" r="18" fill="none" stroke="var(--accent, #00e5ff)" stroke-width="3" stroke-dasharray="113.1" stroke-dashoffset="113.1" stroke-linecap="round" style="transition: stroke-dashoffset 0.15s ease;"></circle>
             </svg>
-            <span id="update-status-icon-glyph" style="font-size: 20px; z-index: 1; transition: transform 0.2s ease;">📥</span>
+            <span id="update-status-icon-glyph" style="font-size: 16px; z-index: 1; display: flex; align-items: center; justify-content: center; width: 100%; height: 100%; text-align: center; line-height: 1; margin: 0; padding: 0; transition: transform 0.2s ease;">📥</span>
           </div>
           <div>
             <div id="update-modal-title" style="font-size: 15px; font-weight: 800; color: var(--text-main);">New Update Available</div>
@@ -2115,7 +2115,7 @@
         You're running the latest official build of <strong style="color: var(--text-main);">Caspian Flow</strong>.
       </div>
       <div
-        style="display: flex; flex-direction: column; gap: 8px; background: var(--bg-deep); border: 1px solid var(--border-glass); border-radius: 14px; padding: 12px 14px; margin-bottom: 18px; text-align: left; font-size: 11px;">
+        style="display: flex; flex-direction: column; gap: 8px; background: var(--bg-deep); border: 1px solid var(--border-glass); border-radius: 14px; padding: 12px 14px; margin-bottom: 14px; text-align: left; font-size: 11px;">
         <div style="display: flex; justify-content: space-between; align-items: center;">
           <span style="color: var(--text-muted); font-weight: 600;">Installed Version</span>
           <span id="uptodate-current-ver"
@@ -2127,6 +2127,18 @@
             style="font-weight: 600; color: var(--text-main); font-family: monospace;">v1.1.57-BetaC</span>
         </div>
       </div>
+
+      <!-- What's New Section in Up to Date Modal -->
+      <div style="text-align: left; margin-bottom: 16px;">
+        <div style="font-size: 10px; font-weight: 800; color: #10b981; letter-spacing: 0.5px; text-transform: uppercase; margin-bottom: 6px;">
+          What's New in this Version:
+        </div>
+        <div id="uptodate-changelog"
+          style="max-height: 180px; overflow-y: auto; background: var(--bg-deep); border: 1px solid var(--border-glass); border-radius: 14px; padding: 12px; font-size: 11px; line-height: 1.5; color: var(--text-main); word-break: break-word;">
+          Loading release notes...
+        </div>
+      </div>
+
       <button id="close-uptodate-modal-btn" class="oneui-pill-btn primary"
         style="width: 100%; padding: 11px; border-radius: 14px; font-size: 12.5px; font-weight: 700; display: flex; align-items: center; justify-content: center; gap: 6px;">
         <span>Done</span>

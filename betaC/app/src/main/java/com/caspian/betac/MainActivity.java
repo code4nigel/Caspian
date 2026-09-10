@@ -367,9 +367,13 @@ public class MainActivity extends AppCompatActivity {
     private ImageView tabGridSearchIcon;
     private EditText tabGridSearchInput;
     private LinearLayout tabGridGroupBanner;
-    private ImageButton btnTabGridGroupBack;
+    private View tabGridGroupColorDot;
     private TextView tabGridGroupBannerTitle;
+    private TextView tabGridGroupCountBadge;
+    private TextView btnTabGridGroupClose;
+    private Button btnTabGridGroupEdit;
     private Button btnTabGridGroupUngroup;
+    private Button btnTabGridGroupDelete;
     private LinearLayout tabGridContentLayout;
     private GridLayout tabGridContainer;
     private LinearLayout tabGridBottomDock;
@@ -1759,9 +1763,13 @@ public class MainActivity extends AppCompatActivity {
             tabGridSearchIcon = findViewById(R.id.tab_grid_search_icon);
             tabGridSearchInput = findViewById(R.id.tab_grid_search_input);
             tabGridGroupBanner = findViewById(R.id.tab_grid_group_banner);
-            btnTabGridGroupBack = findViewById(R.id.btn_tab_grid_group_back);
+            tabGridGroupColorDot = findViewById(R.id.tab_grid_group_color_dot);
             tabGridGroupBannerTitle = findViewById(R.id.tab_grid_group_banner_title);
+            tabGridGroupCountBadge = findViewById(R.id.tab_grid_group_count_badge);
+            btnTabGridGroupClose = findViewById(R.id.btn_tab_grid_group_close);
+            btnTabGridGroupEdit = findViewById(R.id.btn_tab_grid_group_edit);
             btnTabGridGroupUngroup = findViewById(R.id.btn_tab_grid_group_ungroup);
+            btnTabGridGroupDelete = findViewById(R.id.btn_tab_grid_group_delete);
             tabGridContentLayout = findViewById(R.id.tab_grid_content_layout);
             tabGridContainer = findViewById(R.id.tab_grid_container);
             tabGridBottomDock = findViewById(R.id.tab_grid_bottom_dock);
@@ -2016,8 +2024,8 @@ public class MainActivity extends AppCompatActivity {
             hideTabGridView();
         });
 
-        if (btnTabGridGroupBack != null) {
-            btnTabGridGroupBack.setOnClickListener(v -> {
+        if (btnTabGridGroupClose != null) {
+            btnTabGridGroupClose.setOnClickListener(v -> {
                 playUiFeedbackSound("tap");
                 currentGridGroupId = null;
                 renderTabGridCards(tabGridSearchInput != null ? tabGridSearchInput.getText().toString() : "");
@@ -2251,20 +2259,45 @@ public class MainActivity extends AppCompatActivity {
         if (tabGridGroupBanner != null) {
             GradientDrawable gGd = new GradientDrawable();
             gGd.setColor(isLight ? 0xFFFFFFFF : 0xE60F131D);
-            gGd.setCornerRadius(dpToPx(19));
+            gGd.setCornerRadius(dpToPx(16));
             gGd.setStroke(dpToPx(1), isLight ? 0xFFCBD5E1 : 0x26FFFFFF);
             tabGridGroupBanner.setBackground(gGd);
         }
         if (tabGridGroupBannerTitle != null) {
             tabGridGroupBannerTitle.setTextColor(isLight ? 0xFF0F172A : 0xFFFFFFFF);
         }
+        if (tabGridGroupCountBadge != null) {
+            GradientDrawable bgGd = new GradientDrawable();
+            bgGd.setColor(isLight ? 0xFFF1F5F9 : 0x26FFFFFF);
+            bgGd.setCornerRadius(dpToPx(10));
+            tabGridGroupCountBadge.setBackground(bgGd);
+        }
+        if (btnTabGridGroupClose != null) {
+            btnTabGridGroupClose.setTextColor(isLight ? 0xFF64748B : 0xFFA2A9A9);
+        }
+        if (btnTabGridGroupEdit != null) {
+            GradientDrawable edGd = new GradientDrawable();
+            edGd.setColor(isLight ? 0xFFF1F5F9 : 0x26FFFFFF);
+            edGd.setCornerRadius(dpToPx(13));
+            edGd.setStroke(dpToPx(1), isLight ? 0xFFCBD5E1 : 0x22FFFFFF);
+            btnTabGridGroupEdit.setBackground(edGd);
+            btnTabGridGroupEdit.setTextColor(isLight ? 0xFF334155 : 0xFFDFE2F0);
+        }
         if (btnTabGridGroupUngroup != null) {
             GradientDrawable ugGd = new GradientDrawable();
-            ugGd.setColor(isLight ? 0xFFF1F5F9 : 0x33FFFFFF);
+            ugGd.setColor(isLight ? 0xFFF1F5F9 : 0x26FFFFFF);
             ugGd.setCornerRadius(dpToPx(13));
             ugGd.setStroke(dpToPx(1), isLight ? 0xFFCBD5E1 : 0x22FFFFFF);
             btnTabGridGroupUngroup.setBackground(ugGd);
-            btnTabGridGroupUngroup.setTextColor(isLight ? 0xFF475569 : 0xFFA2A9A9);
+            btnTabGridGroupUngroup.setTextColor(isLight ? 0xFF334155 : 0xFFDFE2F0);
+        }
+        if (btnTabGridGroupDelete != null) {
+            GradientDrawable delGd = new GradientDrawable();
+            delGd.setColor(isLight ? 0x1AEF4444 : 0x22EF4444);
+            delGd.setCornerRadius(dpToPx(13));
+            delGd.setStroke(dpToPx(1), 0x44EF4444);
+            btnTabGridGroupDelete.setBackground(delGd);
+            btnTabGridGroupDelete.setTextColor(0xFFEF4444);
         }
 
         // Bottom Dock Capsule (Image 2)
@@ -2430,8 +2463,64 @@ public class MainActivity extends AppCompatActivity {
 
             if (tabGridGroupBanner != null) {
                 tabGridGroupBanner.setVisibility(View.VISIBLE);
-                if (tabGridGroupBannerTitle != null && activeGroup != null) {
-                    tabGridGroupBannerTitle.setText(activeGroup.icon + " " + activeGroup.title + " (" + activeGroup.tabIds.size() + " tabs)");
+                if (activeGroup != null) {
+                    if (tabGridGroupBannerTitle != null) {
+                        tabGridGroupBannerTitle.setText((activeGroup.icon != null ? activeGroup.icon + " " : "") + activeGroup.title);
+                    }
+                    int gCol = 0xFF00E5FF;
+                    try { gCol = Color.parseColor(activeGroup.color != null ? activeGroup.color : "#00E5FF"); } catch (Exception ignored) {}
+                    if (tabGridGroupColorDot != null) {
+                        GradientDrawable dotGd = new GradientDrawable();
+                        dotGd.setShape(GradientDrawable.OVAL);
+                        dotGd.setColor(gCol);
+                        tabGridGroupColorDot.setBackground(dotGd);
+                    }
+                    if (tabGridGroupCountBadge != null) {
+                        int count = activeGroup.tabIds.size();
+                        tabGridGroupCountBadge.setText(count + (count == 1 ? " Tab" : " Tabs"));
+                        tabGridGroupCountBadge.setTextColor(gCol);
+                    }
+                    if (btnTabGridGroupClose != null) {
+                        btnTabGridGroupClose.setOnClickListener(v -> {
+                            playUiFeedbackSound("tap");
+                            currentGridGroupId = null;
+                            renderTabGridCards(tabGridSearchInput != null ? tabGridSearchInput.getText().toString() : "");
+                        });
+                    }
+                    if (btnTabGridGroupEdit != null) {
+                        final TabGroup gToEdit = activeGroup;
+                        btnTabGridGroupEdit.setOnClickListener(v -> {
+                            playUiFeedbackSound("tap");
+                            showModernTabGroupDialog(gToEdit);
+                        });
+                    }
+                    if (btnTabGridGroupUngroup != null) {
+                        final TabGroup gToUngroup = activeGroup;
+                        btnTabGridGroupUngroup.setOnClickListener(v -> {
+                            playUiFeedbackSound("tap");
+                            tabGroupsList.remove(gToUngroup);
+                            currentGridGroupId = null;
+                            saveTabGroups();
+                            updateOmniboxTabStrip();
+                            renderTabGridCards(tabGridSearchInput != null ? tabGridSearchInput.getText().toString() : "");
+                            Toast.makeText(this, "Group dissolved", Toast.LENGTH_SHORT).show();
+                        });
+                    }
+                    if (btnTabGridGroupDelete != null) {
+                        final TabGroup gToDelete = activeGroup;
+                        btnTabGridGroupDelete.setOnClickListener(v -> {
+                            playUiFeedbackSound("tap");
+                            for (int tid : new ArrayList<>(gToDelete.tabIds)) {
+                                closeTab(tid);
+                            }
+                            tabGroupsList.remove(gToDelete);
+                            currentGridGroupId = null;
+                            saveTabGroups();
+                            updateOmniboxTabStrip();
+                            renderTabGridCards(tabGridSearchInput != null ? tabGridSearchInput.getText().toString() : "");
+                            Toast.makeText(this, "Group deleted", Toast.LENGTH_SHORT).show();
+                        });
+                    }
                 }
             }
 
@@ -3018,10 +3107,25 @@ public class MainActivity extends AppCompatActivity {
         card.setLayoutParams(lp);
 
         GradientDrawable gd = new GradientDrawable();
-        gd.setColor(isLight ? 0xFFFFFFFF : 0xFF181B25);
-        gd.setCornerRadius(dpToPx(18));
         String groupColorHex = group.color != null && !group.color.isEmpty() ? group.color : "#00E5FF";
         int groupColor = Color.parseColor(groupColorHex);
+        int r = Color.red(groupColor);
+        int g = Color.green(groupColor);
+        int b = Color.blue(groupColor);
+
+        // Dull/dark tinted variant underneath the group tile & contents (Image 2 fix)
+        int darkGroupBg = Color.rgb(
+            (int) (r * 0.22f + 16 * 0.78f),
+            (int) (g * 0.22f + 20 * 0.78f),
+            (int) (b * 0.22f + 28 * 0.78f)
+        );
+        int lightGroupBg = Color.rgb(
+            (int) (r * 0.15f + 245 * 0.85f),
+            (int) (g * 0.15f + 245 * 0.85f),
+            (int) (b * 0.15f + 245 * 0.85f)
+        );
+        gd.setColor(isLight ? lightGroupBg : darkGroupBg);
+        gd.setCornerRadius(dpToPx(18));
         gd.setStroke(dpToPx(2.5f), groupColor);
         card.setBackground(gd);
         card.setPadding(dpToPx(10), dpToPx(10), dpToPx(10), dpToPx(10));
@@ -3131,7 +3235,9 @@ public class MainActivity extends AppCompatActivity {
             miniTile.setLayoutParams(tileLp);
 
             GradientDrawable tileGd = new GradientDrawable();
-            tileGd.setColor(isLight ? 0xFFF1F5F9 : 0xFF0A0E17);
+            int darkTileBg = Color.rgb((int) (r * 0.14f + 10 * 0.86f), (int) (g * 0.14f + 14 * 0.86f), (int) (b * 0.14f + 20 * 0.86f));
+            int lightTileBg = Color.rgb((int) (r * 0.08f + 240 * 0.92f), (int) (g * 0.08f + 240 * 0.92f), (int) (b * 0.08f + 240 * 0.92f));
+            tileGd.setColor(isLight ? lightTileBg : darkTileBg);
             tileGd.setCornerRadius(dpToPx(8));
             miniTile.setBackground(tileGd);
             miniTile.setClipToOutline(true);
@@ -3173,7 +3279,9 @@ public class MainActivity extends AppCompatActivity {
             emptyTile.setLayoutParams(tileLp);
 
             GradientDrawable emptyGd = new GradientDrawable();
-            emptyGd.setColor(isLight ? 0xFFE2E8F0 : 0xFF0F131D);
+            int darkEmptyBg = Color.rgb((int) (r * 0.14f + 10 * 0.86f), (int) (g * 0.14f + 14 * 0.86f), (int) (b * 0.14f + 20 * 0.86f));
+            int lightEmptyBg = Color.rgb((int) (r * 0.08f + 240 * 0.92f), (int) (g * 0.08f + 240 * 0.92f), (int) (b * 0.08f + 240 * 0.92f));
+            emptyGd.setColor(isLight ? lightEmptyBg : darkEmptyBg);
             emptyGd.setCornerRadius(dpToPx(8));
             emptyTile.setBackground(emptyGd);
 
