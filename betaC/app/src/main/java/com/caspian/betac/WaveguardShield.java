@@ -40,6 +40,7 @@ public class WaveguardShield {
     private static final String KEY_COSMETIC_ENABLED = "waveguard_cosmetic_enabled";
     private static final String KEY_EASYPRIVACY_ENABLED = "waveguard_easyprivacy_enabled";
     private static final String KEY_DEFUSER_ENABLED = "waveguard_defuser_enabled";
+    private static final String KEY_FINGERPRINT_ENABLED = "waveguard_fingerprint_enabled";
     private static final String KEY_WHITELIST = "waveguard_whitelist_set";
     private static final String KEY_TOTAL_BLOCKED = "waveguard_total_blocked";
 
@@ -56,6 +57,7 @@ public class WaveguardShield {
     private boolean isCosmeticEnabled = true;
     private boolean isEasyPrivacyEnabled = true;
     private boolean isDefuserEnabled = true;
+    private boolean isFingerprintEnabled = true;
 
     private String cosmeticCssInjection = "";
 
@@ -72,6 +74,7 @@ public class WaveguardShield {
         this.isCosmeticEnabled = prefs.getBoolean(KEY_COSMETIC_ENABLED, true);
         this.isEasyPrivacyEnabled = prefs.getBoolean(KEY_EASYPRIVACY_ENABLED, true);
         this.isDefuserEnabled = prefs.getBoolean(KEY_DEFUSER_ENABLED, true);
+        this.isFingerprintEnabled = prefs.getBoolean(KEY_FINGERPRINT_ENABLED, true);
         this.totalBlockedCount.set(prefs.getInt(KEY_TOTAL_BLOCKED, 0));
 
         Set<String> savedWhitelist = prefs.getStringSet(KEY_WHITELIST, null);
@@ -296,6 +299,15 @@ public class WaveguardShield {
         prefs.edit().putBoolean(KEY_DEFUSER_ENABLED, enabled).apply();
     }
 
+    public boolean isFingerprintEnabled() {
+        return isFingerprintEnabled;
+    }
+
+    public void setFingerprintEnabled(boolean enabled) {
+        this.isFingerprintEnabled = enabled;
+        prefs.edit().putBoolean(KEY_FINGERPRINT_ENABLED, enabled).apply();
+    }
+
     public boolean isSiteWhitelisted(String host) {
         if (host == null) return false;
         String cleanHost = host.toLowerCase().trim();
@@ -453,6 +465,7 @@ public class WaveguardShield {
             json.put("cosmeticEnabled", isCosmeticEnabled);
             json.put("easyPrivacyEnabled", isEasyPrivacyEnabled);
             json.put("defuserEnabled", isDefuserEnabled);
+            json.put("fingerprintEnabled", isFingerprintEnabled);
             json.put("totalBlocked", totalBlockedCount.get());
             json.put("ruleCount", getRuleCount());
         } catch (Exception ignored) {}

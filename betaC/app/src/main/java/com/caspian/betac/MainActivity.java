@@ -7219,103 +7219,22 @@ public class MainActivity extends AppCompatActivity {
             LayoutInflater inflater = LayoutInflater.from(this);
             View popupView = inflater.inflate(R.layout.popup_waveguard_shield, null);
 
+            int displayWidth = getResources().getDisplayMetrics().widthPixels;
+            int targetWidth = Math.min((int)(getResources().getDisplayMetrics().density * 340), displayWidth - dpToPx(32));
+
             final PopupWindow popupWindow = new PopupWindow(
                     popupView,
-                    (int) (getResources().getDisplayMetrics().density * 320),
+                    targetWidth,
                     ViewGroup.LayoutParams.WRAP_CONTENT,
                     true
             );
             popupWindow.setBackgroundDrawable(new android.graphics.drawable.ColorDrawable(android.graphics.Color.TRANSPARENT));
-            popupWindow.setElevation(24f);
+            popupWindow.setElevation(28f);
             popupWindow.setOutsideTouchable(true);
 
-            // Dynamic Light/Dark Theme Styling
-            androidx.cardview.widget.CardView cardRoot = (androidx.cardview.widget.CardView) popupView;
-            int bgCard = !isDarkTheme ? 0xFFFFFFFF : 0xFF131922;
-            int titleColor = !isDarkTheme ? 0xFF0F172A : 0xFFFFFFFF;
-            int domainColor = !isDarkTheme ? 0xFF64748B : 0xFF9EABB8;
-            int rowBg = !isDarkTheme ? 0xFFF1F5F9 : 0xFF1A222F;
-            int labelColor = !isDarkTheme ? 0xFF0F172A : 0xFFFFFFFF;
-            int sublabelColor = !isDarkTheme ? 0xFF64748B : 0xFF7A8999;
-            int statsBg = !isDarkTheme ? 0xFFF8FAFC : 0xFF10151C;
-            int statsBorder = !isDarkTheme ? 0xFFE2E8F0 : 0xFF1E2836;
-            int secHeaderColor = !isDarkTheme ? 0xFF64748B : 0xFF556575;
-            int updateBtnBg = !isDarkTheme ? 0xFFE0F2FE : 0xFF162534;
-            int updateBtnText = !isDarkTheme ? 0xFF0284C7 : 0xFF00E5FF;
-            int closeBtnTint = !isDarkTheme ? 0xFF64748B : 0xFF94A3B8;
-
-            cardRoot.setCardBackgroundColor(bgCard);
-
-            TextView shieldTitle = popupView.findViewById(R.id.shield_title);
-            if (shieldTitle != null) shieldTitle.setTextColor(titleColor);
-
-            ImageButton btnClose = popupView.findViewById(R.id.btn_close_waveguard_popup);
+            View btnClose = popupView.findViewById(R.id.btn_close_waveguard_popup);
             if (btnClose != null) {
-                btnClose.setColorFilter(closeBtnTint);
                 btnClose.setOnClickListener(v -> popupWindow.dismiss());
-            }
-
-            TextView domainText = popupView.findViewById(R.id.current_site_domain);
-            if (domainText != null) domainText.setTextColor(domainColor);
-
-            View toggleRow = popupView.findViewById(R.id.site_shield_toggle_row);
-            if (toggleRow != null) {
-                GradientDrawable trGd = new GradientDrawable();
-                trGd.setColor(rowBg);
-                trGd.setCornerRadius(dpToPx(12));
-                if (!isDarkTheme) trGd.setStroke(dpToPx(1), 0xFFE2E8F0);
-                toggleRow.setBackground(trGd);
-            }
-
-            TextView labelShield = popupView.findViewById(R.id.site_shield_label);
-            if (labelShield != null) labelShield.setTextColor(labelColor);
-
-            TextView sublabelShield = popupView.findViewById(R.id.site_shield_sublabel);
-            if (sublabelShield != null) sublabelShield.setTextColor(sublabelColor);
-
-            View statsPanel = popupView.findViewById(R.id.stats_panel);
-            if (statsPanel != null) {
-                GradientDrawable spGd = new GradientDrawable();
-                spGd.setColor(statsBg);
-                spGd.setCornerRadius(dpToPx(12));
-                spGd.setStroke(dpToPx(1), statsBorder);
-                statsPanel.setBackground(spGd);
-            }
-
-            TextView blockedTotalText = popupView.findViewById(R.id.blocked_total_text);
-            if (blockedTotalText != null) blockedTotalText.setTextColor(sublabelColor);
-
-            TextView textAdvTitle = popupView.findViewById(R.id.text_advanced_settings_title);
-            if (textAdvTitle != null) textAdvTitle.setTextColor(secHeaderColor);
-
-            ImageView iconAdvChevron = popupView.findViewById(R.id.icon_advanced_chevron);
-            if (iconAdvChevron != null) iconAdvChevron.setColorFilter(secHeaderColor);
-
-            View headerAdv = popupView.findViewById(R.id.header_advanced_settings);
-            View containerAdv = popupView.findViewById(R.id.container_advanced_settings);
-            if (headerAdv != null && containerAdv != null) {
-                headerAdv.setOnClickListener(v -> {
-                    boolean isCurrentlyExpanded = containerAdv.getVisibility() == View.VISIBLE;
-                    containerAdv.setVisibility(isCurrentlyExpanded ? View.GONE : View.VISIBLE);
-                    if (iconAdvChevron != null) {
-                        iconAdvChevron.animate()
-                                .rotation(isCurrentlyExpanded ? 0f : 180f)
-                                .setDuration(200)
-                                .start();
-                    }
-                });
-            }
-
-            TextView rulesVersionText = popupView.findViewById(R.id.rules_version_text);
-            if (rulesVersionText != null) rulesVersionText.setTextColor(secHeaderColor);
-
-            TextView btnUpdateRules = popupView.findViewById(R.id.btn_update_rules);
-            if (btnUpdateRules != null) {
-                GradientDrawable ubGd = new GradientDrawable();
-                ubGd.setColor(updateBtnBg);
-                ubGd.setCornerRadius(dpToPx(8));
-                btnUpdateRules.setBackground(ubGd);
-                btnUpdateRules.setTextColor(updateBtnText);
             }
 
             TabItem currentTab = getActiveOrDominantTab();
@@ -7329,15 +7248,21 @@ public class MainActivity extends AppCompatActivity {
             }
             if (host == null || host.isEmpty()) host = "Active Tab";
 
+            TextView domainText = popupView.findViewById(R.id.current_site_domain);
             if (domainText != null) domainText.setText(host);
 
             final String cleanHost = host;
             boolean isWhitelisted = waveguardShield.isSiteWhitelisted(cleanHost);
             boolean isGlobalOn = waveguardShield.isGlobalEnabled();
+            boolean siteActive = isGlobalOn && !isWhitelisted;
 
             androidx.appcompat.widget.SwitchCompat siteShieldSwitch = popupView.findViewById(R.id.site_shield_switch);
+            View statusPill = popupView.findViewById(R.id.shield_status_badge_container);
+            View statusDot = popupView.findViewById(R.id.shield_status_dot);
             TextView statusBadge = popupView.findViewById(R.id.shield_status_badge);
             TextView blockedBadge = popupView.findViewById(R.id.blocked_count_badge);
+            TextView blockedTotalText = popupView.findViewById(R.id.blocked_total_text);
+            TextView rulesVersionText = popupView.findViewById(R.id.rules_version_text);
 
             int tabBlocks = currentTab != null ? waveguardShield.getBlockedCountForTab(currentTab.id) : 0;
             int totalBlocks = waveguardShield.getTotalBlockedCount();
@@ -7345,21 +7270,27 @@ public class MainActivity extends AppCompatActivity {
             if (blockedTotalText != null) blockedTotalText.setText(totalBlocks + " blocked all-time across tabs");
             if (rulesVersionText != null) rulesVersionText.setText("Waveguard Active (" + waveguardShield.getRuleCount() + " filters)");
 
-            boolean siteActive = isGlobalOn && !isWhitelisted;
-            if (siteShieldSwitch != null) siteShieldSwitch.setChecked(siteActive);
-            if (statusBadge != null) {
-                if (siteActive) {
-                    statusBadge.setText("PROTECTED");
-                    statusBadge.setTextColor(android.graphics.Color.parseColor("#00E5FF"));
-                    statusBadge.setBackgroundColor(android.graphics.Color.parseColor("#2000E5FF"));
-                } else {
-                    statusBadge.setText("PAUSED");
-                    statusBadge.setTextColor(android.graphics.Color.parseColor("#FF5252"));
-                    statusBadge.setBackgroundColor(android.graphics.Color.parseColor("#20FF5252"));
+            Runnable updateStatusPill = () -> {
+                boolean active = waveguardShield.isGlobalEnabled() && !waveguardShield.isSiteWhitelisted(cleanHost);
+                if (statusBadge != null) {
+                    statusBadge.setText(active ? "PROTECTED" : "PAUSED");
+                    statusBadge.setTextColor(active ? 0xFF00E5FF : 0xFFEF4444);
                 }
-            }
+                if (statusDot != null) {
+                    statusDot.setBackgroundResource(active ? R.drawable.bg_circle_cyan : R.drawable.bg_circle_red);
+                }
+                if (statusPill != null) {
+                    GradientDrawable gd = new GradientDrawable();
+                    gd.setCornerRadius(dpToPx(14));
+                    gd.setColor(active ? 0xFF082635 : 0xFF2A1215);
+                    gd.setStroke(dpToPx(1), active ? 0xFF0E495C : 0xFFEF4444);
+                    statusPill.setBackground(gd);
+                }
+            };
+            updateStatusPill.run();
 
             if (siteShieldSwitch != null) {
+                siteShieldSwitch.setChecked(siteActive);
                 siteShieldSwitch.setOnCheckedChangeListener((btn, isChecked) -> {
                     if (cleanHost.contains(".")) {
                         waveguardShield.setSiteWhitelisted(cleanHost, !isChecked);
@@ -7368,19 +7299,25 @@ public class MainActivity extends AppCompatActivity {
                     }
                     updateOmniboxState();
                     syncWaveguardToControlWeb();
-                    if (statusBadge != null) {
-                        if (isChecked) {
-                            statusBadge.setText("PROTECTED");
-                            statusBadge.setTextColor(android.graphics.Color.parseColor("#00E5FF"));
-                            statusBadge.setBackgroundColor(android.graphics.Color.parseColor("#2000E5FF"));
-                        } else {
-                            statusBadge.setText("PAUSED");
-                            statusBadge.setTextColor(android.graphics.Color.parseColor("#FF5252"));
-                            statusBadge.setBackgroundColor(android.graphics.Color.parseColor("#20FF5252"));
-                        }
-                    }
+                    updateStatusPill.run();
                     if (currentTab != null && currentTab.webView != null) {
                         currentTab.webView.reload();
+                    }
+                });
+            }
+
+            View headerAdv = popupView.findViewById(R.id.header_advanced_settings);
+            View containerAdv = popupView.findViewById(R.id.container_advanced_settings);
+            ImageView iconAdvChevron = popupView.findViewById(R.id.icon_advanced_chevron);
+            if (headerAdv != null && containerAdv != null) {
+                headerAdv.setOnClickListener(v -> {
+                    boolean isCurrentlyExpanded = containerAdv.getVisibility() == View.VISIBLE;
+                    containerAdv.setVisibility(isCurrentlyExpanded ? View.GONE : View.VISIBLE);
+                    if (iconAdvChevron != null) {
+                        iconAdvChevron.animate()
+                                .rotation(isCurrentlyExpanded ? 0f : 180f)
+                                .setDuration(200)
+                                .start();
                     }
                 });
             }
@@ -7389,6 +7326,7 @@ public class MainActivity extends AppCompatActivity {
             androidx.appcompat.widget.SwitchCompat swCosmetic = popupView.findViewById(R.id.switch_cosmetic);
             androidx.appcompat.widget.SwitchCompat swDefuser = popupView.findViewById(R.id.switch_defuser);
             androidx.appcompat.widget.SwitchCompat swPopups = popupView.findViewById(R.id.switch_popups);
+            androidx.appcompat.widget.SwitchCompat swFingerprint = popupView.findViewById(R.id.switch_fingerprint);
 
             if (swAdblock != null) {
                 swAdblock.setChecked(waveguardShield.isGlobalEnabled());
@@ -7396,6 +7334,7 @@ public class MainActivity extends AppCompatActivity {
                     waveguardShield.setGlobalEnabled(val);
                     updateOmniboxState();
                     syncWaveguardToControlWeb();
+                    updateStatusPill.run();
                 });
             }
 
@@ -7423,6 +7362,15 @@ public class MainActivity extends AppCompatActivity {
                 });
             }
 
+            if (swFingerprint != null) {
+                swFingerprint.setChecked(waveguardShield.isFingerprintEnabled());
+                swFingerprint.setOnCheckedChangeListener((b, val) -> {
+                    waveguardShield.setFingerprintEnabled(val);
+                    syncWaveguardToControlWeb();
+                });
+            }
+
+            TextView btnUpdateRules = popupView.findViewById(R.id.btn_update_rules);
             if (btnUpdateRules != null) {
                 btnUpdateRules.setOnClickListener(v -> {
                     btnUpdateRules.setText("Updating...");
@@ -8234,6 +8182,10 @@ public class MainActivity extends AppCompatActivity {
         View tileShield = tileMap.get("shield");
         if (tileShield != null) {
             tileShield.setOnClickListener(v -> {
+                dialog.dismiss();
+                showWaveguardFlyout(dialogView);
+            });
+            tileShield.setOnLongClickListener(v -> {
                 if (waveguardShield != null) {
                     boolean nextState = !waveguardShield.isGlobalEnabled();
                     waveguardShield.setGlobalEnabled(nextState);
@@ -8246,6 +8198,7 @@ public class MainActivity extends AppCompatActivity {
                         currentTab.webView.reload();
                     }
                 }
+                return true;
             });
         }
         View tileClearData = tileMap.get("clear_data");
