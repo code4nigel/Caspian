@@ -6041,22 +6041,47 @@
       });
     }
 
-    // Tab Filter Pills (All / Groups / Single - Fix #8)
-    document.querySelectorAll('.tab-filter-pill').forEach(pill => {
-      pill.addEventListener('click', () => {
+    // Tab Filter Dropdown Menu (All / Groups / Single)
+    const filterDropdownBtn = document.getElementById('tab-filter-dropdown-btn');
+    const filterDropdownMenu = document.getElementById('tab-filter-dropdown-menu');
+    const filterSelectedLabel = document.getElementById('tab-filter-selected-label');
+
+    if (filterDropdownBtn && filterDropdownMenu) {
+      filterDropdownBtn.addEventListener('click', (e) => {
+        e.stopPropagation();
         playSFX('tb_clicks');
-        document.querySelectorAll('.tab-filter-pill').forEach(p => {
-          p.classList.remove('active');
-          p.style.background = 'transparent';
-          p.style.color = 'var(--text-sub)';
-        });
-        pill.classList.add('active');
-        pill.style.background = 'var(--accent)';
-        pill.style.color = '#fff';
-        activeTabFilter = pill.dataset.filter || 'all';
-        renderOpenTabs();
+        filterDropdownMenu.classList.toggle('active');
       });
-    });
+
+      document.addEventListener('click', (e) => {
+        if (!filterDropdownMenu.contains(e.target) && e.target !== filterDropdownBtn) {
+          filterDropdownMenu.classList.remove('active');
+        }
+      });
+
+      document.querySelectorAll('.tab-filter-opt-btn').forEach(opt => {
+        opt.addEventListener('click', (e) => {
+          e.stopPropagation();
+          playSFX('tb_clicks');
+          const filter = opt.dataset.filter || 'all';
+          activeTabFilter = filter;
+
+          if (filterSelectedLabel) {
+            filterSelectedLabel.textContent = filter === 'groups' ? 'Groups' : (filter === 'single' ? 'Single' : 'All');
+          }
+
+          document.querySelectorAll('.tab-filter-opt-btn').forEach(o => {
+            const isMatch = (o.dataset.filter === filter);
+            o.classList.toggle('active', isMatch);
+            const check = o.querySelector('.tab-filter-check');
+            if (check) check.style.display = isMatch ? 'inline' : 'none';
+          });
+
+          filterDropdownMenu.classList.remove('active');
+          renderOpenTabs();
+        });
+      });
+    }
 
     // Modal Group Color Dots Binding
     document.querySelectorAll('.modal-group-color-dot').forEach(dot => {

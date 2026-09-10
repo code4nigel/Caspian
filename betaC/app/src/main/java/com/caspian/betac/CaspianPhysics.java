@@ -26,6 +26,29 @@ public final class CaspianPhysics {
     public static final float STIFFNESS_RESPONSIVE = 750f;
     public static final float STIFFNESS_SNAPPY = 1200f;
 
+    // Static weak reference storage for spring animations per view to prevent resource id conflicts with View.setTag
+    private static final java.util.WeakHashMap<View, java.util.Map<DynamicAnimation.ViewProperty, SpringAnimation>> sSpringMap = new java.util.WeakHashMap<>();
+
+    private static synchronized SpringAnimation getAttachedSpring(View view, DynamicAnimation.ViewProperty property) {
+        if (view == null || property == null) return null;
+        java.util.Map<DynamicAnimation.ViewProperty, SpringAnimation> map = sSpringMap.get(view);
+        return map != null ? map.get(property) : null;
+    }
+
+    private static synchronized void setAttachedSpring(View view, DynamicAnimation.ViewProperty property, SpringAnimation spring) {
+        if (view == null || property == null) return;
+        java.util.Map<DynamicAnimation.ViewProperty, SpringAnimation> map = sSpringMap.get(view);
+        if (map == null) {
+            map = new java.util.HashMap<>();
+            sSpringMap.put(view, map);
+        }
+        if (spring != null) {
+            map.put(property, spring);
+        } else {
+            map.remove(property);
+        }
+    }
+
     private CaspianPhysics() {}
 
     /**
@@ -33,10 +56,11 @@ public final class CaspianPhysics {
      */
     public static SpringAnimation createSpring(View view, DynamicAnimation.ViewProperty property,
                                               float dampingRatio, float stiffness) {
-        SpringAnimation spring = (SpringAnimation) view.getTag(property.hashCode());
+        if (view == null || property == null) return null;
+        SpringAnimation spring = getAttachedSpring(view, property);
         if (spring == null) {
             spring = new SpringAnimation(view, property);
-            view.setTag(property.hashCode(), spring);
+            setAttachedSpring(view, property, spring);
         }
         SpringForce force = spring.getSpring();
         if (force == null) {
@@ -54,8 +78,10 @@ public final class CaspianPhysics {
     public static SpringAnimation animateSpring(View view, DynamicAnimation.ViewProperty property,
                                                 float targetValue, float dampingRatio, float stiffness) {
         SpringAnimation spring = createSpring(view, property, dampingRatio, stiffness);
-        spring.getSpring().setFinalPosition(targetValue);
-        spring.start();
+        if (spring != null && spring.getSpring() != null) {
+            spring.getSpring().setFinalPosition(targetValue);
+            spring.start();
+        }
         return spring;
     }
 
@@ -66,9 +92,11 @@ public final class CaspianPhysics {
                                                             float targetValue, float startVelocity,
                                                             float dampingRatio, float stiffness) {
         SpringAnimation spring = createSpring(view, property, dampingRatio, stiffness);
-        spring.setStartVelocity(startVelocity);
-        spring.getSpring().setFinalPosition(targetValue);
-        spring.start();
+        if (spring != null && spring.getSpring() != null) {
+            spring.setStartVelocity(startVelocity);
+            spring.getSpring().setFinalPosition(targetValue);
+            spring.start();
+        }
         return spring;
     }
 
@@ -76,7 +104,7 @@ public final class CaspianPhysics {
      * Cancels any active spring animations for the specified property on this view.
      */
     public static void cancelSpring(View view, DynamicAnimation.ViewProperty property) {
-        SpringAnimation spring = (SpringAnimation) view.getTag(property.hashCode());
+        SpringAnimation spring = getAttachedSpring(view, property);
         if (spring != null && spring.isRunning()) {
             spring.cancel();
         }
@@ -86,20 +114,26 @@ public final class CaspianPhysics {
      * Applies tactile iOS squish effect (scale down to 0.92x).
      */
     public static void applyPressSquish(View view) {
-        cancelSpring(view, DynamicAnimation.SCALE_X);
-        cancelSpring(view, DynamicAnimation.SCALE_Y);
-        animateSpring(view, DynamicAnimation.SCALE_X, 0.92f, DAMPING_SNAPPY, STIFFNESS_SNAPPY);
-        animateSpring(view, DynamicAnimation.SCALE_Y, 0.92f, DAMPING_SNAPPY, STIFFNESS_SNAPPY);
+        if (view == null) return;
+        try {
+            cancelSpring(view, DynamicAnimation.SCALE_X);
+            cancelSpring(view, DynamicAnimation.SCALE_Y);
+            animateSpring(view, DynamicAnimation.SCALE_X, 0.92f, DAMPING_SNAPPY, STIFFNESS_SNAPPY);
+            animateSpring(view, DynamicAnimation.SCALE_Y, 0.92f, DAMPING_SNAPPY, STIFFNESS_SNAPPY);
+        } catch (Throwable ignored) {}
     }
 
     /**
      * Releases squish back to 1.0x with playful overshoot bounce.
      */
     public static void applyReleasePop(View view) {
-        cancelSpring(view, DynamicAnimation.SCALE_X);
-        cancelSpring(view, DynamicAnimation.SCALE_Y);
-        animateSpring(view, DynamicAnimation.SCALE_X, 1.0f, DAMPING_BOUNCY, STIFFNESS_PLAYFUL);
-        animateSpring(view, DynamicAnimation.SCALE_Y, 1.0f, DAMPING_BOUNCY, STIFFNESS_PLAYFUL);
+        if (view == null) return;
+        try {
+            cancelSpring(view, DynamicAnimation.SCALE_X);
+            cancelSpring(view, DynamicAnimation.SCALE_Y);
+            animateSpring(view, DynamicAnimation.SCALE_X, 1.0f, DAMPING_BOUNCY, STIFFNESS_PLAYFUL);
+            animateSpring(view, DynamicAnimation.SCALE_Y, 1.0f, DAMPING_BOUNCY, STIFFNESS_PLAYFUL);
+        } catch (Throwable ignored) {}
     }
 
     /**

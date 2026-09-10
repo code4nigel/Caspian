@@ -7408,43 +7408,47 @@ public class MainActivity extends AppCompatActivity {
         int savedPage = gridPrefs.getInt("last_card_grid_page", 0);
         int initialPage = Math.max(0, Math.min(savedPage, pages.size() - 1));
 
-        if (flipper != null) {
-            flipper.removeAllViews();
-            for (int p = 0; p < pages.size(); p++) {
-                LinearLayout pageWrapper = new LinearLayout(this);
-                pageWrapper.setOrientation(LinearLayout.VERTICAL);
-                pageWrapper.setLayoutParams(new ViewGroup.LayoutParams(
-                        ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT));
+        try {
+            if (flipper != null) {
+                flipper.removeAllViews();
+                for (int p = 0; p < pages.size(); p++) {
+                    LinearLayout pageWrapper = new LinearLayout(this);
+                    pageWrapper.setOrientation(LinearLayout.VERTICAL);
+                    pageWrapper.setLayoutParams(new ViewGroup.LayoutParams(
+                            ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT));
 
-                TableLayout pageTable = new TableLayout(this);
-                pageTable.setLayoutParams(new LinearLayout.LayoutParams(
-                        ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT));
-                populateGridTable(pageTable, pages.get(p), tileMap);
-                pageWrapper.addView(pageTable);
+                    TableLayout pageTable = new TableLayout(this);
+                    pageTable.setLayoutParams(new LinearLayout.LayoutParams(
+                            ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT));
+                    populateGridTable(pageTable, pages.get(p), tileMap);
+                    pageWrapper.addView(pageTable);
 
-                if (p == 0 && widgetCaskBar != null) {
-                    if (widgetCaskBar.getParent() instanceof ViewGroup) {
-                        ((ViewGroup) widgetCaskBar.getParent()).removeView(widgetCaskBar);
+                    if (p == 0 && widgetCaskBar != null) {
+                        if (widgetCaskBar.getParent() instanceof ViewGroup) {
+                            ((ViewGroup) widgetCaskBar.getParent()).removeView(widgetCaskBar);
+                        }
+                        pageWrapper.addView(widgetCaskBar);
+                    } else if (p == 1 && widgetZoom != null) {
+                        if (widgetZoom.getParent() instanceof ViewGroup) {
+                            ((ViewGroup) widgetZoom.getParent()).removeView(widgetZoom);
+                        }
+                        pageWrapper.addView(widgetZoom);
                     }
-                    pageWrapper.addView(widgetCaskBar);
-                } else if (p == 1 && widgetZoom != null) {
-                    if (widgetZoom.getParent() instanceof ViewGroup) {
-                        ((ViewGroup) widgetZoom.getParent()).removeView(widgetZoom);
-                    }
-                    pageWrapper.addView(widgetZoom);
+
+                    flipper.addView(pageWrapper);
                 }
 
-                flipper.addView(pageWrapper);
-            }
+                flipper.setOnPageChangeListener(pageIndex -> {
+                    gridPrefs.edit().putInt("last_card_grid_page", pageIndex).apply();
+                    updateDynamicIndicatorDots(dotsLayout, flipper, pageIndex, pages.size(), isDarkTheme);
+                });
 
-            flipper.setOnPageChangeListener(pageIndex -> {
-                gridPrefs.edit().putInt("last_card_grid_page", pageIndex).apply();
-                updateDynamicIndicatorDots(dotsLayout, flipper, pageIndex, pages.size(), isDarkTheme);
-            });
-
-            if (initialPage > 0 && initialPage < pages.size()) {
-                flipper.setDisplayedChild(initialPage);
+                if (initialPage > 0 && initialPage < pages.size()) {
+                    flipper.setDisplayedChild(initialPage);
+                }
             }
+        } catch (Throwable t) {
+            android.util.Log.e("MainActivity", "Error populating action grid flipper", t);
         }
 
         updateDynamicIndicatorDots(dotsLayout, flipper, initialPage, pages.size(), isDarkTheme);
@@ -8650,21 +8654,27 @@ public class MainActivity extends AppCompatActivity {
             String key = keys.get(i);
             View tile = tileMap.get(key);
             if (tile != null && currentRow != null) {
-                if (tile.getParent() instanceof ViewGroup) {
-                    ((ViewGroup) tile.getParent()).removeView(tile);
+                try {
+                    if (tile.getParent() instanceof ViewGroup) {
+                        ((ViewGroup) tile.getParent()).removeView(tile);
+                    }
+                    TableRow.LayoutParams tLp = new TableRow.LayoutParams(0, TableRow.LayoutParams.WRAP_CONTENT, 1f);
+                    tile.setLayoutParams(tLp);
+                    currentRow.addView(tile);
+                    colCount++;
+                } catch (Throwable t) {
+                    android.util.Log.e("MainActivity", "Error adding grid tile: " + key, t);
                 }
-                TableRow.LayoutParams tLp = new TableRow.LayoutParams(0, TableRow.LayoutParams.WRAP_CONTENT, 1f);
-                tile.setLayoutParams(tLp);
-                currentRow.addView(tile);
-                colCount++;
             }
         }
         if (currentRow != null && colCount > 0 && colCount < columnsPerRow) {
             for (int p = colCount; p < columnsPerRow; p++) {
-                View dummy = new View(this);
-                TableRow.LayoutParams dLp = new TableRow.LayoutParams(0, TableRow.LayoutParams.WRAP_CONTENT, 1f);
-                dummy.setLayoutParams(dLp);
-                currentRow.addView(dummy);
+                try {
+                    View dummy = new View(this);
+                    TableRow.LayoutParams dLp = new TableRow.LayoutParams(0, TableRow.LayoutParams.WRAP_CONTENT, 1f);
+                    dummy.setLayoutParams(dLp);
+                    currentRow.addView(dummy);
+                } catch (Throwable ignored) {}
             }
         }
     }

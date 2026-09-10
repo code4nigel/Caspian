@@ -762,32 +762,54 @@
       </div>
 
       <div class="m3-card" style="margin-top: 4px; padding: 10px 14px 14px 14px;">
-        <!-- Active Tabs Container Header with Filter Pills -->
+        <!-- Active Tabs Container Header with Filter Dropdown -->
         <div class="m3-card-row"
-          style="margin-top: 0; margin-bottom: 8px; display: flex; align-items: center; justify-content: space-between; gap: 4px;">
-          <div style="display: flex; align-items: center; gap: 5px;">
-            <div class="setting-section-header" style="margin: 0; font-size: 11.5px;">Active Tabs</div>
-            <span id="tab-count-badge" class="m3-badge" style="background: rgba(0,0,0,0.06); color: var(--text-sub); font-size: 9.5px; padding: 1px 5px;">1 Tab</span>
+          style="margin-top: 0; margin-bottom: 8px; display: flex; align-items: center; justify-content: space-between; gap: 6px; flex-wrap: nowrap;">
+          <!-- Left: Active Tabs Title + Badge Indicator -->
+          <div style="display: flex; align-items: center; gap: 5px; flex-shrink: 0;">
+            <div class="setting-section-header" style="margin: 0; font-size: 11.5px; white-space: nowrap;">Active Tabs</div>
+            <span id="tab-count-badge" class="m3-badge" style="background: rgba(0,0,0,0.06); color: var(--text-sub); font-size: 9.5px; padding: 1px 5px; white-space: nowrap;">1 Tab</span>
           </div>
 
-          <!-- Tab Filter Pills (All / Groups / Single) -->
-          <div id="tab-filter-pill-bar"
-            style="display: flex; background: var(--input-bg); border: 1px solid var(--border-glass); border-radius: 12px; padding: 1px; gap: 2px;">
-            <button class="tab-filter-pill active" data-filter="all"
-              style="font-size: 9.5px; font-weight: 700; padding: 2px 6px; border-radius: 10px; border: none; background: var(--accent); color: #fff; cursor: pointer;">All</button>
-            <button class="tab-filter-pill" data-filter="groups"
-              style="font-size: 9.5px; font-weight: 700; padding: 2px 6px; border-radius: 10px; border: none; background: transparent; color: var(--text-sub); cursor: pointer;">Groups</button>
-            <button class="tab-filter-pill" data-filter="single"
-              style="font-size: 9.5px; font-weight: 700; padding: 2px 6px; border-radius: 10px; border: none; background: transparent; color: var(--text-sub); cursor: pointer;">Single</button>
-          </div>
-
-          <div style="display: flex; align-items: center; gap: 4px;">
+          <!-- Center: Close All & Undo Action Buttons -->
+          <div style="display: flex; align-items: center; justify-content: center; gap: 4px; flex-shrink: 0;">
             <button id="close-all-tabs-btn" class="oneui-pill-btn secondary"
-              style="padding: 2px 7px; height: 24px; font-size: 10px; color: #ef4444; border-color: rgba(239,68,68,0.3); cursor: pointer;">Close All</button>
+              style="padding: 2px 7px; height: 24px; font-size: 10px; color: #ef4444; border-color: rgba(239,68,68,0.3); cursor: pointer; white-space: nowrap;">Close All</button>
             <button id="undo-closed-tab-btn" class="oneui-pill-btn secondary"
-              style="display: none; padding: 2px 7px; height: 24px; font-size: 10px; color: #38bdf8; border-color: rgba(56,189,248,0.35); background: rgba(56,189,248,0.08); cursor: pointer; align-items: center; gap: 3px;">
+              style="display: none; padding: 2px 7px; height: 24px; font-size: 10px; color: #38bdf8; border-color: rgba(56,189,248,0.35); background: rgba(56,189,248,0.08); cursor: pointer; align-items: center; gap: 3px; white-space: nowrap;">
               <span>↺</span>
             </button>
+          </div>
+
+          <!-- Right: Tab Filter Dropdown Menu -->
+          <div style="position: relative; flex-shrink: 0;">
+            <button id="tab-filter-dropdown-btn" class="oneui-pill-btn secondary"
+              style="padding: 2px 8px; height: 24px; font-size: 10px; font-weight: 700; color: var(--text-main); border-color: var(--border-glass); background: var(--input-bg); cursor: pointer; display: flex; align-items: center; gap: 4px; border-radius: 12px; white-space: nowrap;">
+              <span id="tab-filter-selected-label">All</span>
+              <svg width="8" height="8" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" style="opacity: 0.7;">
+                <polyline points="6 9 12 15 18 9"></polyline>
+              </svg>
+            </button>
+
+            <!-- Dropdown Menu List Overlay -->
+            <div id="tab-filter-dropdown-menu" class="export-menu-overlay"
+              style="top: 28px; right: 0; left: auto; min-width: 96px; padding: 4px; border-radius: 14px; box-shadow: 0 8px 24px rgba(0,0,0,0.45); z-index: 1000;">
+              <button class="tab-filter-opt-btn active" data-filter="all"
+                style="border: none; background: transparent; color: var(--text-main); padding: 6px 8px; border-radius: 9px; font-size: 10.5px; font-weight: 600; text-align: left; cursor: pointer; display: flex; align-items: center; justify-content: space-between;">
+                <span>All</span>
+                <span class="tab-filter-check" style="font-size: 10px; color: var(--accent);">✓</span>
+              </button>
+              <button class="tab-filter-opt-btn" data-filter="groups"
+                style="border: none; background: transparent; color: var(--text-main); padding: 6px 8px; border-radius: 9px; font-size: 10.5px; font-weight: 600; text-align: left; cursor: pointer; display: flex; align-items: center; justify-content: space-between;">
+                <span>Groups</span>
+                <span class="tab-filter-check" style="font-size: 10px; color: var(--accent); display: none;">✓</span>
+              </button>
+              <button class="tab-filter-opt-btn" data-filter="single"
+                style="border: none; background: transparent; color: var(--text-main); padding: 6px 8px; border-radius: 9px; font-size: 10.5px; font-weight: 600; text-align: left; cursor: pointer; display: flex; align-items: center; justify-content: space-between;">
+                <span>Single</span>
+                <span class="tab-filter-check" style="font-size: 10px; color: var(--accent); display: none;">✓</span>
+              </button>
+            </div>
           </div>
         </div>
         <!-- Inside Group Banner -->
