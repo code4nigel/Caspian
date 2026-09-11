@@ -885,7 +885,7 @@
         const ytMicBadge = '';
 
         const isDefaultCask = !tab.caskId || tab.caskId === 'cask_caspian' || (tab.caskName && (tab.caskName.toLowerCase().includes('caspian') || tab.caskName.toLowerCase().includes('default')));
-        const caskBadge = (!isDefaultCask && tab.caskIcon) ? `<span style="font-size: 9.5px; font-weight: 600; color: var(--text-muted); background: var(--input-bg, rgba(128,128,128,0.1)); border: none; padding: 2px 7px; border-radius: 6px; display: inline-flex; align-items: center; gap: 3px;" title="Container Vault: ${tab.caskName || 'Cask'}"><span>${tab.caskIcon}</span><span>${tab.caskName ? tab.caskName.split(' ')[0] : 'Cask'}</span></span>` : '';
+        const caskBadge = (!isDefaultCask && tab.caskIcon) ? `<span style="font-size: 11px; font-weight: 600; color: var(--text-muted); background: var(--input-bg, rgba(128,128,128,0.1)); border: none; padding: 2px 6px; border-radius: 6px; display: inline-flex; align-items: center;" title="Container Vault: ${tab.caskName || 'Cask'}">${tab.caskIcon}</span>` : '';
 
         const favStarBadge = tab.isFavorite ? '<span style="color: #eab308; font-size: 11px; margin-right: 2px;" title="Favorited Tab">⭐</span>' : '';
         const optionMenuBtn = `<button class="chrome-tab-menu-btn icon-btn" data-tabmenuid="${tab.id}" title="Tab Options" style="font-size: 14px; width: 22px; height: 22px; border: none; background: none; color: var(--text-sub); cursor: pointer; display: inline-flex; align-items: center; justify-content: center; margin-right: 2px;">⋮</button>`;

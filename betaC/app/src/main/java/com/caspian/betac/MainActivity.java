@@ -369,6 +369,7 @@ public class MainActivity extends AppCompatActivity {
     private ImageView tabGridSearchIcon;
     private EditText tabGridSearchInput;
     private TextView btnTabGridFavorite;
+    private TextView btnTabGridUndo;
     private View btnTabGridFilter;
     private TextView tabGridFilterLabel;
     private String currentTabGridFilter = "all"; // "all", "groups", "single"
@@ -1884,6 +1885,7 @@ public class MainActivity extends AppCompatActivity {
             tabGridSearchBox = findViewById(R.id.tab_grid_search_box);
             tabGridSearchIcon = findViewById(R.id.tab_grid_search_icon);
             tabGridSearchInput = findViewById(R.id.tab_grid_search_input);
+            btnTabGridUndo = findViewById(R.id.btn_tab_grid_undo);
             btnTabGridFavorite = findViewById(R.id.btn_tab_grid_favorite);
             btnTabGridFilter = findViewById(R.id.btn_tab_grid_filter);
             tabGridFilterLabel = findViewById(R.id.tab_grid_filter_label);
@@ -2191,13 +2193,27 @@ public class MainActivity extends AppCompatActivity {
             });
         }
 
-        // Center Yellow Circular '+' Button (Opens New Tab modal)
+        // Search Bar Top-Right Undo Button
+        if (btnTabGridUndo != null) {
+            btnTabGridUndo.setOnClickListener(v -> {
+                playUiFeedbackSound("tap");
+                int restored = restoreLastClosedBatch();
+                if (restored > 0) {
+                    updateTabGridSelectionUi();
+                    renderTabGridCards(tabGridSearchInput != null ? tabGridSearchInput.getText().toString() : "");
+                    updateTabGridFavoriteButton();
+                    updateOmniboxTabStrip();
+                    updateTabGridUndoButton();
+                    Toast.makeText(this, "Restored " + (restored == 1 ? "tab" : restored + " tabs"), Toast.LENGTH_SHORT).show();
+                }
+            });
+        }
+
+        // Center Yellow Circular '+' Button (Opens Caspian Hub / New Tab page and switches to it)
         tabGridFabAdd.setOnClickListener(v -> {
             playUiFeedbackSound("tap");
-            if (modalNewTabPlatform != null) {
-                modalNewTabPlatform.setVisibility(View.VISIBLE);
-                modalNewTabPlatform.bringToFront();
-            }
+            addNewTab("hub", "", "file:///android_asset/launch_hub.html", false);
+            hideTabGridView();
         });
 
         // Bottom Dock: "Group" Button
@@ -2429,6 +2445,14 @@ public class MainActivity extends AppCompatActivity {
         if (tabGridSearchIcon != null) {
             tabGridSearchIcon.setColorFilter(isLight ? 0xFF64748B : 0x88A2A9A9);
         }
+        if (btnTabGridUndo != null) {
+            GradientDrawable uGd = new GradientDrawable();
+            uGd.setColor(isLight ? 0xFFE0F2FE : 0x3300E5FF);
+            uGd.setCornerRadius(dpToPx(14));
+            uGd.setStroke(dpToPx(1), isLight ? 0xFF0284C7 : 0xFF00E5FF);
+            btnTabGridUndo.setBackground(uGd);
+            btnTabGridUndo.setTextColor(isLight ? 0xFF0284C7 : 0xFF00E5FF);
+        }
 
         // Inside Group Header Banner
         if (tabGridGroupBanner != null) {
@@ -2503,6 +2527,12 @@ public class MainActivity extends AppCompatActivity {
         btnTabGridFavorite.setText(isFav ? "★" : "☆");
         btnTabGridFavorite.setTextColor(isFav ? 0xFFFBBF24 : (isDarkTheme ? 0xFFA2A9A9 : 0xFF64748B));
         btnTabGridFavorite.setTextSize(TypedValue.COMPLEX_UNIT_SP, isFav ? 25 : 24);
+    }
+
+    public void updateTabGridUndoButton() {
+        if (btnTabGridUndo == null) return;
+        boolean hasUndo = hasClosedTabsToUndo();
+        btnTabGridUndo.setVisibility(hasUndo ? View.VISIBLE : View.GONE);
     }
 
     private void showTabGridFilterPopup(View anchor) {
@@ -2591,6 +2621,7 @@ public class MainActivity extends AppCompatActivity {
         applyTabGridTheme();
         updateTabGridSelectionUi();
         updateTabGridFavoriteButton();
+        updateTabGridUndoButton();
         renderTabGridCards("");
 
         // iOS Smooth Zoom & Scale Entrance Animation
@@ -4175,6 +4206,8 @@ public class MainActivity extends AppCompatActivity {
             }
             saveOpenTabsState();
             updateOmniboxTabStrip();
+            updateTabGridFavoriteButton();
+            updateControlSheetTabs();
             renderTabGridCards(tabGridSearchInput != null ? tabGridSearchInput.getText().toString() : "");
             playAssetSound("sfx/pop_click.mp3");
             Toast.makeText(this, "Tab Updated", Toast.LENGTH_SHORT).show();
@@ -4255,12 +4288,17 @@ public class MainActivity extends AppCompatActivity {
         LinearLayout.LayoutParams titleLp = new LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.WRAP_CONTENT, 1f);
         titleLp.setMarginStart(dpToPx(8));
         titleView.setLayoutParams(titleLp);
-        String titleText = (tab.nickname != null && !tab.nickname.isEmpty()) ? tab.nickname : title;
+        boolean hasNickname = (tab.nickname != null && !tab.nickname.trim().isEmpty());
+        String titleText = hasNickname ? tab.nickname.trim() : title;
         if (tab.isFavorite) {
             titleText = "⭐ " + titleText;
         }
         titleView.setText(titleText);
-        titleView.setTextColor(isLight ? 0xFF0F172A : 0xFFDFE2F0);
+        if (hasNickname) {
+            titleView.setTextColor(isLight ? 0xFF059669 : 0xFF10B981); // Emerald green for custom nicknames
+        } else {
+            titleView.setTextColor(isLight ? 0xFF0F172A : 0xFFDFE2F0);
+        }
         titleView.setTextSize(TypedValue.COMPLEX_UNIT_SP, 12);
         titleView.setTypeface(null, android.graphics.Typeface.BOLD);
         titleView.setSingleLine(true);
@@ -4284,6 +4322,8 @@ public class MainActivity extends AppCompatActivity {
             closeTab(tab.id);
             selectedGridTabIds.remove(tab.id);
             updateTabGridSelectionUi();
+            updateTabGridFavoriteButton();
+            updateTabGridUndoButton();
             renderTabGridCards(tabGridSearchInput != null ? tabGridSearchInput.getText().toString() : "");
         });
         closeCircle.addView(closeBtn);
@@ -4338,13 +4378,45 @@ public class MainActivity extends AppCompatActivity {
             body.addView(placeholder);
         }
 
-        // Caspian Cask Indicator at Bottom-Right (Only icon/emoji, hidden if default cask)
+        // Bottom Row Container for Domain Badge & Cask Indicator (Guarantees zero overlap/collision)
+        LinearLayout bottomRow = new LinearLayout(this);
+        bottomRow.setOrientation(LinearLayout.HORIZONTAL);
+        bottomRow.setGravity(Gravity.BOTTOM | Gravity.CENTER_VERTICAL);
+        FrameLayout.LayoutParams bottomRowLp = new FrameLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT);
+        bottomRowLp.gravity = Gravity.BOTTOM;
+        bottomRowLp.setMargins(dpToPx(6), 0, dpToPx(6), dpToPx(6));
+        bottomRow.setLayoutParams(bottomRowLp);
+
+        // Domain pill badge on left (Max 2 lines, ellipsize with ...)
+        String displayDomain = cleanDisplayUrl(url);
         boolean isDefaultCask = (tab.caskId == null || CaskManager.DEFAULT_CASK_ID.equals(tab.caskId));
+        if (!displayDomain.isEmpty()) {
+            TextView domainBadge = new TextView(this);
+            LinearLayout.LayoutParams badgeLp = new LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.WRAP_CONTENT, 1f);
+            badgeLp.setMarginEnd(dpToPx(isDefaultCask ? 0 : 6));
+            domainBadge.setLayoutParams(badgeLp);
+            domainBadge.setText(displayDomain);
+            domainBadge.setTextColor(isLight ? 0xFF0284C7 : 0xFF00E5FF);
+            domainBadge.setTextSize(TypedValue.COMPLEX_UNIT_SP, 9);
+            domainBadge.setTypeface(null, android.graphics.Typeface.BOLD);
+            domainBadge.setMaxLines(2);
+            domainBadge.setEllipsize(android.text.TextUtils.TruncateAt.END);
+            domainBadge.setPadding(dpToPx(6), dpToPx(2), dpToPx(6), dpToPx(2));
+            GradientDrawable badgeGd = new GradientDrawable();
+            badgeGd.setColor(isLight ? 0xE6F1F5F9 : 0xCC0F131D);
+            badgeGd.setCornerRadius(dpToPx(6));
+            domainBadge.setBackground(badgeGd);
+            bottomRow.addView(domainBadge);
+        } else if (!isDefaultCask) {
+            View spacer = new View(this);
+            spacer.setLayoutParams(new LinearLayout.LayoutParams(0, 0, 1f));
+            bottomRow.addView(spacer);
+        }
+
+        // Caspian Cask Indicator on right (Only icon/emoji, hidden if default cask)
         if (!isDefaultCask) {
             TextView caskBadge = new TextView(this);
-            FrameLayout.LayoutParams caskLp = new FrameLayout.LayoutParams(ViewGroup.LayoutParams.WRAP_CONTENT, ViewGroup.LayoutParams.WRAP_CONTENT);
-            caskLp.gravity = Gravity.BOTTOM | Gravity.END;
-            caskLp.setMargins(0, 0, dpToPx(6), dpToPx(6));
+            LinearLayout.LayoutParams caskLp = new LinearLayout.LayoutParams(ViewGroup.LayoutParams.WRAP_CONTENT, ViewGroup.LayoutParams.WRAP_CONTENT);
             caskBadge.setLayoutParams(caskLp);
             String icon = (tab.caskIcon != null && !tab.caskIcon.trim().isEmpty()) ? tab.caskIcon.trim() : "📦";
             caskBadge.setText(icon);
@@ -4360,32 +4432,10 @@ public class MainActivity extends AppCompatActivity {
                 } catch (Exception ignored) {}
             }
             caskBadge.setBackground(caskGd);
-            body.addView(caskBadge);
+            bottomRow.addView(caskBadge);
         }
 
-        // Domain pill badge pinned at bottom-left (Max 2 lines, ellipsize with ...)
-        String displayDomain = cleanDisplayUrl(url);
-        if (!displayDomain.isEmpty()) {
-            TextView domainBadge = new TextView(this);
-            FrameLayout.LayoutParams badgeLp = new FrameLayout.LayoutParams(ViewGroup.LayoutParams.WRAP_CONTENT, ViewGroup.LayoutParams.WRAP_CONTENT);
-            badgeLp.gravity = Gravity.BOTTOM | Gravity.START;
-            badgeLp.setMargins(dpToPx(6), 0, 0, dpToPx(6));
-            domainBadge.setLayoutParams(badgeLp);
-            domainBadge.setText(displayDomain);
-            domainBadge.setTextColor(isLight ? 0xFF0284C7 : 0xFF00E5FF);
-            domainBadge.setTextSize(TypedValue.COMPLEX_UNIT_SP, 9);
-            domainBadge.setTypeface(null, android.graphics.Typeface.BOLD);
-            domainBadge.setMaxLines(2);
-            domainBadge.setEllipsize(android.text.TextUtils.TruncateAt.END);
-            int maxDomainWidth = cardWidth - dpToPx(!isDefaultCask ? 46 : 18);
-            domainBadge.setMaxWidth(Math.max(dpToPx(60), maxDomainWidth));
-            domainBadge.setPadding(dpToPx(6), dpToPx(2), dpToPx(6), dpToPx(2));
-            GradientDrawable badgeGd = new GradientDrawable();
-            badgeGd.setColor(isLight ? 0xE6F1F5F9 : 0xCC0F131D);
-            badgeGd.setCornerRadius(dpToPx(6));
-            domainBadge.setBackground(badgeGd);
-            body.addView(domainBadge);
-        }
+        body.addView(bottomRow);
 
         card.addView(body);
 
@@ -4493,6 +4543,8 @@ public class MainActivity extends AppCompatActivity {
                                     closeTab(tab.id);
                                     selectedGridTabIds.remove(tab.id);
                                     updateTabGridSelectionUi();
+                                    updateTabGridFavoriteButton();
+                                    updateTabGridUndoButton();
                                     renderTabGridCards(tabGridSearchInput != null ? tabGridSearchInput.getText().toString() : "");
                                 })
                                 .start();
@@ -17616,6 +17668,7 @@ public class MainActivity extends AppCompatActivity {
 
     public void notifyUndoStateChanged() {
         evaluateJavascriptInControlSheet("if(typeof updateUndoButtonState === 'function') updateUndoButtonState(" + hasClosedTabsToUndo() + ");");
+        runOnUiThread(this::updateTabGridUndoButton);
     }
 
     public void closeTab(int tabId) {
