@@ -3844,6 +3844,355 @@ public class MainActivity extends AppCompatActivity {
         return card;
     }
 
+    private void showTabSwitcherTabOptionsDialog(final TabItem tab) {
+        if (tab == null) return;
+        android.app.Dialog dialog = new android.app.Dialog(this);
+        dialog.requestWindowFeature(android.view.Window.FEATURE_NO_TITLE);
+
+        boolean isLight = !isDarkTheme;
+
+        ScrollView rootScroll = new ScrollView(this);
+        rootScroll.setOverScrollMode(View.OVER_SCROLL_NEVER);
+        rootScroll.setVerticalScrollBarEnabled(false);
+
+        LinearLayout card = new LinearLayout(this);
+        card.setOrientation(LinearLayout.VERTICAL);
+        card.setPadding(dpToPx(20), dpToPx(18), dpToPx(20), dpToPx(20));
+        GradientDrawable cardBg = new GradientDrawable();
+        cardBg.setColor(isLight ? 0xFFFFFFFF : 0xFF161E31);
+        cardBg.setCornerRadius(dpToPx(24));
+        cardBg.setStroke(dpToPx(1.2f), isLight ? 0xFFCBD5E1 : 0x2AFFFFFF);
+        card.setBackground(cardBg);
+        rootScroll.addView(card);
+
+        // Header Row: Favicon + Title + Close Cross Button
+        LinearLayout headerRow = new LinearLayout(this);
+        headerRow.setOrientation(LinearLayout.HORIZONTAL);
+        headerRow.setGravity(Gravity.CENTER_VERTICAL);
+
+        FrameLayout iconChip = new FrameLayout(this);
+        iconChip.setLayoutParams(new LinearLayout.LayoutParams(dpToPx(28), dpToPx(28)));
+        GradientDrawable iconChipGd = new GradientDrawable();
+        iconChipGd.setColor(isLight ? 0xFFF1F5F9 : 0xFF1C1F29);
+        iconChipGd.setCornerRadius(dpToPx(8));
+        iconChip.setBackground(iconChipGd);
+
+        Bitmap favBmp = getTabFaviconBitmap(tab);
+        if (favBmp != null && !favBmp.isRecycled()) {
+            ImageView favImg = new ImageView(this);
+            FrameLayout.LayoutParams favLp = new FrameLayout.LayoutParams(dpToPx(18), dpToPx(18), Gravity.CENTER);
+            favImg.setLayoutParams(favLp);
+            favImg.setScaleType(ImageView.ScaleType.FIT_CENTER);
+            favImg.setImageBitmap(favBmp);
+            iconChip.addView(favImg);
+        } else {
+            TextView iconView = new TextView(this);
+            iconView.setLayoutParams(new FrameLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.MATCH_PARENT));
+            iconView.setGravity(Gravity.CENTER);
+            String u = tab.url != null ? tab.url : "";
+            iconView.setText(tab.isIncognito ? "🕶️" : (u.contains("youtube.com") ? "🎬" : (u.contains("chatgpt.com") ? "🤖" : (u.contains("gemini.google.com") ? "♊" : "🌐"))));
+            iconView.setTextSize(13);
+            iconChip.addView(iconView);
+        }
+        headerRow.addView(iconChip);
+
+        TextView titleTv = new TextView(this);
+        titleTv.setText("Tab Options");
+        titleTv.setTextSize(TypedValue.COMPLEX_UNIT_SP, 16);
+        titleTv.setTypeface(null, android.graphics.Typeface.BOLD);
+        titleTv.setTextColor(isLight ? 0xFF0F172A : 0xFFFFFFFF);
+        LinearLayout.LayoutParams titleLp = new LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.WRAP_CONTENT, 1f);
+        titleLp.setMarginStart(dpToPx(10));
+        titleTv.setLayoutParams(titleLp);
+        headerRow.addView(titleTv);
+
+        TextView closeBtn = new TextView(this);
+        closeBtn.setText("✕");
+        closeBtn.setTextSize(TypedValue.COMPLEX_UNIT_SP, 14);
+        closeBtn.setGravity(Gravity.CENTER);
+        closeBtn.setTextColor(isLight ? 0xFF64748B : 0xFF94A3B8);
+        closeBtn.setLayoutParams(new LinearLayout.LayoutParams(dpToPx(30), dpToPx(30)));
+        closeBtn.setOnClickListener(v -> dialog.dismiss());
+        headerRow.addView(closeBtn);
+
+        card.addView(headerRow);
+
+        // 1. FULL ACTUAL URL SECTION
+        TextView urlLbl = new TextView(this);
+        urlLbl.setText("ACTUAL FULL URL");
+        urlLbl.setTextSize(TypedValue.COMPLEX_UNIT_SP, 10.5f);
+        urlLbl.setTypeface(null, android.graphics.Typeface.BOLD);
+        urlLbl.setTextColor(isLight ? 0xFF64748B : 0xFF94A3B8);
+        urlLbl.setPadding(0, dpToPx(14), 0, dpToPx(6));
+        card.addView(urlLbl);
+
+        LinearLayout urlBox = new LinearLayout(this);
+        urlBox.setOrientation(LinearLayout.HORIZONTAL);
+        urlBox.setGravity(Gravity.CENTER_VERTICAL);
+        GradientDrawable urlBoxGd = new GradientDrawable();
+        urlBoxGd.setColor(isLight ? 0xFFF1F5F9 : 0xFF0E1424);
+        urlBoxGd.setCornerRadius(dpToPx(12));
+        urlBoxGd.setStroke(dpToPx(1), isLight ? 0xFFCBD5E1 : 0x2AFFFFFF);
+        urlBox.setBackground(urlBoxGd);
+        urlBox.setPadding(dpToPx(12), dpToPx(10), dpToPx(10), dpToPx(10));
+
+        TextView urlContentTv = new TextView(this);
+        String fullUrl = tab.url != null ? tab.url : "";
+        urlContentTv.setText(fullUrl);
+        urlContentTv.setTextSize(TypedValue.COMPLEX_UNIT_SP, 11.5f);
+        urlContentTv.setTextColor(isLight ? 0xFF0284C7 : 0xFF00E5FF);
+        urlContentTv.setTextIsSelectable(true);
+        urlContentTv.setMaxLines(3);
+        urlContentTv.setEllipsize(TextUtils.TruncateAt.END);
+        LinearLayout.LayoutParams urlContentLp = new LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.WRAP_CONTENT, 1f);
+        urlContentTv.setLayoutParams(urlContentLp);
+        urlBox.addView(urlContentTv);
+
+        ImageButton copyUrlBtn = new ImageButton(this);
+        copyUrlBtn.setLayoutParams(new LinearLayout.LayoutParams(dpToPx(32), dpToPx(32)));
+        copyUrlBtn.setBackgroundResource(android.R.color.transparent);
+        copyUrlBtn.setImageResource(R.drawable.ic_omnibox_copy);
+        copyUrlBtn.setColorFilter(isLight ? 0xFF0284C7 : 0xFF00E5FF);
+        copyUrlBtn.setPadding(dpToPx(5), dpToPx(5), dpToPx(5), dpToPx(5));
+        copyUrlBtn.setOnClickListener(v -> {
+            ClipboardManager clipboard = (ClipboardManager) getSystemService(Context.CLIPBOARD_SERVICE);
+            ClipData clip = ClipData.newPlainText("tab_url", fullUrl);
+            if (clipboard != null) {
+                clipboard.setPrimaryClip(clip);
+                playUiFeedbackSound("tap");
+                Toast.makeText(this, "URL copied to clipboard", Toast.LENGTH_SHORT).show();
+            }
+        });
+        urlBox.addView(copyUrlBtn);
+
+        card.addView(urlBox);
+
+        // 2. TAB NICKNAME SECTION
+        TextView nickLbl = new TextView(this);
+        nickLbl.setText("TAB NICKNAME");
+        nickLbl.setTextSize(TypedValue.COMPLEX_UNIT_SP, 10.5f);
+        nickLbl.setTypeface(null, android.graphics.Typeface.BOLD);
+        nickLbl.setTextColor(isLight ? 0xFF64748B : 0xFF94A3B8);
+        nickLbl.setPadding(0, dpToPx(14), 0, dpToPx(6));
+        card.addView(nickLbl);
+
+        EditText nicknameInput = new EditText(this);
+        nicknameInput.setText(tab.nickname != null ? tab.nickname : "");
+        nicknameInput.setHint("Set custom nickname (optional)...");
+        nicknameInput.setTextSize(TypedValue.COMPLEX_UNIT_SP, 13.5f);
+        nicknameInput.setTextColor(isLight ? 0xFF0F172A : 0xFFFFFFFF);
+        nicknameInput.setHintTextColor(isLight ? 0xFF94A3B8 : 0x88A2A9A9);
+        GradientDrawable nickGd = new GradientDrawable();
+        nickGd.setColor(isLight ? 0xFFF1F5F9 : 0xFF0E1424);
+        nickGd.setCornerRadius(dpToPx(12));
+        nickGd.setStroke(dpToPx(1), isLight ? 0xFFCBD5E1 : 0x2AFFFFFF);
+        nicknameInput.setBackground(nickGd);
+        nicknameInput.setPadding(dpToPx(14), dpToPx(11), dpToPx(14), dpToPx(11));
+        card.addView(nicknameInput);
+
+        // 3. FAVORITE TOGGLE SECTION
+        TextView favLbl = new TextView(this);
+        favLbl.setText("FAVORITE STATUS");
+        favLbl.setTextSize(TypedValue.COMPLEX_UNIT_SP, 10.5f);
+        favLbl.setTypeface(null, android.graphics.Typeface.BOLD);
+        favLbl.setTextColor(isLight ? 0xFF64748B : 0xFF94A3B8);
+        favLbl.setPadding(0, dpToPx(14), 0, dpToPx(6));
+        card.addView(favLbl);
+
+        final boolean[] isFav = {tab.isFavorite};
+        LinearLayout favToggleBtn = new LinearLayout(this);
+        favToggleBtn.setOrientation(LinearLayout.HORIZONTAL);
+        favToggleBtn.setGravity(Gravity.CENTER_VERTICAL);
+        favToggleBtn.setPadding(dpToPx(14), dpToPx(10), dpToPx(14), dpToPx(10));
+        favToggleBtn.setLayoutParams(new LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT));
+
+        TextView favStar = new TextView(this);
+        favStar.setTextSize(TypedValue.COMPLEX_UNIT_SP, 15);
+        favStar.setPadding(0, 0, dpToPx(8), 0);
+
+        TextView favText = new TextView(this);
+        favText.setTextSize(TypedValue.COMPLEX_UNIT_SP, 13);
+        favText.setTypeface(null, android.graphics.Typeface.BOLD);
+
+        favToggleBtn.addView(favStar);
+        favToggleBtn.addView(favText);
+
+        Runnable updateFavUi = () -> {
+            GradientDrawable favGd = new GradientDrawable();
+            favGd.setCornerRadius(dpToPx(12));
+            if (isFav[0]) {
+                favGd.setColor(isLight ? 0xFFFEF3C7 : 0x28FBBF24);
+                favGd.setStroke(dpToPx(1.5f), 0xFFF59E0B);
+                favStar.setText("⭐");
+                favText.setText("Favorited Tab");
+                favText.setTextColor(isLight ? 0xFFB45309 : 0xFFFBBF24);
+            } else {
+                favGd.setColor(isLight ? 0xFFF1F5F9 : 0xFF0E1424);
+                favGd.setStroke(dpToPx(1), isLight ? 0xFFCBD5E1 : 0x2AFFFFFF);
+                favStar.setText("☆");
+                favText.setText("Add to Favorites");
+                favText.setTextColor(isLight ? 0xFF64748B : 0xFF94A3B8);
+            }
+            favToggleBtn.setBackground(favGd);
+        };
+        updateFavUi.run();
+
+        favToggleBtn.setOnClickListener(v -> {
+            isFav[0] = !isFav[0];
+            updateFavUi.run();
+            playUiFeedbackSound("tap");
+        });
+        card.addView(favToggleBtn);
+
+        // 4. CASPIAN CASK CONTAINER SECTION
+        TextView caskLbl = new TextView(this);
+        caskLbl.setText("CASPIAN CASK CONTAINER");
+        caskLbl.setTextSize(TypedValue.COMPLEX_UNIT_SP, 10.5f);
+        caskLbl.setTypeface(null, android.graphics.Typeface.BOLD);
+        caskLbl.setTextColor(isLight ? 0xFF64748B : 0xFF94A3B8);
+        caskLbl.setPadding(0, dpToPx(14), 0, dpToPx(6));
+        card.addView(caskLbl);
+
+        CaskManager cm = new CaskManager(this);
+        List<CaskManager.CaskItem> casks = cm.getAllCasks();
+        final String[] selectedCaskId = {tab.caskId != null ? tab.caskId : CaskManager.DEFAULT_CASK_ID};
+
+        HorizontalScrollView caskScroll = new HorizontalScrollView(this);
+        caskScroll.setOverScrollMode(View.OVER_SCROLL_NEVER);
+        caskScroll.setHorizontalScrollBarEnabled(false);
+        LinearLayout caskRow = new LinearLayout(this);
+        caskRow.setOrientation(LinearLayout.HORIZONTAL);
+        caskScroll.addView(caskRow);
+
+        List<LinearLayout> caskViews = new ArrayList<>();
+        List<String> caskIds = new ArrayList<>();
+
+        for (CaskManager.CaskItem cask : casks) {
+            LinearLayout cChip = new LinearLayout(this);
+            cChip.setOrientation(LinearLayout.HORIZONTAL);
+            cChip.setGravity(Gravity.CENTER_VERTICAL);
+            cChip.setPadding(dpToPx(12), dpToPx(8), dpToPx(12), dpToPx(8));
+            LinearLayout.LayoutParams lp = new LinearLayout.LayoutParams(ViewGroup.LayoutParams.WRAP_CONTENT, ViewGroup.LayoutParams.WRAP_CONTENT);
+            lp.setMargins(0, 0, dpToPx(8), 0);
+            cChip.setLayoutParams(lp);
+
+            TextView cIcon = new TextView(this);
+            cIcon.setText(cask.icon != null ? cask.icon : "📦");
+            cIcon.setTextSize(TypedValue.COMPLEX_UNIT_SP, 13);
+            cChip.addView(cIcon);
+
+            TextView cName = new TextView(this);
+            cName.setText(cask.name != null ? cask.name : "Cask");
+            cName.setTextSize(TypedValue.COMPLEX_UNIT_SP, 12);
+            cName.setTypeface(null, android.graphics.Typeface.BOLD);
+            cName.setPadding(dpToPx(6), 0, 0, 0);
+            cName.setTextColor(isLight ? 0xFF0F172A : 0xFFFFFFFF);
+            cChip.addView(cName);
+
+            caskViews.add(cChip);
+            caskIds.add(cask.id);
+
+            cChip.setOnClickListener(v -> {
+                selectedCaskId[0] = cask.id;
+                playUiFeedbackSound("tap");
+                for (int i = 0; i < caskViews.size(); i++) {
+                    LinearLayout chip = caskViews.get(i);
+                    String cid = caskIds.get(i);
+                    boolean isSel = cid.equals(selectedCaskId[0]);
+                    GradientDrawable gd = new GradientDrawable();
+                    gd.setCornerRadius(dpToPx(12));
+                    if (isSel) {
+                        gd.setColor(isLight ? 0x220284C7 : 0x3300E5FF);
+                        gd.setStroke(dpToPx(2), isLight ? 0xFF0284C7 : 0xFF00E5FF);
+                    } else {
+                        gd.setColor(isLight ? 0xFFF1F5F9 : 0xFF0E1424);
+                        gd.setStroke(dpToPx(1), isLight ? 0xFFCBD5E1 : 0x2AFFFFFF);
+                    }
+                    chip.setBackground(gd);
+                }
+            });
+            caskRow.addView(cChip);
+        }
+
+        // Apply initial cask selection styles
+        for (int i = 0; i < caskViews.size(); i++) {
+            LinearLayout chip = caskViews.get(i);
+            String cid = caskIds.get(i);
+            boolean isSel = cid.equals(selectedCaskId[0]);
+            GradientDrawable gd = new GradientDrawable();
+            gd.setCornerRadius(dpToPx(12));
+            if (isSel) {
+                gd.setColor(isLight ? 0x220284C7 : 0x3300E5FF);
+                gd.setStroke(dpToPx(2), isLight ? 0xFF0284C7 : 0xFF00E5FF);
+            } else {
+                gd.setColor(isLight ? 0xFFF1F5F9 : 0xFF0E1424);
+                gd.setStroke(dpToPx(1), isLight ? 0xFFCBD5E1 : 0x2AFFFFFF);
+            }
+            chip.setBackground(gd);
+        }
+        card.addView(caskScroll);
+
+        // 5. ACTION BUTTONS ROW
+        LinearLayout btnRow = new LinearLayout(this);
+        btnRow.setOrientation(LinearLayout.HORIZONTAL);
+        btnRow.setGravity(Gravity.END | Gravity.CENTER_VERTICAL);
+        LinearLayout.LayoutParams btnRowLp = new LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT);
+        btnRowLp.topMargin = dpToPx(22);
+        btnRow.setLayoutParams(btnRowLp);
+
+        Button cancelBtn = new Button(this);
+        cancelBtn.setText("Cancel");
+        cancelBtn.setTextSize(TypedValue.COMPLEX_UNIT_SP, 12);
+        cancelBtn.setTextColor(isLight ? 0xFF334155 : 0xFFDFE2F0);
+        cancelBtn.setTypeface(null, android.graphics.Typeface.BOLD);
+        GradientDrawable cBg = new GradientDrawable();
+        cBg.setColor(isLight ? 0xFFE2E8F0 : 0xFF1E2638);
+        cBg.setCornerRadius(dpToPx(18));
+        cancelBtn.setBackground(cBg);
+        cancelBtn.setPadding(dpToPx(16), 0, dpToPx(16), 0);
+        LinearLayout.LayoutParams cLp = new LinearLayout.LayoutParams(ViewGroup.LayoutParams.WRAP_CONTENT, dpToPx(38));
+        cLp.setMarginEnd(dpToPx(8));
+        cancelBtn.setLayoutParams(cLp);
+        cancelBtn.setOnClickListener(v -> dialog.dismiss());
+        btnRow.addView(cancelBtn);
+
+        Button saveBtn = new Button(this);
+        saveBtn.setText("Save Changes");
+        saveBtn.setTextSize(TypedValue.COMPLEX_UNIT_SP, 12);
+        saveBtn.setTextColor(Color.WHITE);
+        saveBtn.setTypeface(null, android.graphics.Typeface.BOLD);
+        GradientDrawable sBg = new GradientDrawable(GradientDrawable.Orientation.LEFT_RIGHT, new int[]{0xFF00E5FF, 0xFF0284C7});
+        sBg.setCornerRadius(dpToPx(18));
+        saveBtn.setBackground(sBg);
+        saveBtn.setPadding(dpToPx(20), 0, dpToPx(20), 0);
+        saveBtn.setLayoutParams(new LinearLayout.LayoutParams(ViewGroup.LayoutParams.WRAP_CONTENT, dpToPx(38)));
+        saveBtn.setOnClickListener(v -> {
+            String newNick = nicknameInput.getText().toString().trim();
+            tab.nickname = newNick.isEmpty() ? null : newNick;
+            tab.isFavorite = isFav[0];
+            if (!selectedCaskId[0].equals(tab.caskId)) {
+                changeTabCask(tab.id, selectedCaskId[0]);
+            }
+            saveOpenTabsState();
+            updateOmniboxTabStrip();
+            renderTabGridCards(tabGridSearchInput != null ? tabGridSearchInput.getText().toString() : "");
+            playAssetSound("sfx/pop_click.mp3");
+            Toast.makeText(this, "Tab Updated", Toast.LENGTH_SHORT).show();
+            dialog.dismiss();
+        });
+        btnRow.addView(saveBtn);
+
+        card.addView(btnRow);
+
+        dialog.setContentView(rootScroll);
+        if (dialog.getWindow() != null) {
+            dialog.getWindow().setBackgroundDrawable(new ColorDrawable(Color.TRANSPARENT));
+            int dialogW = (int) (getResources().getDisplayMetrics().widthPixels * 0.90f);
+            dialog.getWindow().setLayout(Math.min(dialogW, dpToPx(380)), ViewGroup.LayoutParams.WRAP_CONTENT);
+        }
+        dialog.show();
+    }
+
     private View createSingleTabCard(TabItem tab, int cardWidth, String filterQuery) {
         String title = tab.title != null ? tab.title : "New Tab";
         String url = tab.url != null ? tab.url : "";
@@ -3906,7 +4255,11 @@ public class MainActivity extends AppCompatActivity {
         LinearLayout.LayoutParams titleLp = new LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.WRAP_CONTENT, 1f);
         titleLp.setMarginStart(dpToPx(8));
         titleView.setLayoutParams(titleLp);
-        titleView.setText(tab.nickname != null && !tab.nickname.isEmpty() ? tab.nickname : title);
+        String titleText = (tab.nickname != null && !tab.nickname.isEmpty()) ? tab.nickname : title;
+        if (tab.isFavorite) {
+            titleText = "⭐ " + titleText;
+        }
+        titleView.setText(titleText);
         titleView.setTextColor(isLight ? 0xFF0F172A : 0xFFDFE2F0);
         titleView.setTextSize(TypedValue.COMPLEX_UNIT_SP, 12);
         titleView.setTypeface(null, android.graphics.Typeface.BOLD);
@@ -3985,7 +4338,32 @@ public class MainActivity extends AppCompatActivity {
             body.addView(placeholder);
         }
 
-        // Domain pill badge pinned at bottom-left
+        // Caspian Cask Indicator at Bottom-Right (Only icon/emoji, hidden if default cask)
+        boolean isDefaultCask = (tab.caskId == null || CaskManager.DEFAULT_CASK_ID.equals(tab.caskId));
+        if (!isDefaultCask) {
+            TextView caskBadge = new TextView(this);
+            FrameLayout.LayoutParams caskLp = new FrameLayout.LayoutParams(ViewGroup.LayoutParams.WRAP_CONTENT, ViewGroup.LayoutParams.WRAP_CONTENT);
+            caskLp.gravity = Gravity.BOTTOM | Gravity.END;
+            caskLp.setMargins(0, 0, dpToPx(6), dpToPx(6));
+            caskBadge.setLayoutParams(caskLp);
+            String icon = (tab.caskIcon != null && !tab.caskIcon.trim().isEmpty()) ? tab.caskIcon.trim() : "📦";
+            caskBadge.setText(icon);
+            caskBadge.setTextSize(TypedValue.COMPLEX_UNIT_SP, 10);
+            caskBadge.setGravity(Gravity.CENTER);
+            caskBadge.setPadding(dpToPx(5), dpToPx(2), dpToPx(5), dpToPx(2));
+            GradientDrawable caskGd = new GradientDrawable();
+            caskGd.setColor(isLight ? 0xE6F1F5F9 : 0xCC0F131D);
+            caskGd.setCornerRadius(dpToPx(6));
+            if (tab.caskColor != null && !tab.caskColor.isEmpty()) {
+                try {
+                    caskGd.setStroke(dpToPx(1), Color.parseColor(tab.caskColor));
+                } catch (Exception ignored) {}
+            }
+            caskBadge.setBackground(caskGd);
+            body.addView(caskBadge);
+        }
+
+        // Domain pill badge pinned at bottom-left (Max 2 lines, ellipsize with ...)
         String displayDomain = cleanDisplayUrl(url);
         if (!displayDomain.isEmpty()) {
             TextView domainBadge = new TextView(this);
@@ -3997,6 +4375,10 @@ public class MainActivity extends AppCompatActivity {
             domainBadge.setTextColor(isLight ? 0xFF0284C7 : 0xFF00E5FF);
             domainBadge.setTextSize(TypedValue.COMPLEX_UNIT_SP, 9);
             domainBadge.setTypeface(null, android.graphics.Typeface.BOLD);
+            domainBadge.setMaxLines(2);
+            domainBadge.setEllipsize(android.text.TextUtils.TruncateAt.END);
+            int maxDomainWidth = cardWidth - dpToPx(!isDefaultCask ? 46 : 18);
+            domainBadge.setMaxWidth(Math.max(dpToPx(60), maxDomainWidth));
             domainBadge.setPadding(dpToPx(6), dpToPx(2), dpToPx(6), dpToPx(2));
             GradientDrawable badgeGd = new GradientDrawable();
             badgeGd.setColor(isLight ? 0xE6F1F5F9 : 0xCC0F131D);
@@ -4024,6 +4406,126 @@ public class MainActivity extends AppCompatActivity {
                 switchToTab(tab.id);
                 hideTabGridView();
             }
+        });
+
+        // Swipe Gestures: Swipe Left = Close Tab, Swipe Right = Tab Options Menu
+        int touchSlop = dpToPx(10);
+        final float[] downX = new float[1];
+        final float[] downY = new float[1];
+        final long[] downTime = new long[1];
+        final boolean[] isSwiping = new boolean[1];
+        final boolean[] isDecided = new boolean[1];
+        final boolean[] hasLongPressed = new boolean[1];
+        final Handler gestureHandler = new Handler(Looper.getMainLooper());
+        final Runnable longPressRunnable = () -> {
+            if (!isDecided[0] || !isSwiping[0]) {
+                hasLongPressed[0] = true;
+                card.performLongClick();
+            }
+        };
+
+        card.setOnTouchListener((v, event) -> {
+            switch (event.getActionMasked()) {
+                case MotionEvent.ACTION_DOWN:
+                    downX[0] = event.getRawX();
+                    downY[0] = event.getRawY();
+                    downTime[0] = System.currentTimeMillis();
+                    isSwiping[0] = false;
+                    isDecided[0] = false;
+                    hasLongPressed[0] = false;
+                    gestureHandler.postDelayed(longPressRunnable, 450);
+                    return true;
+
+                case MotionEvent.ACTION_MOVE:
+                    if (hasLongPressed[0]) {
+                        return false;
+                    }
+                    float dx = event.getRawX() - downX[0];
+                    float dy = event.getRawY() - downY[0];
+                    if (!isDecided[0]) {
+                        if (Math.abs(dy) > touchSlop && Math.abs(dy) > Math.abs(dx)) {
+                            isDecided[0] = true;
+                            isSwiping[0] = false;
+                            gestureHandler.removeCallbacks(longPressRunnable);
+                            if (card.getParent() != null) {
+                                card.getParent().requestDisallowInterceptTouchEvent(false);
+                            }
+                            return false;
+                        } else if (Math.abs(dx) > touchSlop && Math.abs(dx) > Math.abs(dy) * 1.15f) {
+                            isDecided[0] = true;
+                            isSwiping[0] = true;
+                            gestureHandler.removeCallbacks(longPressRunnable);
+                            if (card.getParent() != null) {
+                                card.getParent().requestDisallowInterceptTouchEvent(true);
+                            }
+                        }
+                    }
+                    if (isSwiping[0]) {
+                        card.setTranslationX(dx);
+                        if (dx < 0) {
+                            card.setAlpha(Math.max(0.25f, 1f - (Math.abs(dx) / (cardWidth * 1.3f))));
+                        } else {
+                            card.setAlpha(Math.max(0.6f, 1f - (dx / (cardWidth * 2.2f))));
+                        }
+                        return true;
+                    }
+                    return false;
+
+                case MotionEvent.ACTION_UP:
+                    gestureHandler.removeCallbacks(longPressRunnable);
+                    if (card.getParent() != null) {
+                        card.getParent().requestDisallowInterceptTouchEvent(false);
+                    }
+                    if (hasLongPressed[0]) {
+                        return true;
+                    }
+                    if (isSwiping[0]) {
+                        float totalDx = event.getRawX() - downX[0];
+                        float threshold = cardWidth * 0.30f;
+                        if (totalDx < -threshold) {
+                            // Swipe Left -> Close Tab
+                            playUiFeedbackSound("tap");
+                            card.animate()
+                                .translationX(-cardWidth * 1.3f)
+                                .alpha(0f)
+                                .setDuration(160)
+                                .withEndAction(() -> {
+                                    closeTab(tab.id);
+                                    selectedGridTabIds.remove(tab.id);
+                                    updateTabGridSelectionUi();
+                                    renderTabGridCards(tabGridSearchInput != null ? tabGridSearchInput.getText().toString() : "");
+                                })
+                                .start();
+                        } else if (totalDx > threshold) {
+                            // Swipe Right -> Tab Options Menu
+                            playAssetSound("sfx/pop_click.mp3");
+                            card.animate()
+                                .translationX(0f)
+                                .alpha(1f)
+                                .setDuration(180)
+                                .withEndAction(() -> showTabSwitcherTabOptionsDialog(tab))
+                                .start();
+                        } else {
+                            // Snap back
+                            card.animate().translationX(0f).alpha(1f).setDuration(150).start();
+                        }
+                        return true;
+                    } else if (!isDecided[0] && (System.currentTimeMillis() - downTime[0] < 350)) {
+                        card.performClick();
+                        return true;
+                    }
+                    card.animate().translationX(0f).alpha(1f).setDuration(150).start();
+                    return false;
+
+                case MotionEvent.ACTION_CANCEL:
+                    gestureHandler.removeCallbacks(longPressRunnable);
+                    if (card.getParent() != null) {
+                        card.getParent().requestDisallowInterceptTouchEvent(false);
+                    }
+                    card.animate().translationX(0f).alpha(1f).setDuration(150).start();
+                    return false;
+            }
+            return false;
         });
 
         // Multi-tab drag when selected, or single tab drag
