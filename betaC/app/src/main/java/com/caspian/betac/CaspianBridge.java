@@ -592,6 +592,29 @@ public class CaspianBridge {
         }
     }
 
+    @JavascriptInterface
+    public void saveHubData(String key, String value) {
+        if (activity != null && key != null) {
+            try {
+                SharedPreferences prefs = activity.getSharedPreferences("caspian_hub_prefs", Context.MODE_PRIVATE);
+                prefs.edit().putString(key, value).apply();
+            } catch (Exception ignored) {}
+        }
+    }
+
+    @JavascriptInterface
+    public String getHubData(String key, String defaultValue) {
+        if (activity != null && key != null) {
+            try {
+                SharedPreferences prefs = activity.getSharedPreferences("caspian_hub_prefs", Context.MODE_PRIVATE);
+                return prefs.getString(key, defaultValue);
+            } catch (Exception e) {
+                return defaultValue;
+            }
+        }
+        return defaultValue;
+    }
+
     // Pod Customization Bridge Methods
     @JavascriptInterface
     public void setPodShape(String shape) {
