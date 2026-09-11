@@ -601,6 +601,8 @@ public class MainActivity extends AppCompatActivity {
     private final static int REQUEST_CODE_PDF_PICKER = 9182;
     private final static int REQUEST_CODE_EXPORT_BOOKMARKS_TREE = 9410;
     private final static int REQUEST_CODE_IMPORT_BOOKMARKS_FILE = 9411;
+    private final static int REQUEST_CODE_WALLPAPER_PICKER = 9412;
+    private boolean isHubSearchVoiceActive = false;
     private Runnable currentBookmarksRefreshRunnable = null;
     private Uri cameraCapturedUri = null;
     private PermissionRequest pendingWebPermissionRequest = null;
@@ -751,6 +753,11 @@ public class MainActivity extends AppCompatActivity {
             return;
         }
 
+        if (requestCode == REQUEST_CODE_WALLPAPER_PICKER && resultCode == RESULT_OK && data != null && data.getData() != null) {
+            handleWallpaperImageSelected(data.getData());
+            return;
+        }
+
         if (requestCode == FILECHOOSER_RESULTCODE) {
             if (uploadMessage == null) return;
             Uri[] results = null;
@@ -785,6 +792,68 @@ public class MainActivity extends AppCompatActivity {
                 Toast.makeText(this, "Error saving log file: " + e.getMessage(), Toast.LENGTH_SHORT).show();
             }
         }
+    }
+
+    public void pickWallpaperFromGallery() {
+        try {
+            Intent intent = new Intent(Intent.ACTION_PICK, MediaStore.Images.Media.EXTERNAL_CONTENT_URI);
+            intent.setType("image/*");
+            startActivityForResult(Intent.createChooser(intent, "Select Wallpaper from Gallery"), REQUEST_CODE_WALLPAPER_PICKER);
+        } catch (Exception e) {
+            try {
+                Intent fallback = new Intent(Intent.ACTION_GET_CONTENT);
+                fallback.setType("image/*");
+                startActivityForResult(Intent.createChooser(fallback, "Select Wallpaper"), REQUEST_CODE_WALLPAPER_PICKER);
+            } catch (Exception ignored) {
+                Toast.makeText(this, "Could not open gallery", Toast.LENGTH_SHORT).show();
+            }
+        }
+    }
+
+    private void handleWallpaperImageSelected(Uri uri) {
+        if (uri == null) return;
+        new Thread(() -> {
+            try {
+                InputStream is = getContentResolver().openInputStream(uri);
+                if (is == null) return;
+                Bitmap original = BitmapFactory.decodeStream(is);
+                is.close();
+                if (original == null) return;
+
+                int maxDim = 1280;
+                int width = original.getWidth();
+                int height = original.getHeight();
+                if (width > maxDim || height > maxDim) {
+                    if (width > height) {
+                        height = (int) (((float) height * maxDim) / width);
+                        width = maxDim;
+                    } else {
+                        width = (int) (((float) width * maxDim) / height);
+                        height = maxDim;
+                    }
+                }
+                Bitmap scaled = Bitmap.createScaledBitmap(original, width, height, true);
+                ByteArrayOutputStream baos = new ByteArrayOutputStream();
+                scaled.compress(Bitmap.CompressFormat.JPEG, 85, baos);
+                byte[] bytes = baos.toByteArray();
+                String base64Data = "data:image/jpeg;base64," + android.util.Base64.encodeToString(bytes, android.util.Base64.NO_WRAP);
+
+                SharedPreferences prefs = getSharedPreferences("caspian_hub_prefs", Context.MODE_PRIVATE);
+                prefs.edit().putString("caspian_hub_wallpaper", base64Data).apply();
+
+                runOnUiThread(() -> {
+                    TabItem tab = getActiveOrDominantTab();
+                    if (tab != null && tab.webView != null) {
+                        String js = "if (typeof window.onWallpaperImageSelected === 'function') { window.onWallpaperImageSelected(" + JSONObject.quote(base64Data) + "); }";
+                        tab.webView.evaluateJavascript(js, null);
+                    }
+                    Toast.makeText(this, "Wallpaper applied ✨", Toast.LENGTH_SHORT).show();
+                });
+            } catch (Exception e) {
+                Log.e(TAG, "Failed to load wallpaper image: " + e.getMessage(), e);
+                runOnUiThread(() -> Toast.makeText(this, "Failed to load image", Toast.LENGTH_SHORT).show());
+            }
+        }).start();
     }
 
     public void handleIncomingPdfIntent(Intent intent) {

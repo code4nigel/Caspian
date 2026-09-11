@@ -1300,5 +1300,33 @@ public class CaspianBridge {
             activity.runOnUiThread(() -> activity.showBrowserMenuList(null));
         }
     }
+
+    // ==========================================
+    // CASPIAN HUB WALLPAPER INTERFACE
+    // ==========================================
+
+    @JavascriptInterface
+    public void pickWallpaperFromGallery() {
+        if (activity != null) {
+            activity.runOnUiThread(activity::pickWallpaperFromGallery);
+        }
+    }
+
+    @JavascriptInterface
+    public String getSavedWallpaper() {
+        if (activity != null) {
+            android.content.SharedPreferences prefs = activity.getSharedPreferences("caspian_hub_prefs", android.content.Context.MODE_PRIVATE);
+            return prefs.getString("caspian_hub_wallpaper", "");
+        }
+        return "";
+    }
+
+    @JavascriptInterface
+    public void saveWallpaper(String base64Data) {
+        if (activity != null) {
+            android.content.SharedPreferences prefs = activity.getSharedPreferences("caspian_hub_prefs", android.content.Context.MODE_PRIVATE);
+            prefs.edit().putString("caspian_hub_wallpaper", base64Data != null ? base64Data : "").apply();
+        }
+    }
 }
 

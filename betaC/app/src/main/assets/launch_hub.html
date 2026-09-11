@@ -1043,6 +1043,11 @@
     // WALLPAPER & BACKGROUND ENGINE
     // ==========================================
     let currentWallpaper = getStoredData('caspian_hub_wallpaper', '');
+    if (!currentWallpaper && window.CaspianBridge && typeof window.CaspianBridge.getSavedWallpaper === 'function') {
+      try {
+        currentWallpaper = window.CaspianBridge.getSavedWallpaper() || '';
+      } catch (e) {}
+    }
     let currentWpBlur = parseInt(getStoredData('caspian_hub_wp_blur', '8'), 10);
     let currentWpDim = parseFloat(getStoredData('caspian_hub_wp_dim', '0.35'));
 
@@ -1078,10 +1083,21 @@
     }
 
     function setWallpaper(val) {
-      currentWallpaper = val;
+      currentWallpaper = val || '';
       setStoredData('caspian_hub_wallpaper', currentWallpaper);
+      if (window.CaspianBridge && typeof window.CaspianBridge.saveWallpaper === 'function') {
+        try {
+          window.CaspianBridge.saveWallpaper(currentWallpaper);
+        } catch (e) {}
+      }
       applyWallpaperSettings();
     }
+
+    window.onWallpaperImageSelected = function(dataUrl) {
+      if (dataUrl) {
+        setWallpaper(dataUrl);
+      }
+    };
 
     // Wallpaper Preset Click Handlers
     document.querySelectorAll('.wp-preset-tile').forEach(tile => {
@@ -1096,14 +1112,20 @@
       });
     });
 
-    // Wallpaper File Upload (Downsample via Canvas)
+    // Wallpaper File Upload (Native Intent or Fallback Canvas)
     const wpFileInput = document.getElementById('wallpaper-file-input');
     const btnUploadWp = document.getElementById('btn-upload-wallpaper');
-    if (btnUploadWp && wpFileInput) {
+    if (btnUploadWp) {
       btnUploadWp.addEventListener('click', () => {
         playTapSFX();
-        wpFileInput.click();
+        if (window.CaspianBridge && typeof window.CaspianBridge.pickWallpaperFromGallery === 'function') {
+          window.CaspianBridge.pickWallpaperFromGallery();
+        } else if (wpFileInput) {
+          wpFileInput.click();
+        }
       });
+    }
+    if (wpFileInput) {
       wpFileInput.addEventListener('change', (e) => {
         const file = e.target.files && e.target.files[0];
         if (!file) return;
