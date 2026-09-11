@@ -192,6 +192,7 @@ public class MainActivity extends AppCompatActivity {
         public int splitOrientation = 1;
         public String splitRole = "";
         public String splitName = "";
+        public boolean isRestoredFromSavedState = false;
 
         public TabItem(int id, String title, String url, String service, WebView webView, boolean isIncognito) {
             this.id = id;
@@ -1454,6 +1455,7 @@ public class MainActivity extends AppCompatActivity {
                         String caskId = obj.optString("caskId", CaskManager.DEFAULT_CASK_ID);
 
                         TabItem item = createNewTabInstance(id, url, service, null, isIncognito, caskId);
+                        item.isRestoredFromSavedState = true;
                         item.title = title;
                         item.nickname = nickname;
                         item.isDesktop = isDesktop;
@@ -4252,127 +4254,24 @@ public class MainActivity extends AppCompatActivity {
     }
 
 
-    // =========================================================================
-    // CASPIAN AUDIO FOCUS & SMOOTH DUCKING ENGINE
-    // =========================================================================
-    private boolean isCaspianAudioFocusHeld = false;
-    private android.media.AudioFocusRequest caspianAudioFocusRequest = null;
-    private AudioManager.OnAudioFocusChangeListener caspianAudioFocusChangeListener = null;
-
-    private void setupCaspianAudioFocus() {
-        if (caspianAudioFocusChangeListener != null) return;
-        caspianAudioFocusChangeListener = focusChange -> {
-            Log.d(TAG, "Caspian AudioFocus changed: " + focusChange);
-            switch (focusChange) {
-                case AudioManager.AUDIOFOCUS_LOSS_TRANSIENT_CAN_DUCK:
-                    // Notification or navigation cue: smoothly duck volume
-                    duckYouTubeAudioSmooth();
-                    break;
-                case AudioManager.AUDIOFOCUS_GAIN:
-                    // Regained focus: smoothly ease volume back up over 700ms
-                    unduckYouTubeAudioSmooth();
-                    break;
-                case AudioManager.AUDIOFOCUS_LOSS_TRANSIENT:
-                    // Temporary loss (phone call): pause
-                    pauseYouTubeAudio();
-                    break;
-                case AudioManager.AUDIOFOCUS_LOSS:
-                    // Permanent loss: pause & abandon
-                    pauseYouTubeAudio();
-                    abandonCaspianAudioFocus();
-                    break;
-            }
-        };
-    }
-
-    private void requestCaspianAudioFocus() {
-        try {
-            AudioManager am = (AudioManager) getSystemService(Context.AUDIO_SERVICE);
-            if (am == null) return;
-            setupCaspianAudioFocus();
-            if (!isCaspianAudioFocusHeld) {
-                if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
-                    android.media.AudioAttributes playbackAttributes = new android.media.AudioAttributes.Builder()
-                            .setUsage(android.media.AudioAttributes.USAGE_MEDIA)
-                            .setContentType(android.media.AudioAttributes.CONTENT_TYPE_MUSIC)
-                            .build();
-                    caspianAudioFocusRequest = new android.media.AudioFocusRequest.Builder(AudioManager.AUDIOFOCUS_GAIN)
-                            .setAudioAttributes(playbackAttributes)
-                            .setAcceptsDelayedFocusGain(true)
-                            .setWillPauseWhenDucked(false) // Allows app to handle ducking smoothly
-                            .setOnAudioFocusChangeListener(caspianAudioFocusChangeListener, new Handler(Looper.getMainLooper()))
-                            .build();
-                    int res = am.requestAudioFocus(caspianAudioFocusRequest);
-                    isCaspianAudioFocusHeld = (res == AudioManager.AUDIOFOCUS_REQUEST_GRANTED);
-                } else {
-                    int res = am.requestAudioFocus(caspianAudioFocusChangeListener, AudioManager.STREAM_MUSIC, AudioManager.AUDIOFOCUS_GAIN);
-                    isCaspianAudioFocusHeld = (res == AudioManager.AUDIOFOCUS_REQUEST_GRANTED);
-                }
-            }
-        } catch (Exception e) {
-            Log.w(TAG, "requestCaspianAudioFocus error: " + e.getMessage());
-        }
-    }
-
-    private void abandonCaspianAudioFocus() {
-        try {
-            AudioManager am = (AudioManager) getSystemService(Context.AUDIO_SERVICE);
-            if (am == null) return;
-            if (isCaspianAudioFocusHeld) {
-                if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O && caspianAudioFocusRequest != null) {
-                    am.abandonAudioFocusRequest(caspianAudioFocusRequest);
-                } else if (caspianAudioFocusChangeListener != null) {
-                    am.abandonAudioFocus(caspianAudioFocusChangeListener);
-                }
-                isCaspianAudioFocusHeld = false;
-            }
-        } catch (Exception e) {
-            Log.w(TAG, "abandonCaspianAudioFocus error: " + e.getMessage());
-        }
-    }
-
-    public void duckYouTubeAudioSmooth() {
-        runOnUiThread(() -> {
-            for (TabItem tab : tabsList) {
-                if (tab != null && tab.isPlayingAudio && tab.webView != null) {
-                    tab.webView.evaluateJavascript("if(window.__CaspianYouTube && typeof window.__CaspianYouTube.duckAudio === 'function') window.__CaspianYouTube.duckAudio();", null);
-                }
-            }
-        });
-    }
-
-    public void unduckYouTubeAudioSmooth() {
-        runOnUiThread(() -> {
-            for (TabItem tab : tabsList) {
-                if (tab != null && tab.isPlayingAudio && tab.webView != null) {
-                    tab.webView.evaluateJavascript("if(window.__CaspianYouTube && typeof window.__CaspianYouTube.unduckAudio === 'function') window.__CaspianYouTube.unduckAudio();", null);
-                }
-            }
-        });
-    }
-
-    public void pauseYouTubeAudio() {
-        runOnUiThread(() -> {
-            for (TabItem tab : tabsList) {
-                if (tab != null && tab.isPlayingAudio && tab.webView != null) {
-                    tab.webView.evaluateJavascript("if(window.__CaspianYouTube) { window.__caspian_explicit_pause = true; var v = window.__CaspianYouTube.getVideo(); if(v) v.pause(); }", null);
-                }
-            }
-        });
-    }
-
     public void updateYouTubeLiveState(boolean isPlaying, boolean isMuted) {
         updateYouTubeLiveState(isPlaying, isMuted, null);
     }
 
     public void updateYouTubeLiveState(boolean isPlaying, boolean isMuted, Integer tabId) {
+        TabItem targetTab = tabId != null && tabId > 0 ? getTabById(tabId) : getTabById(activeTabId);
+        if (isPlaying && targetTab != null && targetTab.isRestoredFromSavedState) {
+            targetTab.isRestoredFromSavedState = false;
+            if (targetTab.webView != null) {
+                targetTab.webView.evaluateJavascript(
+                        "(function() { try { window.__caspian_explicit_pause = true; if(window.__CaspianYouTube && typeof window.__CaspianYouTube.pauseVideo === 'function') window.__CaspianYouTube.pauseVideo(); else { var v = document.querySelectorAll('video, audio'); for(var i=0;i<v.length;i++) v[i].pause(); } } catch(e){} })();", null
+                );
+            }
+            return;
+        }
+
         if (isPlaying) {
             hasYouTubePlaybackStarted = true;
-            requestCaspianAudioFocus();
-        } else {
-            if (!hasAnyPlayingYouTubeTab()) {
-                abandonCaspianAudioFocus();
-            }
         }
         boolean stateChanged = false;
         if (tabId != null && tabId > 0) {
@@ -16319,7 +16218,7 @@ public class MainActivity extends AppCompatActivity {
         settings.setBuiltInZoomControls(true);
         settings.setDisplayZoomControls(false);
         settings.setUserAgentString(MOBILE_UA);
-        settings.setMediaPlaybackRequiresUserGesture(true);
+        settings.setMediaPlaybackRequiresUserGesture(false);
 
         if (!isIncognito) {
             settings.setCacheMode(WebSettings.LOAD_DEFAULT);
@@ -17151,6 +17050,7 @@ public class MainActivity extends AppCompatActivity {
 
         TabItem tab = getTabById(tabId);
         if (tab == null) return;
+        tab.isRestoredFromSavedState = false;
 
         // On legacy devices lacking Multi-Profile, swap vault cookies when switching between tabs with different casks
         if (!CaskManager.isMultiProfileSupported() && previousTab != null && previousTab.caskId != null && !previousTab.caskId.equals(tab.caskId)) {
@@ -20647,6 +20547,10 @@ public class MainActivity extends AppCompatActivity {
     @Override
     public boolean dispatchTouchEvent(MotionEvent ev) {
         if (ev.getAction() == MotionEvent.ACTION_DOWN) {
+            TabItem curTab = getTabById(activeTabId);
+            if (curTab != null && curTab.isRestoredFromSavedState) {
+                curTab.isRestoredFromSavedState = false;
+            }
             View v = getCurrentFocus();
             if (v instanceof EditText && v == omniboxEditText) {
                 Rect outRect = new Rect();
