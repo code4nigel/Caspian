@@ -495,27 +495,37 @@
     .shortcuts-edit-toolbar .reset-btn {
       display: inline-flex;
       align-items: center;
-      gap: 4px;
-      padding: 6px 10px;
-      font-size: 11px;
-      font-weight: 600;
-      border-radius: 12px;
-      background: rgba(239, 68, 68, 0.15);
-      border: 1px solid rgba(239, 68, 68, 0.4);
-      color: #f87171;
+      justify-content: center;
+      gap: 5px;
+      padding: 7px 15px;
+      font-size: 11.5px;
+      font-weight: 700;
+      border-radius: 14px;
+      background: rgba(239, 68, 68, 0.16);
+      border: 1.5px solid rgba(239, 68, 68, 0.45);
+      color: #ff6b6b;
       cursor: pointer;
-      transition: all 0.2s ease;
+      transition: all 0.18s ease;
+      white-space: nowrap;
     }
     .shortcuts-edit-toolbar .reset-btn:active {
-      transform: scale(0.95);
-      background: rgba(239, 68, 68, 0.25);
+      transform: scale(0.94);
+      background: rgba(239, 68, 68, 0.3);
     }
     .shortcuts-edit-toolbar .done-btn {
-      padding: 6px 12px;
-      font-size: 11px;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      padding: 7px 16px;
+      font-size: 11.5px;
       font-weight: 700;
-      border-radius: 12px;
+      border-radius: 14px;
       cursor: pointer;
+      white-space: nowrap;
+      transition: all 0.18s ease;
+    }
+    .shortcuts-edit-toolbar .done-btn:active {
+      transform: scale(0.94);
     }
 
     /* Card Rearrange Bar */
@@ -574,6 +584,76 @@
       border-color: var(--accent, #00E5FF);
       box-shadow: 0 0 16px var(--accent-glow);
     }
+    
+    /* Wallpaper Crop Modal & Viewport */
+    .crop-viewport {
+      position: relative;
+      width: 100%;
+      height: 350px;
+      overflow: hidden;
+      border-radius: 18px;
+      border: 2px solid var(--accent, #00E5FF);
+      background: #000;
+      touch-action: none;
+      cursor: grab;
+      box-shadow: 0 8px 30px rgba(0, 0, 0, 0.6);
+      user-select: none;
+    }
+    .crop-viewport:active {
+      cursor: grabbing;
+    }
+    #crop-canvas {
+      width: 100%;
+      height: 100%;
+      display: block;
+    }
+    .crop-grid-overlay {
+      position: absolute;
+      inset: 0;
+      pointer-events: none;
+      border-radius: 16px;
+      box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.2);
+    }
+    .crop-grid-overlay::before,
+    .crop-grid-overlay::after {
+      content: '';
+      position: absolute;
+      pointer-events: none;
+    }
+    .crop-grid-overlay::before {
+      top: 33.33%;
+      bottom: 33.33%;
+      left: 0;
+      right: 0;
+      border-top: 1px dashed rgba(255, 255, 255, 0.25);
+      border-bottom: 1px dashed rgba(255, 255, 255, 0.25);
+    }
+    .crop-grid-overlay::after {
+      left: 33.33%;
+      right: 33.33%;
+      top: 0;
+      bottom: 0;
+      border-left: 1px dashed rgba(255, 255, 255, 0.25);
+      border-right: 1px dashed rgba(255, 255, 255, 0.25);
+    }
+    .crop-hint-badge {
+      position: absolute;
+      bottom: 10px;
+      left: 50%;
+      transform: translateX(-50%);
+      font-size: 10px;
+      font-weight: 600;
+      letter-spacing: 0.3px;
+      color: rgba(255, 255, 255, 0.85);
+      background: rgba(0, 0, 0, 0.65);
+      backdrop-filter: blur(8px);
+      -webkit-backdrop-filter: blur(8px);
+      padding: 4px 10px;
+      border-radius: 12px;
+      pointer-events: none;
+      white-space: nowrap;
+    }
+
     @keyframes fadeInDown {
       from {
         opacity: 0;
@@ -914,18 +994,18 @@
         <span class="edit-toolbar-hint">Tap ◀ ▶ to move &bull; ✕ to delete</span>
       </div>
       <div class="edit-toolbar-right">
-        <button id="btn-reset-shortcuts" type="button" class="reset-btn" title="Restore default 3 shortcuts (Gemini, ChatGPT, YouTube)">
-          <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round">
+        <button id="btn-reset-shortcuts" type="button" class="oneui-pill-btn secondary reset-btn" title="Restore default 3 shortcuts (Gemini, ChatGPT, YouTube)">
+          <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
             <path d="M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8"></path>
             <path d="M3 3v5h5"></path>
           </svg>
-          <span>Reset Defaults</span>
+          <span>Reset</span>
         </button>
         <button id="btn-done-shortcuts" type="button" class="oneui-pill-btn primary done-btn">Done</button>
       </div>
     </div>
 
-    <!-- Swipeable Shortcuts Carousel (6 shortcuts per page, swipe left/right) -->
+    <!-- Swipeable Shortcuts Carousel (4 shortcuts per page, swipe left/right) -->
     <div class="shortcuts-carousel-wrapper">
       <div id="shortcuts-carousel" class="shortcuts-carousel">
         <!-- Rendered via JS -->
@@ -1089,11 +1169,50 @@
       </div>
 
       <div style="display: flex; gap: 10px;">
-        <button id="btn-reset-wallpaper" class="oneui-pill-btn secondary" style="flex: 1;">Reset to Default</button>
-        <button id="btn-done-wallpaper" class="oneui-pill-btn primary" style="flex: 1;">Done</button>
+        <button id="btn-crop-current-wallpaper" class="oneui-pill-btn secondary" style="width: 100%; margin-bottom: 12px; display: none;">
+          <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2">
+            <path d="M6 2v14a2 2 0 0 0 2 2h14"></path>
+            <path d="M18 22V8a2 2 0 0 0-2-2H2"></path>
+          </svg>
+          <span>Reposition Current Wallpaper...</span>
+        </button>
+        <div style="display: flex; gap: 10px;">
+          <button id="btn-reset-wallpaper" class="oneui-pill-btn secondary" style="flex: 1;">Reset to Default</button>
+          <button id="btn-done-wallpaper" class="oneui-pill-btn primary" style="flex: 1;">Done</button>
+        </div>
       </div>
     </div>
   </div>
+  <!-- WALLPAPER CROP & POSITION MODAL -->
+  <div id="wallpaper-crop-modal" class="hub-modal-backdrop" style="display: none; z-index: 10000;">
+    <div class="hub-modal-card crop-card" style="max-width: 380px; padding: 16px;">
+      <div class="hub-modal-header" style="margin-bottom: 10px;">
+        <span class="hub-modal-title">Position &amp; Crop Wallpaper</span>
+        <button id="close-crop-modal" class="hub-modal-close">✕</button>
+      </div>
+
+      <!-- Crop Viewport Container (Device screen framing ~ 9:18.5 aspect) -->
+      <div id="crop-viewport" class="crop-viewport">
+        <canvas id="crop-canvas"></canvas>
+        <div class="crop-grid-overlay"></div>
+        <div class="crop-hint-badge">Drag to Pan &bull; Pinch to Zoom</div>
+      </div>
+
+      <!-- Zoom Control Slider -->
+      <div class="crop-controls-row" style="margin-top: 12px; display: flex; align-items: center; gap: 10px;">
+        <span style="font-size: 11px; font-weight: 700; color: var(--text-muted);">ZOOM</span>
+        <input id="crop-zoom-slider" type="range" min="1" max="3" step="0.01" value="1" style="flex: 1; accent-color: var(--accent);" />
+        <button id="btn-crop-reset" class="oneui-pill-btn secondary" style="padding: 4px 10px; font-size: 10.5px; border-radius: 10px;">Fit</button>
+      </div>
+
+      <!-- Action Buttons -->
+      <div style="display: flex; gap: 10px; margin-top: 14px;">
+        <button id="btn-cancel-crop" class="oneui-pill-btn secondary" style="flex: 1;">Cancel</button>
+        <button id="btn-apply-crop" class="oneui-pill-btn primary" style="flex: 1.4;">Apply Wallpaper ✨</button>
+      </div>
+    </div>
+  </div>
+
 
   <!-- CASPIAN CASKS MODAL (ORIGINAL) -->
   <div id="casks-modal" class="hub-modal-backdrop">
@@ -1241,6 +1360,9 @@
             bgLayer.style.backgroundImage = currentWallpaper;
           } else {
             bgLayer.style.backgroundImage = `url("${currentWallpaper}")`;
+      if (btnCropCurrentWp) {
+        btnCropCurrentWp.style.display = (currentWallpaper && !currentWallpaper.startsWith('linear-gradient')) ? 'flex' : 'none';
+      }
           }
         }
       } else {
@@ -1260,9 +1382,245 @@
       applyWallpaperSettings();
     }
 
+    // ==========================================
+    // WALLPAPER CROP & POSITION ENGINE
+    // ==========================================
+    let cropImg = null;
+    let cropScale = 1;
+    let cropMinScale = 1;
+    let cropPanX = 0;
+    let cropPanY = 0;
+    let isCropDragging = false;
+    let cropStartX = 0;
+    let cropStartY = 0;
+    let cropStartPanX = 0;
+    let cropStartPanY = 0;
+    let initialPinchDist = 0;
+    let initialPinchScale = 1;
+
+    const cropModal = document.getElementById('wallpaper-crop-modal');
+    const cropCanvas = document.getElementById('crop-canvas');
+    const cropViewport = document.getElementById('crop-viewport');
+    const cropZoomSlider = document.getElementById('crop-zoom-slider');
+    const btnCropReset = document.getElementById('btn-crop-reset');
+    const btnCancelCrop = document.getElementById('btn-cancel-crop');
+    const btnApplyCrop = document.getElementById('btn-apply-crop');
+    const closeCropModal = document.getElementById('close-crop-modal');
+    const btnCropCurrentWp = document.getElementById('btn-crop-current-wallpaper');
+
+    function openWallpaperCropModal(imgSrc) {
+      if (!imgSrc) return;
+      const img = new Image();
+      img.crossOrigin = 'anonymous';
+      img.onload = function() {
+        cropImg = img;
+        if (cropModal) cropModal.style.display = 'flex';
+        requestAnimationFrame(() => {
+          initCropView();
+        });
+      };
+      img.src = imgSrc;
+    }
+
+    function initCropView() {
+      if (!cropCanvas || !cropViewport || !cropImg) return;
+      const rect = cropViewport.getBoundingClientRect();
+      const dpr = window.devicePixelRatio || 1;
+      cropCanvas.width = rect.width * dpr;
+      cropCanvas.height = rect.height * dpr;
+
+      const cw = cropCanvas.width;
+      const ch = cropCanvas.height;
+      const iw = cropImg.width;
+      const ih = cropImg.height;
+
+      cropMinScale = Math.max(cw / iw, ch / ih);
+      cropScale = cropMinScale;
+      cropPanX = (cw - iw * cropScale) / 2;
+      cropPanY = (ch - ih * cropScale) / 2;
+
+      if (cropZoomSlider) {
+        cropZoomSlider.min = '1';
+        cropZoomSlider.max = '3';
+        cropZoomSlider.step = '0.01';
+        cropZoomSlider.value = '1';
+      }
+
+      drawCropCanvas();
+    }
+
+    function clampCropPan() {
+      if (!cropCanvas || !cropImg) return;
+      const cw = cropCanvas.width;
+      const ch = cropCanvas.height;
+      const scaledW = cropImg.width * cropScale;
+      const scaledH = cropImg.height * cropScale;
+
+      if (scaledW >= cw) {
+        cropPanX = Math.min(0, Math.max(cw - scaledW, cropPanX));
+      } else {
+        cropPanX = (cw - scaledW) / 2;
+      }
+
+      if (scaledH >= ch) {
+        cropPanY = Math.min(0, Math.max(ch - scaledH, cropPanY));
+      } else {
+        cropPanY = (ch - scaledH) / 2;
+      }
+    }
+
+    function drawCropCanvas() {
+      if (!cropCanvas || !cropImg) return;
+      const ctx = cropCanvas.getContext('2d');
+      ctx.clearRect(0, 0, cropCanvas.width, cropCanvas.height);
+      clampCropPan();
+      ctx.drawImage(cropImg, cropPanX, cropPanY, cropImg.width * cropScale, cropImg.height * cropScale);
+    }
+
+    if (cropViewport) {
+      cropViewport.addEventListener('pointerdown', (e) => {
+        isCropDragging = true;
+        cropStartX = e.clientX;
+        cropStartY = e.clientY;
+        cropStartPanX = cropPanX;
+        cropStartPanY = cropPanY;
+        cropViewport.setPointerCapture(e.pointerId);
+      });
+
+      cropViewport.addEventListener('pointermove', (e) => {
+        if (!isCropDragging || !cropCanvas) return;
+        const dpr = window.devicePixelRatio || 1;
+        const dx = (e.clientX - cropStartX) * dpr;
+        const dy = (e.clientY - cropStartY) * dpr;
+        cropPanX = cropStartPanX + dx;
+        cropPanY = cropStartPanY + dy;
+        drawCropCanvas();
+      });
+
+      const endCropDrag = (e) => {
+        isCropDragging = false;
+        try { cropViewport.releasePointerCapture(e.pointerId); } catch(err) {}
+      };
+      cropViewport.addEventListener('pointerup', endCropDrag);
+      cropViewport.addEventListener('pointercancel', endCropDrag);
+
+      cropViewport.addEventListener('touchstart', (e) => {
+        if (e.touches.length === 2) {
+          initialPinchDist = Math.hypot(
+            e.touches[0].clientX - e.touches[1].clientX,
+            e.touches[0].clientY - e.touches[1].clientY
+          );
+          initialPinchScale = cropScale;
+        }
+      }, { passive: true });
+
+      cropViewport.addEventListener('touchmove', (e) => {
+        if (e.touches.length === 2 && initialPinchDist > 0) {
+          const dist = Math.hypot(
+            e.touches[0].clientX - e.touches[1].clientX,
+            e.touches[0].clientY - e.touches[1].clientY
+          );
+          const factor = dist / initialPinchDist;
+          const targetZoom = Math.min(3, Math.max(1, (initialPinchScale / cropMinScale) * factor));
+          if (cropZoomSlider) cropZoomSlider.value = targetZoom;
+          applyCropZoom(targetZoom);
+        }
+      }, { passive: true });
+
+      cropViewport.addEventListener('wheel', (e) => {
+        e.preventDefault();
+        const delta = e.deltaY < 0 ? 0.08 : -0.08;
+        let currentZoom = parseFloat(cropZoomSlider.value);
+        currentZoom = Math.min(3, Math.max(1, currentZoom + delta));
+        cropZoomSlider.value = currentZoom;
+        applyCropZoom(currentZoom);
+      }, { passive: false });
+    }
+
+    function applyCropZoom(zoomMultiplier) {
+      if (!cropCanvas || !cropImg) return;
+      const cw = cropCanvas.width;
+      const ch = cropCanvas.height;
+      const prevScale = cropScale;
+      cropScale = cropMinScale * zoomMultiplier;
+
+      const centerX = cw / 2;
+      const centerY = ch / 2;
+      cropPanX = centerX - (centerX - cropPanX) * (cropScale / prevScale);
+      cropPanY = centerY - (centerY - cropPanY) * (cropScale / prevScale);
+      drawCropCanvas();
+    }
+
+    if (cropZoomSlider) {
+      cropZoomSlider.addEventListener('input', () => {
+        applyCropZoom(parseFloat(cropZoomSlider.value));
+      });
+    }
+
+    if (btnCropReset) {
+      btnCropReset.addEventListener('click', () => {
+        playTapSFX();
+        initCropView();
+      });
+    }
+
+    function closeCrop() {
+      playTapSFX();
+      if (cropModal) cropModal.style.display = 'none';
+      cropImg = null;
+    }
+
+    if (closeCropModal) closeCropModal.addEventListener('click', closeCrop);
+    if (btnCancelCrop) btnCancelCrop.addEventListener('click', closeCrop);
+
+    if (btnApplyCrop) {
+      btnApplyCrop.addEventListener('click', () => {
+        if (!cropCanvas || !cropImg) return;
+        playTapSFX();
+        triggerHaptic(35);
+
+        const exportCanvas = document.createElement('canvas');
+        const aspect = cropCanvas.width / cropCanvas.height;
+        const targetW = 1080;
+        const targetH = Math.round(targetW / aspect);
+        exportCanvas.width = targetW;
+        exportCanvas.height = targetH;
+
+        const exCtx = exportCanvas.getContext('2d');
+        const scale = cropScale;
+        const srcX = Math.max(0, -cropPanX / scale);
+        const srcY = Math.max(0, -cropPanY / scale);
+        const srcW = Math.min(cropImg.width, cropCanvas.width / scale);
+        const srcH = Math.min(cropImg.height, cropCanvas.height / scale);
+
+        exCtx.drawImage(cropImg, srcX, srcY, srcW, srcH, 0, 0, targetW, targetH);
+        const croppedBase64 = exportCanvas.toDataURL('image/jpeg', 0.88);
+
+        setWallpaper(croppedBase64);
+        closeCrop();
+
+        const wpModal = document.getElementById('wallpaper-modal');
+        if (wpModal) wpModal.style.display = 'none';
+
+        showToast('Wallpaper cropped & applied ✨');
+      });
+    }
+
+    if (btnCropCurrentWp) {
+      btnCropCurrentWp.addEventListener('click', () => {
+        playTapSFX();
+        if (currentWallpaper && !currentWallpaper.startsWith('linear-gradient')) {
+          openWallpaperCropModal(currentWallpaper);
+        } else {
+          showToast('No custom image wallpaper to crop');
+        }
+      });
+    }
+
+
     window.onWallpaperImageSelected = function(dataUrl) {
       if (dataUrl) {
-        setWallpaper(dataUrl);
+        openWallpaperCropModal(dataUrl);
       }
     };
 
@@ -1318,9 +1676,8 @@
             canvas.height = height;
             const ctx = canvas.getContext('2d');
             ctx.drawImage(img, 0, 0, width, height);
-            const compressedDataUrl = canvas.toDataURL('image/jpeg', 0.85);
-            setWallpaper(compressedDataUrl);
-            showToast('Custom wallpaper applied ✨');
+            const compressedDataUrl = canvas.toDataURL('image/jpeg', 0.90);
+            openWallpaperCropModal(compressedDataUrl);
           };
           img.src = evt.target.result;
         };
@@ -1336,8 +1693,7 @@
         playTapSFX();
         const url = wpUrlInput.value.trim();
         if (url) {
-          setWallpaper(url);
-          showToast('Wallpaper URL applied ✨');
+          openWallpaperCropModal(url);
           wpUrlInput.value = '';
         }
       });
@@ -1434,7 +1790,7 @@
 
       // Include "+ Add Shortcut" card at the end
       const allItems = [...currentShortcuts, { isAddCard: true }];
-      const itemsPerPage = 6;
+      const itemsPerPage = 4;
       const totalPages = Math.ceil(allItems.length / itemsPerPage);
 
       for (let pageIdx = 0; pageIdx < totalPages; pageIdx++) {
@@ -1663,7 +2019,7 @@
           !e.target.closest('.app-icon-card') && 
           !e.target.closest('#hub-manage-shortcuts-btn') && 
           !e.target.closest('#shortcuts-edit-toolbar') &&
-          !e.target.closest('#shortcut-modal')) {
+          !e.target.closest('#shortcut-modal') && !e.target.closest('#wallpaper-crop-modal')) {
         toggleEditShortcuts(false);
       }
     });
