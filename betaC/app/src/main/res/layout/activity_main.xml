@@ -511,28 +511,37 @@
                             android:inputType="textUri|textNoSuggestions"
                             android:padding="0dp" />
 
-                        <!-- Inline Paste Button (Samsung Internet style) -->
-                        <TextView
-                            android:id="@+id/omnibox_paste_btn"
-                            android:layout_width="wrap_content"
-                            android:layout_height="match_parent"
-                            android:gravity="center"
-                            android:paddingStart="8dp"
-                            android:paddingEnd="8dp"
-                            android:text="Paste"
-                            android:textColor="#00E5FF"
-                            android:textSize="12sp"
-                            android:textStyle="bold"
+                        <!-- Copy URL Button -->
+                        <ImageButton
+                            android:id="@+id/omnibox_copy_btn"
+                            android:layout_width="24dp"
+                            android:layout_height="24dp"
+                            android:layout_marginStart="2dp"
+                            android:padding="3dp"
                             android:background="?attr/selectableItemBackgroundBorderless"
+                            android:src="@drawable/ic_omnibox_copy"
+                            android:tint="#00E5FF"
                             android:visibility="gone"
-                            android:clickable="true"
-                            android:focusable="true" />
+                            android:contentDescription="Copy URL" />
+
+                        <!-- Inline Paste Button (Icon form) -->
+                        <ImageButton
+                            android:id="@+id/omnibox_paste_btn"
+                            android:layout_width="24dp"
+                            android:layout_height="24dp"
+                            android:layout_marginStart="2dp"
+                            android:padding="3dp"
+                            android:background="?attr/selectableItemBackgroundBorderless"
+                            android:src="@drawable/ic_omnibox_paste"
+                            android:tint="#00E5FF"
+                            android:visibility="gone"
+                            android:contentDescription="Paste URL" />
 
                         <!-- Clear / Close Button -->
                         <ImageButton
                             android:id="@+id/omnibox_clear_btn"
-                            android:layout_width="22dp"
-                            android:layout_height="22dp"
+                            android:layout_width="24dp"
+                            android:layout_height="24dp"
                             android:layout_marginStart="2dp"
                             android:padding="3dp"
                             android:background="?attr/selectableItemBackgroundBorderless"

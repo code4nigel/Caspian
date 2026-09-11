@@ -302,7 +302,8 @@ public class MainActivity extends AppCompatActivity {
     private FrameLayout omniboxShieldBtn;
     private ImageView omniboxShieldIcon;
     private EditText omniboxEditText;
-    private TextView omniboxPasteBtn;
+    private ImageButton omniboxCopyBtn;
+    private ImageButton omniboxPasteBtn;
     private ImageButton omniboxClearBtn;
     private ImageButton omniboxFinderBtn;
     private ImageButton omniboxVoiceBtn;
@@ -1820,6 +1821,7 @@ public class MainActivity extends AppCompatActivity {
             omniboxShieldBtn = findViewById(R.id.omnibox_shield_btn);
             omniboxShieldIcon = findViewById(R.id.omnibox_shield_icon);
             omniboxEditText = findViewById(R.id.omnibox_edit_text);
+            omniboxCopyBtn = findViewById(R.id.omnibox_copy_btn);
             omniboxPasteBtn = findViewById(R.id.omnibox_paste_btn);
             omniboxClearBtn = findViewById(R.id.omnibox_clear_btn);
             omniboxVoiceBtn = findViewById(R.id.omnibox_voice_btn);
@@ -4572,7 +4574,9 @@ public class MainActivity extends AppCompatActivity {
         if (omniboxFinderClose != null) omniboxFinderClose.setColorFilter(defaultIconTint);
         if (omniboxFinderPrev != null) omniboxFinderPrev.setColorFilter(defaultIconTint);
         if (omniboxFinderNext != null) omniboxFinderNext.setColorFilter(defaultIconTint);
-        if (omniboxPasteBtn != null) omniboxPasteBtn.setTextColor(isDarkTheme ? 0xFF00E5FF : 0xFF0284C7);
+        int omniAccentTint = isDarkTheme ? 0xFF00E5FF : 0xFF0284C7;
+        if (omniboxCopyBtn != null) omniboxCopyBtn.setColorFilter(omniAccentTint);
+        if (omniboxPasteBtn != null) omniboxPasteBtn.setColorFilter(omniAccentTint);
         if (omniboxDividerLeft != null) omniboxDividerLeft.setBackgroundColor(isDarkTheme ? 0x33FFFFFF : 0x22000000);
         if (omniboxDividerRight != null) omniboxDividerRight.setBackgroundColor(isDarkTheme ? 0x33FFFFFF : 0x22000000);
 
@@ -6732,9 +6736,51 @@ public class MainActivity extends AppCompatActivity {
         if (omniboxClearBtn != null) {
             omniboxClearBtn.setOnClickListener(v -> {
                 playUiFeedbackSound("tap");
-                omniboxEditText.setText("");
-                omniboxEditText.clearFocus();
-                hideKeyboard();
+                if (omniboxEditText.getText() != null && omniboxEditText.getText().length() > 0) {
+                    omniboxEditText.setText("");
+                } else {
+                    omniboxEditText.clearFocus();
+                    hideKeyboard();
+                }
+            });
+        }
+
+        if (omniboxCopyBtn != null) {
+            omniboxCopyBtn.setOnClickListener(v -> {
+                playUiFeedbackSound("tap");
+                TabItem currentTab = getActiveOrDominantTab();
+                String urlToCopy = "";
+                if (omniboxEditText != null && omniboxEditText.getText() != null && !omniboxEditText.getText().toString().trim().isEmpty()) {
+                    urlToCopy = omniboxEditText.getText().toString().trim();
+                } else if (currentTab != null) {
+                    urlToCopy = currentTab.webView != null && currentTab.webView.getUrl() != null ? currentTab.webView.getUrl() : (currentTab.url != null ? currentTab.url : "");
+                }
+                if (!urlToCopy.isEmpty()) {
+                    ClipboardManager clipboard = (ClipboardManager) getSystemService(CLIPBOARD_SERVICE);
+                    if (clipboard != null) {
+                        ClipData clip = ClipData.newPlainText("URL", urlToCopy);
+                        clipboard.setPrimaryClip(clip);
+                        Toast.makeText(this, "URL copied to clipboard ✨", Toast.LENGTH_SHORT).show();
+                    }
+                }
+            });
+        }
+
+        if (omniboxPasteBtn != null) {
+            omniboxPasteBtn.setOnClickListener(v -> {
+                playUiFeedbackSound("tap");
+                ClipboardManager clipboard = (ClipboardManager) getSystemService(CLIPBOARD_SERVICE);
+                if (clipboard != null && clipboard.hasPrimaryClip() && clipboard.getPrimaryClip() != null && clipboard.getPrimaryClip().getItemCount() > 0) {
+                    CharSequence clipText = clipboard.getPrimaryClip().getItemAt(0).getText();
+                    if (clipText != null && !clipText.toString().trim().isEmpty()) {
+                        String link = clipText.toString().trim();
+                        omniboxEditText.setText(link);
+                        omniboxEditText.requestFocus();
+                        omniboxEditText.setSelection(omniboxEditText.getText().length());
+                        InputMethodManager imm = (InputMethodManager) getSystemService(Context.INPUT_METHOD_SERVICE);
+                        if (imm != null) imm.showSoftInput(omniboxEditText, InputMethodManager.SHOW_IMPLICIT);
+                    }
+                }
             });
         }
 
@@ -6923,17 +6969,31 @@ public class MainActivity extends AppCompatActivity {
                 if (omniboxTabsBtn != null) omniboxTabsBtn.setVisibility(View.GONE);
                 if (omniboxMenuBtn != null) omniboxMenuBtn.setVisibility(View.GONE);
 
-                // 2. Show clear button and paste button if clipboard has text
+                // 2. Show full actual URL (including query parameters like ?v=...)
+                TabItem currentTab = getActiveOrDominantTab();
+                if (currentTab != null) {
+                    String fullUrl = currentTab.webView != null && currentTab.webView.getUrl() != null ? currentTab.webView.getUrl() : (currentTab.url != null ? currentTab.url : "");
+                    if ("file:///android_asset/launch_hub.html".equalsIgnoreCase(fullUrl)) {
+                        fullUrl = "caspian://hub";
+                    }
+                    if (!fullUrl.isEmpty()) {
+                        omniboxEditText.setText(fullUrl);
+                    }
+                }
+
+                // 3. Show 3 action icon buttons: Copy, Paste, Cross
+                if (omniboxCopyBtn != null) omniboxCopyBtn.setVisibility(View.VISIBLE);
+                if (omniboxPasteBtn != null) omniboxPasteBtn.setVisibility(View.VISIBLE);
                 if (omniboxClearBtn != null) omniboxClearBtn.setVisibility(View.VISIBLE);
                 updateOmniboxPasteButton();
 
-                // 3. Suppress floating suggestions dropdown
+                // 4. Suppress floating suggestions dropdown
                 if (omniboxSuggestionsContainer != null) omniboxSuggestionsContainer.setVisibility(View.GONE);
 
                 omniboxEditText.post(() -> {
                     if (omniboxEditText.getText() != null) {
                         int len = omniboxEditText.getText().length();
-                        android.text.Selection.setSelection(omniboxEditText.getText(), len, 0);
+                        android.text.Selection.setSelection(omniboxEditText.getText(), 0, len);
                     }
                     omniboxEditText.scrollTo(0, 0);
                     InputMethodManager imm = (InputMethodManager) getSystemService(Context.INPUT_METHOD_SERVICE);
@@ -6956,6 +7016,7 @@ public class MainActivity extends AppCompatActivity {
                 if (omniboxTabsBtn != null) omniboxTabsBtn.setVisibility(View.VISIBLE);
                 if (omniboxMenuBtn != null) omniboxMenuBtn.setVisibility(View.VISIBLE);
 
+                if (omniboxCopyBtn != null) omniboxCopyBtn.setVisibility(View.GONE);
                 if (omniboxPasteBtn != null) omniboxPasteBtn.setVisibility(View.GONE);
                 if (omniboxClearBtn != null) omniboxClearBtn.setVisibility(View.GONE);
                 if (omniboxSuggestionsContainer != null) omniboxSuggestionsContainer.setVisibility(View.GONE);
@@ -6982,25 +7043,16 @@ public class MainActivity extends AppCompatActivity {
 
     private void updateOmniboxPasteButton() {
         if (omniboxPasteBtn == null) return;
-        ClipboardManager clipboard = (ClipboardManager) getSystemService(CLIPBOARD_SERVICE);
-        if (clipboard != null && clipboard.hasPrimaryClip() && clipboard.getPrimaryClip() != null && clipboard.getPrimaryClip().getItemCount() > 0) {
-            CharSequence clipText = clipboard.getPrimaryClip().getItemAt(0).getText();
-            if (clipText != null && !clipText.toString().trim().isEmpty()) {
-                String link = clipText.toString().trim();
-                omniboxPasteBtn.setVisibility(View.VISIBLE);
-                omniboxPasteBtn.setTextColor(isDarkTheme ? 0xFF00E5FF : 0xFF0284C7);
-                omniboxPasteBtn.setOnClickListener(v -> {
-                    playUiFeedbackSound("tap");
-                    omniboxEditText.setText(link);
-                    omniboxEditText.requestFocus();
-                    omniboxEditText.setSelection(omniboxEditText.getText().length());
-                    InputMethodManager imm = (InputMethodManager) getSystemService(Context.INPUT_METHOD_SERVICE);
-                    if (imm != null) imm.showSoftInput(omniboxEditText, InputMethodManager.SHOW_IMPLICIT);
-                });
-                return;
-            }
+        int omniAccent = isDarkTheme ? 0xFF00E5FF : 0xFF0284C7;
+        omniboxPasteBtn.setColorFilter(omniAccent);
+        if (omniboxCopyBtn != null) omniboxCopyBtn.setColorFilter(omniAccent);
+        if (omniboxEditText != null && omniboxEditText.hasFocus()) {
+            omniboxPasteBtn.setVisibility(View.VISIBLE);
+            if (omniboxCopyBtn != null) omniboxCopyBtn.setVisibility(View.VISIBLE);
+        } else {
+            omniboxPasteBtn.setVisibility(View.GONE);
+            if (omniboxCopyBtn != null) omniboxCopyBtn.setVisibility(View.GONE);
         }
-        omniboxPasteBtn.setVisibility(View.GONE);
     }
 
     private void showOmniboxFinder() {
@@ -16140,7 +16192,7 @@ public class MainActivity extends AppCompatActivity {
         settings.setBuiltInZoomControls(true);
         settings.setDisplayZoomControls(false);
         settings.setUserAgentString(MOBILE_UA);
-        settings.setMediaPlaybackRequiresUserGesture(false);
+        settings.setMediaPlaybackRequiresUserGesture(true);
 
         if (!isIncognito) {
             settings.setCacheMode(WebSettings.LOAD_DEFAULT);
@@ -17814,8 +17866,13 @@ public class MainActivity extends AppCompatActivity {
                                     iconView.setImageBitmap(favBmp);
                                     iconView.clearColorFilter();
                                 } else {
-                                    iconView.setImageResource(getTabServiceIconRes(tab));
-                                    iconView.setColorFilter(isActive ? groupCol : (isDarkTheme ? 0xFF64748B : 0xFF64748B));
+                                    int iconRes = getTabServiceIconRes(tab);
+                                    iconView.setImageResource(iconRes);
+                                    if (iconRes == R.drawable.ic_platform_youtube || iconRes == R.drawable.ic_platform_google) {
+                                        iconView.clearColorFilter();
+                                    } else {
+                                        iconView.setColorFilter(isActive ? groupCol : (isDarkTheme ? 0xFF64748B : 0xFF64748B));
+                                    }
                                 }
                             }
 
@@ -18036,11 +18093,16 @@ public class MainActivity extends AppCompatActivity {
                             iconView.setImageBitmap(favBmp);
                             iconView.clearColorFilter();
                         } else {
-                            iconView.setImageResource(getTabServiceIconRes(tab));
-                            if (isDarkTheme) {
-                                iconView.setColorFilter(isActive ? 0xFF00E5FF : 0xFF64748B);
+                            int iconRes = getTabServiceIconRes(tab);
+                            iconView.setImageResource(iconRes);
+                            if (iconRes == R.drawable.ic_platform_youtube || iconRes == R.drawable.ic_platform_google) {
+                                iconView.clearColorFilter();
                             } else {
-                                iconView.setColorFilter(isActive ? 0xFF0284C7 : 0xFF64748B);
+                                if (isDarkTheme) {
+                                    iconView.setColorFilter(isActive ? 0xFF00E5FF : 0xFF64748B);
+                                } else {
+                                    iconView.setColorFilter(isActive ? 0xFF0284C7 : 0xFF64748B);
+                                }
                             }
                         }
                     }
@@ -20475,7 +20537,13 @@ public class MainActivity extends AppCompatActivity {
                     omniboxPasteBtn.getGlobalVisibleRect(pasteRect);
                     inPaste = pasteRect.contains((int) ev.getRawX(), (int) ev.getRawY());
                 }
-                if (!inEdit && !inClear && !inPaste) {
+                boolean inCopy = false;
+                if (omniboxCopyBtn != null && omniboxCopyBtn.getVisibility() == View.VISIBLE) {
+                    Rect copyRect = new Rect();
+                    omniboxCopyBtn.getGlobalVisibleRect(copyRect);
+                    inCopy = copyRect.contains((int) ev.getRawX(), (int) ev.getRawY());
+                }
+                if (!inEdit && !inClear && !inPaste && !inCopy) {
                     v.clearFocus();
                     hideKeyboard();
                 }

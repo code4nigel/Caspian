@@ -958,6 +958,11 @@ public class CaspianBridge {
     }
 
     @JavascriptInterface
+    public boolean selectCaspianCask(String caskId) {
+        return switchCaspianCask(caskId);
+    }
+
+    @JavascriptInterface
     public boolean switchCaspianCask(String caskId) {
         if (activity == null || caskId == null) return false;
         try {
