@@ -1,0 +1,1628 @@
+{
+  "Caspian-Android/app/build.gradle.kts": {
+    "mtime": 1786719649.333336,
+    "seen": 1789062562.2363493,
+    "ast_hash": "520f3620f63a817ce8bf8ecd4d227308",
+    "semantic_hash": ""
+  },
+  "Caspian-Android/app/src/main/java/com/caspian/ai/CaspianBridge.java": {
+    "mtime": 1786719580.5135372,
+    "seen": 1789062562.2363598,
+    "ast_hash": "4ca0ac46cb320f8049c019b78f03b385",
+    "semantic_hash": ""
+  },
+  "Caspian-Android/app/src/main/java/com/caspian/ai/MainActivity.java": {
+    "mtime": 1786719580.5222363,
+    "seen": 1789062562.2363648,
+    "ast_hash": "67361cf97dc55a0f97766758c5718634",
+    "semantic_hash": ""
+  },
+  "Caspian-Android/app/src/main/java/com/caspian/ai/SpeechWaveformView.java": {
+    "mtime": 1786713586.5013826,
+    "seen": 1789062562.2363677,
+    "ast_hash": "da5ac6e6fa636202b389246634d45d13",
+    "semantic_hash": ""
+  },
+  "Caspian-Android/assets/mobile_control.js": {
+    "mtime": 1786718217.5856142,
+    "seen": 1789062562.2363708,
+    "ast_hash": "b142618ece8d3be9767f9f4a7f303233",
+    "semantic_hash": ""
+  },
+  "Caspian-Android/assets/mobile_pruner.js": {
+    "mtime": 1786715932.666134,
+    "seen": 1789062562.236373,
+    "ast_hash": "9bbc50e56810966ebf18b44f2b47f03d",
+    "semantic_hash": ""
+  },
+  "Caspian-Android/assets/site_icons.py": {
+    "mtime": 1786719655.8827107,
+    "seen": 1789062562.2363758,
+    "ast_hash": "223c6170da3b863d72eff2f9279d95cb",
+    "semantic_hash": ""
+  },
+  "Caspian-Android/assets/youtube_helper.js": {
+    "mtime": 1786705914.894688,
+    "seen": 1789062562.2363782,
+    "ast_hash": "6548dbf94915d2b2f9b5e01ca2f6ba28",
+    "semantic_hash": ""
+  },
+  "Caspian-Android/build.gradle.kts": {
+    "mtime": 1785895281.889258,
+    "seen": 1789062562.2363808,
+    "ast_hash": "df3a9dbdbf9e750ecd97aae2a7a12ca8",
+    "semantic_hash": ""
+  },
+  "Caspian-Android/copy_extension_icons.py": {
+    "mtime": 1785901028.4973483,
+    "seen": 1789062562.2363834,
+    "ast_hash": "7184093c7e57c2ed246ae970b06217b0",
+    "semantic_hash": ""
+  },
+  "Caspian-Android/embed_dev_avatar.py": {
+    "mtime": 1785906777.7235308,
+    "seen": 1789062562.2363856,
+    "ast_hash": "7a23e105ae49f15242aba13c3e589ce0",
+    "semantic_hash": ""
+  },
+  "Caspian-Android/encode_icons.py": {
+    "mtime": 1786403887.2460978,
+    "seen": 1789062562.2363892,
+    "ast_hash": "79e9a247f135076e4af6894b1ea9f79e",
+    "semantic_hash": ""
+  },
+  "Caspian-Android/generate_png_icons.py": {
+    "mtime": 1785899653.7609563,
+    "seen": 1789062562.236391,
+    "ast_hash": "4d42d75e022c9920eaee62f58e191f70",
+    "semantic_hash": ""
+  },
+  "Caspian-Android/gradlew": {
+    "mtime": 1785893722.9936254,
+    "seen": 1789062562.2363935,
+    "ast_hash": "857faf4b42fc9e324fb40b7223f2a94a",
+    "semantic_hash": ""
+  },
+  "Caspian-Android/settings.gradle.kts": {
+    "mtime": 1785893722.9966834,
+    "seen": 1789062562.2363963,
+    "ast_hash": "2825da4b7237c4721e89aeedc40c93bb",
+    "semantic_hash": ""
+  },
+  "Caspian-Android/update_hub_html.py": {
+    "mtime": 1786406819.5811434,
+    "seen": 1789062562.236399,
+    "ast_hash": "7273575e5a0271db0f66ba09c48dfdf2",
+    "semantic_hash": ""
+  },
+  "Caspian-Android/update_mobile_html.py": {
+    "mtime": 1786712264.560186,
+    "seen": 1789062562.236401,
+    "ast_hash": "ac024607d0edf086bc29afcdf322c078",
+    "semantic_hash": ""
+  },
+  "Caspian-Beta-A/app/build.gradle.kts": {
+    "mtime": 1786719210.3097444,
+    "seen": 1789062562.2364037,
+    "ast_hash": "59d91ea1219f98139ef57df5debd84ec",
+    "semantic_hash": ""
+  },
+  "Caspian-Beta-A/app/src/main/java/com/caspian/betaa/CaspianBridge.java": {
+    "mtime": 1786719022.1181698,
+    "seen": 1789062562.236406,
+    "ast_hash": "7df9b37747ffb96ba0cb6da5a92141fe",
+    "semantic_hash": ""
+  },
+  "Caspian-Beta-A/app/src/main/java/com/caspian/betaa/MainActivity.java": {
+    "mtime": 1786719200.2612655,
+    "seen": 1789062562.236408,
+    "ast_hash": "8995cc0d752f2ef626bb60acd4bfbc17",
+    "semantic_hash": ""
+  },
+  "Caspian-Beta-A/app/src/main/java/com/caspian/betaa/SpeechWaveformView.java": {
+    "mtime": 1786529014.1599195,
+    "seen": 1789062562.2364101,
+    "ast_hash": "34cfa9ae52059e2c48559dbb0b55e2ea",
+    "semantic_hash": ""
+  },
+  "Caspian-Beta-A/assets/mobile_control.js": {
+    "mtime": 1786718217.5856142,
+    "seen": 1789062562.236412,
+    "ast_hash": "b142618ece8d3be9767f9f4a7f303233",
+    "semantic_hash": ""
+  },
+  "Caspian-Beta-A/assets/mobile_pruner.js": {
+    "mtime": 1786715932.666134,
+    "seen": 1789062562.2364154,
+    "ast_hash": "9bbc50e56810966ebf18b44f2b47f03d",
+    "semantic_hash": ""
+  },
+  "Caspian-Beta-A/assets/site_icons.py": {
+    "mtime": 1786719655.8896441,
+    "seen": 1789062562.2364178,
+    "ast_hash": "223c6170da3b863d72eff2f9279d95cb",
+    "semantic_hash": ""
+  },
+  "Caspian-Beta-A/assets/youtube_helper.js": {
+    "mtime": 1786705914.894688,
+    "seen": 1789062562.2364202,
+    "ast_hash": "6548dbf94915d2b2f9b5e01ca2f6ba28",
+    "semantic_hash": ""
+  },
+  "Caspian-Beta-A/build.gradle.kts": {
+    "mtime": 1785895281.889258,
+    "seen": 1789062562.2364223,
+    "ast_hash": "df3a9dbdbf9e750ecd97aae2a7a12ca8",
+    "semantic_hash": ""
+  },
+  "Caspian-Beta-A/copy_extension_icons.py": {
+    "mtime": 1785901028.4973483,
+    "seen": 1789062562.2364252,
+    "ast_hash": "7184093c7e57c2ed246ae970b06217b0",
+    "semantic_hash": ""
+  },
+  "Caspian-Beta-A/embed_dev_avatar.py": {
+    "mtime": 1785906777.7235308,
+    "seen": 1789062562.2364278,
+    "ast_hash": "7a23e105ae49f15242aba13c3e589ce0",
+    "semantic_hash": ""
+  },
+  "Caspian-Beta-A/encode_icons.py": {
+    "mtime": 1786403887.2460978,
+    "seen": 1789062562.2364302,
+    "ast_hash": "79e9a247f135076e4af6894b1ea9f79e",
+    "semantic_hash": ""
+  },
+  "Caspian-Beta-A/generate_png_icons.py": {
+    "mtime": 1785899653.7609563,
+    "seen": 1789062562.2364326,
+    "ast_hash": "4d42d75e022c9920eaee62f58e191f70",
+    "semantic_hash": ""
+  },
+  "Caspian-Beta-A/gradlew": {
+    "mtime": 1785893722.9936254,
+    "seen": 1789062562.2364347,
+    "ast_hash": "857faf4b42fc9e324fb40b7223f2a94a",
+    "semantic_hash": ""
+  },
+  "Caspian-Beta-A/settings.gradle.kts": {
+    "mtime": 1785893722.9966834,
+    "seen": 1789062562.236437,
+    "ast_hash": "2825da4b7237c4721e89aeedc40c93bb",
+    "semantic_hash": ""
+  },
+  "Caspian-Beta-A/update_hub_html.py": {
+    "mtime": 1786406819.5811434,
+    "seen": 1789062562.2364392,
+    "ast_hash": "7273575e5a0271db0f66ba09c48dfdf2",
+    "semantic_hash": ""
+  },
+  "Caspian-Beta-A/update_mobile_html.py": {
+    "mtime": 1786716515.7889903,
+    "seen": 1789062562.2364419,
+    "ast_hash": "ae63e44b6a5fd3eb04420018670c514e",
+    "semantic_hash": ""
+  },
+  "Caspian-Beta-B/app/build.gradle.kts": {
+    "mtime": 1786107580.2252908,
+    "seen": 1789062562.2364442,
+    "ast_hash": "e10541fa5ee2c233377d397b4832f17f",
+    "semantic_hash": ""
+  },
+  "Caspian-Beta-B/app/src/main/java/com/caspian/betab/CaspianBridge.java": {
+    "mtime": 1786104538.4123418,
+    "seen": 1789062562.2364464,
+    "ast_hash": "95a597cf443a72935e99f73684c9caa3",
+    "semantic_hash": ""
+  },
+  "Caspian-Beta-B/app/src/main/java/com/caspian/betab/ChatAdapter.java": {
+    "mtime": 1786105687.645761,
+    "seen": 1789062562.236449,
+    "ast_hash": "69a61ec547e5f70ca3f4eacf899d6da2",
+    "semantic_hash": ""
+  },
+  "Caspian-Beta-B/app/src/main/java/com/caspian/betab/ChatGPTApiClient.java": {
+    "mtime": 1786107130.6546364,
+    "seen": 1789062562.2364514,
+    "ast_hash": "d69f384e38bb0315b5310058fd32d05e",
+    "semantic_hash": ""
+  },
+  "Caspian-Beta-B/app/src/main/java/com/caspian/betab/ChatMessage.java": {
+    "mtime": 1786105667.8029785,
+    "seen": 1789062562.2364535,
+    "ast_hash": "db657be08405d5b6950f627ea448a641",
+    "semantic_hash": ""
+  },
+  "Caspian-Beta-B/app/src/main/java/com/caspian/betab/MainActivity.java": {
+    "mtime": 1786108039.6433458,
+    "seen": 1789062562.236456,
+    "ast_hash": "d964d731b96444ef8ee3786166af1cad",
+    "semantic_hash": ""
+  },
+  "Caspian-Beta-B/assets/mobile_control.js": {
+    "mtime": 1786036921.022521,
+    "seen": 1789062562.2364585,
+    "ast_hash": "6816f2c516cf49ae256ceb12f3deb53b",
+    "semantic_hash": ""
+  },
+  "Caspian-Beta-B/assets/mobile_pruner.js": {
+    "mtime": 1785993036.7162204,
+    "seen": 1789062562.2364612,
+    "ast_hash": "32bb04e4da5865ffd01907a5ffb5b060",
+    "semantic_hash": ""
+  },
+  "Caspian-Beta-B/assets/site_icons.py": {
+    "mtime": 1785989269.7306302,
+    "seen": 1789062562.2364635,
+    "ast_hash": "9eced608297f4487f2c5f6f2757a73c3",
+    "semantic_hash": ""
+  },
+  "Caspian-Beta-B/build.gradle.kts": {
+    "mtime": 1785895281.889258,
+    "seen": 1789062562.2364671,
+    "ast_hash": "df3a9dbdbf9e750ecd97aae2a7a12ca8",
+    "semantic_hash": ""
+  },
+  "Caspian-Beta-B/gradlew": {
+    "mtime": 1785893722.9936254,
+    "seen": 1789062562.2364695,
+    "ast_hash": "857faf4b42fc9e324fb40b7223f2a94a",
+    "semantic_hash": ""
+  },
+  "Caspian-Beta-B/settings.gradle.kts": {
+    "mtime": 1785893722.9966834,
+    "seen": 1789062562.236472,
+    "ast_hash": "2825da4b7237c4721e89aeedc40c93bb",
+    "semantic_hash": ""
+  },
+  "Caspian/background.js": {
+    "mtime": 1788503118.5385208,
+    "seen": 1789062562.2364743,
+    "ast_hash": "465fd2f27636c62db7303b0f69f0ca2b",
+    "semantic_hash": ""
+  },
+  "Caspian/content.js": {
+    "mtime": 1788000969.9534137,
+    "seen": 1789062562.236477,
+    "ast_hash": "52a207e3fa83d98e8f4e9580dee06e66",
+    "semantic_hash": ""
+  },
+  "Caspian/manifest.json": {
+    "mtime": 1788504268.3963535,
+    "seen": 1789062562.236479,
+    "ast_hash": "6ed637dc246abcc8548e05b4e9961626",
+    "semantic_hash": ""
+  },
+  "Caspian/popup.js": {
+    "mtime": 1788503110.3557801,
+    "seen": 1789062562.2364812,
+    "ast_hash": "51a21ea6b24f1af67023dca6111f173f",
+    "semantic_hash": ""
+  },
+  "Caspian/rippleframe.js": {
+    "mtime": 1788502404.2524023,
+    "seen": 1789062562.2364838,
+    "ast_hash": "6fe476c4079000bde1763f8f19b3a4f7",
+    "semantic_hash": ""
+  },
+  "Caspian/rippleframe_capture.js": {
+    "mtime": 1788499782.788602,
+    "seen": 1789062562.236486,
+    "ast_hash": "c175cd620851a991b5463f69fffd9d5a",
+    "semantic_hash": ""
+  },
+  "Caspian/speed_content.js": {
+    "mtime": 1788069663.7708383,
+    "seen": 1789062562.2364888,
+    "ast_hash": "9af9f857ac82cbbc630dfd48c9fadbf3",
+    "semantic_hash": ""
+  },
+  "Caspian/youtube_content.js": {
+    "mtime": 1788068067.9450636,
+    "seen": 1789062562.2364907,
+    "ast_hash": "19681b24c587084bd7b1a467e95ef5d9",
+    "semantic_hash": ""
+  },
+  "betaC/app/build.gradle.kts": {
+    "mtime": 1789061021.4180539,
+    "seen": 1789062562.236493,
+    "ast_hash": "91baf3a7a0da16d501c016c5d74d8022",
+    "semantic_hash": ""
+  },
+  "betaC/app/src/main/assets/adblock_rules.json": {
+    "mtime": 1786769808.077809,
+    "seen": 1789062562.2364953,
+    "ast_hash": "951a1fe947d52d316a47e1a95201f33f",
+    "semantic_hash": ""
+  },
+  "betaC/app/src/main/assets/browser_control.js": {
+    "mtime": 1789057373.1779084,
+    "seen": 1789062562.2364976,
+    "ast_hash": "12c064ae1df88dcf176a479fb3e9ab17",
+    "semantic_hash": ""
+  },
+  "betaC/app/src/main/assets/chatgpt_network_interceptor.js": {
+    "mtime": 1788495149.0519037,
+    "seen": 1789062562.2365,
+    "ast_hash": "1a1aaac60d5498874391200d565db916",
+    "semantic_hash": ""
+  },
+  "betaC/app/src/main/assets/mobile_pruner.js": {
+    "mtime": 1787067446.329575,
+    "seen": 1789062562.2365024,
+    "ast_hash": "f1dabdcddcf8d0dd2579f8bc7f0e3678",
+    "semantic_hash": ""
+  },
+  "betaC/app/src/main/assets/pdf_viewer.js": {
+    "mtime": 1788330366.7082503,
+    "seen": 1789062562.2365048,
+    "ast_hash": "3f2289f75226a79f64d3411f9819559e",
+    "semantic_hash": ""
+  },
+  "betaC/app/src/main/assets/reader_mode.js": {
+    "mtime": 1786769815.0025942,
+    "seen": 1789062562.2365072,
+    "ast_hash": "b8e978cff4a0bc041c14bb1c397416e4",
+    "semantic_hash": ""
+  },
+  "betaC/app/src/main/assets/waveguard_rules.json": {
+    "mtime": 1788589751.577803,
+    "seen": 1789062562.2365093,
+    "ast_hash": "238ae83ba465daf072eac044be3cfeff",
+    "semantic_hash": ""
+  },
+  "betaC/app/src/main/assets/youtube_helper.js": {
+    "mtime": 1789060002.7270484,
+    "seen": 1789062562.2365117,
+    "ast_hash": "a7ddb37335655072faa4dcf999d00132",
+    "semantic_hash": ""
+  },
+  "betaC/app/src/main/java/com/caspian/betac/AICommandRouter.java": {
+    "mtime": 1788611822.196404,
+    "seen": 1789062562.2365139,
+    "ast_hash": "353f55930a9a0f67dcea49afdc220e56",
+    "semantic_hash": ""
+  },
+  "betaC/app/src/main/java/com/caspian/betac/AdBlockShield.java": {
+    "mtime": 1788424692.006215,
+    "seen": 1789062562.236516,
+    "ast_hash": "ab5a443927124319a01e9982fc364de0",
+    "semantic_hash": ""
+  },
+  "betaC/app/src/main/java/com/caspian/betac/BookmarkManager.java": {
+    "mtime": 1788944362.1628227,
+    "seen": 1789062562.2365184,
+    "ast_hash": "a8d44bec6729e448c8566c3400792496",
+    "semantic_hash": ""
+  },
+  "betaC/app/src/main/java/com/caspian/betac/CabRadialMenuView.java": {
+    "mtime": 1788167807.6163468,
+    "seen": 1789062562.2365205,
+    "ast_hash": "0f7a154b3caa51aee67ad48f6d639140",
+    "semantic_hash": ""
+  },
+  "betaC/app/src/main/java/com/caspian/betac/CaskManager.java": {
+    "mtime": 1788598215.544674,
+    "seen": 1789062562.2365227,
+    "ast_hash": "9e4c58ec8a1c404fe131b7b2fef17704",
+    "semantic_hash": ""
+  },
+  "betaC/app/src/main/java/com/caspian/betac/CaspianBridge.java": {
+    "mtime": 1789033641.6346903,
+    "seen": 1789062562.236525,
+    "ast_hash": "8eef8d1dcd571757eef5f93bbaf41ebf",
+    "semantic_hash": ""
+  },
+  "betaC/app/src/main/java/com/caspian/betac/CaspianDownloadManager.java": {
+    "mtime": 1788626614.0567017,
+    "seen": 1789062562.2365272,
+    "ast_hash": "2a5a7f82e48fc8bae2b20f8c77e1b1de",
+    "semantic_hash": ""
+  },
+  "betaC/app/src/main/java/com/caspian/betac/CaspianMediaService.java": {
+    "mtime": 1789060020.2216177,
+    "seen": 1789062562.2365294,
+    "ast_hash": "8387f2f9ae382a37414b817fb52a883f",
+    "semantic_hash": ""
+  },
+  "betaC/app/src/main/java/com/caspian/betac/CaspianPhysics.java": {
+    "mtime": 1789021591.9722667,
+    "seen": 1789062562.2365317,
+    "ast_hash": "62d45dd5fa9efc70402e398d5aacab36",
+    "semantic_hash": ""
+  },
+  "betaC/app/src/main/java/com/caspian/betac/CaspianWebView.java": {
+    "mtime": 1788611901.4422941,
+    "seen": 1789062562.236534,
+    "ast_hash": "5d1733c1a9a1f429d382fe59357623c3",
+    "semantic_hash": ""
+  },
+  "betaC/app/src/main/java/com/caspian/betac/GitHubUpdateManager.java": {
+    "mtime": 1788621856.0092096,
+    "seen": 1789062562.2365363,
+    "ast_hash": "832cd9f503792caff10bedff0b4ef96e",
+    "semantic_hash": ""
+  },
+  "betaC/app/src/main/java/com/caspian/betac/HistoryManager.java": {
+    "mtime": 1788863691.5284286,
+    "seen": 1789062562.2365382,
+    "ast_hash": "fb411cced91d7bdc0a971ee14b025349",
+    "semantic_hash": ""
+  },
+  "betaC/app/src/main/java/com/caspian/betac/MainActivity.java": {
+    "mtime": 1789060963.4205177,
+    "seen": 1789062562.2365406,
+    "ast_hash": "ecfd1d2ea9b7cbafeded5c249220a701",
+    "semantic_hash": ""
+  },
+  "betaC/app/src/main/java/com/caspian/betac/SearchSuggestionService.java": {
+    "mtime": 1787889646.8038251,
+    "seen": 1789062562.2365427,
+    "ast_hash": "2f67089c0f0fb7c7a8a4a4f3bd5d4b09",
+    "semantic_hash": ""
+  },
+  "betaC/app/src/main/java/com/caspian/betac/SpeechWaveformView.java": {
+    "mtime": 1786769755.3970058,
+    "seen": 1789062562.236545,
+    "ast_hash": "9428a99cea7793a0594de89cb7460148",
+    "semantic_hash": ""
+  },
+  "betaC/app/src/main/java/com/caspian/betac/SplashActivity.java": {
+    "mtime": 1786781199.3596451,
+    "seen": 1789062562.236547,
+    "ast_hash": "a3aa75a8c3f2d1315cf4fc10ff1576e4",
+    "semantic_hash": ""
+  },
+  "betaC/app/src/main/java/com/caspian/betac/SwipeableViewFlipper.java": {
+    "mtime": 1788853655.1014798,
+    "seen": 1789062562.2365494,
+    "ast_hash": "95fd6ff1a7cb2b611220b36f70bf77c3",
+    "semantic_hash": ""
+  },
+  "betaC/app/src/main/java/com/caspian/betac/WaveguardShield.java": {
+    "mtime": 1789058662.481856,
+    "seen": 1789062562.2365518,
+    "ast_hash": "967686f0ae49d966ec11277477e2c2ce",
+    "semantic_hash": ""
+  },
+  "betaC/app/src/main/java/com/caspian/betac/WhirlpoolOverlayView.java": {
+    "mtime": 1788337128.4021263,
+    "seen": 1789062562.2365537,
+    "ast_hash": "4e86de74e7e5569c93c2eeec2469fb85",
+    "semantic_hash": ""
+  },
+  "betaC/app/src/main/java/cz/vytvarenicher/whisper/WhisperLib.java": {
+    "mtime": 1788682561.5515633,
+    "seen": 1789062562.236556,
+    "ast_hash": "70e438c0db865c0b0e41dbb1a36230ce",
+    "semantic_hash": ""
+  },
+  "betaC/build.gradle.kts": {
+    "mtime": 1786769596.2455144,
+    "seen": 1789062562.2365584,
+    "ast_hash": "aa668827e0fd0be9c0c37f8e52587d6d",
+    "semantic_hash": ""
+  },
+  "betaC/build_control_assets.py": {
+    "mtime": 1788522798.6411552,
+    "seen": 1789062562.2365606,
+    "ast_hash": "431154bae8ab46caea0356deabf200be",
+    "semantic_hash": ""
+  },
+  "betaC/generate_flow_icons.py": {
+    "mtime": 1786773810.4506319,
+    "seen": 1789062562.236563,
+    "ast_hash": "0554e1684d13199630d4ca58b2918878",
+    "semantic_hash": ""
+  },
+  "betaC/gradlew": {
+    "mtime": 1785893722.9936254,
+    "seen": 1789062562.2365665,
+    "ast_hash": "857faf4b42fc9e324fb40b7223f2a94a",
+    "semantic_hash": ""
+  },
+  "betaC/settings.gradle.kts": {
+    "mtime": 1786769586.7921607,
+    "seen": 1789062562.2365687,
+    "ast_hash": "0cc6e5b2534f5f32c4b8a728e4c060b2",
+    "semantic_hash": ""
+  },
+  "betaC/temp_test.js": {
+    "mtime": 1787064487.4753318,
+    "seen": 1789062562.236571,
+    "ast_hash": "8c95a3da5f7f0599da5726542a8a5784",
+    "semantic_hash": ""
+  },
+  "obtanium setup/Caspian_Obtainium_Setup.json": {
+    "mtime": 1787990418.5522356,
+    "seen": 1789062562.2365732,
+    "ast_hash": "0264d149c4fb9a93a89af00b59621cbf",
+    "semantic_hash": ""
+  },
+  "obtanium setup/Caspian_Obtainium_Setup_V2.json": {
+    "mtime": 1787990857.7331734,
+    "seen": 1789062562.236576,
+    "ast_hash": "0264d149c4fb9a93a89af00b59621cbf",
+    "semantic_hash": ""
+  },
+  ".github/workflows/release.yml": {
+    "mtime": 1788674165.991782,
+    "seen": 1789062562.236578,
+    "ast_hash": "bafcb6e0351164516aaebe1d6a63bdc3",
+    "semantic_hash": ""
+  },
+  "Caspian-Android/README.md": {
+    "mtime": 1786722592.2213676,
+    "seen": 1789062562.2365804,
+    "ast_hash": "cf88205e373c15e0278cb74e31dc6187",
+    "semantic_hash": ""
+  },
+  "Caspian-Android/android log/Caspian_Debug_Log_2026-08-07_10-05-24.txt": {
+    "mtime": 1786077324.0,
+    "seen": 1789062562.236583,
+    "ast_hash": "3fa77b3de2a170367c0e778e96c47166",
+    "semantic_hash": ""
+  },
+  "Caspian-Android/assets/dev_avatar.txt": {
+    "mtime": 1785906796.9271147,
+    "seen": 1789062562.236585,
+    "ast_hash": "72d338680d01ec33e39879901bceccc5",
+    "semantic_hash": ""
+  },
+  "Caspian-Android/assets/launch_hub.html": {
+    "mtime": 1786719656.0206137,
+    "seen": 1789062562.236587,
+    "ast_hash": "9c7fa2d586ddbdb0cc2f7f9fe1e28a5e",
+    "semantic_hash": ""
+  },
+  "Caspian-Android/assets/mobile_control.html": {
+    "mtime": 1786719656.1286433,
+    "seen": 1789062562.2365892,
+    "ast_hash": "46ccbae414cf072b28b66deb7f210a19",
+    "semantic_hash": ""
+  },
+  "Caspian-Beta-A/README.md": {
+    "mtime": 1785893164.408283,
+    "seen": 1789062562.2365916,
+    "ast_hash": "4d7c0b363bf43ee0b957f8158644e747",
+    "semantic_hash": ""
+  },
+  "Caspian-Beta-A/android log/Caspian_BetaA_Debug_Log_2026-08-12_12-44-34.txt": {
+    "mtime": 1786518883.472,
+    "seen": 1789062562.236594,
+    "ast_hash": "83f0e8c7fc96fe758d0f1f60a5035b29",
+    "semantic_hash": ""
+  },
+  "Caspian-Beta-A/assets/dev_avatar.txt": {
+    "mtime": 1785906796.9271147,
+    "seen": 1789062562.236596,
+    "ast_hash": "72d338680d01ec33e39879901bceccc5",
+    "semantic_hash": ""
+  },
+  "Caspian-Beta-A/assets/launch_hub.html": {
+    "mtime": 1786719656.0226216,
+    "seen": 1789062562.2365983,
+    "ast_hash": "9c7fa2d586ddbdb0cc2f7f9fe1e28a5e",
+    "semantic_hash": ""
+  },
+  "Caspian-Beta-A/assets/mobile_control.html": {
+    "mtime": 1786719656.1471398,
+    "seen": 1789062562.2366006,
+    "ast_hash": "8e084a0c0a9296a22daaae4d4a49179c",
+    "semantic_hash": ""
+  },
+  "Caspian-Beta-B/assets/dev_avatar.txt": {
+    "mtime": 1785906796.9271147,
+    "seen": 1789062562.2366028,
+    "ast_hash": "72d338680d01ec33e39879901bceccc5",
+    "semantic_hash": ""
+  },
+  "Caspian-Beta-B/assets/launch_hub.html": {
+    "mtime": 1785991683.434652,
+    "seen": 1789062562.2366052,
+    "ast_hash": "16b725c4f1e4d81115939826590fddc7",
+    "semantic_hash": ""
+  },
+  "Caspian-Beta-B/assets/mobile_control.html": {
+    "mtime": 1786076958.747593,
+    "seen": 1789062562.2366073,
+    "ast_hash": "d48c745e0981908655cc9ef912752f7e",
+    "semantic_hash": ""
+  },
+  "Caspian/popup.html": {
+    "mtime": 1788503000.7036915,
+    "seen": 1789062562.2366092,
+    "ast_hash": "9bbeac43f0df732d2053da9031ecb2e7",
+    "semantic_hash": ""
+  },
+  "Caspian/rippleframe.html": {
+    "mtime": 1788502330.4982185,
+    "seen": 1789062562.2366116,
+    "ast_hash": "f876e3da1fea3543e2dfda4c46eaa5a1",
+    "semantic_hash": ""
+  },
+  "README.md": {
+    "mtime": 1788535398.9965038,
+    "seen": 1789062562.236614,
+    "ast_hash": "2498013bf4bd3164354b9bebc03a730e",
+    "semantic_hash": ""
+  },
+  "betaC/app/src/main/assets/browser_control.html": {
+    "mtime": 1789027011.9586997,
+    "seen": 1789062562.2366161,
+    "ast_hash": "5bd8c8b5717a1fc6b049a45af6c6b392",
+    "semantic_hash": ""
+  },
+  "betaC/app/src/main/assets/incognito_hub.html": {
+    "mtime": 1786860454.869115,
+    "seen": 1789062562.2366185,
+    "ast_hash": "99531259953553258f7ba33ce3f95977",
+    "semantic_hash": ""
+  },
+  "betaC/app/src/main/assets/launch_hub.html": {
+    "mtime": 1788944317.9257026,
+    "seen": 1789062562.236621,
+    "ast_hash": "74bf13385e574eb14f6c11bb068b9777",
+    "semantic_hash": ""
+  },
+  "betaC/app/src/main/assets/pdf_viewer.html": {
+    "mtime": 1788171102.835229,
+    "seen": 1789062562.2366228,
+    "ast_hash": "8a9b02f7dda82c6e2de733f7935f09b5",
+    "semantic_hash": ""
+  },
+  "stitch_designs/Stitch_history_UI/DESIGN.md": {
+    "mtime": 1788791610.4797902,
+    "seen": 1789062562.236625,
+    "ast_hash": "a56ec7cbe2593fdb958cf3ba53bf5e96",
+    "semantic_hash": ""
+  },
+  "stitch_designs/Stitch_history_UI/code.html": {
+    "mtime": 1788791610.4430668,
+    "seen": 1789062562.236627,
+    "ast_hash": "ef98dfe4d531f5fac5834626e5fc4a54",
+    "semantic_hash": ""
+  },
+  "stitch_designs/caspian_ai_browser/DESIGN.md": {
+    "mtime": 1787893001.5725076,
+    "seen": 1789062562.2366295,
+    "ast_hash": "a56ec7cbe2593fdb958cf3ba53bf5e96",
+    "semantic_hash": ""
+  },
+  "stitch_designs/caspian_ai_browser_pro_view/code.html": {
+    "mtime": 1787893001.5342648,
+    "seen": 1789062562.2366319,
+    "ast_hash": "84bf513b1fac0101f50a7ee4144e7011",
+    "semantic_hash": ""
+  },
+  "stitch_designs/caspian_split_arena/code.html": {
+    "mtime": 1787893001.4722803,
+    "seen": 1789062562.236634,
+    "ast_hash": "809ab756ae48c90bf4e7453418eee8b4",
+    "semantic_hash": ""
+  },
+  "stitch_designs/caspian_tab_switcher/code.html": {
+    "mtime": 1787893001.4010744,
+    "seen": 1789062562.2366364,
+    "ast_hash": "d83c0aae62861837e882008ec69dd56e",
+    "semantic_hash": ""
+  },
+  "stitch_designs/stitch_bookmark_design_3/stitch_caspian_ai_mobile_browser/caspian_ai_browser/DESIGN.md": {
+    "mtime": 1788872072.0,
+    "seen": 1789062562.2366388,
+    "ast_hash": "a56ec7cbe2593fdb958cf3ba53bf5e96",
+    "semantic_hash": ""
+  },
+  "stitch_designs/stitch_bookmark_design_3/stitch_caspian_ai_mobile_browser/caspian_bookmark_manager_light/code.html": {
+    "mtime": 1788872072.0,
+    "seen": 1789062562.236641,
+    "ast_hash": "065e63240ca9499725712b3f916d21ef",
+    "semantic_hash": ""
+  },
+  "stitch_designs/stitch_bookmark_design_3/stitch_caspian_ai_mobile_browser/caspian_bookmark_manager_sort_icon_dropdown/code.html": {
+    "mtime": 1788872072.0,
+    "seen": 1789062562.2366433,
+    "ast_hash": "4c9752344dc592a156f16d9791c03f2d",
+    "semantic_hash": ""
+  },
+  "stitch_designs/stitch_dark_card/DESIGN.md": {
+    "mtime": 1788787523.243989,
+    "seen": 1789062562.236646,
+    "ast_hash": "a56ec7cbe2593fdb958cf3ba53bf5e96",
+    "semantic_hash": ""
+  },
+  "stitch_designs/stitch_dark_card/code.html": {
+    "mtime": 1788787523.194082,
+    "seen": 1789062562.236648,
+    "ast_hash": "6481ff34cef207b4c196bf85d27f12fb",
+    "semantic_hash": ""
+  },
+  "stitch_designs/stitch_dark_list/DESIGN.md": {
+    "mtime": 1788787510.5664628,
+    "seen": 1789062562.2366505,
+    "ast_hash": "a56ec7cbe2593fdb958cf3ba53bf5e96",
+    "semantic_hash": ""
+  },
+  "stitch_designs/stitch_dark_list/code.html": {
+    "mtime": 1788787510.5127902,
+    "seen": 1789062562.2366526,
+    "ast_hash": "5b70e8584552906c8df689e7d9bc71e6",
+    "semantic_hash": ""
+  },
+  "stitch_designs/stitch_light_card/DESIGN.md": {
+    "mtime": 1788787336.1317117,
+    "seen": 1789062562.2366545,
+    "ast_hash": "a56ec7cbe2593fdb958cf3ba53bf5e96",
+    "semantic_hash": ""
+  },
+  "stitch_designs/stitch_light_card/code.html": {
+    "mtime": 1788787336.063311,
+    "seen": 1789062562.236657,
+    "ast_hash": "83aa070db1059945e5b6e8fc3233a0ac",
+    "semantic_hash": ""
+  },
+  "stitch_designs/stitch_light_list/DESIGN.md": {
+    "mtime": 1788787429.9652982,
+    "seen": 1789062562.2366593,
+    "ast_hash": "a56ec7cbe2593fdb958cf3ba53bf5e96",
+    "semantic_hash": ""
+  },
+  "stitch_designs/stitch_light_list/code.html": {
+    "mtime": 1788787429.9138265,
+    "seen": 1789062562.236662,
+    "ast_hash": "292405e5ea4cf2684c0638e24416e314",
+    "semantic_hash": ""
+  },
+  "Caspian-Android/app/src/main/res/drawable/ic_launcher_extension.png": {
+    "mtime": 1786193212.6562016,
+    "seen": 1789062562.236664,
+    "ast_hash": "4f533862022348a0bb07d4ea33d2dce3",
+    "semantic_hash": ""
+  },
+  "Caspian-Android/app/src/main/res/mipmap-hdpi/ic_launcher.png": {
+    "mtime": 1786193174.529078,
+    "seen": 1789062562.2366667,
+    "ast_hash": "4f533862022348a0bb07d4ea33d2dce3",
+    "semantic_hash": ""
+  },
+  "Caspian-Android/app/src/main/res/mipmap-hdpi/ic_launcher_round.png": {
+    "mtime": 1785901035.7867513,
+    "seen": 1789062562.2366686,
+    "ast_hash": "4f533862022348a0bb07d4ea33d2dce3",
+    "semantic_hash": ""
+  },
+  "Caspian-Android/app/src/main/res/mipmap-mdpi/ic_launcher.png": {
+    "mtime": 1786193174.528419,
+    "seen": 1789062562.236671,
+    "ast_hash": "4f533862022348a0bb07d4ea33d2dce3",
+    "semantic_hash": ""
+  },
+  "Caspian-Android/app/src/main/res/mipmap-mdpi/ic_launcher_round.png": {
+    "mtime": 1785901035.7847543,
+    "seen": 1789062562.236673,
+    "ast_hash": "4f533862022348a0bb07d4ea33d2dce3",
+    "semantic_hash": ""
+  },
+  "Caspian-Android/app/src/main/res/mipmap-xhdpi/ic_launcher.png": {
+    "mtime": 1786193174.5306094,
+    "seen": 1789062562.2366753,
+    "ast_hash": "4f533862022348a0bb07d4ea33d2dce3",
+    "semantic_hash": ""
+  },
+  "Caspian-Android/app/src/main/res/mipmap-xhdpi/ic_launcher_round.png": {
+    "mtime": 1785901035.7911105,
+    "seen": 1789062562.2366774,
+    "ast_hash": "4f533862022348a0bb07d4ea33d2dce3",
+    "semantic_hash": ""
+  },
+  "Caspian-Android/app/src/main/res/mipmap-xxhdpi/ic_launcher.png": {
+    "mtime": 1786193174.5317101,
+    "seen": 1789062562.2366798,
+    "ast_hash": "4f533862022348a0bb07d4ea33d2dce3",
+    "semantic_hash": ""
+  },
+  "Caspian-Android/app/src/main/res/mipmap-xxhdpi/ic_launcher_round.png": {
+    "mtime": 1785901035.7931204,
+    "seen": 1789062562.236682,
+    "ast_hash": "4f533862022348a0bb07d4ea33d2dce3",
+    "semantic_hash": ""
+  },
+  "Caspian-Android/app/src/main/res/mipmap-xxxhdpi/ic_launcher.png": {
+    "mtime": 1786193174.5333478,
+    "seen": 1789062562.2366843,
+    "ast_hash": "4f533862022348a0bb07d4ea33d2dce3",
+    "semantic_hash": ""
+  },
+  "Caspian-Android/app/src/main/res/mipmap-xxxhdpi/ic_launcher_round.png": {
+    "mtime": 1785901035.7941215,
+    "seen": 1789062562.2366867,
+    "ast_hash": "4f533862022348a0bb07d4ea33d2dce3",
+    "semantic_hash": ""
+  },
+  "Caspian-Android/icon images/chatgpt-icon.png": {
+    "mtime": 1785988905.7872498,
+    "seen": 1789062562.2366889,
+    "ast_hash": "8550423f3c5e56ec76eb27ef74fa2903",
+    "semantic_hash": ""
+  },
+  "Caspian-Android/icon images/google-gemini-icon.png": {
+    "mtime": 1785988914.6251814,
+    "seen": 1789062562.2366912,
+    "ast_hash": "fe38b5629ba31edf52df0697642b7587",
+    "semantic_hash": ""
+  },
+  "Caspian-Android/icon images/google.png": {
+    "mtime": 1786399747.8497777,
+    "seen": 1789062562.2366931,
+    "ast_hash": "9e3c550aec59af1cc9d4b00266bd193d",
+    "semantic_hash": ""
+  },
+  "Caspian-Android/icon images/youtube.png": {
+    "mtime": 1786399704.7499053,
+    "seen": 1789062562.2366958,
+    "ast_hash": "9c9d41eb4a9ee8611a498fa857b1380a",
+    "semantic_hash": ""
+  },
+  "Caspian-Android/icon images/youtube2.png": {
+    "mtime": 1786403087.0859835,
+    "seen": 1789062562.2366982,
+    "ast_hash": "0a3b6857d89b9c05dc221ef492dfba38",
+    "semantic_hash": ""
+  },
+  "Caspian-Beta-A/app/src/main/res/drawable/ic_launcher_extension.png": {
+    "mtime": 1786193212.6562016,
+    "seen": 1789062562.2367005,
+    "ast_hash": "4f533862022348a0bb07d4ea33d2dce3",
+    "semantic_hash": ""
+  },
+  "Caspian-Beta-A/app/src/main/res/mipmap-hdpi/ic_launcher.png": {
+    "mtime": 1786193174.529078,
+    "seen": 1789062562.2367024,
+    "ast_hash": "4f533862022348a0bb07d4ea33d2dce3",
+    "semantic_hash": ""
+  },
+  "Caspian-Beta-A/app/src/main/res/mipmap-hdpi/ic_launcher_round.png": {
+    "mtime": 1785901035.7867513,
+    "seen": 1789062562.236705,
+    "ast_hash": "4f533862022348a0bb07d4ea33d2dce3",
+    "semantic_hash": ""
+  },
+  "Caspian-Beta-A/app/src/main/res/mipmap-mdpi/ic_launcher.png": {
+    "mtime": 1786193174.528419,
+    "seen": 1789062562.236707,
+    "ast_hash": "4f533862022348a0bb07d4ea33d2dce3",
+    "semantic_hash": ""
+  },
+  "Caspian-Beta-A/app/src/main/res/mipmap-mdpi/ic_launcher_round.png": {
+    "mtime": 1785901035.7847543,
+    "seen": 1789062562.2367094,
+    "ast_hash": "4f533862022348a0bb07d4ea33d2dce3",
+    "semantic_hash": ""
+  },
+  "Caspian-Beta-A/app/src/main/res/mipmap-xhdpi/ic_launcher.png": {
+    "mtime": 1786193174.5306094,
+    "seen": 1789062562.2367117,
+    "ast_hash": "4f533862022348a0bb07d4ea33d2dce3",
+    "semantic_hash": ""
+  },
+  "Caspian-Beta-A/app/src/main/res/mipmap-xhdpi/ic_launcher_round.png": {
+    "mtime": 1785901035.7911105,
+    "seen": 1789062562.236714,
+    "ast_hash": "4f533862022348a0bb07d4ea33d2dce3",
+    "semantic_hash": ""
+  },
+  "Caspian-Beta-A/app/src/main/res/mipmap-xxhdpi/ic_launcher.png": {
+    "mtime": 1786193174.5317101,
+    "seen": 1789062562.2367158,
+    "ast_hash": "4f533862022348a0bb07d4ea33d2dce3",
+    "semantic_hash": ""
+  },
+  "Caspian-Beta-A/app/src/main/res/mipmap-xxhdpi/ic_launcher_round.png": {
+    "mtime": 1785901035.7931204,
+    "seen": 1789062562.2367184,
+    "ast_hash": "4f533862022348a0bb07d4ea33d2dce3",
+    "semantic_hash": ""
+  },
+  "Caspian-Beta-A/app/src/main/res/mipmap-xxxhdpi/ic_launcher.png": {
+    "mtime": 1786193174.5333478,
+    "seen": 1789062562.2367206,
+    "ast_hash": "4f533862022348a0bb07d4ea33d2dce3",
+    "semantic_hash": ""
+  },
+  "Caspian-Beta-A/app/src/main/res/mipmap-xxxhdpi/ic_launcher_round.png": {
+    "mtime": 1785901035.7941215,
+    "seen": 1789062562.2367227,
+    "ast_hash": "4f533862022348a0bb07d4ea33d2dce3",
+    "semantic_hash": ""
+  },
+  "Caspian-Beta-A/icon images/chatgpt-icon.png": {
+    "mtime": 1785988905.7872498,
+    "seen": 1789062562.2367249,
+    "ast_hash": "8550423f3c5e56ec76eb27ef74fa2903",
+    "semantic_hash": ""
+  },
+  "Caspian-Beta-A/icon images/google-gemini-icon.png": {
+    "mtime": 1785988914.6251814,
+    "seen": 1789062562.2367268,
+    "ast_hash": "fe38b5629ba31edf52df0697642b7587",
+    "semantic_hash": ""
+  },
+  "Caspian-Beta-B/app/src/main/mipmap-hdpi/ic_launcher.png": {
+    "mtime": 1785901035.7867513,
+    "seen": 1789062562.2367291,
+    "ast_hash": "4f533862022348a0bb07d4ea33d2dce3",
+    "semantic_hash": ""
+  },
+  "Caspian-Beta-B/app/src/main/mipmap-hdpi/ic_launcher_round.png": {
+    "mtime": 1785901035.7867513,
+    "seen": 1789062562.2367308,
+    "ast_hash": "4f533862022348a0bb07d4ea33d2dce3",
+    "semantic_hash": ""
+  },
+  "Caspian-Beta-B/app/src/main/mipmap-mdpi/ic_launcher.png": {
+    "mtime": 1785901035.7837546,
+    "seen": 1789062562.2367332,
+    "ast_hash": "4f533862022348a0bb07d4ea33d2dce3",
+    "semantic_hash": ""
+  },
+  "Caspian-Beta-B/app/src/main/mipmap-mdpi/ic_launcher_round.png": {
+    "mtime": 1785901035.7847543,
+    "seen": 1789062562.2367356,
+    "ast_hash": "4f533862022348a0bb07d4ea33d2dce3",
+    "semantic_hash": ""
+  },
+  "Caspian-Beta-B/app/src/main/mipmap-xhdpi/ic_launcher.png": {
+    "mtime": 1785901035.790601,
+    "seen": 1789062562.2367377,
+    "ast_hash": "4f533862022348a0bb07d4ea33d2dce3",
+    "semantic_hash": ""
+  },
+  "Caspian-Beta-B/app/src/main/mipmap-xhdpi/ic_launcher_round.png": {
+    "mtime": 1785901035.7911105,
+    "seen": 1789062562.2367399,
+    "ast_hash": "4f533862022348a0bb07d4ea33d2dce3",
+    "semantic_hash": ""
+  },
+  "Caspian-Beta-B/app/src/main/mipmap-xxhdpi/ic_launcher.png": {
+    "mtime": 1785901035.7921193,
+    "seen": 1789062562.2367418,
+    "ast_hash": "4f533862022348a0bb07d4ea33d2dce3",
+    "semantic_hash": ""
+  },
+  "Caspian-Beta-B/app/src/main/mipmap-xxhdpi/ic_launcher_round.png": {
+    "mtime": 1785901035.7931204,
+    "seen": 1789062562.2367442,
+    "ast_hash": "4f533862022348a0bb07d4ea33d2dce3",
+    "semantic_hash": ""
+  },
+  "Caspian-Beta-B/app/src/main/mipmap-xxxhdpi/ic_launcher.png": {
+    "mtime": 1785901035.7931204,
+    "seen": 1789062562.2367463,
+    "ast_hash": "4f533862022348a0bb07d4ea33d2dce3",
+    "semantic_hash": ""
+  },
+  "Caspian-Beta-B/app/src/main/mipmap-xxxhdpi/ic_launcher_round.png": {
+    "mtime": 1785901035.7941215,
+    "seen": 1789062562.2367482,
+    "ast_hash": "4f533862022348a0bb07d4ea33d2dce3",
+    "semantic_hash": ""
+  },
+  "Caspian-Beta-B/app/src/main/res/mipmap-hdpi/ic_launcher.png": {
+    "mtime": 1785901035.7867513,
+    "seen": 1789062562.2367506,
+    "ast_hash": "4f533862022348a0bb07d4ea33d2dce3",
+    "semantic_hash": ""
+  },
+  "Caspian-Beta-B/app/src/main/res/mipmap-hdpi/ic_launcher_round.png": {
+    "mtime": 1785901035.7867513,
+    "seen": 1789062562.236753,
+    "ast_hash": "4f533862022348a0bb07d4ea33d2dce3",
+    "semantic_hash": ""
+  },
+  "Caspian-Beta-B/app/src/main/res/mipmap-mdpi/ic_launcher.png": {
+    "mtime": 1785901035.7837546,
+    "seen": 1789062562.2367551,
+    "ast_hash": "4f533862022348a0bb07d4ea33d2dce3",
+    "semantic_hash": ""
+  },
+  "Caspian-Beta-B/app/src/main/res/mipmap-mdpi/ic_launcher_round.png": {
+    "mtime": 1785901035.7847543,
+    "seen": 1789062562.2367604,
+    "ast_hash": "4f533862022348a0bb07d4ea33d2dce3",
+    "semantic_hash": ""
+  },
+  "Caspian-Beta-B/app/src/main/res/mipmap-xhdpi/ic_launcher.png": {
+    "mtime": 1785901035.790601,
+    "seen": 1789062562.236762,
+    "ast_hash": "4f533862022348a0bb07d4ea33d2dce3",
+    "semantic_hash": ""
+  },
+  "Caspian-Beta-B/app/src/main/res/mipmap-xhdpi/ic_launcher_round.png": {
+    "mtime": 1785901035.7911105,
+    "seen": 1789062562.2367644,
+    "ast_hash": "4f533862022348a0bb07d4ea33d2dce3",
+    "semantic_hash": ""
+  },
+  "Caspian-Beta-B/app/src/main/res/mipmap-xxhdpi/ic_launcher.png": {
+    "mtime": 1785901035.7921193,
+    "seen": 1789062562.2367666,
+    "ast_hash": "4f533862022348a0bb07d4ea33d2dce3",
+    "semantic_hash": ""
+  },
+  "Caspian-Beta-B/app/src/main/res/mipmap-xxhdpi/ic_launcher_round.png": {
+    "mtime": 1785901035.7931204,
+    "seen": 1789062562.2367687,
+    "ast_hash": "4f533862022348a0bb07d4ea33d2dce3",
+    "semantic_hash": ""
+  },
+  "Caspian-Beta-B/app/src/main/res/mipmap-xxxhdpi/ic_launcher.png": {
+    "mtime": 1785901035.7931204,
+    "seen": 1789062562.2367709,
+    "ast_hash": "4f533862022348a0bb07d4ea33d2dce3",
+    "semantic_hash": ""
+  },
+  "Caspian-Beta-B/app/src/main/res/mipmap-xxxhdpi/ic_launcher_round.png": {
+    "mtime": 1785901035.7941215,
+    "seen": 1789062562.236773,
+    "ast_hash": "4f533862022348a0bb07d4ea33d2dce3",
+    "semantic_hash": ""
+  },
+  "Caspian/developer.png": {
+    "mtime": 1784218072.0379138,
+    "seen": 1789062562.2367754,
+    "ast_hash": "e6121c01b387b7d5ebdefbb97e285fc8",
+    "semantic_hash": ""
+  },
+  "Caspian/icon128.png": {
+    "mtime": 1785308288.7786021,
+    "seen": 1789062562.2367775,
+    "ast_hash": "4f533862022348a0bb07d4ea33d2dce3",
+    "semantic_hash": ""
+  },
+  "Caspian/icon16.png": {
+    "mtime": 1785308288.765903,
+    "seen": 1789062562.2367795,
+    "ast_hash": "7b5a613447578208e5f53be7d0c08d80",
+    "semantic_hash": ""
+  },
+  "Caspian/icon48.png": {
+    "mtime": 1785308288.7735324,
+    "seen": 1789062562.2367816,
+    "ast_hash": "1f663d97772eba666137332f86b632c2",
+    "semantic_hash": ""
+  },
+  "Caspian/images/Caspian_darkUI.png": {
+    "mtime": 1785313703.7473903,
+    "seen": 1789062562.236784,
+    "ast_hash": "20d6badefeabe15b243d9698dced4a81",
+    "semantic_hash": ""
+  },
+  "Caspian/images/caspian_exportOptions.png": {
+    "mtime": 1785685583.151131,
+    "seen": 1789062562.236786,
+    "ast_hash": "e122710b9adfbee47a7501233a0390c5",
+    "semantic_hash": ""
+  },
+  "Caspian/images/caspian_mainUI.png": {
+    "mtime": 1785685566.7330456,
+    "seen": 1789062562.2367883,
+    "ast_hash": "39a01931e7bf50096a42bf10a8a894cc",
+    "semantic_hash": ""
+  },
+  "Caspian/images/caspian_settingsUI.png": {
+    "mtime": 1785313683.3052244,
+    "seen": 1789062562.2367902,
+    "ast_hash": "a2d01ffb2a9d70191ba2812d3cc47720",
+    "semantic_hash": ""
+  },
+  "Caspian/images/caspian_siteUI.png": {
+    "mtime": 1785313663.9778547,
+    "seen": 1789062562.2367923,
+    "ast_hash": "2450ebb7896de12eb712c38677153ecd",
+    "semantic_hash": ""
+  },
+  "Images/Capsian Flow/Flow_Youtube_example.jpg": {
+    "mtime": 1787918714.0,
+    "seen": 1789062562.2367945,
+    "ast_hash": "104b7135dff703a9bb25252e75a3ab20",
+    "semantic_hash": ""
+  },
+  "Images/Capsian Flow/Flow_chat_AI_example.jpg": {
+    "mtime": 1787918714.0,
+    "seen": 1789062562.236797,
+    "ast_hash": "a344a68e33158d6e7c93dc2266f76b22",
+    "semantic_hash": ""
+  },
+  "Images/Capsian Flow/Flow_engine_example.jpg": {
+    "mtime": 1787918714.0,
+    "seen": 1789062562.2367995,
+    "ast_hash": "185ac831272612c09cf150dd9cf0a90f",
+    "semantic_hash": ""
+  },
+  "Images/Capsian Flow/Flow_google_example.jpg": {
+    "mtime": 1787918714.0,
+    "seen": 1789062562.2368019,
+    "ast_hash": "0e0bc980e7dd87dffae1e204f9dce834",
+    "semantic_hash": ""
+  },
+  "Images/Capsian Flow/Flow_settings_example.jpg": {
+    "mtime": 1787918714.0,
+    "seen": 1789062562.2368038,
+    "ast_hash": "127314cc6d216f3e23e2f209820acffe",
+    "semantic_hash": ""
+  },
+  "Images/Capsian Flow/Flow_tab_example.jpg": {
+    "mtime": 1787918714.0,
+    "seen": 1789062562.2368062,
+    "ast_hash": "da5c68e5afec39236fd98b227f983368",
+    "semantic_hash": ""
+  },
+  "betaC/app/src/main/res/drawable/ic_launcher_extension.png": {
+    "mtime": 1786193212.6562016,
+    "seen": 1789062562.2368085,
+    "ast_hash": "4f533862022348a0bb07d4ea33d2dce3",
+    "semantic_hash": ""
+  },
+  "betaC/app/src/main/res/mipmap-hdpi/ic_launcher.png": {
+    "mtime": 1786773942.280008,
+    "seen": 1789062562.236811,
+    "ast_hash": "282b1d038f2a07f520dcc4d706eae86e",
+    "semantic_hash": ""
+  },
+  "betaC/app/src/main/res/mipmap-hdpi/ic_launcher_round.png": {
+    "mtime": 1786773942.280008,
+    "seen": 1789062562.236813,
+    "ast_hash": "916353f02b9d2d2ba8db6b3d9a6e845a",
+    "semantic_hash": ""
+  },
+  "betaC/app/src/main/res/mipmap-mdpi/ic_launcher.png": {
+    "mtime": 1786773942.272763,
+    "seen": 1789062562.2368147,
+    "ast_hash": "fb61a378f4c0518a07a4eb02a5c7692a",
+    "semantic_hash": ""
+  },
+  "betaC/app/src/main/res/mipmap-mdpi/ic_launcher_round.png": {
+    "mtime": 1786773942.2790086,
+    "seen": 1789062562.2368174,
+    "ast_hash": "24b9814897b8e03262e12f087b74c58c",
+    "semantic_hash": ""
+  },
+  "betaC/app/src/main/res/mipmap-xhdpi/ic_launcher.png": {
+    "mtime": 1786773942.297288,
+    "seen": 1789062562.23682,
+    "ast_hash": "98107edf79a2bf0de8790501afcccd46",
+    "semantic_hash": ""
+  },
+  "betaC/app/src/main/res/mipmap-xhdpi/ic_launcher_round.png": {
+    "mtime": 1786773942.3134396,
+    "seen": 1789062562.2368221,
+    "ast_hash": "4a95c4214421e61e9a499e22cd3d56c2",
+    "semantic_hash": ""
+  },
+  "betaC/app/src/main/res/mipmap-xxhdpi/ic_launcher.png": {
+    "mtime": 1786773942.3305378,
+    "seen": 1789062562.2368243,
+    "ast_hash": "8d5c726e2b0329e7aa74110745982e85",
+    "semantic_hash": ""
+  },
+  "betaC/app/src/main/res/mipmap-xxhdpi/ic_launcher_round.png": {
+    "mtime": 1786773942.3465846,
+    "seen": 1789062562.2368262,
+    "ast_hash": "66c3780677a25cfb3fc30c0ff0501e0a",
+    "semantic_hash": ""
+  },
+  "betaC/app/src/main/res/mipmap-xxxhdpi/ic_launcher.png": {
+    "mtime": 1786773942.379403,
+    "seen": 1789062562.2368283,
+    "ast_hash": "0b5209adaca82ada2b172c0f566f40e1",
+    "semantic_hash": ""
+  },
+  "betaC/app/src/main/res/mipmap-xxxhdpi/ic_launcher_round.png": {
+    "mtime": 1786773942.4113772,
+    "seen": 1789062562.2368302,
+    "ast_hash": "689c83f521d442a19013cc2819ed14d1",
+    "semantic_hash": ""
+  },
+  "stitch_designs/Stitch_history_UI/screen.png": {
+    "mtime": 1788791610.4670577,
+    "seen": 1789062562.2368326,
+    "ast_hash": "6622713101774df6aa3c1e5335c5f1eb",
+    "semantic_hash": ""
+  },
+  "stitch_designs/caspian_ai_browser_pro_view/screen.png": {
+    "mtime": 1787893001.5504029,
+    "seen": 1789062562.236835,
+    "ast_hash": "a65db3f2a336bc6fa69f9d15e8af24af",
+    "semantic_hash": ""
+  },
+  "stitch_designs/caspian_split_arena/screen.png": {
+    "mtime": 1787893001.5079305,
+    "seen": 1789062562.2368374,
+    "ast_hash": "8db951461339f4c978ac6a1f57e673f8",
+    "semantic_hash": ""
+  },
+  "stitch_designs/caspian_tab_switcher/screen.png": {
+    "mtime": 1787893001.4501345,
+    "seen": 1789062562.2368398,
+    "ast_hash": "0534fca20bdd4d152a7746c571004a12",
+    "semantic_hash": ""
+  },
+  "stitch_designs/stitch_bookmark_design_3/stitch_caspian_ai_mobile_browser/caspian_bookmark_manager_light/screen.png": {
+    "mtime": 1788872072.0,
+    "seen": 1789062562.2368417,
+    "ast_hash": "bfdb5ab0b2ec51938e005628386af8ec",
+    "semantic_hash": ""
+  },
+  "stitch_designs/stitch_bookmark_design_3/stitch_caspian_ai_mobile_browser/caspian_bookmark_manager_sort_icon_dropdown/screen.png": {
+    "mtime": 1788872072.0,
+    "seen": 1789062562.2368443,
+    "ast_hash": "6f33833e51a0d56d76405362134b296f",
+    "semantic_hash": ""
+  },
+  "stitch_designs/stitch_dark_card/screen.png": {
+    "mtime": 1788787523.225758,
+    "seen": 1789062562.2368467,
+    "ast_hash": "9db0344e22d6386c82ce70a20a86e19a",
+    "semantic_hash": ""
+  },
+  "stitch_designs/stitch_dark_list/screen.png": {
+    "mtime": 1788787510.5497048,
+    "seen": 1789062562.2368486,
+    "ast_hash": "11ca3550941d8fc201ecdfb54a7df770",
+    "semantic_hash": ""
+  },
+  "stitch_designs/stitch_light_card/screen.png": {
+    "mtime": 1788787336.1157498,
+    "seen": 1789062562.2368512,
+    "ast_hash": "18cb201c25ac46dc9b547aa680182ff4",
+    "semantic_hash": ""
+  },
+  "stitch_designs/stitch_light_list/screen.png": {
+    "mtime": 1788787429.9486604,
+    "seen": 1789062562.2368536,
+    "ast_hash": "afaa112ebb14a8be368a45734a6bb46a",
+    "semantic_hash": ""
+  },
+  "Caspian-Android/app/src/main/res/raw/caspian_splash_v22.mp4": {
+    "mtime": 1786419816.3061137,
+    "seen": 1789062562.236856,
+    "ast_hash": "1d6a2c8e134697057eae6224aedf84ac",
+    "semantic_hash": ""
+  },
+  "Caspian-Android/assets/sfx/pop_button.mp3": {
+    "mtime": 1786503696.4304564,
+    "seen": 1789062562.2368581,
+    "ast_hash": "48d1af1a0daa0a3bc22e92cc0d3c0b2c",
+    "semantic_hash": ""
+  },
+  "Caspian-Android/assets/sfx/pop_button_v2.mp3": {
+    "mtime": 1786712117.4216917,
+    "seen": 1789062562.2368605,
+    "ast_hash": "0c7aab15c6b51c174211c86753a791db",
+    "semantic_hash": ""
+  },
+  "Caspian-Android/assets/sfx/pop_button_v2.wav": {
+    "mtime": 1786652205.975458,
+    "seen": 1789062562.2368622,
+    "ast_hash": "d69527ae5dc83f778722948f7f484998",
+    "semantic_hash": ""
+  },
+  "Caspian-Android/assets/sfx/pop_click.mp3": {
+    "mtime": 1786712117.5539832,
+    "seen": 1789062562.2368648,
+    "ast_hash": "719039938a053535707bfb59ea9dd7db",
+    "semantic_hash": ""
+  },
+  "Caspian-Android/assets/sfx/pop_click.wav": {
+    "mtime": 1786652176.6740744,
+    "seen": 1789062562.2368672,
+    "ast_hash": "994ff2fa38a0f1d6f1e74199ece5590d",
+    "semantic_hash": ""
+  },
+  "Caspian-Android/assets/sfx/pop_unknown_v1.mp3": {
+    "mtime": 1786712117.68739,
+    "seen": 1789062562.2368693,
+    "ast_hash": "8213d81c09fdf94896ee06ea12f56541",
+    "semantic_hash": ""
+  },
+  "Caspian-Android/assets/sfx/pop_unknown_v1.wav": {
+    "mtime": 1786652278.0971248,
+    "seen": 1789062562.2368715,
+    "ast_hash": "a27b5c6f951225ae622e33cadbf80ac0",
+    "semantic_hash": ""
+  },
+  "Caspian-Android/assets/sfx/tap_alternate.mp3": {
+    "mtime": 1786712117.8285174,
+    "seen": 1789062562.2368734,
+    "ast_hash": "b2452bd7b935c08d6fe575ed9906bade",
+    "semantic_hash": ""
+  },
+  "Caspian-Android/assets/sfx/tap_alternate.wav": {
+    "mtime": 1784529504.3063831,
+    "seen": 1789062562.2368755,
+    "ast_hash": "7212a1a4b47975c1870e64a719d04908",
+    "semantic_hash": ""
+  },
+  "Caspian-Android/assets/sfx/tap_button.mp3": {
+    "mtime": 1786712117.9519582,
+    "seen": 1789062562.2368772,
+    "ast_hash": "803611121a0257c2ceaef6fb2378205c",
+    "semantic_hash": ""
+  },
+  "Caspian-Android/assets/sfx/tap_button.wav": {
+    "mtime": 1784529482.9434035,
+    "seen": 1789062562.236879,
+    "ast_hash": "6bbce5e506c88f7fbb9b284c34b00638",
+    "semantic_hash": ""
+  },
+  "Caspian-Android/assets/sfx/tap_main.mp3": {
+    "mtime": 1786712118.1251938,
+    "seen": 1789062562.2368817,
+    "ast_hash": "342512382d1e4734429e60aaa042adf1",
+    "semantic_hash": ""
+  },
+  "Caspian-Android/assets/sfx/tap_main.wav": {
+    "mtime": 1784529216.813058,
+    "seen": 1789062562.2368836,
+    "ast_hash": "9912acd67c9f8be8f0c9a836955a40fb",
+    "semantic_hash": ""
+  },
+  "Caspian-Android/sfx/pop_button.mp3": {
+    "mtime": 1786503696.4304564,
+    "seen": 1789062562.2368855,
+    "ast_hash": "48d1af1a0daa0a3bc22e92cc0d3c0b2c",
+    "semantic_hash": ""
+  },
+  "Caspian-Android/sfx/pop_button_v2.wav": {
+    "mtime": 1786652205.975458,
+    "seen": 1789062562.2368877,
+    "ast_hash": "d69527ae5dc83f778722948f7f484998",
+    "semantic_hash": ""
+  },
+  "Caspian-Android/sfx/pop_click.wav": {
+    "mtime": 1786652176.6740744,
+    "seen": 1789062562.2368898,
+    "ast_hash": "994ff2fa38a0f1d6f1e74199ece5590d",
+    "semantic_hash": ""
+  },
+  "Caspian-Android/sfx/pop_unknown_v1.wav": {
+    "mtime": 1786652278.0971248,
+    "seen": 1789062562.236892,
+    "ast_hash": "a27b5c6f951225ae622e33cadbf80ac0",
+    "semantic_hash": ""
+  },
+  "Caspian-Android/sfx/tap_alternate.wav": {
+    "mtime": 1784529504.3063831,
+    "seen": 1789062562.2368941,
+    "ast_hash": "7212a1a4b47975c1870e64a719d04908",
+    "semantic_hash": ""
+  },
+  "Caspian-Android/sfx/tap_button.wav": {
+    "mtime": 1784529482.9434035,
+    "seen": 1789062562.2368965,
+    "ast_hash": "6bbce5e506c88f7fbb9b284c34b00638",
+    "semantic_hash": ""
+  },
+  "Caspian-Android/sfx/tap_main.wav": {
+    "mtime": 1784529216.813058,
+    "seen": 1789062562.236899,
+    "ast_hash": "9912acd67c9f8be8f0c9a836955a40fb",
+    "semantic_hash": ""
+  },
+  "Caspian-Beta-A/app/src/main/res/raw/caspian_splash_v22.mp4": {
+    "mtime": 1786419816.3061137,
+    "seen": 1789062562.236901,
+    "ast_hash": "1d6a2c8e134697057eae6224aedf84ac",
+    "semantic_hash": ""
+  },
+  "Caspian-Beta-A/assets/sfx/pop_button.mp3": {
+    "mtime": 1786503696.4304564,
+    "seen": 1789062562.2369034,
+    "ast_hash": "48d1af1a0daa0a3bc22e92cc0d3c0b2c",
+    "semantic_hash": ""
+  },
+  "Caspian-Beta-A/assets/sfx/pop_button_v2.mp3": {
+    "mtime": 1786712117.4216917,
+    "seen": 1789062562.236906,
+    "ast_hash": "0c7aab15c6b51c174211c86753a791db",
+    "semantic_hash": ""
+  },
+  "Caspian-Beta-A/assets/sfx/pop_button_v2.wav": {
+    "mtime": 1786652205.975458,
+    "seen": 1789062562.236909,
+    "ast_hash": "d69527ae5dc83f778722948f7f484998",
+    "semantic_hash": ""
+  },
+  "Caspian-Beta-A/assets/sfx/pop_click.mp3": {
+    "mtime": 1786712117.5539832,
+    "seen": 1789062562.2369115,
+    "ast_hash": "719039938a053535707bfb59ea9dd7db",
+    "semantic_hash": ""
+  },
+  "Caspian-Beta-A/assets/sfx/pop_click.wav": {
+    "mtime": 1786652176.6740744,
+    "seen": 1789062562.2369142,
+    "ast_hash": "994ff2fa38a0f1d6f1e74199ece5590d",
+    "semantic_hash": ""
+  },
+  "Caspian-Beta-A/assets/sfx/pop_unknown_v1.mp3": {
+    "mtime": 1786712117.68739,
+    "seen": 1789062562.2369165,
+    "ast_hash": "8213d81c09fdf94896ee06ea12f56541",
+    "semantic_hash": ""
+  },
+  "Caspian-Beta-A/assets/sfx/pop_unknown_v1.wav": {
+    "mtime": 1786652278.0971248,
+    "seen": 1789062562.2369194,
+    "ast_hash": "a27b5c6f951225ae622e33cadbf80ac0",
+    "semantic_hash": ""
+  },
+  "Caspian-Beta-A/assets/sfx/tap_alternate.mp3": {
+    "mtime": 1786712117.8285174,
+    "seen": 1789062562.2369215,
+    "ast_hash": "b2452bd7b935c08d6fe575ed9906bade",
+    "semantic_hash": ""
+  },
+  "Caspian-Beta-A/assets/sfx/tap_alternate.wav": {
+    "mtime": 1784529504.3063831,
+    "seen": 1789062562.2369244,
+    "ast_hash": "7212a1a4b47975c1870e64a719d04908",
+    "semantic_hash": ""
+  },
+  "Caspian-Beta-A/assets/sfx/tap_button.mp3": {
+    "mtime": 1786712117.9519582,
+    "seen": 1789062562.236927,
+    "ast_hash": "803611121a0257c2ceaef6fb2378205c",
+    "semantic_hash": ""
+  },
+  "Caspian-Beta-A/assets/sfx/tap_button.wav": {
+    "mtime": 1784529482.9434035,
+    "seen": 1789062562.2369301,
+    "ast_hash": "6bbce5e506c88f7fbb9b284c34b00638",
+    "semantic_hash": ""
+  },
+  "Caspian-Beta-A/assets/sfx/tap_main.mp3": {
+    "mtime": 1786712118.1251938,
+    "seen": 1789062562.2369325,
+    "ast_hash": "342512382d1e4734429e60aaa042adf1",
+    "semantic_hash": ""
+  },
+  "Caspian-Beta-A/assets/sfx/tap_main.wav": {
+    "mtime": 1784529216.813058,
+    "seen": 1789062562.2369356,
+    "ast_hash": "9912acd67c9f8be8f0c9a836955a40fb",
+    "semantic_hash": ""
+  },
+  "Caspian-Beta-A/splashscreen/caspian_splash_v22.mp4": {
+    "mtime": 1786419816.3061137,
+    "seen": 1789062562.236938,
+    "ast_hash": "1d6a2c8e134697057eae6224aedf84ac",
+    "semantic_hash": ""
+  },
+  "Caspian-Beta-B/assets/sfx/pop_button.mp3": {
+    "mtime": 1786503696.4304564,
+    "seen": 1789062562.2369409,
+    "ast_hash": "48d1af1a0daa0a3bc22e92cc0d3c0b2c",
+    "semantic_hash": ""
+  },
+  "Caspian-Beta-B/assets/sfx/pop_button_v2.wav": {
+    "mtime": 1786652205.975458,
+    "seen": 1789062562.2369437,
+    "ast_hash": "d69527ae5dc83f778722948f7f484998",
+    "semantic_hash": ""
+  },
+  "Caspian-Beta-B/assets/sfx/pop_click.wav": {
+    "mtime": 1786652176.6740744,
+    "seen": 1789062562.236946,
+    "ast_hash": "994ff2fa38a0f1d6f1e74199ece5590d",
+    "semantic_hash": ""
+  },
+  "Caspian-Beta-B/assets/sfx/pop_unknown_v1.wav": {
+    "mtime": 1786652278.0971248,
+    "seen": 1789062562.236949,
+    "ast_hash": "a27b5c6f951225ae622e33cadbf80ac0",
+    "semantic_hash": ""
+  },
+  "Caspian-Beta-B/assets/sfx/tap_alternate.wav": {
+    "mtime": 1784529504.3063831,
+    "seen": 1789062562.2369518,
+    "ast_hash": "7212a1a4b47975c1870e64a719d04908",
+    "semantic_hash": ""
+  },
+  "Caspian-Beta-B/assets/sfx/tap_button.wav": {
+    "mtime": 1784529482.9434035,
+    "seen": 1789062562.2369547,
+    "ast_hash": "6bbce5e506c88f7fbb9b284c34b00638",
+    "semantic_hash": ""
+  },
+  "Caspian-Beta-B/assets/sfx/tap_main.wav": {
+    "mtime": 1784529216.813058,
+    "seen": 1789062562.236957,
+    "ast_hash": "9912acd67c9f8be8f0c9a836955a40fb",
+    "semantic_hash": ""
+  },
+  "betaC/app/src/main/assets/sfx/pop_button.mp3": {
+    "mtime": 1786503696.4304564,
+    "seen": 1789062562.23696,
+    "ast_hash": "48d1af1a0daa0a3bc22e92cc0d3c0b2c",
+    "semantic_hash": ""
+  },
+  "betaC/app/src/main/assets/sfx/pop_button_v2.mp3": {
+    "mtime": 1786712117.4216917,
+    "seen": 1789062562.2369628,
+    "ast_hash": "0c7aab15c6b51c174211c86753a791db",
+    "semantic_hash": ""
+  },
+  "betaC/app/src/main/assets/sfx/pop_button_v2.wav": {
+    "mtime": 1786652205.975458,
+    "seen": 1789062562.2369657,
+    "ast_hash": "d69527ae5dc83f778722948f7f484998",
+    "semantic_hash": ""
+  },
+  "betaC/app/src/main/assets/sfx/pop_click.mp3": {
+    "mtime": 1786712117.5539832,
+    "seen": 1789062562.2369685,
+    "ast_hash": "719039938a053535707bfb59ea9dd7db",
+    "semantic_hash": ""
+  },
+  "betaC/app/src/main/assets/sfx/pop_click.wav": {
+    "mtime": 1786652176.6740744,
+    "seen": 1789062562.2369707,
+    "ast_hash": "994ff2fa38a0f1d6f1e74199ece5590d",
+    "semantic_hash": ""
+  },
+  "betaC/app/src/main/assets/sfx/pop_unknown_v1.mp3": {
+    "mtime": 1786712117.68739,
+    "seen": 1789062562.2369738,
+    "ast_hash": "8213d81c09fdf94896ee06ea12f56541",
+    "semantic_hash": ""
+  },
+  "betaC/app/src/main/assets/sfx/pop_unknown_v1.wav": {
+    "mtime": 1786652278.0971248,
+    "seen": 1789062562.2369764,
+    "ast_hash": "a27b5c6f951225ae622e33cadbf80ac0",
+    "semantic_hash": ""
+  },
+  "betaC/app/src/main/assets/sfx/tap_alternate.mp3": {
+    "mtime": 1786712117.8285174,
+    "seen": 1789062562.2369792,
+    "ast_hash": "b2452bd7b935c08d6fe575ed9906bade",
+    "semantic_hash": ""
+  },
+  "betaC/app/src/main/assets/sfx/tap_alternate.wav": {
+    "mtime": 1784529504.3063831,
+    "seen": 1789062562.2369814,
+    "ast_hash": "7212a1a4b47975c1870e64a719d04908",
+    "semantic_hash": ""
+  },
+  "betaC/app/src/main/assets/sfx/tap_button.mp3": {
+    "mtime": 1786712117.9519582,
+    "seen": 1789062562.236984,
+    "ast_hash": "803611121a0257c2ceaef6fb2378205c",
+    "semantic_hash": ""
+  },
+  "betaC/app/src/main/assets/sfx/tap_button.wav": {
+    "mtime": 1784529482.9434035,
+    "seen": 1789062562.2369866,
+    "ast_hash": "6bbce5e506c88f7fbb9b284c34b00638",
+    "semantic_hash": ""
+  },
+  "betaC/app/src/main/assets/sfx/tap_main.mp3": {
+    "mtime": 1786712118.1251938,
+    "seen": 1789062562.2369895,
+    "ast_hash": "342512382d1e4734429e60aaa042adf1",
+    "semantic_hash": ""
+  },
+  "betaC/app/src/main/assets/sfx/tap_main.wav": {
+    "mtime": 1784529216.813058,
+    "seen": 1789062562.236992,
+    "ast_hash": "9912acd67c9f8be8f0c9a836955a40fb",
+    "semantic_hash": ""
+  },
+  "betaC/app/src/main/res/raw/caspian_splash_v22.mp4": {
+    "mtime": 1786419816.3061137,
+    "seen": 1789062562.2369943,
+    "ast_hash": "1d6a2c8e134697057eae6224aedf84ac",
+    "semantic_hash": ""
+  }
+}

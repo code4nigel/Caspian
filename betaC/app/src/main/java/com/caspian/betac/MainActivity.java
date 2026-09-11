@@ -4251,6 +4251,116 @@ public class MainActivity extends AppCompatActivity {
         renderTabGridCards(tabGridSearchInput != null ? tabGridSearchInput.getText().toString() : "");
     }
 
+
+    // =========================================================================
+    // CASPIAN AUDIO FOCUS & SMOOTH DUCKING ENGINE
+    // =========================================================================
+    private boolean isCaspianAudioFocusHeld = false;
+    private android.media.AudioFocusRequest caspianAudioFocusRequest = null;
+    private AudioManager.OnAudioFocusChangeListener caspianAudioFocusChangeListener = null;
+
+    private void setupCaspianAudioFocus() {
+        if (caspianAudioFocusChangeListener != null) return;
+        caspianAudioFocusChangeListener = focusChange -> {
+            Log.d(TAG, "Caspian AudioFocus changed: " + focusChange);
+            switch (focusChange) {
+                case AudioManager.AUDIOFOCUS_LOSS_TRANSIENT_CAN_DUCK:
+                    // Notification or navigation cue: smoothly duck volume
+                    duckYouTubeAudioSmooth();
+                    break;
+                case AudioManager.AUDIOFOCUS_GAIN:
+                    // Regained focus: smoothly ease volume back up over 700ms
+                    unduckYouTubeAudioSmooth();
+                    break;
+                case AudioManager.AUDIOFOCUS_LOSS_TRANSIENT:
+                    // Temporary loss (phone call): pause
+                    pauseYouTubeAudio();
+                    break;
+                case AudioManager.AUDIOFOCUS_LOSS:
+                    // Permanent loss: pause & abandon
+                    pauseYouTubeAudio();
+                    abandonCaspianAudioFocus();
+                    break;
+            }
+        };
+    }
+
+    private void requestCaspianAudioFocus() {
+        try {
+            AudioManager am = (AudioManager) getSystemService(Context.AUDIO_SERVICE);
+            if (am == null) return;
+            setupCaspianAudioFocus();
+            if (!isCaspianAudioFocusHeld) {
+                if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+                    android.media.AudioAttributes playbackAttributes = new android.media.AudioAttributes.Builder()
+                            .setUsage(android.media.AudioAttributes.USAGE_MEDIA)
+                            .setContentType(android.media.AudioAttributes.CONTENT_TYPE_MUSIC)
+                            .build();
+                    caspianAudioFocusRequest = new android.media.AudioFocusRequest.Builder(AudioManager.AUDIOFOCUS_GAIN)
+                            .setAudioAttributes(playbackAttributes)
+                            .setAcceptsDelayedFocusGain(true)
+                            .setWillPauseWhenDucked(false) // Allows app to handle ducking smoothly
+                            .setOnAudioFocusChangeListener(caspianAudioFocusChangeListener, new Handler(Looper.getMainLooper()))
+                            .build();
+                    int res = am.requestAudioFocus(caspianAudioFocusRequest);
+                    isCaspianAudioFocusHeld = (res == AudioManager.AUDIOFOCUS_REQUEST_GRANTED);
+                } else {
+                    int res = am.requestAudioFocus(caspianAudioFocusChangeListener, AudioManager.STREAM_MUSIC, AudioManager.AUDIOFOCUS_GAIN);
+                    isCaspianAudioFocusHeld = (res == AudioManager.AUDIOFOCUS_REQUEST_GRANTED);
+                }
+            }
+        } catch (Exception e) {
+            Log.w(TAG, "requestCaspianAudioFocus error: " + e.getMessage());
+        }
+    }
+
+    private void abandonCaspianAudioFocus() {
+        try {
+            AudioManager am = (AudioManager) getSystemService(Context.AUDIO_SERVICE);
+            if (am == null) return;
+            if (isCaspianAudioFocusHeld) {
+                if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O && caspianAudioFocusRequest != null) {
+                    am.abandonAudioFocusRequest(caspianAudioFocusRequest);
+                } else if (caspianAudioFocusChangeListener != null) {
+                    am.abandonAudioFocus(caspianAudioFocusChangeListener);
+                }
+                isCaspianAudioFocusHeld = false;
+            }
+        } catch (Exception e) {
+            Log.w(TAG, "abandonCaspianAudioFocus error: " + e.getMessage());
+        }
+    }
+
+    public void duckYouTubeAudioSmooth() {
+        runOnUiThread(() -> {
+            for (TabItem tab : tabsList) {
+                if (tab != null && tab.isPlayingAudio && tab.webView != null) {
+                    tab.webView.evaluateJavascript("if(window.__CaspianYouTube && typeof window.__CaspianYouTube.duckAudio === 'function') window.__CaspianYouTube.duckAudio();", null);
+                }
+            }
+        });
+    }
+
+    public void unduckYouTubeAudioSmooth() {
+        runOnUiThread(() -> {
+            for (TabItem tab : tabsList) {
+                if (tab != null && tab.isPlayingAudio && tab.webView != null) {
+                    tab.webView.evaluateJavascript("if(window.__CaspianYouTube && typeof window.__CaspianYouTube.unduckAudio === 'function') window.__CaspianYouTube.unduckAudio();", null);
+                }
+            }
+        });
+    }
+
+    public void pauseYouTubeAudio() {
+        runOnUiThread(() -> {
+            for (TabItem tab : tabsList) {
+                if (tab != null && tab.isPlayingAudio && tab.webView != null) {
+                    tab.webView.evaluateJavascript("if(window.__CaspianYouTube) { window.__caspian_explicit_pause = true; var v = window.__CaspianYouTube.getVideo(); if(v) v.pause(); }", null);
+                }
+            }
+        });
+    }
+
     public void updateYouTubeLiveState(boolean isPlaying, boolean isMuted) {
         updateYouTubeLiveState(isPlaying, isMuted, null);
     }
@@ -4258,6 +4368,11 @@ public class MainActivity extends AppCompatActivity {
     public void updateYouTubeLiveState(boolean isPlaying, boolean isMuted, Integer tabId) {
         if (isPlaying) {
             hasYouTubePlaybackStarted = true;
+            requestCaspianAudioFocus();
+        } else {
+            if (!hasAnyPlayingYouTubeTab()) {
+                abandonCaspianAudioFocus();
+            }
         }
         boolean stateChanged = false;
         if (tabId != null && tabId > 0) {
@@ -4455,6 +4570,10 @@ public class MainActivity extends AppCompatActivity {
         if (endHex != null) this.podEndColor = endHex;
         applyPodCustomization();
         savePodPreferences();
+        try {
+            evaluateJavascriptInControlSheet("if(window.applyCaspianThemeColors) window.applyCaspianThemeColors();");
+            evaluateJavascriptInActiveTab("if(window.applyCaspianThemeColors) window.applyCaspianThemeColors();");
+        } catch (Exception ignored) {}
     }
 
     private void applyPodCustomization() {
@@ -4526,6 +4645,14 @@ public class MainActivity extends AppCompatActivity {
         } catch (Exception e) {
             floatingCaspianCard.setCardBackgroundColor(0xFF00C4FF);
         }
+    }
+
+    public String getPodStartColor() {
+        return podStartColor != null ? podStartColor : "#00C4FF";
+    }
+
+    public String getPodEndColor() {
+        return podEndColor != null ? podEndColor : "#0077B6";
     }
 
     public String getPodSettingsJson() {

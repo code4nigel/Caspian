@@ -579,11 +579,73 @@
         }
       } catch (e) { }
     },
+    _duckInterval: null,
+    _normalVolume: 1.0,
+    _isDucked: false,
+    fadeVolumeTo: function (targetVol, durationMs, onComplete) {
+      try {
+        const v = this.getVideo();
+        if (!v) return;
+        if (this._duckInterval) {
+          clearInterval(this._duckInterval);
+          this._duckInterval = null;
+        }
+        const startVol = (typeof v.volume === 'number') ? v.volume : 1.0;
+        const diff = targetVol - startVol;
+        if (Math.abs(diff) < 0.01) {
+          v.volume = targetVol;
+          if (typeof onComplete === 'function') onComplete();
+          return;
+        }
+        const intervalTime = 25;
+        const steps = Math.max(8, Math.round(durationMs / intervalTime));
+        let step = 0;
+        this._duckInterval = setInterval(() => {
+          step++;
+          const progress = Math.min(1.0, step / steps);
+          // Sinusoidal smooth ease-in-out curve
+          const ease = 0.5 * (1 - Math.cos(Math.PI * progress));
+          const current = startVol + diff * ease;
+          v.volume = Math.max(0, Math.min(1, current));
+          if (step >= steps) {
+            clearInterval(this._duckInterval);
+            this._duckInterval = null;
+            v.volume = Math.max(0, Math.min(1, targetVol));
+            if (typeof onComplete === 'function') onComplete();
+          }
+        }, intervalTime);
+      } catch (e) { }
+    },
+    duckAudio: function () {
+      try {
+        const v = this.getVideo();
+        if (v) {
+          if (!this._isDucked) {
+            this._normalVolume = (typeof v.volume === 'number' && v.volume > 0.05) ? v.volume : 1.0;
+            this._isDucked = true;
+          }
+          const duckTarget = Math.max(0.12, this._normalVolume * 0.25);
+          this.fadeVolumeTo(duckTarget, 300);
+        }
+      } catch (e) { }
+    },
+    unduckAudio: function () {
+      try {
+        const v = this.getVideo();
+        if (v && this._isDucked) {
+          this._isDucked = false;
+          const target = this._normalVolume || 1.0;
+          this.fadeVolumeTo(target, 700);
+        }
+      } catch (e) { }
+    },
     setVolume: function (vol) {
       try {
         const v = this.getVideo();
         if (v && Number.isFinite(vol)) {
           v.volume = Math.max(0, Math.min(1, vol));
+          this._normalVolume = v.volume;
+          this._isDucked = false;
           if (v.volume > 0 && v.muted) v.muted = false;
         }
       } catch (e) { }

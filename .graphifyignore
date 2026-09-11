@@ -1,0 +1,16 @@
+node_modules/
+dist/
+build/
+.pnpm-store/
+coverage/
+*.min.js
+*.min.css
+*.map
+pnpm-lock.yaml
+yarn.lock
+*.lock
+*.log
+.env*
+graphify-out/
+.code-review-graph/
+*.example.*

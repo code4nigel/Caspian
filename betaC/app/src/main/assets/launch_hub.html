@@ -1329,6 +1329,54 @@
   </div>
 
   <script>
+    // ==========================================
+    // CASPIAN THEME COLOR ADAPTATION
+    // ==========================================
+    function applyCaspianThemeColors() {
+      try {
+        let startColor = '';
+        let endColor = '';
+        if (window.CaspianBridge) {
+          if (typeof window.CaspianBridge.getPodSettingsJson === 'function') {
+            const raw = window.CaspianBridge.getPodSettingsJson();
+            if (raw && raw !== '{}') {
+              const parsed = JSON.parse(raw);
+              if (parsed.startColor) startColor = parsed.startColor;
+              if (parsed.endColor) endColor = parsed.endColor;
+            }
+          }
+          if (!startColor && typeof window.CaspianBridge.getThemeAccentColor === 'function') {
+            startColor = window.CaspianBridge.getThemeAccentColor();
+            if (typeof window.CaspianBridge.getThemeSecondaryColor === 'function') {
+              endColor = window.CaspianBridge.getThemeSecondaryColor();
+            }
+          }
+        }
+        if (!startColor) {
+          startColor = getStoredData('caspian_theme_start_color', '');
+          endColor = getStoredData('caspian_theme_end_color', '');
+        }
+
+        if (startColor) {
+          if (!endColor) endColor = startColor;
+          setStoredData('caspian_theme_start_color', startColor);
+          setStoredData('caspian_theme_end_color', endColor);
+
+          document.documentElement.style.setProperty('--accent', startColor);
+          document.documentElement.style.setProperty('--secondary', endColor);
+          document.documentElement.style.setProperty('--accent-glow', startColor + '55');
+          document.documentElement.style.setProperty('--accent-gradient', `linear-gradient(135deg, ${startColor}, ${endColor})`);
+
+          const brandLogo = document.querySelector('.brand-logo');
+          if (brandLogo) {
+            brandLogo.style.background = `linear-gradient(135deg, ${startColor}, ${endColor})`;
+            brandLogo.style.boxShadow = `0 8px 24px ${startColor}55`;
+          }
+        }
+      } catch (e) { }
+    }
+    window.applyCaspianThemeColors = applyCaspianThemeColors;
+
     // SFX & Audio Engine
     function playTapSFX() {
       try {
@@ -2755,6 +2803,8 @@
     document.getElementById('btn-confirm-create-cask').addEventListener('click', confirmCreateCask);
 
     setTimeout(loadCaspianCasks, 100);
+    applyCaspianThemeColors();
+    setTimeout(applyCaspianThemeColors, 120);
   </script>
 </body>
 </html>

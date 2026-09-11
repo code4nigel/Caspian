@@ -645,6 +645,16 @@ public class CaspianBridge {
     }
 
     @JavascriptInterface
+    public String getThemeAccentColor() {
+        return activity != null ? activity.getPodStartColor() : "#00C4FF";
+    }
+
+    @JavascriptInterface
+    public String getThemeSecondaryColor() {
+        return activity != null ? activity.getPodEndColor() : "#0077B6";
+    }
+
+    @JavascriptInterface
     public String getPodSettingsJson() {
         return activity != null ? activity.getPodSettingsJson() : "{}";
     }
