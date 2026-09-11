@@ -820,6 +820,40 @@ public class MainActivity extends AppCompatActivity {
                 is.close();
                 if (original == null) return;
 
+                // Auto-correct camera photo orientation using EXIF tags
+                try {
+                    InputStream exifIs = getContentResolver().openInputStream(uri);
+                    if (exifIs != null) {
+                        android.media.ExifInterface exif = new android.media.ExifInterface(exifIs);
+                        int orientation = exif.getAttributeInt(
+                                android.media.ExifInterface.TAG_ORIENTATION,
+                                android.media.ExifInterface.ORIENTATION_NORMAL
+                        );
+                        exifIs.close();
+
+                        int rotationDegrees = 0;
+                        if (orientation == android.media.ExifInterface.ORIENTATION_ROTATE_90) {
+                            rotationDegrees = 90;
+                        } else if (orientation == android.media.ExifInterface.ORIENTATION_ROTATE_180) {
+                            rotationDegrees = 180;
+                        } else if (orientation == android.media.ExifInterface.ORIENTATION_ROTATE_270) {
+                            rotationDegrees = 270;
+                        }
+
+                        if (rotationDegrees != 0) {
+                            android.graphics.Matrix matrix = new android.graphics.Matrix();
+                            matrix.postRotate(rotationDegrees);
+                            Bitmap rotated = Bitmap.createBitmap(original, 0, 0, original.getWidth(), original.getHeight(), matrix, true);
+                            if (rotated != original) {
+                                original.recycle();
+                                original = rotated;
+                            }
+                        }
+                    }
+                } catch (Exception exifEx) {
+                    Log.w(TAG, "Could not check EXIF orientation: " + exifEx.getMessage());
+                }
+
                 int maxDim = 1280;
                 int width = original.getWidth();
                 int height = original.getHeight();

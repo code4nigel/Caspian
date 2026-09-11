@@ -98,8 +98,8 @@
       width: 100%;
       max-width: 410px;
       background: rgba(255, 255, 255, 0.88);
-      backdrop-filter: blur(28px) saturate(180%);
-      -webkit-backdrop-filter: blur(28px) saturate(180%);
+      backdrop-filter: blur(var(--hub-glass-blur, 28px)) saturate(180%);
+      -webkit-backdrop-filter: blur(var(--hub-glass-blur, 28px)) saturate(180%);
       border: 1.5px solid var(--border-glass);
       border-radius: 30px;
       padding: 26px 20px 22px 20px;
@@ -883,7 +883,7 @@
       text-overflow: ellipsis;
     }
 
-    /* Range Sliders */
+    /* Range Sliders with Identical Lengths & Tap-to-Type Badges */
     .slider-row {
       display: flex;
       align-items: center;
@@ -891,7 +891,10 @@
       margin-bottom: 12px;
       gap: 12px;
     }
-    .slider-row label {
+    .slider-row .slider-label {
+      width: 130px;
+      min-width: 130px;
+      flex-shrink: 0;
       font-size: 11.5px;
       font-weight: 600;
       color: var(--text-main);
@@ -901,6 +904,46 @@
       flex: 1;
       accent-color: var(--accent, #00E5FF);
       height: 4px;
+    }
+    .slider-row .slider-val-badge {
+      width: 44px;
+      min-width: 44px;
+      flex-shrink: 0;
+      display: flex;
+      justify-content: flex-end;
+      align-items: center;
+      cursor: pointer;
+    }
+    .slider-row .slider-val-badge .val-text {
+      font-size: 11px;
+      font-weight: 700;
+      color: var(--text-main);
+      text-align: right;
+      padding: 2px 4px;
+      border-radius: 6px;
+      border: 1px solid transparent;
+      user-select: none;
+      transition: all 0.15s ease;
+    }
+    .slider-row .slider-val-badge:hover .val-text {
+      border-color: var(--border-glass);
+      background: rgba(255, 255, 255, 0.08);
+    }
+    .slider-row .slider-val-badge:active .val-text {
+      background: var(--bg-hover);
+      border-color: var(--accent);
+    }
+    .slider-row .slider-val-badge .val-input {
+      width: 42px;
+      font-size: 11px;
+      font-weight: 700;
+      color: var(--text-main);
+      background: var(--bg-deep);
+      border: 1.5px solid var(--accent);
+      border-radius: 6px;
+      padding: 1px 2px;
+      text-align: center;
+      outline: none;
     }
 
     /* Casks Styling */
@@ -1158,28 +1201,40 @@
 
       <label class="form-label">Glass &amp; Contrast Adjustments</label>
       <div class="slider-row">
-        <label>Background Blur</label>
+        <label class="slider-label">Background Blur</label>
         <input id="slider-wp-blur" type="range" min="0" max="24" value="8" />
-        <span id="label-wp-blur" style="font-size: 11px; font-weight: 700; width: 28px; text-align: right;">8px</span>
+        <div class="slider-val-badge" data-slider="slider-wp-blur" data-unit="px" data-min="0" data-max="24" title="Click to enter number">
+          <span class="val-text" id="label-wp-blur">8px</span>
+          <input type="number" class="val-input" min="0" max="24" style="display: none;" inputmode="numeric" />
+        </div>
+      </div>
+      <div class="slider-row">
+        <label class="slider-label">Darkening Tint</label>
+        <input id="slider-wp-dim" type="range" min="0" max="80" value="35" />
+        <div class="slider-val-badge" data-slider="slider-wp-dim" data-unit="%" data-min="0" data-max="80" title="Click to enter number">
+          <span class="val-text" id="label-wp-dim">35%</span>
+          <input type="number" class="val-input" min="0" max="80" style="display: none;" inputmode="numeric" />
+        </div>
       </div>
       <div class="slider-row" style="margin-bottom: 18px;">
-        <label>Darkening Tint</label>
-        <input id="slider-wp-dim" type="range" min="10" max="75" value="35" />
-        <span id="label-wp-dim" style="font-size: 11px; font-weight: 700; width: 28px; text-align: right;">35%</span>
+        <label class="slider-label">Window Glass Blur</label>
+        <input id="slider-glass-blur" type="range" min="0" max="50" value="28" />
+        <div class="slider-val-badge" data-slider="slider-glass-blur" data-unit="px" data-min="0" data-max="50" title="Click to enter number">
+          <span class="val-text" id="label-glass-blur">28px</span>
+          <input type="number" class="val-input" min="0" max="50" style="display: none;" inputmode="numeric" />
+        </div>
       </div>
 
+      <button id="btn-crop-current-wallpaper" class="oneui-pill-btn secondary" style="width: 100%; margin-bottom: 12px; display: none;">
+        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2">
+          <path d="M6 2v14a2 2 0 0 0 2 2h14"></path>
+          <path d="M18 22V8a2 2 0 0 0-2-2H2"></path>
+        </svg>
+        <span>Reposition Current Wallpaper...</span>
+      </button>
       <div style="display: flex; gap: 10px;">
-        <button id="btn-crop-current-wallpaper" class="oneui-pill-btn secondary" style="width: 100%; margin-bottom: 12px; display: none;">
-          <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2">
-            <path d="M6 2v14a2 2 0 0 0 2 2h14"></path>
-            <path d="M18 22V8a2 2 0 0 0-2-2H2"></path>
-          </svg>
-          <span>Reposition Current Wallpaper...</span>
-        </button>
-        <div style="display: flex; gap: 10px;">
-          <button id="btn-reset-wallpaper" class="oneui-pill-btn secondary" style="flex: 1;">Reset to Default</button>
-          <button id="btn-done-wallpaper" class="oneui-pill-btn primary" style="flex: 1;">Done</button>
-        </div>
+        <button id="btn-reset-wallpaper" class="oneui-pill-btn secondary" style="flex: 1;">Reset to Default</button>
+        <button id="btn-done-wallpaper" class="oneui-pill-btn primary" style="flex: 1;">Done</button>
       </div>
     </div>
   </div>
@@ -1203,6 +1258,22 @@
         <span style="font-size: 11px; font-weight: 700; color: var(--text-muted);">ZOOM</span>
         <input id="crop-zoom-slider" type="range" min="1" max="3" step="0.01" value="1" style="flex: 1; accent-color: var(--accent);" />
         <button id="btn-crop-reset" class="oneui-pill-btn secondary" style="padding: 4px 10px; font-size: 10.5px; border-radius: 10px;">Fit</button>
+      </div>
+
+      <!-- Rotate & Tools Row -->
+      <div style="display: flex; gap: 8px; margin-top: 10px;">
+        <button id="btn-crop-rotate-left" class="oneui-pill-btn secondary" style="flex: 1; padding: 7px 10px; font-size: 11.5px; border-radius: 12px; display: flex; align-items: center; justify-content: center; gap: 6px;" title="Rotate 90 degrees anti-clockwise">
+          <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2">
+            <path d="M2.5 2v6h6M2.66 15.57a10 10 0 1 0 .57-8.38L2.5 8"/>
+          </svg>
+          <span>Rotate Left</span>
+        </button>
+        <button id="btn-crop-rotate-right" class="oneui-pill-btn secondary" style="flex: 1; padding: 7px 10px; font-size: 11.5px; border-radius: 12px; display: flex; align-items: center; justify-content: center; gap: 6px;" title="Rotate 90 degrees clockwise">
+          <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2">
+            <path d="M21.5 2v6h-6M21.34 15.57a10 10 0 1 1-.57-8.38L21.5 8"/>
+          </svg>
+          <span>Rotate Right</span>
+        </button>
       </div>
 
       <!-- Action Buttons -->
@@ -1336,22 +1407,28 @@
     }
     let currentWpBlur = parseInt(getStoredData('caspian_hub_wp_blur', '8'), 10);
     let currentWpDim = parseFloat(getStoredData('caspian_hub_wp_dim', '0.35'));
+    let currentGlassBlur = parseInt(getStoredData('caspian_hub_glass_blur', '28'), 10);
 
     function applyWallpaperSettings() {
       const bgLayer = document.getElementById('hub-bg-layer');
       const overlayLayer = document.getElementById('hub-bg-overlay');
       const sliderBlur = document.getElementById('slider-wp-blur');
       const sliderDim = document.getElementById('slider-wp-dim');
+      const sliderGlassBlur = document.getElementById('slider-glass-blur');
       const labelBlur = document.getElementById('label-wp-blur');
       const labelDim = document.getElementById('label-wp-dim');
+      const labelGlassBlur = document.getElementById('label-glass-blur');
 
       if (sliderBlur) sliderBlur.value = currentWpBlur;
       if (sliderDim) sliderDim.value = Math.round(currentWpDim * 100);
+      if (sliderGlassBlur) sliderGlassBlur.value = currentGlassBlur;
       if (labelBlur) labelBlur.textContent = currentWpBlur + 'px';
       if (labelDim) labelDim.textContent = Math.round(currentWpDim * 100) + '%';
+      if (labelGlassBlur) labelGlassBlur.textContent = currentGlassBlur + 'px';
 
       document.documentElement.style.setProperty('--wp-blur', currentWpBlur + 'px');
       document.documentElement.style.setProperty('--wp-dim', currentWpDim.toString());
+      document.documentElement.style.setProperty('--hub-glass-blur', currentGlassBlur + 'px');
 
       if (currentWallpaper) {
         document.body.classList.add('has-custom-wallpaper');
@@ -1383,13 +1460,14 @@
     }
 
     // ==========================================
-    // WALLPAPER CROP & POSITION ENGINE
+    // WALLPAPER CROP & POSITION ENGINE (WITH ROTATION)
     // ==========================================
     let cropImg = null;
     let cropScale = 1;
     let cropMinScale = 1;
     let cropPanX = 0;
     let cropPanY = 0;
+    let cropRotation = 0; // 0, 90, 180, 270 degrees
     let isCropDragging = false;
     let cropStartX = 0;
     let cropStartY = 0;
@@ -1403,6 +1481,8 @@
     const cropViewport = document.getElementById('crop-viewport');
     const cropZoomSlider = document.getElementById('crop-zoom-slider');
     const btnCropReset = document.getElementById('btn-crop-reset');
+    const btnCropRotateLeft = document.getElementById('btn-crop-rotate-left');
+    const btnCropRotateRight = document.getElementById('btn-crop-rotate-right');
     const btnCancelCrop = document.getElementById('btn-cancel-crop');
     const btnApplyCrop = document.getElementById('btn-apply-crop');
     const closeCropModal = document.getElementById('close-crop-modal');
@@ -1414,6 +1494,7 @@
       img.crossOrigin = 'anonymous';
       img.onload = function() {
         cropImg = img;
+        cropRotation = 0;
         if (cropModal) cropModal.style.display = 'flex';
         requestAnimationFrame(() => {
           initCropView();
@@ -1424,6 +1505,7 @@
 
     function initCropView() {
       if (!cropCanvas || !cropViewport || !cropImg) return;
+      cropRotation = 0;
       const rect = cropViewport.getBoundingClientRect();
       const dpr = window.devicePixelRatio || 1;
       cropCanvas.width = rect.width * dpr;
@@ -1449,12 +1531,37 @@
       drawCropCanvas();
     }
 
+    function rotateCrop(deltaDeg) {
+      if (!cropCanvas || !cropImg) return;
+      playTapSFX();
+      triggerHaptic(20);
+      cropRotation = (cropRotation + deltaDeg + 360) % 360;
+
+      const cw = cropCanvas.width;
+      const ch = cropCanvas.height;
+      const isRotated90 = (cropRotation === 90 || cropRotation === 270);
+      const effectiveW = isRotated90 ? cropImg.height : cropImg.width;
+      const effectiveH = isRotated90 ? cropImg.width : cropImg.height;
+
+      const currentZoom = cropZoomSlider ? parseFloat(cropZoomSlider.value) : 1;
+      cropMinScale = Math.max(cw / effectiveW, ch / effectiveH);
+      cropScale = cropMinScale * currentZoom;
+
+      cropPanX = (cw - effectiveW * cropScale) / 2;
+      cropPanY = (ch - effectiveH * cropScale) / 2;
+
+      drawCropCanvas();
+    }
+
     function clampCropPan() {
       if (!cropCanvas || !cropImg) return;
       const cw = cropCanvas.width;
       const ch = cropCanvas.height;
-      const scaledW = cropImg.width * cropScale;
-      const scaledH = cropImg.height * cropScale;
+      const isRotated90 = (cropRotation === 90 || cropRotation === 270);
+      const effectiveW = isRotated90 ? cropImg.height : cropImg.width;
+      const effectiveH = isRotated90 ? cropImg.width : cropImg.height;
+      const scaledW = effectiveW * cropScale;
+      const scaledH = effectiveH * cropScale;
 
       if (scaledW >= cw) {
         cropPanX = Math.min(0, Math.max(cw - scaledW, cropPanX));
@@ -1474,7 +1581,26 @@
       const ctx = cropCanvas.getContext('2d');
       ctx.clearRect(0, 0, cropCanvas.width, cropCanvas.height);
       clampCropPan();
-      ctx.drawImage(cropImg, cropPanX, cropPanY, cropImg.width * cropScale, cropImg.height * cropScale);
+
+      const isRotated90 = (cropRotation === 90 || cropRotation === 270);
+      const effectiveW = isRotated90 ? cropImg.height : cropImg.width;
+      const effectiveH = isRotated90 ? cropImg.width : cropImg.height;
+      const scaledW = effectiveW * cropScale;
+      const scaledH = effectiveH * cropScale;
+      const centerX = cropPanX + scaledW / 2;
+      const centerY = cropPanY + scaledH / 2;
+
+      ctx.save();
+      ctx.translate(centerX, centerY);
+      ctx.rotate((cropRotation * Math.PI) / 180);
+      ctx.drawImage(
+        cropImg,
+        -cropImg.width * cropScale / 2,
+        -cropImg.height * cropScale / 2,
+        cropImg.width * cropScale,
+        cropImg.height * cropScale
+      );
+      ctx.restore();
     }
 
     if (cropViewport) {
@@ -1564,6 +1690,18 @@
       });
     }
 
+    if (btnCropRotateLeft) {
+      btnCropRotateLeft.addEventListener('click', () => {
+        rotateCrop(-90);
+      });
+    }
+
+    if (btnCropRotateRight) {
+      btnCropRotateRight.addEventListener('click', () => {
+        rotateCrop(90);
+      });
+    }
+
     function closeCrop() {
       playTapSFX();
       if (cropModal) cropModal.style.display = 'none';
@@ -1587,13 +1725,28 @@
         exportCanvas.height = targetH;
 
         const exCtx = exportCanvas.getContext('2d');
-        const scale = cropScale;
-        const srcX = Math.max(0, -cropPanX / scale);
-        const srcY = Math.max(0, -cropPanY / scale);
-        const srcW = Math.min(cropImg.width, cropCanvas.width / scale);
-        const srcH = Math.min(cropImg.height, cropCanvas.height / scale);
+        const exportFactor = targetW / cropCanvas.width;
 
-        exCtx.drawImage(cropImg, srcX, srcY, srcW, srcH, 0, 0, targetW, targetH);
+        const isRotated90 = (cropRotation === 90 || cropRotation === 270);
+        const effectiveW = isRotated90 ? cropImg.height : cropImg.width;
+        const effectiveH = isRotated90 ? cropImg.width : cropImg.height;
+        const scaledW = effectiveW * cropScale * exportFactor;
+        const scaledH = effectiveH * cropScale * exportFactor;
+        const exCenterX = (cropPanX * exportFactor) + scaledW / 2;
+        const exCenterY = (cropPanY * exportFactor) + scaledH / 2;
+
+        exCtx.save();
+        exCtx.translate(exCenterX, exCenterY);
+        exCtx.rotate((cropRotation * Math.PI) / 180);
+        exCtx.drawImage(
+          cropImg,
+          -cropImg.width * cropScale * exportFactor / 2,
+          -cropImg.height * cropScale * exportFactor / 2,
+          cropImg.width * cropScale * exportFactor,
+          cropImg.height * cropScale * exportFactor
+        );
+        exCtx.restore();
+
         const croppedBase64 = exportCanvas.toDataURL('image/jpeg', 0.88);
 
         setWallpaper(croppedBase64);
@@ -1699,7 +1852,7 @@
       });
     }
 
-    // Range Sliders
+    // Range Sliders (Blur, Dim, Window Glass Blur)
     const sliderWpBlur = document.getElementById('slider-wp-blur');
     if (sliderWpBlur) {
       sliderWpBlur.addEventListener('input', () => {
@@ -1716,12 +1869,90 @@
         applyWallpaperSettings();
       });
     }
+    const sliderGlassBlur = document.getElementById('slider-glass-blur');
+    if (sliderGlassBlur) {
+      sliderGlassBlur.addEventListener('input', () => {
+        currentGlassBlur = parseInt(sliderGlassBlur.value, 10);
+        setStoredData('caspian_hub_glass_blur', currentGlassBlur.toString());
+        applyWallpaperSettings();
+      });
+    }
 
-    // Reset Wallpaper
+    // Tap-to-Type Numeric Input on Slider Badges
+    document.querySelectorAll('.slider-val-badge').forEach(badge => {
+      const sliderId = badge.getAttribute('data-slider');
+      const unit = badge.getAttribute('data-unit') || '';
+      const minVal = parseInt(badge.getAttribute('data-min') || '0', 10);
+      const maxVal = parseInt(badge.getAttribute('data-max') || '100', 10);
+      const valText = badge.querySelector('.val-text');
+      const valInput = badge.querySelector('.val-input');
+      const slider = document.getElementById(sliderId);
+
+      if (!valText || !valInput || !slider) return;
+
+      badge.addEventListener('click', () => {
+        if (valInput.style.display !== 'none') return;
+        playTapSFX();
+
+        valInput.value = slider.value;
+        valText.style.display = 'none';
+        valInput.style.display = 'inline-block';
+        valInput.focus();
+        valInput.select();
+      });
+
+      function commitValue() {
+        if (valInput.style.display === 'none') return;
+        let num = parseInt(valInput.value, 10);
+        if (isNaN(num)) num = parseInt(slider.value, 10);
+        num = Math.max(minVal, Math.min(maxVal, num));
+
+        slider.value = num;
+        valText.textContent = num + unit;
+        valInput.style.display = 'none';
+        valText.style.display = 'inline';
+
+        slider.dispatchEvent(new Event('input', { bubbles: true }));
+      }
+
+      valInput.addEventListener('keydown', (e) => {
+        if (e.key === 'Enter') {
+          e.preventDefault();
+          commitValue();
+        } else if (e.key === 'Escape') {
+          valInput.style.display = 'none';
+          valText.style.display = 'inline';
+        }
+      });
+
+      valInput.addEventListener('blur', () => {
+        commitValue();
+      });
+    });
+
+    // Reset Wallpaper and All 3 Sliders to Default
     document.getElementById('btn-reset-wallpaper').addEventListener('click', () => {
       playTapSFX();
-      setWallpaper('');
-      showToast('Wallpaper reset to default');
+      triggerHaptic(30);
+
+      currentWallpaper = '';
+      currentWpBlur = 8;
+      currentWpDim = 0.35;
+      currentGlassBlur = 28;
+
+      setStoredData('caspian_hub_wallpaper', '');
+      setStoredData('caspian_hub_wp_blur', '8');
+      setStoredData('caspian_hub_wp_dim', '0.35');
+      setStoredData('caspian_hub_glass_blur', '28');
+
+      if (window.CaspianBridge && typeof window.CaspianBridge.saveWallpaper === 'function') {
+        try {
+          window.CaspianBridge.saveWallpaper('');
+        } catch (e) {}
+      }
+
+      applyWallpaperSettings();
+      showToast('Settings & wallpaper reset to default ✨');
     });
 
     // Modal Triggers
