@@ -4896,9 +4896,9 @@ public class MainActivity extends AppCompatActivity {
                 }
             } else {
                 if (hasYouTubePlaybackStarted && hasAnyYouTubeTab()) {
-                    // Retain wake lock for 10-minute grace period during track transitions and lock screen pause
+                    // Retain wake lock for 3-minute grace period during track transitions and lock screen pause
                     ytWakeLockHandler.removeCallbacks(ytWakeLockReleaseRunnable);
-                    ytWakeLockHandler.postDelayed(ytWakeLockReleaseRunnable, 10 * 60 * 1000L);
+                    ytWakeLockHandler.postDelayed(ytWakeLockReleaseRunnable, 3 * 60 * 1000L);
                 } else {
                     ytWakeLockHandler.removeCallbacks(ytWakeLockReleaseRunnable);
                     if (youtubeWakeLock != null && youtubeWakeLock.isHeld()) {
@@ -14212,8 +14212,14 @@ public class MainActivity extends AppCompatActivity {
             splitRightContainer.setLayoutParams(new LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, 0, 1.0f - splitRatio));
         }
 
-        if (leftTab != null) splitLeftContainer.addView(leftTab.webView);
-        if (rightTab != null) splitRightContainer.addView(rightTab.webView);
+        if (leftTab != null && leftTab.webView != null) {
+            splitLeftContainer.addView(leftTab.webView);
+            try { leftTab.webView.onResume(); } catch (Throwable ignored) {}
+        }
+        if (rightTab != null && rightTab.webView != null) {
+            splitRightContainer.addView(rightTab.webView);
+            try { rightTab.webView.onResume(); } catch (Throwable ignored) {}
+        }
 
         if (splitLeftTapMask != null) {
             if (splitLeftTapMask.getParent() != null) ((ViewGroup) splitLeftTapMask.getParent()).removeView(splitLeftTapMask);
@@ -17645,10 +17651,14 @@ public class MainActivity extends AppCompatActivity {
                         }
                         t.webView.setVisibility(View.VISIBLE);
                         t.webView.bringToFront();
+                        try { t.webView.onResume(); } catch (Throwable ignored) {}
                     } else {
                         // Keep background tab WebViews attached to container as INVISIBLE so background media playback continues uninterrupted
                         if (t.webView.getParent() == webViewContainer) {
                             t.webView.setVisibility(View.INVISIBLE);
+                        }
+                        if (!t.isPlayingAudio) {
+                            try { t.webView.onPause(); } catch (Throwable ignored) {}
                         }
                     }
                 }
@@ -20376,6 +20386,16 @@ public class MainActivity extends AppCompatActivity {
     protected void onPause() {
         super.onPause();
         saveOpenTabsState();
+        try {
+            // Power saving: pause all WebViews that are NOT currently playing audio
+            for (TabItem t : tabsList) {
+                if (t != null && t.webView != null) {
+                    if (!t.isPlayingAudio) {
+                        try { t.webView.onPause(); } catch (Throwable ignored) {}
+                    }
+                }
+            }
+        } catch (Throwable ignored) {}
     }
 
     private void setupPiPActionsReceiver() {
@@ -21074,6 +21094,24 @@ public class MainActivity extends AppCompatActivity {
         super.onUserLeaveHint();
         // PiP is only entered explicitly via the YouTube Float Pod button.
         // On home gesture, continuous background audio playback continues without PiP!
+    }
+
+    @Override
+    protected void onResume() {
+        super.onResume();
+        try {
+            // Resume foreground active tab(s)
+            TabItem activeTab = getTabById(activeTabId);
+            if (activeTab != null && activeTab.webView != null) {
+                try { activeTab.webView.onResume(); } catch (Throwable ignored) {}
+            }
+            if (splitModeState > 0 && secondarySplitTabId != -1) {
+                TabItem splitTab = getTabById(secondarySplitTabId);
+                if (splitTab != null && splitTab.webView != null) {
+                    try { splitTab.webView.onResume(); } catch (Throwable ignored) {}
+                }
+            }
+        } catch (Throwable ignored) {}
     }
 
     @Override

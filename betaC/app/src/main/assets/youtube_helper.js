@@ -848,7 +848,7 @@
     }
   } catch (e) { }
   attachVideoListeners();
-  setInterval(attachVideoListeners, 1000);
+  setInterval(attachVideoListeners, 4000);
 
   // 1.6 Intercept in-page YouTube Fullscreen button to trigger native WebView full-screen
   try {
@@ -1028,7 +1028,7 @@
 
   // Observe route changes between home and watch
   let _lastYtPath = window.location.pathname;
-  setInterval(() => {
+  function checkRouteTransition() {
     try {
       const curPath = window.location.pathname;
       if (curPath !== _lastYtPath) {
@@ -1042,7 +1042,11 @@
         _lastYtPath = curPath;
       }
     } catch (e) { }
-  }, 150);
+  }
+  window.addEventListener('yt-navigate-finish', checkRouteTransition, { passive: true });
+  window.addEventListener('popstate', checkRouteTransition, { passive: true });
+  window.addEventListener('hashchange', checkRouteTransition, { passive: true });
+  setInterval(checkRouteTransition, 2000);
 
   // Hook window.fetch for /youtubei/v1/browse
   if (window.fetch) {
@@ -1173,13 +1177,21 @@
     } catch (e) { }
   }
 
-  // 50ms High-frequency tick
-  setInterval(executeFastForwardSkip, 50);
+  // Trigger skip check on DOM changes via MutationObserver
+  let _adSkipThrottle = false;
+  function triggerFastForwardSkipThrottled() {
+    if (_adSkipThrottle) return;
+    _adSkipThrottle = true;
+    requestAnimationFrame(() => {
+      _adSkipThrottle = false;
+      executeFastForwardSkip();
+    });
+  }
 
   // MutationObserver for instant trigger on DOM ad class changes
   try {
     const observer = new MutationObserver(() => {
-      executeFastForwardSkip();
+      triggerFastForwardSkipThrottled();
     });
     if (document.body) {
       observer.observe(document.body, { childList: true, subtree: true, attributes: true, attributeFilter: ['class'] });
@@ -1191,6 +1203,19 @@
       });
     }
   } catch (e) { }
+
+  // Adaptive background timer: only poll frequently (300ms) if an ad is actively playing, otherwise relax to 1500ms
+  let _adTickTimer = null;
+  function scheduleAdFallbackTick() {
+    clearTimeout(_adTickTimer);
+    const hasAd = !!(_adHangStartTime || document.querySelector('.ad-showing, .ad-interrupting'));
+    const delay = hasAd ? 300 : 1500;
+    _adTickTimer = setTimeout(() => {
+      executeFastForwardSkip();
+      scheduleAdFallbackTick();
+    }, delay);
+  }
+  scheduleAdFallbackTick();
 
   // -------------------------------------------------------------
   // 6. Visual Element Ad Suppression & Player Control Fixes
@@ -1325,18 +1350,19 @@
       const isMuted = !!(v && v.muted);
       const tabId = window.__caspian_tab_id || 0;
       const isYtMusic = location.hostname.includes('music.youtube.com');
+      const isHidden = document.hidden;
 
       if (window.__CaspianYouTube) {
         window.__CaspianYouTube.notifyState();
       }
 
       if (v && (isPlaying || v.currentTime > 0)) {
-        if (window.__CaspianYouTube && typeof window.__CaspianYouTube.syncMediaMetadata === 'function') {
+        if (!isHidden && window.__CaspianYouTube && typeof window.__CaspianYouTube.syncMediaMetadata === 'function') {
           window.__CaspianYouTube.syncMediaMetadata();
         }
 
-        // Sync actual YouTube Music repeat and shuffle modes to Android ONLY when buttons are present
-        if (isYtMusic && window.CaspianBridge && typeof window.CaspianBridge.updateTabMediaPlaybackModes === 'function') {
+        // Sync actual YouTube Music repeat and shuffle modes to Android ONLY when visible
+        if (!isHidden && isYtMusic && window.CaspianBridge && typeof window.CaspianBridge.updateTabMediaPlaybackModes === 'function') {
           try {
             var repBtn = document.querySelector('ytmusic-player-bar .repeat, tp-yt-paper-icon-button.repeat, [aria-label*="repeat" i], [aria-label*="Repeat" i]');
             var shufBtn = document.querySelector('ytmusic-player-bar .shuffle, tp-yt-paper-icon-button.shuffle, [aria-label*="shuffle" i], [aria-label*="Shuffle" i]');
@@ -1390,12 +1416,12 @@
         } catch(e){}
       }
     } catch (e) { }
-  }, 1000);
+  }, 2000);
 
   // -------------------------------------------------------------
-  // Continuous Background Media & Worker Keep-Alive Engine
+  // 8. Robust Background Audio Keep-Alive
   // -------------------------------------------------------------
-  (function initKeepAlive() {
+  (function () {
     try {
       // 1. Silent WebAudio loop to keep Chromium's audio output stream & V8 thread awake
       const AudioCtx = window.AudioContext || window.webkitAudioContext;
@@ -1427,7 +1453,7 @@
         "let timer = null;\n" +
         "self.onmessage = function(e) {\n" +
         "  if (e.data === 'start' && !timer) {\n" +
-        "    timer = setInterval(function() { self.postMessage('tick'); }, 1000);\n" +
+        "    timer = setInterval(function() { self.postMessage('tick'); }, 2500);\n" +
         "  } else if (e.data === 'stop' && timer) {\n" +
         "    clearInterval(timer); timer = null;\n" +
         "  }\n" +

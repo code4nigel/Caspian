@@ -78,11 +78,7 @@ public class CaspianMediaService extends Service {
             if (wifiLock == null) {
                 WifiManager wm = (WifiManager) getApplicationContext().getSystemService(Context.WIFI_SERVICE);
                 if (wm != null) {
-                    if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
-                        wifiLock = wm.createWifiLock(WifiManager.WIFI_MODE_FULL_LOW_LATENCY, "Caspian:MediaServiceWifiLock");
-                    } else {
-                        wifiLock = wm.createWifiLock(WifiManager.WIFI_MODE_FULL_HIGH_PERF, "Caspian:MediaServiceWifiLock");
-                    }
+                    wifiLock = wm.createWifiLock(WifiManager.WIFI_MODE_FULL, "Caspian:MediaServiceWifiLock");
                     wifiLock.setReferenceCounted(false);
                 }
             }
@@ -134,9 +130,9 @@ public class CaspianMediaService extends Service {
             } else if (ACTION_PAUSE_FOREGROUND.equals(action)) {
                 // Do NOT immediately release locks or detach foreground on brief pause/song transition!
                 // During track changes, playback pauses briefly while fetching next audio buffer.
-                // Maintain locks for a 10-minute grace period so network and CPU do not sleep when locked.
+                // Maintain locks for a 3-minute grace period so network and CPU do not sleep during song transitions.
                 releaseHandler.removeCallbacks(releaseLocksRunnable);
-                releaseHandler.postDelayed(releaseLocksRunnable, 10 * 60 * 1000L);
+                releaseHandler.postDelayed(releaseLocksRunnable, 3 * 60 * 1000L);
             } else if (ACTION_STOP_FOREGROUND.equals(action)) {
                 releaseHandler.removeCallbacks(releaseLocksRunnable);
                 try {
