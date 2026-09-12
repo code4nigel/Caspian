@@ -62,7 +62,7 @@
         </div>
         <div style="display: flex; flex-direction: column;">
           <span class="sheet-brand-name">CASPIAN FLOW</span>
-          <span class="sheet-brand-tag">V1.2.98-BetaC</span>
+          <span class="sheet-brand-tag">V1.2.99-BetaC</span>
         </div>
       </div>
       <div class="header-icon-actions">
@@ -386,14 +386,25 @@
           <!-- Advanced API Credentials Toggle -->
           <div style="margin-bottom: 12px;">
             <div id="scrobby-api-toggle" style="display: flex; align-items: center; justify-content: space-between; cursor: pointer; padding: 4px 2px; font-size: 10.5px; color: var(--text-muted);">
-              <span>🔑 Custom Last.fm API Key (Optional)</span>
+              <span style="display: flex; align-items: center; gap: 5px;">🔑 Custom Last.fm API Key (Optional)</span>
               <span id="scrobby-api-toggle-icon">▼</span>
             </div>
-            <div id="scrobby-api-form" style="display: none; margin-top: 6px; background: rgba(0,0,0,0.25); border: 1px solid var(--border-glass); border-radius: 10px; padding: 10px;">
-              <div style="font-size: 9.5px; color: var(--text-muted); margin-bottom: 6px;">Override built-in keys with your personal Last.fm developer API application credentials:</div>
-              <div style="display: flex; flex-direction: column; gap: 6px;">
-                <input type="text" id="scrobby-custom-api-key" placeholder="API Key" style="width: 100%; background: rgba(0,0,0,0.3); border: 1px solid var(--border-glass); border-radius: 6px; color: var(--text-main); font-size: 10.5px; padding: 6px 8px; box-sizing: border-box;" />
-                <input type="text" id="scrobby-custom-api-secret" placeholder="Shared Secret" style="width: 100%; background: rgba(0,0,0,0.3); border: 1px solid var(--border-glass); border-radius: 6px; color: var(--text-main); font-size: 10.5px; padding: 6px 8px; box-sizing: border-box;" />
+            <div id="scrobby-api-form" style="display: none; margin-top: 6px; background: rgba(0,0,0,0.28); border: 1px solid var(--border-glass); border-radius: 10px; padding: 10px;">
+              <div id="scrobby-api-status-badge" style="font-size: 10px; margin-bottom: 6px; color: var(--text-muted);">
+                Status: <span style="color: var(--accent); font-weight: 600;">🔒 Caspian built-in keys active (Masked)</span>
+              </div>
+              <div style="font-size: 9.5px; color: var(--text-muted); margin-bottom: 8px; line-height: 1.4;">
+                Supply personal developer keys if preferred. Built-in keys remain completely masked and protected.
+              </div>
+              <div style="display: flex; flex-direction: column; gap: 8px;">
+                <div style="position: relative; width: 100%;">
+                  <input type="password" id="scrobby-custom-api-key" placeholder="Custom API Key (Leave empty for built-in)" autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false" style="width: 100%; background: rgba(0,0,0,0.35); border: 1px solid var(--border-glass); border-radius: 6px; color: var(--text-main); font-size: 11px; padding: 7px 34px 7px 8px; box-sizing: border-box; letter-spacing: 0.8px;" />
+                  <button type="button" id="scrobby-toggle-key-eye" class="oneui-pill-btn icon-only" style="position: absolute; right: 4px; top: 50%; transform: translateY(-50%); width: 26px; height: 26px; background: transparent; border: none; color: var(--text-muted); cursor: pointer; font-size: 12px; display: flex; align-items: center; justify-content: center; opacity: 0.6;" title="Show/Hide">👁️</button>
+                </div>
+                <div style="position: relative; width: 100%;">
+                  <input type="password" id="scrobby-custom-api-secret" placeholder="Custom Shared Secret (Leave empty for built-in)" autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false" style="width: 100%; background: rgba(0,0,0,0.35); border: 1px solid var(--border-glass); border-radius: 6px; color: var(--text-main); font-size: 11px; padding: 7px 34px 7px 8px; box-sizing: border-box; letter-spacing: 0.8px;" />
+                  <button type="button" id="scrobby-toggle-secret-eye" class="oneui-pill-btn icon-only" style="position: absolute; right: 4px; top: 50%; transform: translateY(-50%); width: 26px; height: 26px; background: transparent; border: none; color: var(--text-muted); cursor: pointer; font-size: 12px; display: flex; align-items: center; justify-content: center; opacity: 0.6;" title="Show/Hide">👁️</button>
+                </div>
                 <div style="display: flex; gap: 6px; justify-content: flex-end; margin-top: 2px;">
                   <button id="scrobby-reset-api-btn" class="oneui-pill-btn secondary" style="font-size: 10px; padding: 4px 8px;">Reset Default</button>
                   <button id="scrobby-save-api-btn" class="oneui-pill-btn primary" style="font-size: 10px; padding: 4px 10px;">Save Keys</button>
@@ -1774,7 +1785,7 @@
             <div id="updater-status-dot" class="status-dot active"></div>
             <div>
               <div class="m3-card-title">Caspian Flow Updates</div>
-              <div id="updater-status-sub" class="m3-card-sub">Current: V1.2.98-BetaC • Direct in-app GitHub updater.
+              <div id="updater-status-sub" class="m3-card-sub">Current: V1.2.99-BetaC • Direct in-app GitHub updater.
               </div>
             </div>
           </div>
@@ -2684,8 +2695,11 @@
         var apiToggle = document.getElementById('scrobby-api-toggle');
         var apiForm = document.getElementById('scrobby-api-form');
         var apiToggleIcon = document.getElementById('scrobby-api-toggle-icon');
+        var apiStatusBadge = document.getElementById('scrobby-api-status-badge');
         var customApiKeyInput = document.getElementById('scrobby-custom-api-key');
         var customApiSecretInput = document.getElementById('scrobby-custom-api-secret');
+        var toggleKeyEye = document.getElementById('scrobby-toggle-key-eye');
+        var toggleSecretEye = document.getElementById('scrobby-toggle-secret-eye');
         var saveApiBtn = document.getElementById('scrobby-save-api-btn');
         var resetApiBtn = document.getElementById('scrobby-reset-api-btn');
 
@@ -2698,17 +2712,47 @@
           });
         }
 
+        if (toggleKeyEye && customApiKeyInput) {
+          toggleKeyEye.addEventListener('click', function(e) {
+            e.stopPropagation();
+            var isPw = customApiKeyInput.type === 'password';
+            customApiKeyInput.type = isPw ? 'text' : 'password';
+            toggleKeyEye.style.opacity = isPw ? '1.0' : '0.6';
+          });
+        }
+
+        if (toggleSecretEye && customApiSecretInput) {
+          toggleSecretEye.addEventListener('click', function(e) {
+            e.stopPropagation();
+            var isPw = customApiSecretInput.type === 'password';
+            customApiSecretInput.type = isPw ? 'text' : 'password';
+            toggleSecretEye.style.opacity = isPw ? '1.0' : '0.6';
+          });
+        }
+
         if (saveApiBtn) {
           saveApiBtn.addEventListener('click', function(e) {
             e.stopPropagation();
             var k = (customApiKeyInput ? customApiKeyInput.value : '').trim();
             var sec = (customApiSecretInput ? customApiSecretInput.value : '').trim();
-            if (!k || !sec) {
-              alert('Please enter both an API Key and Shared Secret.');
+            if (!k && !sec) {
+              window.ScrobbyEngine.saveSettings({ customApiKey: '', customSharedSecret: '' });
+              alert('Cleared custom keys. Caspian built-in credentials active.');
+            } else if (!k || !sec) {
+              alert('Please enter both an API Key and Shared Secret, or click Reset Default.');
               return;
+            } else {
+              window.ScrobbyEngine.saveSettings({ customApiKey: k, customSharedSecret: sec });
+              alert('Custom Last.fm API credentials saved!');
             }
-            window.ScrobbyEngine.saveSettings({ apiKey: k, sharedSecret: sec });
-            alert('Last.fm API credentials updated!');
+            if (customApiKeyInput) {
+              customApiKeyInput.type = 'password';
+              if (toggleKeyEye) toggleKeyEye.style.opacity = '0.6';
+            }
+            if (customApiSecretInput) {
+              customApiSecretInput.type = 'password';
+              if (toggleSecretEye) toggleSecretEye.style.opacity = '0.6';
+            }
             updateUI();
           });
         }
@@ -2716,8 +2760,18 @@
         if (resetApiBtn) {
           resetApiBtn.addEventListener('click', function(e) {
             e.stopPropagation();
-            window.ScrobbyEngine.saveSettings({ apiKey: '', sharedSecret: '' });
-            alert('Restored default Last.fm API credentials.');
+            window.ScrobbyEngine.saveSettings({ customApiKey: '', customSharedSecret: '' });
+            if (customApiKeyInput) {
+              customApiKeyInput.value = '';
+              customApiKeyInput.type = 'password';
+              if (toggleKeyEye) toggleKeyEye.style.opacity = '0.6';
+            }
+            if (customApiSecretInput) {
+              customApiSecretInput.value = '';
+              customApiSecretInput.type = 'password';
+              if (toggleSecretEye) toggleSecretEye.style.opacity = '0.6';
+            }
+            alert('Restored Caspian default Last.fm API credentials.');
             updateUI();
           });
         }
@@ -2867,11 +2921,19 @@
             statusDot.className = 'status-dot ' + (s.enabled ? 'active' : 'inactive');
           }
 
+          if (apiStatusBadge) {
+            if (s.hasCustomCredentials) {
+              apiStatusBadge.innerHTML = 'Status: <span style="color: #10b981; font-weight: 600;">🔑 Custom Key active</span>';
+            } else {
+              apiStatusBadge.innerHTML = 'Status: <span style="color: var(--accent); font-weight: 600;">🔒 Caspian built-in keys active (Masked)</span>';
+            }
+          }
+
           if (customApiKeyInput && document.activeElement !== customApiKeyInput) {
-            customApiKeyInput.value = s.apiKey || '';
+            customApiKeyInput.value = s.customApiKey || '';
           }
           if (customApiSecretInput && document.activeElement !== customApiSecretInput) {
-            customApiSecretInput.value = s.sharedSecret || '';
+            customApiSecretInput.value = s.customSharedSecret || '';
           }
 
           if (s.sessionKey && s.username) {

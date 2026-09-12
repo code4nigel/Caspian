@@ -227,10 +227,32 @@
       settings = JSON.parse(localStorage.getItem('caspian_scrobby_settings') || '{}');
     } catch (e) {}
 
+    // Cleanse any legacy leakage of built-in keys in user storage
+    if (settings.apiKey === DEFAULT_API_KEY || settings.sharedSecret === DEFAULT_SHARED_SECRET) {
+      delete settings.apiKey;
+      delete settings.sharedSecret;
+      try {
+        localStorage.setItem('caspian_scrobby_settings', JSON.stringify(settings));
+      } catch (e) {}
+    }
+
+    var rawCustomKey = (settings.customApiKey || settings.apiKey || '').trim();
+    var rawCustomSecret = (settings.customSharedSecret || settings.sharedSecret || '').trim();
+
+    var hasCustomKey = rawCustomKey !== '' && rawCustomKey !== DEFAULT_API_KEY;
+    var hasCustomSecret = rawCustomSecret !== '' && rawCustomSecret !== DEFAULT_SHARED_SECRET;
+
+    var effectiveApiKey = hasCustomKey ? rawCustomKey : DEFAULT_API_KEY;
+    var effectiveSharedSecret = hasCustomSecret ? rawCustomSecret : DEFAULT_SHARED_SECRET;
+
     return {
       enabled: settings.enabled === true, // Default to FALSE (OFF)
-      apiKey: (settings.apiKey && settings.apiKey.trim()) ? settings.apiKey.trim() : DEFAULT_API_KEY,
-      sharedSecret: (settings.sharedSecret && settings.sharedSecret.trim()) ? settings.sharedSecret.trim() : DEFAULT_SHARED_SECRET,
+      _effectiveApiKey: effectiveApiKey,
+      _effectiveSharedSecret: effectiveSharedSecret,
+      // Custom credentials entered by user - NEVER exposes DEFAULT_API_KEY or DEFAULT_SHARED_SECRET
+      customApiKey: hasCustomKey ? rawCustomKey : '',
+      customSharedSecret: hasCustomSecret ? rawCustomSecret : '',
+      hasCustomCredentials: (hasCustomKey && hasCustomSecret),
       sessionKey: localStorage.getItem('caspian_scrobby_session_key') || '',
       username: localStorage.getItem('caspian_scrobby_username') || '',
       cleanRemasters: settings.cleanRemasters !== false,
@@ -243,19 +265,35 @@
   }
 
   function saveSettings(updates) {
-    var current = getSettings();
-    var merged = Object.assign({}, current, updates);
-    localStorage.setItem('caspian_scrobby_settings', JSON.stringify({
-      enabled: merged.enabled === true,
-      apiKey: merged.apiKey,
-      sharedSecret: merged.sharedSecret,
-      cleanRemasters: merged.cleanRemasters,
-      primaryArtistOnly: merged.primaryArtistOnly,
-      scrobbleMode: merged.scrobbleMode,
-      scrobblePercent: merged.scrobblePercent,
-      scrobbleSeconds: merged.scrobbleSeconds,
-      customRegexRules: merged.customRegexRules
-    }));
+    var raw = {};
+    try {
+      raw = JSON.parse(localStorage.getItem('caspian_scrobby_settings') || '{}');
+    } catch (e) {}
+
+    // Support both customApiKey/customSharedSecret and legacy names, ensuring built-ins are never stored
+    var newKey = updates.customApiKey !== undefined ? updates.customApiKey : updates.apiKey;
+    if (newKey !== undefined) {
+      var trimmedKey = (newKey || '').trim();
+      raw.customApiKey = (trimmedKey && trimmedKey !== DEFAULT_API_KEY) ? trimmedKey : '';
+      delete raw.apiKey;
+    }
+
+    var newSecret = updates.customSharedSecret !== undefined ? updates.customSharedSecret : updates.sharedSecret;
+    if (newSecret !== undefined) {
+      var trimmedSecret = (newSecret || '').trim();
+      raw.customSharedSecret = (trimmedSecret && trimmedSecret !== DEFAULT_SHARED_SECRET) ? trimmedSecret : '';
+      delete raw.sharedSecret;
+    }
+
+    if (updates.enabled !== undefined) raw.enabled = updates.enabled === true;
+    if (updates.cleanRemasters !== undefined) raw.cleanRemasters = updates.cleanRemasters;
+    if (updates.primaryArtistOnly !== undefined) raw.primaryArtistOnly = updates.primaryArtistOnly;
+    if (updates.scrobbleMode !== undefined) raw.scrobbleMode = updates.scrobbleMode;
+    if (updates.scrobblePercent !== undefined) raw.scrobblePercent = updates.scrobblePercent;
+    if (updates.scrobbleSeconds !== undefined) raw.scrobbleSeconds = updates.scrobbleSeconds;
+    if (updates.customRegexRules !== undefined) raw.customRegexRules = updates.customRegexRules;
+
+    localStorage.setItem('caspian_scrobby_settings', JSON.stringify(raw));
     if (typeof updates.sessionKey === 'string') {
       localStorage.setItem('caspian_scrobby_session_key', updates.sessionKey);
     }
@@ -288,14 +326,14 @@
 
     var finalParams = Object.assign({
       method: method,
-      api_key: settings.apiKey
+      api_key: settings._effectiveApiKey
     }, params);
 
     if (requiresAuth) {
       finalParams.sk = settings.sessionKey;
     }
 
-    finalParams.api_sig = generateSignature(finalParams, settings.sharedSecret);
+    finalParams.api_sig = generateSignature(finalParams, settings._effectiveSharedSecret);
     finalParams.format = 'json';
 
     var isPost = (method === 'track.scrobble' || method === 'track.updateNowPlaying' || method === 'auth.getSession');
@@ -343,7 +381,7 @@
   function startAuthFlow() {
     var settings = getSettings();
     var cbUrl = 'https://music.youtube.com/lastfm-callback';
-    var authUrl = 'https://www.last.fm/api/auth/?api_key=' + settings.apiKey + '&cb=' + encodeURIComponent(cbUrl);
+    var authUrl = 'https://www.last.fm/api/auth/?api_key=' + settings._effectiveApiKey + '&cb=' + encodeURIComponent(cbUrl);
     if (window.CaspianBridge && typeof window.CaspianBridge.openExternalUrl === 'function') {
       window.CaspianBridge.openExternalUrl(authUrl);
     } else if (window.CaspianBridge && typeof window.CaspianBridge.openUrl === 'function') {
