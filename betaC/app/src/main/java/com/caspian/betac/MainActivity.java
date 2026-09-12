@@ -86,6 +86,7 @@ import android.view.ViewGroup;
 import android.view.WindowManager;
 import android.view.animation.AccelerateInterpolator;
 import android.view.animation.DecelerateInterpolator;
+import android.view.animation.Interpolator;
 import android.view.animation.OvershootInterpolator;
 import android.view.animation.PathInterpolator;
 import android.view.inputmethod.EditorInfo;
@@ -388,6 +389,16 @@ public class MainActivity extends AppCompatActivity {
     private FrameLayout tabGridFabAdd;
     private TextView btnTabDockSelect;
     private boolean isGridSelectionMode = false;
+
+    // Dynamic Toolbar Auto-Hide & Docking States
+    private static final int TOOLBAR_STATE_DOCKED_TOP = 0;
+    private static final int TOOLBAR_STATE_FULLSCREEN_HIDDEN = 1;
+    private static final int TOOLBAR_STATE_OVERLAY_VISIBLE = 2;
+    private static final int TOOLBAR_STATE_DOCKED_BOTTOM = 3;
+
+    private int currentToolbarState = TOOLBAR_STATE_DOCKED_TOP;
+    private int accumulatedScrollDelta = 0;
+    private boolean isToolbarScrollLocked = false;
 
     private FrameLayout modalNewTabPlatform;
     private ImageButton btnClosePlatformModal;
@@ -2018,7 +2029,19 @@ public class MainActivity extends AppCompatActivity {
 
             if (floatingCaspianCard != null) floatingCaspianCard.setLayerType(View.LAYER_TYPE_HARDWARE, null);
             if (omniboxHeaderWrapper != null) omniboxHeaderWrapper.setLayerType(View.LAYER_TYPE_HARDWARE, null);
+            if (webviewsParentContainer != null) webviewsParentContainer.setLayerType(View.LAYER_TYPE_HARDWARE, null);
+            if (browserProgressBar != null) browserProgressBar.setLayerType(View.LAYER_TYPE_HARDWARE, null);
             if (sheetOverlayContainer != null) sheetOverlayContainer.setLayerType(View.LAYER_TYPE_HARDWARE, null);
+
+            if (omniboxHeaderWrapper != null) {
+                omniboxHeaderWrapper.post(() -> {
+                    if ("bottom".equalsIgnoreCase(omniboxPosition)) {
+                        dockToolbarAtBottom(false);
+                    } else {
+                        dockToolbarAtTop(false);
+                    }
+                });
+            }
         } catch (Exception e) {
             Log.e(TAG, "bindViews error: " + e.getMessage());
         }
@@ -7551,6 +7574,7 @@ public class MainActivity extends AppCompatActivity {
                 android.transition.TransitionManager.beginDelayedTransition(omniboxHeader, transition);
             }
             if (hasFocus) {
+                showToolbar(true, true);
                 // 1. Expand Omnibox URL section across toolbar by hiding other icon buttons
                 if (omniboxBackBtn != null) omniboxBackBtn.setVisibility(View.GONE);
                 if (omniboxForwardBtn != null) omniboxForwardBtn.setVisibility(View.GONE);
@@ -11513,13 +11537,8 @@ public class MainActivity extends AppCompatActivity {
                     if (wpLp == null) {
                         wpLp = new FrameLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.MATCH_PARENT);
                     }
-                    if (isBottom) {
-                        wpLp.bottomMargin = dpToPx(100);
-                        wpLp.topMargin = 0;
-                    } else {
-                        wpLp.topMargin = dpToPx(100);
-                        wpLp.bottomMargin = 0;
-                    }
+                    wpLp.topMargin = 0;
+                    wpLp.bottomMargin = 0;
                     webviewsParentContainer.setLayoutParams(wpLp);
                 }
 
@@ -11530,10 +11549,10 @@ public class MainActivity extends AppCompatActivity {
                     }
                     pbLp.gravity = isBottom ? Gravity.BOTTOM : Gravity.TOP;
                     if (isBottom) {
-                        pbLp.bottomMargin = dpToPx(100);
+                        pbLp.bottomMargin = dpToPx(88);
                         pbLp.topMargin = 0;
                     } else {
-                        pbLp.topMargin = dpToPx(100);
+                        pbLp.topMargin = dpToPx(88);
                         pbLp.bottomMargin = 0;
                     }
                     browserProgressBar.setLayoutParams(pbLp);
@@ -11546,18 +11565,186 @@ public class MainActivity extends AppCompatActivity {
                     }
                     sugLp.gravity = isBottom ? Gravity.BOTTOM : Gravity.TOP;
                     if (isBottom) {
-                        sugLp.bottomMargin = dpToPx(100);
+                        sugLp.bottomMargin = dpToPx(94);
                         sugLp.topMargin = 0;
                     } else {
-                        sugLp.topMargin = dpToPx(100);
+                        sugLp.topMargin = dpToPx(94);
                         sugLp.bottomMargin = 0;
                     }
                     omniboxSuggestionsContainer.setLayoutParams(sugLp);
                 }
 
                 updateOmniboxScrimBackground();
+
+                if (isBottom) {
+                    dockToolbarAtBottom(false);
+                } else {
+                    dockToolbarAtTop(false);
+                }
             } catch (Throwable ignored) {}
         });
+    }
+
+    public int getToolbarHeight() {
+        if (omniboxHeaderWrapper != null && omniboxHeaderWrapper.getHeight() > 0) {
+            return omniboxHeaderWrapper.getHeight();
+        }
+        return dpToPx(98);
+    }
+
+    private boolean isInternalPageWithoutToolbarAutohide() {
+        TabItem activeTab = getTabById(activeTabId);
+        if (activeTab == null || activeTab.url == null) return true;
+        String url = activeTab.url.toLowerCase();
+        return url.contains("launch_hub.html") || url.contains("incognito_hub.html") || "hub".equalsIgnoreCase(activeTab.service);
+    }
+
+    public void dockToolbarAtTop(boolean animate) {
+        currentToolbarState = TOOLBAR_STATE_DOCKED_TOP;
+        int toolbarH = getToolbarHeight();
+        applyToolbarMotion(0f, (float) toolbarH, animate);
+    }
+
+    public void dockToolbarAtBottom(boolean animate) {
+        currentToolbarState = TOOLBAR_STATE_DOCKED_BOTTOM;
+        int toolbarH = getToolbarHeight();
+        applyToolbarMotion(0f, (float) -toolbarH, animate);
+    }
+
+    public void hideToolbar(boolean animate) {
+        if (isToolbarScrollLocked || isInternalPageWithoutToolbarAutohide()) return;
+        currentToolbarState = TOOLBAR_STATE_FULLSCREEN_HIDDEN;
+        int toolbarH = getToolbarHeight();
+        boolean isBottomMode = "bottom".equalsIgnoreCase(omniboxPosition);
+        float targetToolbarY = isBottomMode ? (toolbarH + dpToPx(16)) : (-toolbarH - dpToPx(16));
+        applyToolbarMotion(targetToolbarY, 0f, animate);
+    }
+
+    public void showToolbar(boolean asOverlay, boolean animate) {
+        currentToolbarState = asOverlay ? TOOLBAR_STATE_OVERLAY_VISIBLE : TOOLBAR_STATE_DOCKED_TOP;
+        int toolbarH = getToolbarHeight();
+        boolean isBottomMode = "bottom".equalsIgnoreCase(omniboxPosition);
+        float targetWebViewY = 0f;
+        if (!asOverlay) {
+            targetWebViewY = isBottomMode ? -toolbarH : toolbarH;
+        }
+        applyToolbarMotion(0f, targetWebViewY, animate);
+    }
+
+    private void applyToolbarMotion(float targetToolbarY, float targetWebViewY, boolean animate) {
+        runOnUiThread(() -> {
+            if (omniboxHeaderWrapper == null || webviewsParentContainer == null) return;
+            long duration = animate ? 220 : 0;
+            Interpolator interpolator = new DecelerateInterpolator(1.8f);
+
+            if (animate) {
+                omniboxHeaderWrapper.animate().cancel();
+                omniboxHeaderWrapper.animate()
+                        .translationY(targetToolbarY)
+                        .setDuration(duration)
+                        .setInterpolator(interpolator)
+                        .start();
+
+                webviewsParentContainer.animate().cancel();
+                webviewsParentContainer.animate()
+                        .translationY(targetWebViewY)
+                        .setDuration(duration)
+                        .setInterpolator(interpolator)
+                        .start();
+
+                if (browserProgressBar != null) {
+                    browserProgressBar.animate().cancel();
+                    browserProgressBar.animate()
+                            .translationY(targetToolbarY)
+                            .setDuration(duration)
+                            .setInterpolator(interpolator)
+                            .start();
+                }
+            } else {
+                omniboxHeaderWrapper.setTranslationY(targetToolbarY);
+                webviewsParentContainer.setTranslationY(targetWebViewY);
+                if (browserProgressBar != null) {
+                    browserProgressBar.setTranslationY(targetToolbarY);
+                }
+            }
+        });
+    }
+
+    public void handleWebViewScroll(CaspianWebView webView, int scrollX, int scrollY, int oldScrollX, int oldScrollY) {
+        if (isToolbarScrollLocked || isInternalPageWithoutToolbarAutohide()) {
+            dockToolbarAtTop(false);
+            return;
+        }
+        if (omniboxEditText != null && omniboxEditText.hasFocus()) {
+            showToolbar(true, false);
+            return;
+        }
+
+        int deltaY = scrollY - oldScrollY;
+        boolean isBottomMode = "bottom".equalsIgnoreCase(omniboxPosition);
+
+        // 1. Boundary check: Absolute top
+        if (scrollY <= 0 || webView.isAtTop()) {
+            accumulatedScrollDelta = 0;
+            if (!isBottomMode) {
+                dockToolbarAtTop(true);
+            } else {
+                showToolbar(false, true);
+            }
+            return;
+        }
+
+        // 2. Boundary check: Absolute bottom
+        if (isBottomMode && webView.isAtBottom(dpToPx(16))) {
+            accumulatedScrollDelta = 0;
+            dockToolbarAtBottom(true);
+            return;
+        }
+
+        // 3. Direction accumulation
+        if ((deltaY > 0 && accumulatedScrollDelta < 0) || (deltaY < 0 && accumulatedScrollDelta > 0)) {
+            accumulatedScrollDelta = 0;
+        }
+        accumulatedScrollDelta += deltaY;
+
+        int threshold = dpToPx(18);
+        if (accumulatedScrollDelta > threshold) {
+            // User scrolling down into content -> Fullscreen mode
+            hideToolbar(true);
+            accumulatedScrollDelta = 0;
+        } else if (accumulatedScrollDelta < -threshold) {
+            // User scrolling up -> Show floating overlay
+            showToolbar(true, true);
+            accumulatedScrollDelta = 0;
+        }
+    }
+
+    public void handleWebViewOverScrolled(CaspianWebView webView, int scrollX, int scrollY, boolean clampedX, boolean clampedY) {
+        if (isToolbarScrollLocked || isInternalPageWithoutToolbarAutohide()) return;
+        boolean isBottomMode = "bottom".equalsIgnoreCase(omniboxPosition);
+        if (clampedY) {
+            if (scrollY <= 0) {
+                // Pulled down at the absolute top -> dock to own section!
+                if (!isBottomMode) {
+                    dockToolbarAtTop(true);
+                } else {
+                    showToolbar(false, true);
+                }
+            } else if (scrollY > 0 && isBottomMode) {
+                // Pulled up at the absolute bottom -> dock to own section!
+                dockToolbarAtBottom(true);
+            }
+        }
+    }
+
+    public void handleWebViewScrollIdle(CaspianWebView webView) {
+        if (isToolbarScrollLocked || isInternalPageWithoutToolbarAutohide()) return;
+        boolean isBottomMode = "bottom".equalsIgnoreCase(omniboxPosition);
+        if (webView.isAtTop() && !isBottomMode) {
+            dockToolbarAtTop(true);
+        } else if (isBottomMode && webView.isAtBottom(dpToPx(16))) {
+            dockToolbarAtBottom(true);
+        }
     }
 
     public void setOmniboxPosition(String position) {
@@ -16845,6 +17032,29 @@ public class MainActivity extends AppCompatActivity {
             }
         });
 
+        webView.setScrollStateListener(new CaspianWebView.OnScrollStateListener() {
+            @Override
+            public void onScrollChanged(CaspianWebView targetWebView, int scrollX, int scrollY, int oldScrollX, int oldScrollY) {
+                if (tabItem.id == activeTabId) {
+                    handleWebViewScroll(targetWebView, scrollX, scrollY, oldScrollX, oldScrollY);
+                }
+            }
+
+            @Override
+            public void onOverScrolled(CaspianWebView targetWebView, int scrollX, int scrollY, boolean clampedX, boolean clampedY) {
+                if (tabItem.id == activeTabId) {
+                    handleWebViewOverScrolled(targetWebView, scrollX, scrollY, clampedX, clampedY);
+                }
+            }
+
+            @Override
+            public void onScrollIdle(CaspianWebView targetWebView) {
+                if (tabItem.id == activeTabId) {
+                    handleWebViewScrollIdle(targetWebView);
+                }
+            }
+        });
+
         webView.setDownloadListener((downloadUrl, userAgent, contentDisposition, mimeType, contentLength) -> {
             try {
                 String referer = webView.getUrl();
@@ -16992,6 +17202,12 @@ public class MainActivity extends AppCompatActivity {
                     browserProgressBar.setVisibility(View.VISIBLE);
                     browserProgressBar.setProgress(15);
                     updateOmniboxState();
+                    accumulatedScrollDelta = 0;
+                    if ("bottom".equalsIgnoreCase(omniboxPosition)) {
+                        showToolbar(false, false);
+                    } else {
+                        dockToolbarAtTop(false);
+                    }
                 }
                 if (pageUrl != null && pageUrl.contains("chatgpt.com")) {
                     String interceptorJs = readAssetScript("chatgpt_network_interceptor.js");
@@ -17690,6 +17906,15 @@ public class MainActivity extends AppCompatActivity {
             }
         }
         updateOmniboxState();
+        accumulatedScrollDelta = 0;
+        TabItem curSwitchedTab = getTabById(tabId);
+        if (curSwitchedTab != null && (isInternalPageWithoutToolbarAutohide() || curSwitchedTab.webView == null || curSwitchedTab.webView.getScrollY() <= 0)) {
+            if ("bottom".equalsIgnoreCase(omniboxPosition)) {
+                showToolbar(false, false);
+            } else {
+                dockToolbarAtTop(false);
+            }
+        }
         if (!hasAnyYouTubeTab()) {
             hasYouTubePlaybackStarted = false;
             dismissMediaNotification();

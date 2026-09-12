@@ -84,6 +84,56 @@ public class CaspianWebView extends WebView {
         super.onWindowFocusChanged(hasWindowFocus);
     }
 
+    public interface OnScrollStateListener {
+        void onScrollChanged(CaspianWebView webView, int scrollX, int scrollY, int oldScrollX, int oldScrollY);
+        void onOverScrolled(CaspianWebView webView, int scrollX, int scrollY, boolean clampedX, boolean clampedY);
+        void onScrollIdle(CaspianWebView webView);
+    }
+
+    private OnScrollStateListener scrollStateListener;
+
+    public void setScrollStateListener(OnScrollStateListener listener) {
+        this.scrollStateListener = listener;
+    }
+
+    public boolean isAtTop() {
+        return computeVerticalScrollOffset() <= 0;
+    }
+
+    public boolean isAtBottom(int thresholdPx) {
+        int offset = computeVerticalScrollOffset();
+        int range = computeVerticalScrollRange();
+        int extent = computeVerticalScrollExtent();
+        return (offset + extent) >= (range - Math.max(0, thresholdPx));
+    }
+
+    @Override
+    protected void onScrollChanged(int l, int t, int oldl, int oldt) {
+        super.onScrollChanged(l, t, oldl, oldt);
+        if (scrollStateListener != null) {
+            scrollStateListener.onScrollChanged(this, l, t, oldl, oldt);
+        }
+    }
+
+    @Override
+    protected void onOverScrolled(int scrollX, int scrollY, boolean clampedX, boolean clampedY) {
+        super.onOverScrolled(scrollX, scrollY, clampedX, clampedY);
+        if (scrollStateListener != null) {
+            scrollStateListener.onOverScrolled(this, scrollX, scrollY, clampedX, clampedY);
+        }
+    }
+
+    @Override
+    public boolean onTouchEvent(android.view.MotionEvent event) {
+        boolean result = super.onTouchEvent(event);
+        if (event.getAction() == android.view.MotionEvent.ACTION_UP || event.getAction() == android.view.MotionEvent.ACTION_CANCEL) {
+            if (scrollStateListener != null) {
+                scrollStateListener.onScrollIdle(this);
+            }
+        }
+        return result;
+    }
+
     @Override
     public boolean isShown() {
         if (isBackgroundPlaybackEnabled) {
