@@ -400,6 +400,7 @@ public class MainActivity extends AppCompatActivity {
     private int accumulatedScrollDelta = 0;
     private boolean isToolbarScrollLocked = false;
     private boolean isToolbarInDedicatedSection = true;
+    private float currentDedicatedScrollOffset = 0f;
     private String omniboxScrollMode = "overlay"; // "overlay" (dynamic fullscreen overlay) or "separate" (always dedicated space)
 
     private FrameLayout modalNewTabPlatform;
@@ -11666,6 +11667,7 @@ public class MainActivity extends AppCompatActivity {
     public void dockToolbarAtTop(boolean animate) {
         currentToolbarState = TOOLBAR_STATE_DOCKED_TOP;
         isToolbarInDedicatedSection = true;
+        currentDedicatedScrollOffset = 0f;
         int toolbarH = getToolbarHeight();
         applyToolbarMotion(0f, (float) toolbarH, animate);
     }
@@ -11673,6 +11675,7 @@ public class MainActivity extends AppCompatActivity {
     public void dockToolbarAtBottom(boolean animate) {
         currentToolbarState = TOOLBAR_STATE_DOCKED_BOTTOM;
         isToolbarInDedicatedSection = true;
+        currentDedicatedScrollOffset = 0f;
         int toolbarH = getToolbarHeight();
         applyToolbarMotion(0f, (float) -toolbarH, animate);
     }
@@ -11682,6 +11685,7 @@ public class MainActivity extends AppCompatActivity {
         currentToolbarState = TOOLBAR_STATE_FULLSCREEN_HIDDEN;
         isToolbarInDedicatedSection = false;
         int toolbarH = getToolbarHeight();
+        currentDedicatedScrollOffset = (float) toolbarH;
         boolean isBottomMode = "bottom".equalsIgnoreCase(omniboxPosition);
         float targetToolbarY = isBottomMode ? (toolbarH + dpToPx(32)) : (-toolbarH - dpToPx(32));
         applyToolbarMotion(targetToolbarY, 0f, animate);
@@ -11766,17 +11770,20 @@ public class MainActivity extends AppCompatActivity {
         if (!isBottomMode) {
             // === TOP OMNIBOX MODE ===
             if (isToolbarInDedicatedSection) {
-                if (dragOffsetY <= 0) {
+                float effectiveOffset = currentDedicatedScrollOffset + dragOffsetY;
+                if (effectiveOffset <= 0) {
+                    currentDedicatedScrollOffset = 0f;
                     applyToolbarMotion(0f, (float) toolbarH, false);
-                    return true;
-                } else if (dragOffsetY < toolbarH) {
+                    return false;
+                } else if (effectiveOffset < toolbarH) {
                     // Moving down slowly: Omnibox and WebView move together in 1:1 lockstep!
-                    float tY = -dragOffsetY;
-                    float wY = toolbarH - dragOffsetY;
+                    float tY = -effectiveOffset;
+                    float wY = toolbarH - effectiveOffset;
                     applyToolbarMotion(tY, wY, false);
                     return true;
                 } else {
                     // Toolbar has moved completely off-screen! Switch to Overlay Mode!
+                    currentDedicatedScrollOffset = (float) toolbarH;
                     isToolbarInDedicatedSection = false;
                     applyToolbarMotion((float) -toolbarH, 0f, false);
                     return false;
@@ -11785,16 +11792,18 @@ public class MainActivity extends AppCompatActivity {
         } else {
             // === BOTTOM OMNIBOX MODE ===
             if (isToolbarInDedicatedSection) {
-                float pullUp = dragOffsetY;
-                if (pullUp <= 0) {
+                float effectiveOffset = currentDedicatedScrollOffset + dragOffsetY;
+                if (effectiveOffset <= 0) {
+                    currentDedicatedScrollOffset = 0f;
                     applyToolbarMotion(0f, (float) -toolbarH, false);
-                    return true;
-                } else if (pullUp < toolbarH) {
-                    float tY = pullUp;
-                    float wY = -toolbarH + pullUp;
+                    return false;
+                } else if (effectiveOffset < toolbarH) {
+                    float tY = effectiveOffset;
+                    float wY = -toolbarH + effectiveOffset;
                     applyToolbarMotion(tY, wY, false);
                     return true;
                 } else {
+                    currentDedicatedScrollOffset = (float) toolbarH;
                     isToolbarInDedicatedSection = false;
                     applyToolbarMotion((float) (toolbarH + dpToPx(16)), 0f, false);
                     return false;
@@ -11813,21 +11822,35 @@ public class MainActivity extends AppCompatActivity {
 
         if (!isBottomMode) {
             if (isToolbarInDedicatedSection) {
-                if (dragOffsetY > toolbarH / 2f) {
+                float effectiveOffset = currentDedicatedScrollOffset + dragOffsetY;
+                effectiveOffset = Math.max(0f, Math.min((float) toolbarH, effectiveOffset));
+                if (effectiveOffset >= toolbarH) {
+                    currentDedicatedScrollOffset = (float) toolbarH;
                     isToolbarInDedicatedSection = false;
-                    hideToolbar(true);
+                    applyToolbarMotion((float) -toolbarH, 0f, false);
+                } else if (effectiveOffset <= 0) {
+                    currentDedicatedScrollOffset = 0f;
+                    dockToolbarAtTop(false);
                 } else {
-                    dockToolbarAtTop(true);
+                    // Paused at partial position: stay exactly here like a native page component!
+                    currentDedicatedScrollOffset = effectiveOffset;
+                    applyToolbarMotion(-currentDedicatedScrollOffset, toolbarH - currentDedicatedScrollOffset, false);
                 }
             }
         } else {
             if (isToolbarInDedicatedSection) {
-                float pullUp = dragOffsetY;
-                if (pullUp > toolbarH / 2f) {
+                float effectiveOffset = currentDedicatedScrollOffset + dragOffsetY;
+                effectiveOffset = Math.max(0f, Math.min((float) toolbarH, effectiveOffset));
+                if (effectiveOffset >= toolbarH) {
+                    currentDedicatedScrollOffset = (float) toolbarH;
                     isToolbarInDedicatedSection = false;
-                    hideToolbar(true);
+                    applyToolbarMotion((float) (toolbarH + dpToPx(16)), 0f, false);
+                } else if (effectiveOffset <= 0) {
+                    currentDedicatedScrollOffset = 0f;
+                    dockToolbarAtBottom(false);
                 } else {
-                    dockToolbarAtBottom(true);
+                    currentDedicatedScrollOffset = effectiveOffset;
+                    applyToolbarMotion(currentDedicatedScrollOffset, -toolbarH + currentDedicatedScrollOffset, false);
                 }
             }
         }
@@ -11855,10 +11878,12 @@ public class MainActivity extends AppCompatActivity {
             // === TOP OMNIBOX MODE ===
             if (isToolbarInDedicatedSection) {
                 if (scrollY <= 0) {
+                    currentDedicatedScrollOffset = 0f;
                     applyToolbarMotion(0f, (float) toolbarH, false);
                     accumulatedScrollDelta = 0;
                 } else if (scrollY >= toolbarH) {
                     isToolbarInDedicatedSection = false;
+                    currentDedicatedScrollOffset = (float) toolbarH;
                     applyToolbarMotion((float) -toolbarH, 0f, false);
                     accumulatedScrollDelta = 0;
                 }
@@ -11866,7 +11891,11 @@ public class MainActivity extends AppCompatActivity {
                 // In Overlay Mode (mid-page reading)
                 // If user scrolls all the way back up to the absolute top border
                 if (scrollY <= 0) {
-                    showToolbar(true, true);
+                    if (deltaY < 0) {
+                        isToolbarInDedicatedSection = true;
+                        currentDedicatedScrollOffset = 0f;
+                        dockToolbarAtTop(true);
+                    }
                     accumulatedScrollDelta = 0;
                     return;
                 }
@@ -11892,16 +11921,22 @@ public class MainActivity extends AppCompatActivity {
             // === BOTTOM OMNIBOX MODE ===
             if (isToolbarInDedicatedSection) {
                 if (webView.isAtBottom(dpToPx(8))) {
+                    currentDedicatedScrollOffset = 0f;
                     applyToolbarMotion(0f, (float) -toolbarH, false);
                     accumulatedScrollDelta = 0;
                 } else {
                     isToolbarInDedicatedSection = false;
+                    currentDedicatedScrollOffset = (float) toolbarH;
                     applyToolbarMotion((float) (toolbarH + dpToPx(16)), 0f, false);
                     accumulatedScrollDelta = 0;
                 }
             } else {
                 if (webView.isAtBottom(dpToPx(8))) {
-                    showToolbar(true, true);
+                    if (deltaY > 0) {
+                        isToolbarInDedicatedSection = true;
+                        currentDedicatedScrollOffset = 0f;
+                        dockToolbarAtBottom(true);
+                    }
                     accumulatedScrollDelta = 0;
                     return;
                 }
@@ -11931,12 +11966,14 @@ public class MainActivity extends AppCompatActivity {
                 // User pulled down into overscroll at the absolute top ("scroll a bit top as well")
                 if (!isToolbarInDedicatedSection) {
                     isToolbarInDedicatedSection = true;
+                    currentDedicatedScrollOffset = 0f;
                     dockToolbarAtTop(true);
                 }
             } else if (scrollY > 0 && isBottomMode && webView.isAtBottom(dpToPx(16))) {
                 // User pulled up into overscroll at the absolute bottom ("scroll a bit bottom as well")
                 if (!isToolbarInDedicatedSection) {
                     isToolbarInDedicatedSection = true;
+                    currentDedicatedScrollOffset = 0f;
                     dockToolbarAtBottom(true);
                 }
             }
@@ -11945,24 +11982,7 @@ public class MainActivity extends AppCompatActivity {
 
     public void handleWebViewScrollIdle(CaspianWebView webView) {
         if (isToolbarScrollLocked || isInternalPageWithoutToolbarAutohide() || "separate".equalsIgnoreCase(omniboxScrollMode)) return;
-        boolean isBottomMode = "bottom".equalsIgnoreCase(omniboxPosition);
-        int toolbarH = getToolbarHeight();
-        if (!isBottomMode) {
-            if (isToolbarInDedicatedSection) {
-                int sy = webView.getScrollY();
-                if (sy <= 0) {
-                    dockToolbarAtTop(true);
-                } else if (sy >= toolbarH) {
-                    isToolbarInDedicatedSection = false;
-                    hideToolbar(true);
-                }
-            }
-        } else {
-            if (isToolbarInDedicatedSection && !webView.isAtBottom(dpToPx(16))) {
-                isToolbarInDedicatedSection = false;
-                hideToolbar(true);
-            }
-        }
+        // In dedicated section, allow user to pause anywhere like a native page component without snapping.
     }
 
     public void setOmniboxPosition(String position) {
