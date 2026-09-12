@@ -11665,6 +11665,10 @@ public class MainActivity extends AppCompatActivity {
                             .start();
                 }
             } else {
+                omniboxHeaderWrapper.animate().cancel();
+                webviewsParentContainer.animate().cancel();
+                if (browserProgressBar != null) browserProgressBar.animate().cancel();
+
                 omniboxHeaderWrapper.setTranslationY(targetToolbarY);
                 webviewsParentContainer.setTranslationY(targetWebViewY);
                 if (browserProgressBar != null) {
@@ -11684,25 +11688,91 @@ public class MainActivity extends AppCompatActivity {
             return;
         }
 
-        int deltaY = scrollY - oldScrollX; // vertical delta
-        deltaY = scrollY - oldScrollY;
+        int deltaY = scrollY - oldScrollY;
+        boolean isBottomMode = "bottom".equalsIgnoreCase(omniboxPosition);
+        int toolbarH = getToolbarHeight();
 
-        // Direction accumulation
-        if ((deltaY > 0 && accumulatedScrollDelta < 0) || (deltaY < 0 && accumulatedScrollDelta > 0)) {
-            accumulatedScrollDelta = 0;
-        }
-        accumulatedScrollDelta += deltaY;
+        if (!isBottomMode) {
+            // === TOP OMNIBOX MODE ===
+            if (isToolbarInDedicatedSection) {
+                // At the top border: Toolbar and WebView stay together in dedicated mode!
+                if (scrollY <= 0) {
+                    applyToolbarMotion(0f, (float) toolbarH, false);
+                    accumulatedScrollDelta = 0;
+                } else if (scrollY < toolbarH) {
+                    // Moving down: Omnibox and WebView move together in 1:1 lockstep!
+                    // Distance between them is always exactly toolbarH - zero jump!
+                    float tY = -scrollY;
+                    float wY = toolbarH - scrollY;
+                    applyToolbarMotion(tY, wY, false);
+                    accumulatedScrollDelta = 0;
+                } else {
+                    // Omnibox has moved completely out of the visible screen!
+                    // Now, and ONLY now, switch into Overlay Mode!
+                    isToolbarInDedicatedSection = false;
+                    applyToolbarMotion((float) -toolbarH, 0f, false);
+                    accumulatedScrollDelta = 0;
+                }
+            } else {
+                // In Overlay Mode (mid-page reading)
+                // If user scrolls all the way back up to the absolute top border
+                if (scrollY <= 0) {
+                    isToolbarInDedicatedSection = true;
+                    dockToolbarAtTop(true);
+                    accumulatedScrollDelta = 0;
+                    return;
+                }
 
-        int threshold = dpToPx(18);
-        if (accumulatedScrollDelta > threshold) {
-            // User scrolling down into content -> Fullscreen mode (WebView stays at 0, no jumping!)
-            isToolbarInDedicatedSection = false;
-            hideToolbar(true);
-            accumulatedScrollDelta = 0;
-        } else if (accumulatedScrollDelta < -threshold) {
-            // User scrolling up -> Show floating overlay (WebView stays at 0, no jumping!)
-            showToolbar(true, true);
-            accumulatedScrollDelta = 0;
+                // Normal mid-page overlay behavior (WebView stays at 0, no jumping!)
+                if ((deltaY > 0 && accumulatedScrollDelta < 0) || (deltaY < 0 && accumulatedScrollDelta > 0)) {
+                    accumulatedScrollDelta = 0;
+                }
+                accumulatedScrollDelta += deltaY;
+
+                int threshold = dpToPx(18);
+                if (accumulatedScrollDelta > threshold) {
+                    // Scrolling down -> Hide toolbar off-screen (WebView stays at 0)
+                    hideToolbar(true);
+                    accumulatedScrollDelta = 0;
+                } else if (accumulatedScrollDelta < -threshold) {
+                    // Scrolling up -> Show floating overlay (WebView stays at 0)
+                    showToolbar(true, true);
+                    accumulatedScrollDelta = 0;
+                }
+            }
+        } else {
+            // === BOTTOM OMNIBOX MODE ===
+            if (isToolbarInDedicatedSection) {
+                if (webView.isAtBottom(dpToPx(8))) {
+                    applyToolbarMotion(0f, (float) -toolbarH, false);
+                    accumulatedScrollDelta = 0;
+                } else {
+                    isToolbarInDedicatedSection = false;
+                    applyToolbarMotion((float) (toolbarH + dpToPx(16)), 0f, false);
+                    accumulatedScrollDelta = 0;
+                }
+            } else {
+                if (webView.isAtBottom(dpToPx(8))) {
+                    isToolbarInDedicatedSection = true;
+                    dockToolbarAtBottom(true);
+                    accumulatedScrollDelta = 0;
+                    return;
+                }
+
+                if ((deltaY > 0 && accumulatedScrollDelta < 0) || (deltaY < 0 && accumulatedScrollDelta > 0)) {
+                    accumulatedScrollDelta = 0;
+                }
+                accumulatedScrollDelta += deltaY;
+
+                int threshold = dpToPx(18);
+                if (accumulatedScrollDelta > threshold) {
+                    hideToolbar(true);
+                    accumulatedScrollDelta = 0;
+                } else if (accumulatedScrollDelta < -threshold) {
+                    showToolbar(true, true);
+                    accumulatedScrollDelta = 0;
+                }
+            }
         }
     }
 
@@ -11729,11 +11799,21 @@ public class MainActivity extends AppCompatActivity {
     public void handleWebViewScrollIdle(CaspianWebView webView) {
         if (isToolbarScrollLocked || isInternalPageWithoutToolbarAutohide()) return;
         boolean isBottomMode = "bottom".equalsIgnoreCase(omniboxPosition);
-        if (isToolbarInDedicatedSection) {
-            if (!isBottomMode && webView.getScrollY() <= 0) {
-                dockToolbarAtTop(true);
-            } else if (isBottomMode && webView.isAtBottom(dpToPx(16))) {
-                dockToolbarAtBottom(true);
+        int toolbarH = getToolbarHeight();
+        if (!isBottomMode) {
+            if (isToolbarInDedicatedSection) {
+                int sy = webView.getScrollY();
+                if (sy <= 0) {
+                    dockToolbarAtTop(true);
+                } else if (sy >= toolbarH) {
+                    isToolbarInDedicatedSection = false;
+                    hideToolbar(true);
+                }
+            }
+        } else {
+            if (isToolbarInDedicatedSection && !webView.isAtBottom(dpToPx(16))) {
+                isToolbarInDedicatedSection = false;
+                hideToolbar(true);
             }
         }
     }
