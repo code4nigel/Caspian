@@ -1266,6 +1266,21 @@ public class CaspianBridge {
     }
 
     @JavascriptInterface
+    public void setOmniboxScrollMode(String mode) {
+        if (activity != null) {
+            activity.runOnUiThread(() -> activity.setOmniboxScrollMode(mode));
+        }
+    }
+
+    @JavascriptInterface
+    public String getOmniboxScrollMode() {
+        if (activity != null) {
+            return activity.getOmniboxScrollMode();
+        }
+        return "overlay";
+    }
+
+    @JavascriptInterface
     public void setTabStripEnabled(boolean enabled) {
         if (activity != null) {
             activity.runOnUiThread(() -> activity.setTabStripEnabled(enabled));

@@ -400,6 +400,7 @@ public class MainActivity extends AppCompatActivity {
     private int accumulatedScrollDelta = 0;
     private boolean isToolbarScrollLocked = false;
     private boolean isToolbarInDedicatedSection = true;
+    private String omniboxScrollMode = "overlay"; // "overlay" (dynamic fullscreen overlay) or "separate" (always dedicated space)
 
     private FrameLayout modalNewTabPlatform;
     private ImageButton btnClosePlatformModal;
@@ -1822,6 +1823,7 @@ public class MainActivity extends AppCompatActivity {
             }
 
             omniboxPosition = getSharedPreferences(PREFS_NAME, MODE_PRIVATE).getString("omnibox_position", "top");
+            omniboxScrollMode = getSharedPreferences(PREFS_NAME, MODE_PRIVATE).getString("omnibox_scroll_mode", "overlay");
             omniboxMenuStyle = getSharedPreferences(PREFS_NAME, MODE_PRIVATE).getString("omnibox_menu_style", "grid");
             isTabStripEnabled = getSharedPreferences(PREFS_NAME, MODE_PRIVATE).getBoolean("tab_strip_enabled", true);
             omniboxHeader = findViewById(R.id.omnibox_header);
@@ -5187,13 +5189,13 @@ public class MainActivity extends AppCompatActivity {
         if (omniboxReloadBtn != null) omniboxReloadBtn.setColorFilter(defaultIconTint);
         if (omniboxMenuBtn != null) omniboxMenuBtn.setColorFilter(defaultIconTint);
         if (omniboxFinderBtn != null) omniboxFinderBtn.setColorFilter(defaultIconTint);
-        if (omniboxClearBtn != null) omniboxClearBtn.setColorFilter(defaultIconTint);
         if (omniboxFinderClose != null) omniboxFinderClose.setColorFilter(defaultIconTint);
         if (omniboxFinderPrev != null) omniboxFinderPrev.setColorFilter(defaultIconTint);
         if (omniboxFinderNext != null) omniboxFinderNext.setColorFilter(defaultIconTint);
         int omniAccentTint = isDarkTheme ? 0xFF00E5FF : 0xFF0284C7;
         if (omniboxCopyBtn != null) omniboxCopyBtn.setColorFilter(omniAccentTint);
         if (omniboxPasteBtn != null) omniboxPasteBtn.setColorFilter(omniAccentTint);
+        if (omniboxClearBtn != null) omniboxClearBtn.setColorFilter(omniAccentTint);
         if (omniboxDividerLeft != null) omniboxDividerLeft.setBackgroundColor(isDarkTheme ? 0x33FFFFFF : 0x22000000);
         if (omniboxDividerRight != null) omniboxDividerRight.setBackgroundColor(isDarkTheme ? 0x33FFFFFF : 0x22000000);
 
@@ -7353,12 +7355,9 @@ public class MainActivity extends AppCompatActivity {
         if (omniboxClearBtn != null) {
             omniboxClearBtn.setOnClickListener(v -> {
                 playUiFeedbackSound("tap");
-                if (omniboxEditText.getText() != null && omniboxEditText.getText().length() > 0) {
-                    omniboxEditText.setText("");
-                } else {
-                    omniboxEditText.clearFocus();
-                    hideKeyboard();
-                }
+                hideKeyboard();
+                omniboxEditText.clearFocus();
+                updateOmniboxState();
             });
         }
 
@@ -7664,12 +7663,15 @@ public class MainActivity extends AppCompatActivity {
         int omniAccent = isDarkTheme ? 0xFF00E5FF : 0xFF0284C7;
         omniboxPasteBtn.setColorFilter(omniAccent);
         if (omniboxCopyBtn != null) omniboxCopyBtn.setColorFilter(omniAccent);
+        if (omniboxClearBtn != null) omniboxClearBtn.setColorFilter(omniAccent);
         if (omniboxEditText != null && omniboxEditText.hasFocus()) {
             omniboxPasteBtn.setVisibility(View.VISIBLE);
             if (omniboxCopyBtn != null) omniboxCopyBtn.setVisibility(View.VISIBLE);
+            if (omniboxClearBtn != null) omniboxClearBtn.setVisibility(View.VISIBLE);
         } else {
             omniboxPasteBtn.setVisibility(View.GONE);
             if (omniboxCopyBtn != null) omniboxCopyBtn.setVisibility(View.GONE);
+            if (omniboxClearBtn != null) omniboxClearBtn.setVisibility(View.GONE);
         }
     }
 
@@ -11615,7 +11617,7 @@ public class MainActivity extends AppCompatActivity {
     }
 
     public void hideToolbar(boolean animate) {
-        if (isToolbarScrollLocked || isInternalPageWithoutToolbarAutohide()) return;
+        if (isToolbarScrollLocked || isInternalPageWithoutToolbarAutohide() || "separate".equalsIgnoreCase(omniboxScrollMode)) return;
         currentToolbarState = TOOLBAR_STATE_FULLSCREEN_HIDDEN;
         isToolbarInDedicatedSection = false;
         int toolbarH = getToolbarHeight();
@@ -11679,7 +11681,7 @@ public class MainActivity extends AppCompatActivity {
     }
 
     public boolean handlePreScrollDrag(CaspianWebView webView, float dragOffsetY) {
-        if (isToolbarScrollLocked || isInternalPageWithoutToolbarAutohide()) return false;
+        if (isToolbarScrollLocked || isInternalPageWithoutToolbarAutohide() || "separate".equalsIgnoreCase(omniboxScrollMode)) return false;
         if (omniboxEditText != null && omniboxEditText.hasFocus()) return false;
 
         boolean isBottomMode = "bottom".equalsIgnoreCase(omniboxPosition);
@@ -11727,7 +11729,7 @@ public class MainActivity extends AppCompatActivity {
     }
 
     public void handlePreScrollDragEnd(CaspianWebView webView, float dragOffsetY) {
-        if (isToolbarScrollLocked || isInternalPageWithoutToolbarAutohide()) return;
+        if (isToolbarScrollLocked || isInternalPageWithoutToolbarAutohide() || "separate".equalsIgnoreCase(omniboxScrollMode)) return;
         if (omniboxEditText != null && omniboxEditText.hasFocus()) return;
 
         boolean isBottomMode = "bottom".equalsIgnoreCase(omniboxPosition);
@@ -11756,8 +11758,12 @@ public class MainActivity extends AppCompatActivity {
     }
 
     public void handleWebViewScroll(CaspianWebView webView, int scrollX, int scrollY, int oldScrollX, int oldScrollY) {
-        if (isToolbarScrollLocked || isInternalPageWithoutToolbarAutohide()) {
-            dockToolbarAtTop(false);
+        if (isToolbarScrollLocked || isInternalPageWithoutToolbarAutohide() || "separate".equalsIgnoreCase(omniboxScrollMode)) {
+            if ("bottom".equalsIgnoreCase(omniboxPosition)) {
+                dockToolbarAtBottom(false);
+            } else {
+                dockToolbarAtTop(false);
+            }
             return;
         }
         if (omniboxEditText != null && omniboxEditText.hasFocus()) {
@@ -11842,7 +11848,7 @@ public class MainActivity extends AppCompatActivity {
     }
 
     public void handleWebViewOverScrolled(CaspianWebView webView, int scrollX, int scrollY, boolean clampedX, boolean clampedY) {
-        if (isToolbarScrollLocked || isInternalPageWithoutToolbarAutohide()) return;
+        if (isToolbarScrollLocked || isInternalPageWithoutToolbarAutohide() || "separate".equalsIgnoreCase(omniboxScrollMode)) return;
         boolean isBottomMode = "bottom".equalsIgnoreCase(omniboxPosition);
         if (clampedY) {
             if (scrollY <= 0 && !isBottomMode) {
@@ -11862,7 +11868,7 @@ public class MainActivity extends AppCompatActivity {
     }
 
     public void handleWebViewScrollIdle(CaspianWebView webView) {
-        if (isToolbarScrollLocked || isInternalPageWithoutToolbarAutohide()) return;
+        if (isToolbarScrollLocked || isInternalPageWithoutToolbarAutohide() || "separate".equalsIgnoreCase(omniboxScrollMode)) return;
         boolean isBottomMode = "bottom".equalsIgnoreCase(omniboxPosition);
         int toolbarH = getToolbarHeight();
         if (!isBottomMode) {
@@ -11910,6 +11916,35 @@ public class MainActivity extends AppCompatActivity {
 
     public String getOmniboxMenuStyle() {
         return this.omniboxMenuStyle;
+    }
+
+    public void setOmniboxScrollMode(String mode) {
+        this.omniboxScrollMode = (mode != null && mode.equalsIgnoreCase("separate")) ? "separate" : "overlay";
+        try {
+            getSharedPreferences(PREFS_NAME, MODE_PRIVATE)
+                    .edit()
+                    .putString("omnibox_scroll_mode", this.omniboxScrollMode)
+                    .apply();
+        } catch (Throwable ignored) {}
+
+        if ("separate".equalsIgnoreCase(this.omniboxScrollMode)) {
+            isToolbarInDedicatedSection = true;
+            if ("bottom".equalsIgnoreCase(omniboxPosition)) {
+                dockToolbarAtBottom(true);
+            } else {
+                dockToolbarAtTop(true);
+            }
+        } else {
+            if ("bottom".equalsIgnoreCase(omniboxPosition)) {
+                dockToolbarAtBottom(true);
+            } else {
+                dockToolbarAtTop(true);
+            }
+        }
+    }
+
+    public String getOmniboxScrollMode() {
+        return (this.omniboxScrollMode != null) ? this.omniboxScrollMode : "overlay";
     }
 
     public void setInterfaceDensity(String density) {

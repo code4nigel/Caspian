@@ -2463,17 +2463,26 @@
   // Omnibox Placement & Menu Style Customization
   const omniboxPosTop = document.getElementById('omnibox-pos-top');
   const omniboxPosBottom = document.getElementById('omnibox-pos-bottom');
+  const omniboxModeOverlay = document.getElementById('omnibox-mode-overlay');
+  const omniboxModeSeparate = document.getElementById('omnibox-mode-separate');
   const menuStyleList = document.getElementById('menu-style-list');
   const menuStyleGrid = document.getElementById('menu-style-grid');
 
   function updateOmniboxCustomizationUI() {
     let currentPos = 'top';
+    let currentScrollMode = 'overlay';
     let currentStyle = 'grid';
 
     if (window.CaspianBridge && typeof window.CaspianBridge.getOmniboxPosition === 'function') {
       try { currentPos = window.CaspianBridge.getOmniboxPosition() || 'top'; } catch (e) {}
     } else {
       currentPos = localStorage.getItem('omnibox_position') || 'top';
+    }
+
+    if (window.CaspianBridge && typeof window.CaspianBridge.getOmniboxScrollMode === 'function') {
+      try { currentScrollMode = window.CaspianBridge.getOmniboxScrollMode() || 'overlay'; } catch (e) {}
+    } else {
+      currentScrollMode = localStorage.getItem('omnibox_scroll_mode') || 'overlay';
     }
 
     if (window.CaspianBridge && typeof window.CaspianBridge.getOmniboxMenuStyle === 'function') {
@@ -2484,6 +2493,8 @@
 
     if (omniboxPosTop) omniboxPosTop.classList.toggle('active', currentPos === 'top');
     if (omniboxPosBottom) omniboxPosBottom.classList.toggle('active', currentPos === 'bottom');
+    if (omniboxModeOverlay) omniboxModeOverlay.classList.toggle('active', currentScrollMode === 'overlay');
+    if (omniboxModeSeparate) omniboxModeSeparate.classList.toggle('active', currentScrollMode === 'separate');
     if (menuStyleList) menuStyleList.classList.toggle('active', currentStyle === 'list');
     if (menuStyleGrid) menuStyleGrid.classList.toggle('active', currentStyle === 'grid');
   }
@@ -2497,6 +2508,18 @@
     updateOmniboxCustomizationUI();
     if (window.CaspianBridge && typeof window.CaspianBridge.showToast === 'function') {
       window.CaspianBridge.showToast('Omnibox set to ' + (pos === 'bottom' ? 'Bottom Bar' : 'Top Bar'));
+    }
+  }
+
+  function setOmniboxScrollMode(mode) {
+    try { playSFX('tm_header'); } catch (e) {}
+    localStorage.setItem('omnibox_scroll_mode', mode);
+    if (window.CaspianBridge && typeof window.CaspianBridge.setOmniboxScrollMode === 'function') {
+      window.CaspianBridge.setOmniboxScrollMode(mode);
+    }
+    updateOmniboxCustomizationUI();
+    if (window.CaspianBridge && typeof window.CaspianBridge.showToast === 'function') {
+      window.CaspianBridge.showToast(mode === 'separate' ? 'Omnibox: Always Separate Mode' : 'Omnibox: Dynamic Overlay Mode');
     }
   }
 
@@ -2514,6 +2537,8 @@
 
   if (omniboxPosTop) omniboxPosTop.addEventListener('click', () => setOmniboxPlacement('top'));
   if (omniboxPosBottom) omniboxPosBottom.addEventListener('click', () => setOmniboxPlacement('bottom'));
+  if (omniboxModeOverlay) omniboxModeOverlay.addEventListener('click', () => setOmniboxScrollMode('overlay'));
+  if (omniboxModeSeparate) omniboxModeSeparate.addEventListener('click', () => setOmniboxScrollMode('separate'));
   if (menuStyleList) menuStyleList.addEventListener('click', () => setOmniboxMenuStyle('list'));
   if (menuStyleGrid) menuStyleGrid.addEventListener('click', () => setOmniboxMenuStyle('grid'));
 
