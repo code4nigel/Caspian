@@ -1,0 +1,161 @@
+<?xml version="1.0" encoding="utf-8"?>
+<FrameLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:id="@+id/horizon_peek_root"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:background="#B3050811"
+    android:clickable="true"
+    android:focusable="true"
+    android:elevation="450dp"
+    android:visibility="gone">
+
+    <!-- Floating Horizon Sheet Container -->
+    <LinearLayout
+        android:id="@+id/horizon_peek_sheet"
+        android:layout_width="match_parent"
+        android:layout_height="match_parent"
+        android:layout_gravity="bottom"
+        android:layout_marginTop="96dp"
+        android:background="@drawable/bg_horizon_peek_sheet"
+        android:orientation="vertical"
+        android:clickable="true"
+        android:focusable="true">
+
+        <!-- Top Drag Handle & Gesture Anchor -->
+        <FrameLayout
+            android:id="@+id/horizon_peek_handle_bar"
+            android:layout_width="match_parent"
+            android:layout_height="22dp">
+            <View
+                android:layout_width="38dp"
+                android:layout_height="4dp"
+                android:layout_gravity="center"
+                android:background="@drawable/bg_pill_accent"
+                android:alpha="0.6" />
+        </FrameLayout>
+
+        <!-- Horizon Peek Header -->
+        <LinearLayout
+            android:id="@+id/horizon_peek_header"
+            android:layout_width="match_parent"
+            android:layout_height="46dp"
+            android:orientation="horizontal"
+            android:gravity="center_vertical"
+            android:paddingStart="14dp"
+            android:paddingEnd="12dp"
+            android:paddingBottom="4dp">
+
+            <!-- Favicon / Globe Badge -->
+            <ImageView
+                android:id="@+id/horizon_peek_favicon"
+                android:layout_width="20dp"
+                android:layout_height="20dp"
+                android:src="@drawable/ic_browser_lock"
+                android:tint="#38BDF8"
+                android:contentDescription="Security" />
+
+            <!-- Title and Domain Column -->
+            <LinearLayout
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_weight="1"
+                android:orientation="vertical"
+                android:layout_marginStart="10dp"
+                android:layout_marginEnd="8dp">
+
+                <TextView
+                    android:id="@+id/horizon_peek_title"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="Horizon Peek"
+                    android:textColor="#FFFFFF"
+                    android:textSize="12.5sp"
+                    android:textStyle="bold"
+                    android:singleLine="true"
+                    android:ellipsize="end" />
+
+                <TextView
+                    android:id="@+id/horizon_peek_host"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="preview.caspian"
+                    android:textColor="#38BDF8"
+                    android:textSize="10sp"
+                    android:singleLine="true"
+                    android:ellipsize="end" />
+            </LinearLayout>
+
+            <!-- Action Capsules Capsule -->
+            <LinearLayout
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:orientation="horizontal"
+                android:gravity="center_vertical">
+
+                <!-- 1. Open in Split Screen Button -->
+                <ImageButton
+                    android:id="@+id/horizon_peek_action_split"
+                    android:layout_width="28dp"
+                    android:layout_height="28dp"
+                    android:layout_marginEnd="4dp"
+                    android:padding="5dp"
+                    android:background="?attr/selectableItemBackgroundBorderless"
+                    android:src="@drawable/ic_browser_split"
+                    android:tint="#00E5FF"
+                    android:contentDescription="Open in Split Screen" />
+
+                <!-- 2. Promote to Full Tab Button -->
+                <ImageButton
+                    android:id="@+id/horizon_peek_action_tab"
+                    android:layout_width="28dp"
+                    android:layout_height="28dp"
+                    android:layout_marginEnd="4dp"
+                    android:padding="5dp"
+                    android:background="?attr/selectableItemBackgroundBorderless"
+                    android:src="@drawable/ic_fullscreen_pod"
+                    android:tint="#38BDF8"
+                    android:contentDescription="Open as Tab" />
+
+                <!-- 3. Copy Link Button -->
+                <ImageButton
+                    android:id="@+id/horizon_peek_action_copy"
+                    android:layout_width="28dp"
+                    android:layout_height="28dp"
+                    android:layout_marginEnd="4dp"
+                    android:padding="5dp"
+                    android:background="?attr/selectableItemBackgroundBorderless"
+                    android:src="@drawable/ic_omnibox_copy"
+                    android:tint="#94A3B8"
+                    android:contentDescription="Copy Link" />
+
+                <!-- 4. Close Peek Button -->
+                <ImageButton
+                    android:id="@+id/horizon_peek_action_close"
+                    android:layout_width="28dp"
+                    android:layout_height="28dp"
+                    android:padding="5dp"
+                    android:background="?attr/selectableItemBackgroundBorderless"
+                    android:src="@drawable/ic_omnibox_close"
+                    android:tint="#EF4444"
+                    android:contentDescription="Dismiss" />
+            </LinearLayout>
+        </LinearLayout>
+
+        <!-- Progress Indicator -->
+        <ProgressBar
+            android:id="@+id/horizon_peek_progress"
+            style="?android:attr/progressBarStyleHorizontal"
+            android:layout_width="match_parent"
+            android:layout_height="2dp"
+            android:progressDrawable="@drawable/bg_pill_accent"
+            android:visibility="gone" />
+
+        <!-- Disposable WebView Preview Container -->
+        <FrameLayout
+            android:id="@+id/horizon_peek_webview_container"
+            android:layout_width="match_parent"
+            android:layout_height="0dp"
+            android:layout_weight="1"
+            android:background="#000000" />
+    </LinearLayout>
+</FrameLayout>

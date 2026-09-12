@@ -2601,4 +2601,7 @@
             android:layout_gravity="center" />
     </FrameLayout>
 
+    <!-- 15. Horizon Peek Glass Modal -->
+    <include layout="@layout/dialog_horizon_peek" />
+
 </FrameLayout>

@@ -93,10 +93,36 @@ public class CaspianWebView extends WebView {
         void onPreScrollDragEnd(CaspianWebView webView, float dragOffsetY);
     }
 
+    public interface OnLinkLongPressListener {
+        boolean onLinkLongPressed(CaspianWebView webView, String url, String extra);
+    }
+
     private OnScrollStateListener scrollStateListener;
+    private OnLinkLongPressListener linkLongPressListener;
 
     public void setScrollStateListener(OnScrollStateListener listener) {
         this.scrollStateListener = listener;
+    }
+
+    public void setOnLinkLongPressListener(OnLinkLongPressListener listener) {
+        this.linkLongPressListener = listener;
+        if (listener != null) {
+            setOnLongClickListener(v -> {
+                HitTestResult hr = getHitTestResult();
+                if (hr != null) {
+                    int type = hr.getType();
+                    if (type == HitTestResult.SRC_ANCHOR_TYPE || type == HitTestResult.SRC_IMAGE_ANCHOR_TYPE) {
+                        String url = hr.getExtra();
+                        if (url != null && !url.trim().isEmpty() && !url.startsWith("javascript:")) {
+                            return linkLongPressListener.onLinkLongPressed(this, url, null);
+                        }
+                    }
+                }
+                return false;
+            });
+        } else {
+            setOnLongClickListener(null);
+        }
     }
 
     public boolean isAtTop() {

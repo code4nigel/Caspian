@@ -424,6 +424,24 @@ public class MainActivity extends AppCompatActivity {
     private View sheetBackdrop;
     private WebView controlWebView;
 
+    // Horizon Peek
+    private FrameLayout horizonPeekRoot;
+    private LinearLayout horizonPeekSheet;
+    private FrameLayout horizonPeekHandleBar;
+    private LinearLayout horizonPeekHeader;
+    private ImageView horizonPeekFavicon;
+    private TextView horizonPeekTitle;
+    private TextView horizonPeekHost;
+    private ImageButton horizonPeekActionSplit;
+    private ImageButton horizonPeekActionTab;
+    private ImageButton horizonPeekActionCopy;
+    private ImageButton horizonPeekActionClose;
+    private ProgressBar horizonPeekProgress;
+    private FrameLayout horizonPeekWebviewContainer;
+    private CaspianWebView horizonPeekWebView;
+    private String currentHorizonPeekUrl = null;
+    private boolean isHorizonPeekOpen = false;
+
     private FrameLayout ytFloatingRemoteContainer;
     private HorizontalScrollView ytFloatingRemoteScroll;
     private LinearLayout ytFloatingRemoteDock;
@@ -1872,6 +1890,49 @@ public class MainActivity extends AppCompatActivity {
             splitRightTapMask = findViewById(R.id.split_right_tap_mask);
             splitDivider = findViewById(R.id.split_divider);
             splitDividerHandle = findViewById(R.id.split_divider_handle);
+
+            // Horizon Peek Views & Listeners
+            horizonPeekRoot = findViewById(R.id.horizon_peek_root);
+            horizonPeekSheet = findViewById(R.id.horizon_peek_sheet);
+            horizonPeekHandleBar = findViewById(R.id.horizon_peek_handle_bar);
+            horizonPeekHeader = findViewById(R.id.horizon_peek_header);
+            horizonPeekFavicon = findViewById(R.id.horizon_peek_favicon);
+            horizonPeekTitle = findViewById(R.id.horizon_peek_title);
+            horizonPeekHost = findViewById(R.id.horizon_peek_host);
+            horizonPeekActionSplit = findViewById(R.id.horizon_peek_action_split);
+            horizonPeekActionTab = findViewById(R.id.horizon_peek_action_tab);
+            horizonPeekActionCopy = findViewById(R.id.horizon_peek_action_copy);
+            horizonPeekActionClose = findViewById(R.id.horizon_peek_action_close);
+            horizonPeekProgress = findViewById(R.id.horizon_peek_progress);
+            horizonPeekWebviewContainer = findViewById(R.id.horizon_peek_webview_container);
+
+            if (horizonPeekActionClose != null) {
+                horizonPeekActionClose.setOnClickListener(v -> closeHorizonPeek(true));
+            }
+            if (horizonPeekRoot != null) {
+                horizonPeekRoot.setOnClickListener(v -> closeHorizonPeek(true));
+            }
+            if (horizonPeekActionCopy != null) {
+                horizonPeekActionCopy.setOnClickListener(v -> {
+                    if (currentHorizonPeekUrl != null) {
+                        try {
+                            ClipboardManager cm = (ClipboardManager) getSystemService(Context.CLIPBOARD_SERVICE);
+                            if (cm != null) {
+                                cm.setPrimaryClip(ClipData.newPlainText("URL", currentHorizonPeekUrl));
+                                Toast.makeText(this, "Link copied to clipboard", Toast.LENGTH_SHORT).show();
+                            }
+                        } catch (Throwable ignored) {}
+                    }
+                });
+            }
+            if (horizonPeekActionTab != null) {
+                horizonPeekActionTab.setOnClickListener(v -> promoteHorizonPeekToTab());
+            }
+            if (horizonPeekActionSplit != null) {
+                horizonPeekActionSplit.setOnClickListener(v -> promoteHorizonPeekToSplit());
+            }
+
+            setupHorizonPeekDragGesture();
 
             applyOmniboxPosition(omniboxPosition);
 
@@ -14636,6 +14697,59 @@ public class MainActivity extends AppCompatActivity {
             }
         }
 
+        // Cinematic Split Screen Entrance Animation
+        if (splitRightContainer != null && splitDivider != null) {
+            splitRightContainer.animate().cancel();
+            splitDivider.animate().cancel();
+            if (splitModeState == 1) {
+                // Horizontal split: secondary slides in from right edge
+                int slideDistance = dpToPx(160);
+                splitRightContainer.setTranslationX((float) slideDistance);
+                splitRightContainer.setAlpha(0f);
+                splitRightContainer.animate()
+                        .translationX(0f)
+                        .alpha(1f)
+                        .setDuration(340)
+                        .setInterpolator(new DecelerateInterpolator(2.0f))
+                        .start();
+
+                splitDivider.setAlpha(0f);
+                splitDivider.setScaleY(0.4f);
+                splitDivider.animate()
+                        .alpha(1f)
+                        .scaleY(1f)
+                        .setDuration(320)
+                        .setInterpolator(new OvershootInterpolator(1.2f))
+                        .withEndAction(() -> {
+                            try { splitDivider.performHapticFeedback(HapticFeedbackConstants.KEYBOARD_TAP); } catch (Throwable ignored) {}
+                        })
+                        .start();
+            } else {
+                // Vertical split: secondary slides in from bottom edge
+                int slideDistance = dpToPx(160);
+                splitRightContainer.setTranslationY((float) slideDistance);
+                splitRightContainer.setAlpha(0f);
+                splitRightContainer.animate()
+                        .translationY(0f)
+                        .alpha(1f)
+                        .setDuration(340)
+                        .setInterpolator(new DecelerateInterpolator(2.0f))
+                        .start();
+
+                splitDivider.setAlpha(0f);
+                splitDivider.setScaleX(0.4f);
+                splitDivider.animate()
+                        .alpha(1f)
+                        .scaleX(1f)
+                        .setDuration(320)
+                        .setInterpolator(new OvershootInterpolator(1.2f))
+                        .withEndAction(() -> {
+                            try { splitDivider.performHapticFeedback(HapticFeedbackConstants.KEYBOARD_TAP); } catch (Throwable ignored) {}
+                        })
+                        .start();
+            }
+        }
+
         updateOmniboxState();
         saveOpenTabsState();
     }
@@ -15495,6 +15609,35 @@ public class MainActivity extends AppCompatActivity {
     }
 
     public void exitSplitView() {
+        if (splitViewContainer != null && splitViewContainer.getVisibility() == View.VISIBLE && splitRightContainer != null && splitDivider != null) {
+            splitRightContainer.animate().cancel();
+            splitDivider.animate().cancel();
+            if (splitModeState == 1) {
+                splitRightContainer.animate()
+                        .translationX((float) dpToPx(160))
+                        .alpha(0f)
+                        .setDuration(220)
+                        .setInterpolator(new AccelerateInterpolator(1.8f))
+                        .start();
+            } else {
+                splitRightContainer.animate()
+                        .translationY((float) dpToPx(160))
+                        .alpha(0f)
+                        .setDuration(220)
+                        .setInterpolator(new AccelerateInterpolator(1.8f))
+                        .start();
+            }
+            splitDivider.animate()
+                    .alpha(0f)
+                    .setDuration(200)
+                    .withEndAction(this::performExitSplitViewCleanup)
+                    .start();
+        } else {
+            performExitSplitViewCleanup();
+        }
+    }
+
+    private void performExitSplitViewCleanup() {
         TabItem leftTab = getTabById(activeTabId);
         TabItem rightTab = getTabById(secondarySplitTabId);
         if (leftTab != null) {
@@ -15513,7 +15656,17 @@ public class MainActivity extends AppCompatActivity {
         secondarySplitTabId = -1;
         if (splitArenaBroadcastContainer != null) splitArenaBroadcastContainer.setVisibility(View.GONE);
         if (splitLeftContainer != null) splitLeftContainer.removeAllViews();
-        if (splitRightContainer != null) splitRightContainer.removeAllViews();
+        if (splitRightContainer != null) {
+            splitRightContainer.removeAllViews();
+            splitRightContainer.setTranslationX(0f);
+            splitRightContainer.setTranslationY(0f);
+            splitRightContainer.setAlpha(1f);
+        }
+        if (splitDivider != null) {
+            splitDivider.setAlpha(1f);
+            splitDivider.setScaleX(1f);
+            splitDivider.setScaleY(1f);
+        }
         if (splitViewContainer != null) splitViewContainer.setVisibility(View.GONE);
         if (webViewContainer != null) {
             webViewContainer.removeAllViews();
@@ -15528,6 +15681,241 @@ public class MainActivity extends AppCompatActivity {
             if (webViewContainer != null) webViewContainer.addView(activeTab.webView);
         }
         updateOmniboxState();
+    }
+
+    // ==========================================
+    // Horizon Peek Floating Link Preview Engine
+    // ==========================================
+
+    public void openHorizonPeek(String targetUrl) {
+        if (targetUrl == null || targetUrl.trim().isEmpty()) return;
+        currentHorizonPeekUrl = targetUrl;
+        isHorizonPeekOpen = true;
+
+        if (horizonPeekRoot == null) return;
+
+        // Extract clean host
+        String host = targetUrl;
+        try {
+            Uri u = Uri.parse(targetUrl);
+            if (u.getHost() != null && !u.getHost().isEmpty()) {
+                host = u.getHost();
+            }
+        } catch (Throwable ignored) {}
+
+        if (horizonPeekHost != null) horizonPeekHost.setText(host);
+        if (horizonPeekTitle != null) horizonPeekTitle.setText("Loading Peek...");
+        if (horizonPeekProgress != null) {
+            horizonPeekProgress.setProgress(0);
+            horizonPeekProgress.setVisibility(View.VISIBLE);
+        }
+
+        // Clean previous preview webview
+        if (horizonPeekWebviewContainer != null) {
+            horizonPeekWebviewContainer.removeAllViews();
+        }
+        if (horizonPeekWebView != null) {
+            try {
+                horizonPeekWebView.stopLoading();
+                horizonPeekWebView.destroy();
+            } catch (Throwable ignored) {}
+            horizonPeekWebView = null;
+        }
+
+        // Create fresh sandboxed CaspianWebView
+        horizonPeekWebView = new CaspianWebView(this);
+        horizonPeekWebView.setLayoutParams(new ViewGroup.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.MATCH_PARENT));
+        WebSettings s = horizonPeekWebView.getSettings();
+        s.setJavaScriptEnabled(true);
+        s.setDomStorageEnabled(true);
+        s.setLoadWithOverviewMode(true);
+        s.setUseWideViewPort(true);
+        s.setBuiltInZoomControls(true);
+        s.setDisplayZoomControls(false);
+        s.setUserAgentString(MOBILE_UA);
+        s.setMixedContentMode(WebSettings.MIXED_CONTENT_ALWAYS_ALLOW);
+        applyWebViewTheme(horizonPeekWebView, isDarkTheme);
+
+        horizonPeekWebView.setWebChromeClient(new WebChromeClient() {
+            @Override
+            public void onProgressChanged(WebView view, int newProgress) {
+                if (horizonPeekProgress != null) {
+                    horizonPeekProgress.setProgress(newProgress);
+                    if (newProgress >= 100) {
+                        horizonPeekProgress.setVisibility(View.GONE);
+                    } else {
+                        horizonPeekProgress.setVisibility(View.VISIBLE);
+                    }
+                }
+            }
+
+            @Override
+            public void onReceivedTitle(WebView view, String title) {
+                if (title != null && !title.isEmpty() && horizonPeekTitle != null) {
+                    horizonPeekTitle.setText(title);
+                }
+            }
+
+            @Override
+            public void onReceivedIcon(WebView view, Bitmap icon) {
+                if (icon != null && horizonPeekFavicon != null) {
+                    horizonPeekFavicon.setImageBitmap(icon);
+                }
+            }
+        });
+
+        horizonPeekWebView.setWebViewClient(new WebViewClient() {
+            @Override
+            public boolean shouldOverrideUrlLoading(WebView view, WebResourceRequest request) {
+                return false; // Stay inside preview
+            }
+        });
+
+        horizonPeekWebView.loadUrl(targetUrl);
+        if (horizonPeekWebviewContainer != null) {
+            horizonPeekWebviewContainer.addView(horizonPeekWebView);
+        }
+
+        // Entrance animation
+        horizonPeekRoot.setVisibility(View.VISIBLE);
+        horizonPeekRoot.setAlpha(0f);
+        horizonPeekRoot.animate().alpha(1f).setDuration(220).start();
+
+        int screenH = getResources().getDisplayMetrics().heightPixels;
+        if (horizonPeekSheet != null) {
+            horizonPeekSheet.setTranslationY((float) screenH);
+            horizonPeekSheet.animate()
+                    .translationY(0f)
+                    .setDuration(320)
+                    .setInterpolator(new DecelerateInterpolator(2.0f))
+                    .start();
+        }
+    }
+
+    public void closeHorizonPeek(boolean animate) {
+        if (!isHorizonPeekOpen && (horizonPeekRoot == null || horizonPeekRoot.getVisibility() != View.VISIBLE)) return;
+        isHorizonPeekOpen = false;
+
+        if (animate && horizonPeekSheet != null && horizonPeekRoot != null) {
+            int screenH = getResources().getDisplayMetrics().heightPixels;
+            horizonPeekSheet.animate()
+                    .translationY((float) screenH)
+                    .setDuration(220)
+                    .setInterpolator(new AccelerateInterpolator(1.8f))
+                    .start();
+
+            horizonPeekRoot.animate()
+                    .alpha(0f)
+                    .setDuration(220)
+                    .withEndAction(this::cleanupHorizonPeek)
+                    .start();
+        } else {
+            cleanupHorizonPeek();
+        }
+    }
+
+    private void cleanupHorizonPeek() {
+        if (horizonPeekRoot != null) {
+            horizonPeekRoot.setVisibility(View.GONE);
+            horizonPeekRoot.setAlpha(1f);
+        }
+        if (horizonPeekSheet != null) {
+            horizonPeekSheet.setTranslationY(0f);
+        }
+        if (horizonPeekWebviewContainer != null) {
+            horizonPeekWebviewContainer.removeAllViews();
+        }
+        if (horizonPeekWebView != null) {
+            try {
+                horizonPeekWebView.stopLoading();
+                horizonPeekWebView.destroy();
+            } catch (Throwable ignored) {}
+            horizonPeekWebView = null;
+        }
+    }
+
+    private void promoteHorizonPeekToTab() {
+        if (currentHorizonPeekUrl == null) return;
+        String url = currentHorizonPeekUrl;
+        closeHorizonPeek(false);
+        int newId = nextTabId++;
+        TabItem tab = createNewTabInstance(newId, url, "web", null, false);
+        tabsList.add(tab);
+        activeTabId = newId;
+        switchToTab(newId, true);
+        saveOpenTabsState();
+        updateOmniboxTabStrip();
+        Toast.makeText(this, "Promoted to new tab", Toast.LENGTH_SHORT).show();
+    }
+
+    private void promoteHorizonPeekToSplit() {
+        if (currentHorizonPeekUrl == null) return;
+        String url = currentHorizonPeekUrl;
+        closeHorizonPeek(false);
+        int newId = nextTabId++;
+        TabItem newTab = createNewTabInstance(newId, url, "web", null, false);
+        tabsList.add(newTab);
+        secondarySplitTabId = newId;
+        splitModeState = 1; // Horizontal Split
+        applySplitViewLayout();
+        updateOmniboxState();
+        saveOpenTabsState();
+        updateOmniboxTabStrip();
+        Toast.makeText(this, "Opened in Split Screen", Toast.LENGTH_SHORT).show();
+    }
+
+    @SuppressLint("ClickableViewAccessibility")
+    private void setupHorizonPeekDragGesture() {
+        if (horizonPeekHandleBar == null || horizonPeekSheet == null) return;
+
+        View.OnTouchListener swipeListener = new View.OnTouchListener() {
+            private float startY = 0f;
+            private boolean isDragging = false;
+
+            @Override
+            public boolean onTouch(View v, MotionEvent event) {
+                switch (event.getActionMasked()) {
+                    case MotionEvent.ACTION_DOWN:
+                        startY = event.getRawY();
+                        isDragging = true;
+                        return true;
+
+                    case MotionEvent.ACTION_MOVE:
+                        if (isDragging) {
+                            float dy = event.getRawY() - startY;
+                            if (dy > 0) {
+                                horizonPeekSheet.setTranslationY(dy);
+                            }
+                            return true;
+                        }
+                        break;
+
+                    case MotionEvent.ACTION_UP:
+                    case MotionEvent.ACTION_CANCEL:
+                        if (isDragging) {
+                            isDragging = false;
+                            float dy = event.getRawY() - startY;
+                            if (dy > dpToPx(80)) {
+                                closeHorizonPeek(true);
+                            } else {
+                                horizonPeekSheet.animate()
+                                        .translationY(0f)
+                                        .setDuration(200)
+                                        .setInterpolator(new DecelerateInterpolator(1.8f))
+                                        .start();
+                            }
+                            return true;
+                        }
+                        break;
+                }
+                return false;
+            }
+        };
+
+        horizonPeekHandleBar.setOnTouchListener(swipeListener);
+        if (horizonPeekHeader != null) {
+            horizonPeekHeader.setOnTouchListener(swipeListener);
+        }
     }
 
     public void startVoiceRecognition() {
@@ -17254,6 +17642,13 @@ public class MainActivity extends AppCompatActivity {
                     handlePreScrollDragEnd(targetWebView, dragOffsetY);
                 }
             }
+        });
+
+        webView.setOnLinkLongPressListener((targetWebView, targetUrl, extra) -> {
+            try { targetWebView.performHapticFeedback(HapticFeedbackConstants.LONG_PRESS); } catch (Throwable ignored) {}
+            playUiFeedbackSound("tap");
+            openHorizonPeek(targetUrl);
+            return true;
         });
 
         webView.setDownloadListener((downloadUrl, userAgent, contentDisposition, mimeType, contentLength) -> {
@@ -20760,6 +21155,10 @@ public class MainActivity extends AppCompatActivity {
 
     @Override
     public void onBackPressed() {
+        if (isHorizonPeekOpen) {
+            closeHorizonPeek(true);
+            return;
+        }
         if (omniboxEditText != null && omniboxEditText.hasFocus()) {
             omniboxEditText.clearFocus();
             hideKeyboard();
