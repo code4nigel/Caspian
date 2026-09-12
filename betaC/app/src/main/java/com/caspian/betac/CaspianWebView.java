@@ -123,15 +123,45 @@ public class CaspianWebView extends WebView {
         }
     }
 
+    private float touchDownY = 0f;
+    private boolean isTouchDownAtTop = false;
+    private boolean isTouchDownAtBottom = false;
+
     @Override
     public boolean onTouchEvent(android.view.MotionEvent event) {
-        boolean result = super.onTouchEvent(event);
-        if (event.getAction() == android.view.MotionEvent.ACTION_UP || event.getAction() == android.view.MotionEvent.ACTION_CANCEL) {
-            if (scrollStateListener != null) {
-                scrollStateListener.onScrollIdle(this);
-            }
+        switch (event.getActionMasked()) {
+            case android.view.MotionEvent.ACTION_DOWN:
+                touchDownY = event.getRawY();
+                isTouchDownAtTop = (computeVerticalScrollOffset() <= 0);
+                isTouchDownAtBottom = isAtBottom(30);
+                break;
+            case android.view.MotionEvent.ACTION_MOVE:
+                if (isTouchDownAtTop && computeVerticalScrollOffset() <= 0) {
+                    float dy = event.getRawY() - touchDownY;
+                    if (dy > 45) { // User deliberately pulled down at the absolute top
+                        if (scrollStateListener != null) {
+                            scrollStateListener.onOverScrolled(this, 0, 0, false, true);
+                        }
+                    }
+                } else if (isTouchDownAtBottom && isAtBottom(30)) {
+                    float dy = event.getRawY() - touchDownY;
+                    if (dy < -45) { // User deliberately pulled up at the absolute bottom
+                        if (scrollStateListener != null) {
+                            scrollStateListener.onOverScrolled(this, 0, 100, false, true);
+                        }
+                    }
+                }
+                break;
+            case android.view.MotionEvent.ACTION_UP:
+            case android.view.MotionEvent.ACTION_CANCEL:
+                isTouchDownAtTop = false;
+                isTouchDownAtBottom = false;
+                if (scrollStateListener != null) {
+                    scrollStateListener.onScrollIdle(this);
+                }
+                break;
         }
-        return result;
+        return super.onTouchEvent(event);
     }
 
     @Override

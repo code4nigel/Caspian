@@ -399,6 +399,7 @@ public class MainActivity extends AppCompatActivity {
     private int currentToolbarState = TOOLBAR_STATE_DOCKED_TOP;
     private int accumulatedScrollDelta = 0;
     private boolean isToolbarScrollLocked = false;
+    private boolean isToolbarInDedicatedSection = true;
 
     private FrameLayout modalNewTabPlatform;
     private ImageButton btnClosePlatformModal;
@@ -11601,12 +11602,14 @@ public class MainActivity extends AppCompatActivity {
 
     public void dockToolbarAtTop(boolean animate) {
         currentToolbarState = TOOLBAR_STATE_DOCKED_TOP;
+        isToolbarInDedicatedSection = true;
         int toolbarH = getToolbarHeight();
         applyToolbarMotion(0f, (float) toolbarH, animate);
     }
 
     public void dockToolbarAtBottom(boolean animate) {
         currentToolbarState = TOOLBAR_STATE_DOCKED_BOTTOM;
+        isToolbarInDedicatedSection = true;
         int toolbarH = getToolbarHeight();
         applyToolbarMotion(0f, (float) -toolbarH, animate);
     }
@@ -11614,6 +11617,7 @@ public class MainActivity extends AppCompatActivity {
     public void hideToolbar(boolean animate) {
         if (isToolbarScrollLocked || isInternalPageWithoutToolbarAutohide()) return;
         currentToolbarState = TOOLBAR_STATE_FULLSCREEN_HIDDEN;
+        isToolbarInDedicatedSection = false;
         int toolbarH = getToolbarHeight();
         boolean isBottomMode = "bottom".equalsIgnoreCase(omniboxPosition);
         float targetToolbarY = isBottomMode ? (toolbarH + dpToPx(16)) : (-toolbarH - dpToPx(16));
@@ -11625,7 +11629,7 @@ public class MainActivity extends AppCompatActivity {
         int toolbarH = getToolbarHeight();
         boolean isBottomMode = "bottom".equalsIgnoreCase(omniboxPosition);
         float targetWebViewY = 0f;
-        if (!asOverlay) {
+        if (!asOverlay && isToolbarInDedicatedSection) {
             targetWebViewY = isBottomMode ? -toolbarH : toolbarH;
         }
         applyToolbarMotion(0f, targetWebViewY, animate);
@@ -11680,28 +11684,10 @@ public class MainActivity extends AppCompatActivity {
             return;
         }
 
-        int deltaY = scrollY - oldScrollY;
-        boolean isBottomMode = "bottom".equalsIgnoreCase(omniboxPosition);
+        int deltaY = scrollY - oldScrollX; // vertical delta
+        deltaY = scrollY - oldScrollY;
 
-        // 1. Boundary check: Absolute top
-        if (scrollY <= 0 || webView.isAtTop()) {
-            accumulatedScrollDelta = 0;
-            if (!isBottomMode) {
-                dockToolbarAtTop(true);
-            } else {
-                showToolbar(false, true);
-            }
-            return;
-        }
-
-        // 2. Boundary check: Absolute bottom
-        if (isBottomMode && webView.isAtBottom(dpToPx(16))) {
-            accumulatedScrollDelta = 0;
-            dockToolbarAtBottom(true);
-            return;
-        }
-
-        // 3. Direction accumulation
+        // Direction accumulation
         if ((deltaY > 0 && accumulatedScrollDelta < 0) || (deltaY < 0 && accumulatedScrollDelta > 0)) {
             accumulatedScrollDelta = 0;
         }
@@ -11709,11 +11695,12 @@ public class MainActivity extends AppCompatActivity {
 
         int threshold = dpToPx(18);
         if (accumulatedScrollDelta > threshold) {
-            // User scrolling down into content -> Fullscreen mode
+            // User scrolling down into content -> Fullscreen mode (WebView stays at 0, no jumping!)
+            isToolbarInDedicatedSection = false;
             hideToolbar(true);
             accumulatedScrollDelta = 0;
         } else if (accumulatedScrollDelta < -threshold) {
-            // User scrolling up -> Show floating overlay
+            // User scrolling up -> Show floating overlay (WebView stays at 0, no jumping!)
             showToolbar(true, true);
             accumulatedScrollDelta = 0;
         }
@@ -11723,16 +11710,18 @@ public class MainActivity extends AppCompatActivity {
         if (isToolbarScrollLocked || isInternalPageWithoutToolbarAutohide()) return;
         boolean isBottomMode = "bottom".equalsIgnoreCase(omniboxPosition);
         if (clampedY) {
-            if (scrollY <= 0) {
-                // Pulled down at the absolute top -> dock to own section!
-                if (!isBottomMode) {
+            if (scrollY <= 0 && !isBottomMode) {
+                // User pulled down into overscroll at the absolute top ("scroll a bit top as well")
+                if (!isToolbarInDedicatedSection) {
+                    isToolbarInDedicatedSection = true;
                     dockToolbarAtTop(true);
-                } else {
-                    showToolbar(false, true);
                 }
-            } else if (scrollY > 0 && isBottomMode) {
-                // Pulled up at the absolute bottom -> dock to own section!
-                dockToolbarAtBottom(true);
+            } else if (scrollY > 0 && isBottomMode && webView.isAtBottom(dpToPx(16))) {
+                // User pulled up into overscroll at the absolute bottom ("scroll a bit bottom as well")
+                if (!isToolbarInDedicatedSection) {
+                    isToolbarInDedicatedSection = true;
+                    dockToolbarAtBottom(true);
+                }
             }
         }
     }
@@ -11740,10 +11729,12 @@ public class MainActivity extends AppCompatActivity {
     public void handleWebViewScrollIdle(CaspianWebView webView) {
         if (isToolbarScrollLocked || isInternalPageWithoutToolbarAutohide()) return;
         boolean isBottomMode = "bottom".equalsIgnoreCase(omniboxPosition);
-        if (webView.isAtTop() && !isBottomMode) {
-            dockToolbarAtTop(true);
-        } else if (isBottomMode && webView.isAtBottom(dpToPx(16))) {
-            dockToolbarAtBottom(true);
+        if (isToolbarInDedicatedSection) {
+            if (!isBottomMode && webView.getScrollY() <= 0) {
+                dockToolbarAtTop(true);
+            } else if (isBottomMode && webView.isAtBottom(dpToPx(16))) {
+                dockToolbarAtBottom(true);
+            }
         }
     }
 
@@ -17908,12 +17899,14 @@ public class MainActivity extends AppCompatActivity {
         updateOmniboxState();
         accumulatedScrollDelta = 0;
         TabItem curSwitchedTab = getTabById(tabId);
-        if (curSwitchedTab != null && (isInternalPageWithoutToolbarAutohide() || curSwitchedTab.webView == null || curSwitchedTab.webView.getScrollY() <= 0)) {
+        if (curSwitchedTab != null && (isInternalPageWithoutToolbarAutohide() || curSwitchedTab.webView == null || (curSwitchedTab.webView.getScrollY() <= 0 && isToolbarInDedicatedSection))) {
             if ("bottom".equalsIgnoreCase(omniboxPosition)) {
-                showToolbar(false, false);
+                dockToolbarAtBottom(false);
             } else {
                 dockToolbarAtTop(false);
             }
+        } else {
+            showToolbar(true, false);
         }
         if (!hasAnyYouTubeTab()) {
             hasYouTubePlaybackStarted = false;
