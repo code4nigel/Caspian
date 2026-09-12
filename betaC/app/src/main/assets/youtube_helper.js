@@ -69,35 +69,12 @@
   // -------------------------------------------------------------
   window.__caspian_explicit_pause = false;
   window.__caspian_pip_active = false;
-  window.__caspian_is_app_visible = true;
-  window.__caspian_set_app_visibility = function (visible) {
-    window.__caspian_is_app_visible = !!visible;
-    try {
-      if (document.documentElement) {
-        if (!visible) {
-          document.documentElement.classList.add('caspian-app-hidden');
-        } else {
-          document.documentElement.classList.remove('caspian-app-hidden');
-        }
-      }
-    } catch(e){}
-  };
-
   try {
-    Object.defineProperty(document, 'hidden', {
-      get: () => !window.__caspian_is_app_visible,
-      configurable: true
-    });
-    Object.defineProperty(document, 'visibilityState', {
-      get: () => window.__caspian_is_app_visible ? 'visible' : 'hidden',
-      configurable: true
-    });
-    Object.defineProperty(document, 'webkitVisibilityState', {
-      get: () => window.__caspian_is_app_visible ? 'visible' : 'hidden',
-      configurable: true
-    });
-    document.hasFocus = () => window.__caspian_is_app_visible;
-    window.hasFocus = () => window.__caspian_is_app_visible;
+    Object.defineProperty(document, 'hidden', { get: () => false, configurable: true });
+    Object.defineProperty(document, 'visibilityState', { get: () => 'visible', configurable: true });
+    Object.defineProperty(document, 'webkitVisibilityState', { get: () => 'visible', configurable: true });
+    document.hasFocus = () => true;
+    window.hasFocus = () => true;
   } catch (e) { }
 
   // Intercept and drop listeners that YouTube uses to pause videos (visibility, blur, freeze, pagehide)
@@ -1260,10 +1237,6 @@
       visibility: hidden !important;
       height: 0 !important;
       pointer-events: none !important;
-    }
-    html.caspian-app-hidden * {
-      animation-play-state: paused !important;
-      transition: none !important;
     }
     /* Only scope settings gear button and menus inside fullscreen */
     :fullscreen .ytp-settings-button,

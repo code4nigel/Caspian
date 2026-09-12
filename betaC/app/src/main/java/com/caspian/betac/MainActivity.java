@@ -17652,16 +17652,13 @@ public class MainActivity extends AppCompatActivity {
                         t.webView.setVisibility(View.VISIBLE);
                         t.webView.bringToFront();
                         try { t.webView.onResume(); } catch (Throwable ignored) {}
-                        try { t.webView.evaluateJavascript("if(typeof window.__caspian_set_app_visibility === 'function') window.__caspian_set_app_visibility(true);", null); } catch (Throwable ignored) {}
                     } else {
                         // Keep background tab WebViews attached to container as INVISIBLE so background media playback continues uninterrupted
                         if (t.webView.getParent() == webViewContainer) {
                             t.webView.setVisibility(View.INVISIBLE);
                         }
-                        if (!t.isPlayingAudio) {
+                        if (!t.isPlayingAudio && !isYouTubeTab(t)) {
                             try { t.webView.onPause(); } catch (Throwable ignored) {}
-                        } else {
-                            try { t.webView.evaluateJavascript("if(typeof window.__caspian_set_app_visibility === 'function') window.__caspian_set_app_visibility(false);", null); } catch (Throwable ignored) {}
                         }
                     }
                 }
@@ -20390,13 +20387,12 @@ public class MainActivity extends AppCompatActivity {
         super.onPause();
         saveOpenTabsState();
         try {
-            // Power saving: pause all WebViews that are NOT currently playing audio
+            // Power saving: pause regular background WebViews (like news, reddit, wikis),
+            // but NEVER pause any YouTube/media tab as webView.onPause() halts Android media codecs!
             for (TabItem t : tabsList) {
                 if (t != null && t.webView != null) {
-                    if (!t.isPlayingAudio) {
+                    if (!t.isPlayingAudio && !isYouTubeTab(t)) {
                         try { t.webView.onPause(); } catch (Throwable ignored) {}
-                    } else {
-                        try { t.webView.evaluateJavascript("if(typeof window.__caspian_set_app_visibility === 'function') window.__caspian_set_app_visibility(false);", null); } catch (Throwable ignored) {}
                     }
                 }
             }
@@ -20709,6 +20705,12 @@ public class MainActivity extends AppCompatActivity {
             }
         }
         return false;
+    }
+
+    public boolean isYouTubeTab(TabItem t) {
+        if (t == null || t.url == null) return false;
+        String u = t.url.toLowerCase();
+        return u.contains("youtube.com") || u.contains("music.youtube.com") || "youtube".equalsIgnoreCase(t.service) || "youtubemusic".equalsIgnoreCase(t.service);
     }
 
     public void handleYouTubeVideoEnded(Integer tabId) {
@@ -21109,13 +21111,11 @@ public class MainActivity extends AppCompatActivity {
             TabItem activeTab = getTabById(activeTabId);
             if (activeTab != null && activeTab.webView != null) {
                 try { activeTab.webView.onResume(); } catch (Throwable ignored) {}
-                try { activeTab.webView.evaluateJavascript("if(typeof window.__caspian_set_app_visibility === 'function') window.__caspian_set_app_visibility(true);", null); } catch (Throwable ignored) {}
             }
             if (splitModeState > 0 && secondarySplitTabId != -1) {
                 TabItem splitTab = getTabById(secondarySplitTabId);
                 if (splitTab != null && splitTab.webView != null) {
                     try { splitTab.webView.onResume(); } catch (Throwable ignored) {}
-                    try { splitTab.webView.evaluateJavascript("if(typeof window.__caspian_set_app_visibility === 'function') window.__caspian_set_app_visibility(true);", null); } catch (Throwable ignored) {}
                 }
             }
         } catch (Throwable ignored) {}
