@@ -1076,7 +1076,7 @@
     <div id="shortcuts-edit-toolbar" class="shortcuts-edit-toolbar" style="display: none;">
       <div class="edit-toolbar-left">
         <span class="edit-toolbar-title">✏️ Edit Shortcuts</span>
-        <span class="edit-toolbar-hint">Tap ◀ ▶ to move &bull; ✕ to delete</span>
+        <span class="edit-toolbar-hint">Tap shortcut to edit &bull; ◀ ▶ to move &bull; ✕ to delete</span>
       </div>
       <div class="edit-toolbar-right">
         <button id="btn-reset-shortcuts" type="button" class="oneui-pill-btn secondary reset-btn" title="Restore default 3 shortcuts (Gemini, ChatGPT, YouTube)">
@@ -2286,17 +2286,6 @@
               triggerShortcutLaunch(card, item);
             });
 
-            // Long-press to toggle edit/delete mode
-            let pressTimer = null;
-            card.addEventListener('touchstart', () => {
-              pressTimer = setTimeout(() => {
-                triggerHaptic(60);
-                toggleEditShortcuts(true);
-              }, 600);
-            }, { passive: true });
-            card.addEventListener('touchend', () => clearTimeout(pressTimer));
-            card.addEventListener('touchmove', () => clearTimeout(pressTimer));
-
             gridEl.appendChild(card);
           }
         });
@@ -2371,7 +2360,7 @@
           manageBtn.classList.add('active');
           manageBtn.title = 'Done Editing';
         }
-        showToast('Edit Mode: Tap ◀ ▶ or drag to rearrange');
+        showToast('Edit Mode: Tap shortcut to edit name/URL');
       } else {
         document.body.classList.remove('is-editing-shortcuts');
         if (toolbarEl) toolbarEl.style.display = 'none';
@@ -2423,13 +2412,18 @@
       });
     }
 
-    // Add Shortcut Modal Logic
+    // Add & Edit Shortcut Modal Logic
     let selectedShortcutEmoji = '';
     let editingShortcutId = null;
+
     function openAddShortcutModal() {
       playTapSFX();
       editingShortcutId = null;
       selectedShortcutEmoji = '';
+      const modalTitle = document.querySelector('#shortcut-modal .hub-modal-title');
+      if (modalTitle) modalTitle.textContent = 'Add Website Shortcut';
+      const saveBtn = document.getElementById('btn-save-shortcut');
+      if (saveBtn) saveBtn.textContent = 'Add to Hub';
       document.querySelectorAll('.shortcut-emoji-opt').forEach(el => el.style.border = 'none');
       document.getElementById('shortcut-name-input').value = '';
       document.getElementById('shortcut-url-input').value = '';
@@ -2437,10 +2431,50 @@
       setTimeout(() => document.getElementById('shortcut-name-input').focus(), 80);
     }
 
+    function openEditShortcutModal(item) {
+      if (!item) return;
+      playTapSFX();
+      triggerHaptic(30);
+      editingShortcutId = item.id;
+      selectedShortcutEmoji = (item.icon && !item.icon.startsWith('http') && !item.icon.startsWith('data:')) ? item.icon : '';
+
+      document.querySelectorAll('.shortcut-emoji-opt').forEach(el => {
+        if (selectedShortcutEmoji && el.getAttribute('data-emoji') === selectedShortcutEmoji) {
+          el.style.border = '2px solid var(--accent)';
+        } else {
+          el.style.border = 'none';
+        }
+      });
+
+      const modalTitle = document.querySelector('#shortcut-modal .hub-modal-title');
+      if (modalTitle) modalTitle.textContent = 'Edit Website Shortcut';
+
+      const saveBtn = document.getElementById('btn-save-shortcut');
+      if (saveBtn) saveBtn.textContent = 'Save Changes';
+
+      const nameInput = document.getElementById('shortcut-name-input');
+      if (nameInput) nameInput.value = item.title || '';
+
+      const urlInput = document.getElementById('shortcut-url-input');
+      if (urlInput) urlInput.value = item.url || '';
+
+      document.getElementById('shortcut-modal').style.display = 'flex';
+      setTimeout(() => {
+        if (nameInput) {
+          nameInput.focus();
+          nameInput.select();
+        }
+      }, 80);
+    }
+
     function closeAddShortcutModal() {
       playTapSFX();
       document.getElementById('shortcut-modal').style.display = 'none';
       editingShortcutId = null;
+      const modalTitle = document.querySelector('#shortcut-modal .hub-modal-title');
+      if (modalTitle) modalTitle.textContent = 'Add Website Shortcut';
+      const saveBtn = document.getElementById('btn-save-shortcut');
+      if (saveBtn) saveBtn.textContent = 'Add to Hub';
     }
 
     document.querySelectorAll('.shortcut-emoji-opt').forEach(el => {
@@ -2506,7 +2540,9 @@
           currentShortcuts[existingIdx].domain = domain;
           if (selectedShortcutEmoji) {
             currentShortcuts[existingIdx].icon = selectedShortcutEmoji;
-          } else if (!currentShortcuts[existingIdx].icon || (!currentShortcuts[existingIdx].icon.startsWith('data:') && !currentShortcuts[existingIdx].icon.startsWith('http'))) {
+          } else if (currentShortcuts[existingIdx].icon && (currentShortcuts[existingIdx].icon.startsWith('http') || currentShortcuts[existingIdx].icon.startsWith('data:'))) {
+            currentShortcuts[existingIdx].icon = `https://www.google.com/s2/favicons?sz=128&domain=${domain}`;
+          } else {
             currentShortcuts[existingIdx].icon = icon;
           }
           saveShortcuts([...currentShortcuts]);
