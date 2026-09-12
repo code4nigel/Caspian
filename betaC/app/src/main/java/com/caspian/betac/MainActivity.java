@@ -401,6 +401,7 @@ public class MainActivity extends AppCompatActivity {
     private boolean isToolbarScrollLocked = false;
     private boolean isToolbarInDedicatedSection = true;
     private float currentDedicatedScrollOffset = 0f;
+    private long lastToolbarDedicatedHideTime = 0L;
     private String omniboxScrollMode = "overlay"; // "overlay" (dynamic fullscreen overlay) or "separate" (always dedicated space)
 
     private FrameLayout modalNewTabPlatform;
@@ -11785,6 +11786,7 @@ public class MainActivity extends AppCompatActivity {
                     // Toolbar has moved completely off-screen! Switch to Overlay Mode!
                     currentDedicatedScrollOffset = (float) toolbarH;
                     isToolbarInDedicatedSection = false;
+                    lastToolbarDedicatedHideTime = System.currentTimeMillis();
                     applyToolbarMotion((float) -toolbarH, 0f, false);
                     return false;
                 }
@@ -11805,6 +11807,7 @@ public class MainActivity extends AppCompatActivity {
                 } else {
                     currentDedicatedScrollOffset = (float) toolbarH;
                     isToolbarInDedicatedSection = false;
+                    lastToolbarDedicatedHideTime = System.currentTimeMillis();
                     applyToolbarMotion((float) (toolbarH + dpToPx(16)), 0f, false);
                     return false;
                 }
@@ -11827,6 +11830,7 @@ public class MainActivity extends AppCompatActivity {
                 if (effectiveOffset >= toolbarH) {
                     currentDedicatedScrollOffset = (float) toolbarH;
                     isToolbarInDedicatedSection = false;
+                    lastToolbarDedicatedHideTime = System.currentTimeMillis();
                     applyToolbarMotion((float) -toolbarH, 0f, false);
                 } else if (effectiveOffset <= 0) {
                     currentDedicatedScrollOffset = 0f;
@@ -11844,6 +11848,7 @@ public class MainActivity extends AppCompatActivity {
                 if (effectiveOffset >= toolbarH) {
                     currentDedicatedScrollOffset = (float) toolbarH;
                     isToolbarInDedicatedSection = false;
+                    lastToolbarDedicatedHideTime = System.currentTimeMillis();
                     applyToolbarMotion((float) (toolbarH + dpToPx(16)), 0f, false);
                 } else if (effectiveOffset <= 0) {
                     currentDedicatedScrollOffset = 0f;
@@ -11884,6 +11889,7 @@ public class MainActivity extends AppCompatActivity {
                 } else if (scrollY >= toolbarH) {
                     isToolbarInDedicatedSection = false;
                     currentDedicatedScrollOffset = (float) toolbarH;
+                    lastToolbarDedicatedHideTime = System.currentTimeMillis();
                     applyToolbarMotion((float) -toolbarH, 0f, false);
                     accumulatedScrollDelta = 0;
                 }
@@ -11891,11 +11897,17 @@ public class MainActivity extends AppCompatActivity {
                 // In Overlay Mode (mid-page reading)
                 // If user scrolls all the way back up to the absolute top border
                 if (scrollY <= 0) {
-                    if (deltaY < 0) {
+                    if (deltaY < 0 && System.currentTimeMillis() - lastToolbarDedicatedHideTime > 450L) {
                         isToolbarInDedicatedSection = true;
                         currentDedicatedScrollOffset = 0f;
                         dockToolbarAtTop(true);
                     }
+                    accumulatedScrollDelta = 0;
+                    return;
+                }
+
+                // If we just transitioned off the dedicated top section, lock out overlay popup
+                if (System.currentTimeMillis() - lastToolbarDedicatedHideTime < 350L) {
                     accumulatedScrollDelta = 0;
                     return;
                 }
@@ -11927,16 +11939,22 @@ public class MainActivity extends AppCompatActivity {
                 } else {
                     isToolbarInDedicatedSection = false;
                     currentDedicatedScrollOffset = (float) toolbarH;
+                    lastToolbarDedicatedHideTime = System.currentTimeMillis();
                     applyToolbarMotion((float) (toolbarH + dpToPx(16)), 0f, false);
                     accumulatedScrollDelta = 0;
                 }
             } else {
                 if (webView.isAtBottom(dpToPx(8))) {
-                    if (deltaY > 0) {
+                    if (deltaY > 0 && System.currentTimeMillis() - lastToolbarDedicatedHideTime > 450L) {
                         isToolbarInDedicatedSection = true;
                         currentDedicatedScrollOffset = 0f;
                         dockToolbarAtBottom(true);
                     }
+                    accumulatedScrollDelta = 0;
+                    return;
+                }
+
+                if (System.currentTimeMillis() - lastToolbarDedicatedHideTime < 350L) {
                     accumulatedScrollDelta = 0;
                     return;
                 }
@@ -11962,16 +11980,16 @@ public class MainActivity extends AppCompatActivity {
         if (isToolbarScrollLocked || isInternalPageWithoutToolbarAutohide() || "separate".equalsIgnoreCase(omniboxScrollMode)) return;
         boolean isBottomMode = "bottom".equalsIgnoreCase(omniboxPosition);
         if (clampedY) {
-            if (scrollY <= 0 && !isBottomMode) {
-                // User pulled down into overscroll at the absolute top ("scroll a bit top as well")
-                if (!isToolbarInDedicatedSection) {
+            if (scrollY < 0 && !isBottomMode) {
+                // User deliberately pulled down into overscroll at the absolute top
+                if (!isToolbarInDedicatedSection && System.currentTimeMillis() - lastToolbarDedicatedHideTime > 450L) {
                     isToolbarInDedicatedSection = true;
                     currentDedicatedScrollOffset = 0f;
                     dockToolbarAtTop(true);
                 }
-            } else if (scrollY > 0 && isBottomMode && webView.isAtBottom(dpToPx(16))) {
-                // User pulled up into overscroll at the absolute bottom ("scroll a bit bottom as well")
-                if (!isToolbarInDedicatedSection) {
+            } else if (scrollY > 50 && isBottomMode && webView.isAtBottom(dpToPx(16))) {
+                // User deliberately pulled up into overscroll at the absolute bottom
+                if (!isToolbarInDedicatedSection && System.currentTimeMillis() - lastToolbarDedicatedHideTime > 450L) {
                     isToolbarInDedicatedSection = true;
                     currentDedicatedScrollOffset = 0f;
                     dockToolbarAtBottom(true);
@@ -14560,6 +14578,7 @@ public class MainActivity extends AppCompatActivity {
     }
 
     public void cycleSplitViewMode() {
+        int prevMode = splitModeState;
         splitModeState = (splitModeState + 1) % 3;
         if (splitModeState != 0) {
             if (tabsList.size() < 2) {
@@ -14574,7 +14593,11 @@ public class MainActivity extends AppCompatActivity {
                     }
                 }
             }
-            applySplitViewLayout();
+            if (prevMode != 0 && splitViewContainer != null && splitViewContainer.getVisibility() == View.VISIBLE) {
+                animateSplitOrientationTransition(splitModeState);
+            } else {
+                applySplitViewLayout();
+            }
             Toast.makeText(this, splitModeState == 1 ? "🔀 Horizontal Split Active" : "🔀 Vertical Split Active", Toast.LENGTH_SHORT).show();
         } else {
             exitSplitView();
@@ -14659,25 +14682,7 @@ public class MainActivity extends AppCompatActivity {
             }
         }
 
-        if (splitModeState == 1) {
-            splitViewContainer.setOrientation(LinearLayout.HORIZONTAL);
-            splitDivider.setLayoutParams(new LinearLayout.LayoutParams((int) TypedValue.applyDimension(TypedValue.COMPLEX_UNIT_DIP, 8, getResources().getDisplayMetrics()), ViewGroup.LayoutParams.MATCH_PARENT));
-            if (splitDividerHandle != null) {
-                FrameLayout.LayoutParams hl = new FrameLayout.LayoutParams((int) TypedValue.applyDimension(TypedValue.COMPLEX_UNIT_DIP, 6, getResources().getDisplayMetrics()), (int) TypedValue.applyDimension(TypedValue.COMPLEX_UNIT_DIP, 44, getResources().getDisplayMetrics()), Gravity.CENTER);
-                splitDividerHandle.setLayoutParams(hl);
-            }
-            splitLeftContainer.setLayoutParams(new LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.MATCH_PARENT, splitRatio));
-            splitRightContainer.setLayoutParams(new LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.MATCH_PARENT, 1.0f - splitRatio));
-        } else {
-            splitViewContainer.setOrientation(LinearLayout.VERTICAL);
-            splitDivider.setLayoutParams(new LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, (int) TypedValue.applyDimension(TypedValue.COMPLEX_UNIT_DIP, 8, getResources().getDisplayMetrics())));
-            if (splitDividerHandle != null) {
-                FrameLayout.LayoutParams hl = new FrameLayout.LayoutParams((int) TypedValue.applyDimension(TypedValue.COMPLEX_UNIT_DIP, 44, getResources().getDisplayMetrics()), (int) TypedValue.applyDimension(TypedValue.COMPLEX_UNIT_DIP, 6, getResources().getDisplayMetrics()), Gravity.CENTER);
-                splitDividerHandle.setLayoutParams(hl);
-            }
-            splitLeftContainer.setLayoutParams(new LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, 0, splitRatio));
-            splitRightContainer.setLayoutParams(new LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, 0, 1.0f - splitRatio));
-        }
+        updateSplitOrientationLayout();
 
         if (leftTab != null && leftTab.webView != null) {
             splitLeftContainer.addView(leftTab.webView);
@@ -14718,51 +14723,79 @@ public class MainActivity extends AppCompatActivity {
         }
 
         // Cinematic Split Screen Entrance Animation
-        if (splitRightContainer != null && splitDivider != null) {
+        if (splitLeftContainer != null && splitRightContainer != null && splitDivider != null) {
+            splitLeftContainer.animate().cancel();
             splitRightContainer.animate().cancel();
             splitDivider.animate().cancel();
+
+            // Primary Pane contraction animation
+            splitLeftContainer.setScaleX(0.95f);
+            splitLeftContainer.setScaleY(0.95f);
+            splitLeftContainer.setAlpha(0.85f);
+            splitLeftContainer.animate()
+                    .scaleX(1f)
+                    .scaleY(1f)
+                    .alpha(1f)
+                    .setDuration(320)
+                    .setInterpolator(new DecelerateInterpolator(2.0f))
+                    .start();
+
             if (splitModeState == 1) {
                 // Horizontal split: secondary slides in from right edge
-                int slideDistance = dpToPx(160);
+                int slideDistance = dpToPx(200);
                 splitRightContainer.setTranslationX((float) slideDistance);
+                splitRightContainer.setTranslationY(0f);
+                splitRightContainer.setScaleX(0.94f);
+                splitRightContainer.setScaleY(0.94f);
                 splitRightContainer.setAlpha(0f);
                 splitRightContainer.animate()
                         .translationX(0f)
+                        .scaleX(1f)
+                        .scaleY(1f)
                         .alpha(1f)
-                        .setDuration(340)
-                        .setInterpolator(new DecelerateInterpolator(2.0f))
+                        .setDuration(360)
+                        .setInterpolator(new DecelerateInterpolator(2.2f))
                         .start();
 
                 splitDivider.setAlpha(0f);
-                splitDivider.setScaleY(0.4f);
+                splitDivider.setScaleX(0.2f);
+                splitDivider.setScaleY(0.2f);
                 splitDivider.animate()
                         .alpha(1f)
+                        .scaleX(1f)
                         .scaleY(1f)
-                        .setDuration(320)
-                        .setInterpolator(new OvershootInterpolator(1.2f))
+                        .setDuration(340)
+                        .setInterpolator(new OvershootInterpolator(1.3f))
                         .withEndAction(() -> {
                             try { splitDivider.performHapticFeedback(HapticFeedbackConstants.KEYBOARD_TAP); } catch (Throwable ignored) {}
                         })
                         .start();
             } else {
                 // Vertical split: secondary slides in from bottom edge
-                int slideDistance = dpToPx(160);
+                int slideDistance = dpToPx(200);
                 splitRightContainer.setTranslationY((float) slideDistance);
+                splitRightContainer.setTranslationX(0f);
+                splitRightContainer.setScaleX(0.94f);
+                splitRightContainer.setScaleY(0.94f);
                 splitRightContainer.setAlpha(0f);
                 splitRightContainer.animate()
                         .translationY(0f)
+                        .scaleX(1f)
+                        .scaleY(1f)
                         .alpha(1f)
-                        .setDuration(340)
-                        .setInterpolator(new DecelerateInterpolator(2.0f))
+                        .setDuration(360)
+                        .setInterpolator(new DecelerateInterpolator(2.2f))
                         .start();
 
                 splitDivider.setAlpha(0f);
-                splitDivider.setScaleX(0.4f);
+                splitDivider.setScaleX(0.2f);
+                splitDivider.setScaleY(0.2f);
                 splitDivider.animate()
                         .alpha(1f)
                         .scaleX(1f)
-                        .setDuration(320)
-                        .setInterpolator(new OvershootInterpolator(1.2f))
+                        .scaleY(1f)
+                        .setDuration(340)
+                        .setInterpolator(new OvershootInterpolator(1.3f))
                         .withEndAction(() -> {
                             try { splitDivider.performHapticFeedback(HapticFeedbackConstants.KEYBOARD_TAP); } catch (Throwable ignored) {}
                         })
@@ -14772,6 +14805,114 @@ public class MainActivity extends AppCompatActivity {
 
         updateOmniboxState();
         saveOpenTabsState();
+    }
+
+    private void updateSplitOrientationLayout() {
+        if (splitViewContainer == null || splitDivider == null || splitLeftContainer == null || splitRightContainer == null) return;
+        if (splitModeState == 1) {
+            splitViewContainer.setOrientation(LinearLayout.HORIZONTAL);
+            splitDivider.setLayoutParams(new LinearLayout.LayoutParams((int) TypedValue.applyDimension(TypedValue.COMPLEX_UNIT_DIP, 8, getResources().getDisplayMetrics()), ViewGroup.LayoutParams.MATCH_PARENT));
+            if (splitDividerHandle != null) {
+                FrameLayout.LayoutParams hl = new FrameLayout.LayoutParams((int) TypedValue.applyDimension(TypedValue.COMPLEX_UNIT_DIP, 6, getResources().getDisplayMetrics()), (int) TypedValue.applyDimension(TypedValue.COMPLEX_UNIT_DIP, 44, getResources().getDisplayMetrics()), Gravity.CENTER);
+                splitDividerHandle.setLayoutParams(hl);
+            }
+            splitLeftContainer.setLayoutParams(new LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.MATCH_PARENT, splitRatio));
+            splitRightContainer.setLayoutParams(new LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.MATCH_PARENT, 1.0f - splitRatio));
+        } else {
+            splitViewContainer.setOrientation(LinearLayout.VERTICAL);
+            splitDivider.setLayoutParams(new LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, (int) TypedValue.applyDimension(TypedValue.COMPLEX_UNIT_DIP, 8, getResources().getDisplayMetrics())));
+            if (splitDividerHandle != null) {
+                FrameLayout.LayoutParams hl = new FrameLayout.LayoutParams((int) TypedValue.applyDimension(TypedValue.COMPLEX_UNIT_DIP, 44, getResources().getDisplayMetrics()), (int) TypedValue.applyDimension(TypedValue.COMPLEX_UNIT_DIP, 6, getResources().getDisplayMetrics()), Gravity.CENTER);
+                splitDividerHandle.setLayoutParams(hl);
+            }
+            splitLeftContainer.setLayoutParams(new LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, 0, splitRatio));
+            splitRightContainer.setLayoutParams(new LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, 0, 1.0f - splitRatio));
+        }
+    }
+
+    private void animateSplitOrientationTransition(int newOrientation) {
+        if (splitLeftContainer == null || splitRightContainer == null || splitDivider == null || splitViewContainer == null) {
+            applySplitViewLayout();
+            return;
+        }
+
+        splitLeftContainer.animate().cancel();
+        splitRightContainer.animate().cancel();
+        splitDivider.animate().cancel();
+
+        float targetRot = (newOrientation == 1) ? 90f : -90f;
+
+        // Phase 1: Contract & morph out
+        splitLeftContainer.animate()
+                .scaleX(0.92f)
+                .scaleY(0.92f)
+                .alpha(0.65f)
+                .setDuration(130)
+                .setInterpolator(new AccelerateInterpolator(1.5f))
+                .start();
+
+        splitRightContainer.animate()
+                .scaleX(0.92f)
+                .scaleY(0.92f)
+                .alpha(0.65f)
+                .setDuration(130)
+                .setInterpolator(new AccelerateInterpolator(1.5f))
+                .start();
+
+        splitDivider.animate()
+                .scaleX(0.2f)
+                .scaleY(0.2f)
+                .rotation(targetRot)
+                .alpha(0.2f)
+                .setDuration(130)
+                .setInterpolator(new AccelerateInterpolator(1.5f))
+                .withEndAction(() -> {
+                    // Phase 2: Switch layout configuration
+                    updateSplitOrientationLayout();
+
+                    // Phase 3: Expand & morph in with overshoot
+                    splitLeftContainer.setScaleX(0.92f);
+                    splitLeftContainer.setScaleY(0.92f);
+                    splitLeftContainer.setAlpha(0.65f);
+                    splitLeftContainer.animate()
+                            .scaleX(1f)
+                            .scaleY(1f)
+                            .alpha(1f)
+                            .setDuration(260)
+                            .setInterpolator(new OvershootInterpolator(1.1f))
+                            .start();
+
+                    splitRightContainer.setScaleX(0.92f);
+                    splitRightContainer.setScaleY(0.92f);
+                    splitRightContainer.setAlpha(0.65f);
+                    splitRightContainer.animate()
+                            .scaleX(1f)
+                            .scaleY(1f)
+                            .alpha(1f)
+                            .setDuration(260)
+                            .setInterpolator(new OvershootInterpolator(1.1f))
+                            .start();
+
+                    splitDivider.setRotation(-targetRot);
+                    splitDivider.setScaleX(0.2f);
+                    splitDivider.setScaleY(0.2f);
+                    splitDivider.setAlpha(0.2f);
+                    splitDivider.animate()
+                            .scaleX(1f)
+                            .scaleY(1f)
+                            .rotation(0f)
+                            .alpha(1f)
+                            .setDuration(280)
+                            .setInterpolator(new OvershootInterpolator(1.3f))
+                            .withEndAction(() -> {
+                                try { splitDivider.performHapticFeedback(HapticFeedbackConstants.KEYBOARD_TAP); } catch (Throwable ignored) {}
+                            })
+                            .start();
+
+                    updateOmniboxState();
+                    saveOpenTabsState();
+                })
+                .start();
     }
 
     @SuppressLint("ClickableViewAccessibility")
@@ -15563,7 +15704,11 @@ public class MainActivity extends AppCompatActivity {
 
     private void toggleSplitOrientation() {
         splitModeState = (splitModeState == 1) ? 2 : 1;
-        applySplitViewLayout();
+        if (splitViewContainer != null && splitViewContainer.getVisibility() == View.VISIBLE) {
+            animateSplitOrientationTransition(splitModeState);
+        } else {
+            applySplitViewLayout();
+        }
         Toast.makeText(this, splitModeState == 1 ? "Horizontal Side-by-Side" : "Vertical Top-and-Bottom", Toast.LENGTH_SHORT).show();
     }
 
@@ -15630,26 +15775,46 @@ public class MainActivity extends AppCompatActivity {
 
     public void exitSplitView() {
         if (splitViewContainer != null && splitViewContainer.getVisibility() == View.VISIBLE && splitRightContainer != null && splitDivider != null) {
+            if (splitLeftContainer != null) splitLeftContainer.animate().cancel();
             splitRightContainer.animate().cancel();
             splitDivider.animate().cancel();
+
+            try { splitDivider.performHapticFeedback(HapticFeedbackConstants.KEYBOARD_TAP); } catch (Throwable ignored) {}
+
+            // Primary Pane expands back to full screen seamlessly
+            if (splitLeftContainer != null) {
+                splitLeftContainer.animate()
+                        .scaleX(1.02f)
+                        .scaleY(1.02f)
+                        .setDuration(240)
+                        .setInterpolator(new DecelerateInterpolator(1.8f))
+                        .start();
+            }
+
             if (splitModeState == 1) {
                 splitRightContainer.animate()
-                        .translationX((float) dpToPx(160))
+                        .translationX((float) dpToPx(220))
+                        .scaleX(0.92f)
+                        .scaleY(0.92f)
                         .alpha(0f)
-                        .setDuration(220)
+                        .setDuration(240)
                         .setInterpolator(new AccelerateInterpolator(1.8f))
                         .start();
             } else {
                 splitRightContainer.animate()
-                        .translationY((float) dpToPx(160))
+                        .translationY((float) dpToPx(220))
+                        .scaleX(0.92f)
+                        .scaleY(0.92f)
                         .alpha(0f)
-                        .setDuration(220)
+                        .setDuration(240)
                         .setInterpolator(new AccelerateInterpolator(1.8f))
                         .start();
             }
             splitDivider.animate()
+                    .scaleX(0f)
+                    .scaleY(0f)
                     .alpha(0f)
-                    .setDuration(200)
+                    .setDuration(210)
                     .withEndAction(this::performExitSplitViewCleanup)
                     .start();
         } else {
@@ -15675,17 +15840,27 @@ public class MainActivity extends AppCompatActivity {
         splitModeState = 0;
         secondarySplitTabId = -1;
         if (splitArenaBroadcastContainer != null) splitArenaBroadcastContainer.setVisibility(View.GONE);
-        if (splitLeftContainer != null) splitLeftContainer.removeAllViews();
+        if (splitLeftContainer != null) {
+            splitLeftContainer.removeAllViews();
+            splitLeftContainer.setScaleX(1f);
+            splitLeftContainer.setScaleY(1f);
+            splitLeftContainer.setAlpha(1f);
+            splitLeftContainer.setTranslationX(0f);
+            splitLeftContainer.setTranslationY(0f);
+        }
         if (splitRightContainer != null) {
             splitRightContainer.removeAllViews();
+            splitRightContainer.setScaleX(1f);
+            splitRightContainer.setScaleY(1f);
+            splitRightContainer.setAlpha(1f);
             splitRightContainer.setTranslationX(0f);
             splitRightContainer.setTranslationY(0f);
-            splitRightContainer.setAlpha(1f);
         }
         if (splitDivider != null) {
             splitDivider.setAlpha(1f);
             splitDivider.setScaleX(1f);
             splitDivider.setScaleY(1f);
+            splitDivider.setRotation(0f);
         }
         if (splitViewContainer != null) splitViewContainer.setVisibility(View.GONE);
         if (webViewContainer != null) {

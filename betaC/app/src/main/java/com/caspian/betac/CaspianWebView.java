@@ -187,8 +187,8 @@ public class CaspianWebView extends WebView {
                                 }
                                 scrollTo(getScrollX(), 0);
                                 return true;
-                            } else if (isHandlingPreScroll) {
-                                // Pre-scroll drag finished (toolbar reached off-screen)
+                            } else {
+                                // Pre-scroll drag finished or not consumed (e.g. fast swipe exceeded toolbarH immediately)
                                 isHandlingPreScroll = false;
                                 preScrollPassedToSuper = true;
                                 touchDownRawY = event.getRawY();
@@ -203,7 +203,7 @@ public class CaspianWebView extends WebView {
                     if (isTouchDownAtTop && computeVerticalScrollOffset() <= 0) {
                         float dy = event.getRawY() - touchDownRawY;
                         if (dy > 45) { // User deliberately pulled down at the absolute top
-                            scrollStateListener.onOverScrolled(this, 0, 0, false, true);
+                            scrollStateListener.onOverScrolled(this, 0, -100, false, true);
                         }
                     } else if (isTouchDownAtBottom && isAtBottom(30)) {
                         float dy = event.getRawY() - touchDownRawY;
