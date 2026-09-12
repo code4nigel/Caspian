@@ -11678,6 +11678,83 @@ public class MainActivity extends AppCompatActivity {
         });
     }
 
+    public boolean handlePreScrollDrag(CaspianWebView webView, float dragOffsetY) {
+        if (isToolbarScrollLocked || isInternalPageWithoutToolbarAutohide()) return false;
+        if (omniboxEditText != null && omniboxEditText.hasFocus()) return false;
+
+        boolean isBottomMode = "bottom".equalsIgnoreCase(omniboxPosition);
+        int toolbarH = getToolbarHeight();
+
+        if (!isBottomMode) {
+            // === TOP OMNIBOX MODE ===
+            if (isToolbarInDedicatedSection) {
+                if (dragOffsetY <= 0) {
+                    applyToolbarMotion(0f, (float) toolbarH, false);
+                    return true;
+                } else if (dragOffsetY < toolbarH) {
+                    // Moving down slowly: Omnibox and WebView move together in 1:1 lockstep!
+                    float tY = -dragOffsetY;
+                    float wY = toolbarH - dragOffsetY;
+                    applyToolbarMotion(tY, wY, false);
+                    return true;
+                } else {
+                    // Toolbar has moved completely off-screen! Switch to Overlay Mode!
+                    isToolbarInDedicatedSection = false;
+                    applyToolbarMotion((float) -toolbarH, 0f, false);
+                    return false;
+                }
+            }
+        } else {
+            // === BOTTOM OMNIBOX MODE ===
+            if (isToolbarInDedicatedSection) {
+                float pullUp = dragOffsetY;
+                if (pullUp <= 0) {
+                    applyToolbarMotion(0f, (float) -toolbarH, false);
+                    return true;
+                } else if (pullUp < toolbarH) {
+                    float tY = pullUp;
+                    float wY = -toolbarH + pullUp;
+                    applyToolbarMotion(tY, wY, false);
+                    return true;
+                } else {
+                    isToolbarInDedicatedSection = false;
+                    applyToolbarMotion((float) (toolbarH + dpToPx(16)), 0f, false);
+                    return false;
+                }
+            }
+        }
+        return false;
+    }
+
+    public void handlePreScrollDragEnd(CaspianWebView webView, float dragOffsetY) {
+        if (isToolbarScrollLocked || isInternalPageWithoutToolbarAutohide()) return;
+        if (omniboxEditText != null && omniboxEditText.hasFocus()) return;
+
+        boolean isBottomMode = "bottom".equalsIgnoreCase(omniboxPosition);
+        int toolbarH = getToolbarHeight();
+
+        if (!isBottomMode) {
+            if (isToolbarInDedicatedSection) {
+                if (dragOffsetY > toolbarH / 2f) {
+                    isToolbarInDedicatedSection = false;
+                    hideToolbar(true);
+                } else {
+                    dockToolbarAtTop(true);
+                }
+            }
+        } else {
+            if (isToolbarInDedicatedSection) {
+                float pullUp = dragOffsetY;
+                if (pullUp > toolbarH / 2f) {
+                    isToolbarInDedicatedSection = false;
+                    hideToolbar(true);
+                } else {
+                    dockToolbarAtBottom(true);
+                }
+            }
+        }
+    }
+
     public void handleWebViewScroll(CaspianWebView webView, int scrollX, int scrollY, int oldScrollX, int oldScrollY) {
         if (isToolbarScrollLocked || isInternalPageWithoutToolbarAutohide()) {
             dockToolbarAtTop(false);
@@ -11695,20 +11772,10 @@ public class MainActivity extends AppCompatActivity {
         if (!isBottomMode) {
             // === TOP OMNIBOX MODE ===
             if (isToolbarInDedicatedSection) {
-                // At the top border: Toolbar and WebView stay together in dedicated mode!
                 if (scrollY <= 0) {
                     applyToolbarMotion(0f, (float) toolbarH, false);
                     accumulatedScrollDelta = 0;
-                } else if (scrollY < toolbarH) {
-                    // Moving down: Omnibox and WebView move together in 1:1 lockstep!
-                    // Distance between them is always exactly toolbarH - zero jump!
-                    float tY = -scrollY;
-                    float wY = toolbarH - scrollY;
-                    applyToolbarMotion(tY, wY, false);
-                    accumulatedScrollDelta = 0;
-                } else {
-                    // Omnibox has moved completely out of the visible screen!
-                    // Now, and ONLY now, switch into Overlay Mode!
+                } else if (scrollY >= toolbarH) {
                     isToolbarInDedicatedSection = false;
                     applyToolbarMotion((float) -toolbarH, 0f, false);
                     accumulatedScrollDelta = 0;
@@ -11717,8 +11784,7 @@ public class MainActivity extends AppCompatActivity {
                 // In Overlay Mode (mid-page reading)
                 // If user scrolls all the way back up to the absolute top border
                 if (scrollY <= 0) {
-                    isToolbarInDedicatedSection = true;
-                    dockToolbarAtTop(true);
+                    showToolbar(true, true);
                     accumulatedScrollDelta = 0;
                     return;
                 }
@@ -11753,8 +11819,7 @@ public class MainActivity extends AppCompatActivity {
                 }
             } else {
                 if (webView.isAtBottom(dpToPx(8))) {
-                    isToolbarInDedicatedSection = true;
-                    dockToolbarAtBottom(true);
+                    showToolbar(true, true);
                     accumulatedScrollDelta = 0;
                     return;
                 }
@@ -17122,6 +17187,21 @@ public class MainActivity extends AppCompatActivity {
             public void onScrollIdle(CaspianWebView targetWebView) {
                 if (tabItem.id == activeTabId) {
                     handleWebViewScrollIdle(targetWebView);
+                }
+            }
+
+            @Override
+            public boolean onPreScrollDrag(CaspianWebView targetWebView, float dragOffsetY) {
+                if (tabItem.id == activeTabId) {
+                    return handlePreScrollDrag(targetWebView, dragOffsetY);
+                }
+                return false;
+            }
+
+            @Override
+            public void onPreScrollDragEnd(CaspianWebView targetWebView, float dragOffsetY) {
+                if (tabItem.id == activeTabId) {
+                    handlePreScrollDragEnd(targetWebView, dragOffsetY);
                 }
             }
         });

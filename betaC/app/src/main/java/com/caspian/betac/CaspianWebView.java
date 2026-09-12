@@ -2,6 +2,7 @@ package com.caspian.betac;
 
 import android.content.Context;
 import android.util.AttributeSet;
+import android.view.MotionEvent;
 import android.view.View;
 import android.webkit.WebView;
 
@@ -88,6 +89,8 @@ public class CaspianWebView extends WebView {
         void onScrollChanged(CaspianWebView webView, int scrollX, int scrollY, int oldScrollX, int oldScrollY);
         void onOverScrolled(CaspianWebView webView, int scrollX, int scrollY, boolean clampedX, boolean clampedY);
         void onScrollIdle(CaspianWebView webView);
+        boolean onPreScrollDrag(CaspianWebView webView, float dragOffsetY);
+        void onPreScrollDragEnd(CaspianWebView webView, float dragOffsetY);
     }
 
     private OnScrollStateListener scrollStateListener;
@@ -123,39 +126,81 @@ public class CaspianWebView extends WebView {
         }
     }
 
-    private float touchDownY = 0f;
+    private float touchDownRawY = 0f;
     private boolean isTouchDownAtTop = false;
     private boolean isTouchDownAtBottom = false;
+    private boolean isHandlingPreScroll = false;
+    private boolean preScrollPassedToSuper = false;
 
     @Override
-    public boolean onTouchEvent(android.view.MotionEvent event) {
+    public boolean onTouchEvent(MotionEvent event) {
         switch (event.getActionMasked()) {
-            case android.view.MotionEvent.ACTION_DOWN:
-                touchDownY = event.getRawY();
+            case MotionEvent.ACTION_DOWN:
+                touchDownRawY = event.getRawY();
                 isTouchDownAtTop = (computeVerticalScrollOffset() <= 0);
                 isTouchDownAtBottom = isAtBottom(30);
+                isHandlingPreScroll = false;
+                preScrollPassedToSuper = false;
                 break;
-            case android.view.MotionEvent.ACTION_MOVE:
-                if (isTouchDownAtTop && computeVerticalScrollOffset() <= 0) {
-                    float dy = event.getRawY() - touchDownY;
-                    if (dy > 45) { // User deliberately pulled down at the absolute top
-                        if (scrollStateListener != null) {
-                            scrollStateListener.onOverScrolled(this, 0, 0, false, true);
+
+            case MotionEvent.ACTION_MOVE:
+                if (scrollStateListener != null) {
+                    float dragOffsetY = touchDownRawY - event.getRawY();
+
+                    if ((isTouchDownAtTop || isHandlingPreScroll) && !preScrollPassedToSuper) {
+                        boolean consumed = scrollStateListener.onPreScrollDrag(this, dragOffsetY);
+                        if (consumed) {
+                            if (!isHandlingPreScroll) {
+                                isHandlingPreScroll = true;
+                                MotionEvent cancelEv = MotionEvent.obtain(event);
+                                cancelEv.setAction(MotionEvent.ACTION_CANCEL);
+                                super.onTouchEvent(cancelEv);
+                                cancelEv.recycle();
+                            }
+                            scrollTo(getScrollX(), 0);
+                            return true;
+                        } else if (isHandlingPreScroll) {
+                            // Pre-scroll drag finished (toolbar reached off-screen)
+                            isHandlingPreScroll = false;
+                            preScrollPassedToSuper = true;
+                            touchDownRawY = event.getRawY();
+                            MotionEvent fakeDown = MotionEvent.obtain(event);
+                            fakeDown.setAction(MotionEvent.ACTION_DOWN);
+                            super.onTouchEvent(fakeDown);
+                            fakeDown.recycle();
                         }
                     }
-                } else if (isTouchDownAtBottom && isAtBottom(30)) {
-                    float dy = event.getRawY() - touchDownY;
-                    if (dy < -45) { // User deliberately pulled up at the absolute bottom
-                        if (scrollStateListener != null) {
+
+                    if (isTouchDownAtTop && computeVerticalScrollOffset() <= 0) {
+                        float dy = event.getRawY() - touchDownRawY;
+                        if (dy > 45) { // User deliberately pulled down at the absolute top
+                            scrollStateListener.onOverScrolled(this, 0, 0, false, true);
+                        }
+                    } else if (isTouchDownAtBottom && isAtBottom(30)) {
+                        float dy = event.getRawY() - touchDownRawY;
+                        if (dy < -45) { // User deliberately pulled up at the absolute bottom
                             scrollStateListener.onOverScrolled(this, 0, 100, false, true);
                         }
                     }
                 }
                 break;
-            case android.view.MotionEvent.ACTION_UP:
-            case android.view.MotionEvent.ACTION_CANCEL:
+
+            case MotionEvent.ACTION_UP:
+            case MotionEvent.ACTION_CANCEL:
+                if (isHandlingPreScroll) {
+                    isHandlingPreScroll = false;
+                    preScrollPassedToSuper = false;
+                    if (scrollStateListener != null) {
+                        float dragOffsetY = touchDownRawY - event.getRawY();
+                        scrollStateListener.onPreScrollDragEnd(this, dragOffsetY);
+                    }
+                    isTouchDownAtTop = false;
+                    isTouchDownAtBottom = false;
+                    return true;
+                }
                 isTouchDownAtTop = false;
                 isTouchDownAtBottom = false;
+                preScrollPassedToSuper = false;
                 if (scrollStateListener != null) {
                     scrollStateListener.onScrollIdle(this);
                 }
