@@ -148,26 +148,29 @@ public class CaspianWebView extends WebView {
                     float dragOffsetY = touchDownRawY - event.getRawY();
 
                     if ((isTouchDownAtTop || isHandlingPreScroll) && !preScrollPassedToSuper) {
-                        boolean consumed = scrollStateListener.onPreScrollDrag(this, dragOffsetY);
-                        if (consumed) {
-                            if (!isHandlingPreScroll) {
-                                isHandlingPreScroll = true;
-                                MotionEvent cancelEv = MotionEvent.obtain(event);
-                                cancelEv.setAction(MotionEvent.ACTION_CANCEL);
-                                super.onTouchEvent(cancelEv);
-                                cancelEv.recycle();
+                        float touchSlop = android.view.ViewConfiguration.get(getContext()).getScaledTouchSlop();
+                        if (isHandlingPreScroll || Math.abs(dragOffsetY) >= touchSlop) {
+                            boolean consumed = scrollStateListener.onPreScrollDrag(this, dragOffsetY);
+                            if (consumed) {
+                                if (!isHandlingPreScroll) {
+                                    isHandlingPreScroll = true;
+                                    MotionEvent cancelEv = MotionEvent.obtain(event);
+                                    cancelEv.setAction(MotionEvent.ACTION_CANCEL);
+                                    super.onTouchEvent(cancelEv);
+                                    cancelEv.recycle();
+                                }
+                                scrollTo(getScrollX(), 0);
+                                return true;
+                            } else if (isHandlingPreScroll) {
+                                // Pre-scroll drag finished (toolbar reached off-screen)
+                                isHandlingPreScroll = false;
+                                preScrollPassedToSuper = true;
+                                touchDownRawY = event.getRawY();
+                                MotionEvent fakeDown = MotionEvent.obtain(event);
+                                fakeDown.setAction(MotionEvent.ACTION_DOWN);
+                                super.onTouchEvent(fakeDown);
+                                fakeDown.recycle();
                             }
-                            scrollTo(getScrollX(), 0);
-                            return true;
-                        } else if (isHandlingPreScroll) {
-                            // Pre-scroll drag finished (toolbar reached off-screen)
-                            isHandlingPreScroll = false;
-                            preScrollPassedToSuper = true;
-                            touchDownRawY = event.getRawY();
-                            MotionEvent fakeDown = MotionEvent.obtain(event);
-                            fakeDown.setAction(MotionEvent.ACTION_DOWN);
-                            super.onTouchEvent(fakeDown);
-                            fakeDown.recycle();
                         }
                     }
 

@@ -11622,7 +11622,7 @@ public class MainActivity extends AppCompatActivity {
         isToolbarInDedicatedSection = false;
         int toolbarH = getToolbarHeight();
         boolean isBottomMode = "bottom".equalsIgnoreCase(omniboxPosition);
-        float targetToolbarY = isBottomMode ? (toolbarH + dpToPx(16)) : (-toolbarH - dpToPx(16));
+        float targetToolbarY = isBottomMode ? (toolbarH + dpToPx(32)) : (-toolbarH - dpToPx(32));
         applyToolbarMotion(targetToolbarY, 0f, animate);
     }
 
@@ -11643,12 +11643,22 @@ public class MainActivity extends AppCompatActivity {
             long duration = animate ? 220 : 0;
             Interpolator interpolator = new DecelerateInterpolator(1.8f);
 
+            boolean isHiding = (currentToolbarState == TOOLBAR_STATE_FULLSCREEN_HIDDEN);
+            if (!isHiding) {
+                omniboxHeaderWrapper.setVisibility(View.VISIBLE);
+            }
+
             if (animate) {
                 omniboxHeaderWrapper.animate().cancel();
                 omniboxHeaderWrapper.animate()
                         .translationY(targetToolbarY)
                         .setDuration(duration)
                         .setInterpolator(interpolator)
+                        .withEndAction(() -> {
+                            if (currentToolbarState == TOOLBAR_STATE_FULLSCREEN_HIDDEN && omniboxHeaderWrapper != null) {
+                                omniboxHeaderWrapper.setVisibility(View.GONE);
+                            }
+                        })
                         .start();
 
                 webviewsParentContainer.animate().cancel();
@@ -11672,6 +11682,11 @@ public class MainActivity extends AppCompatActivity {
                 if (browserProgressBar != null) browserProgressBar.animate().cancel();
 
                 omniboxHeaderWrapper.setTranslationY(targetToolbarY);
+                if (isHiding) {
+                    omniboxHeaderWrapper.setVisibility(View.GONE);
+                } else {
+                    omniboxHeaderWrapper.setVisibility(View.VISIBLE);
+                }
                 webviewsParentContainer.setTranslationY(targetWebViewY);
                 if (browserProgressBar != null) {
                     browserProgressBar.setTranslationY(targetToolbarY);

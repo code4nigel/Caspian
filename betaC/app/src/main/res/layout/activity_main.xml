@@ -309,8 +309,6 @@
             android:paddingTop="6dp"
             android:paddingBottom="6dp"
             android:background="@android:color/transparent"
-            android:clickable="true"
-            android:focusable="true"
             android:layout_gravity="top"
             android:elevation="350dp">
 
