@@ -7368,40 +7368,7 @@ public class MainActivity extends AppCompatActivity {
             omniboxShieldIcon.setOnClickListener(this::showWaveguardFlyout);
         }
 
-        omniboxEditText.setOnTouchListener(new View.OnTouchListener() {
-            private long lastTapTime = 0;
-
-            @Override
-            public boolean onTouch(View v, MotionEvent event) {
-                if (event.getAction() == MotionEvent.ACTION_UP) {
-                    long now = System.currentTimeMillis();
-                    if (!omniboxEditText.hasFocus()) {
-                        omniboxEditText.requestFocus();
-                        omniboxEditText.post(() -> {
-                            if (omniboxEditText.getText() != null) {
-                                int len = omniboxEditText.getText().length();
-                                android.text.Selection.setSelection(omniboxEditText.getText(), len, 0);
-                            }
-                            omniboxEditText.scrollTo(0, 0);
-                            InputMethodManager imm = (InputMethodManager) getSystemService(Context.INPUT_METHOD_SERVICE);
-                            if (imm != null) imm.showSoftInput(omniboxEditText, InputMethodManager.SHOW_IMPLICIT);
-                        });
-                        omniboxEditText.postDelayed(() -> {
-                            if (omniboxEditText != null) {
-                                omniboxEditText.scrollTo(0, 0);
-                            }
-                        }, 240);
-                        lastTapTime = now;
-                        return true;
-                    } else if (now - lastTapTime > 400 && omniboxEditText.getSelectionStart() == 0 && omniboxEditText.getSelectionEnd() == omniboxEditText.getText().length()) {
-                        lastTapTime = now;
-                        return false;
-                    }
-                    lastTapTime = now;
-                }
-                return false;
-            }
-        });
+        setupOmniboxUrlGestureListener();
 
         omniboxEditText.setOnEditorActionListener((v, actionId, event) -> {
             if (actionId == EditorInfo.IME_ACTION_GO || actionId == EditorInfo.IME_ACTION_SEARCH ||
@@ -7533,49 +7500,118 @@ public class MainActivity extends AppCompatActivity {
         return (int) (dp * getResources().getDisplayMetrics().density + 0.5f);
     }
 
-    private void setupOmniboxSwipeTabSwitcher() {
-        if (omniboxHeaderWrapper == null) return;
+    private void expandOmniboxUrl() {
+        if (omniboxEditText == null) return;
+        if (!omniboxEditText.hasFocus()) {
+            omniboxEditText.requestFocus();
+            omniboxEditText.post(() -> {
+                if (omniboxEditText.getText() != null) {
+                    int len = omniboxEditText.getText().length();
+                    android.text.Selection.setSelection(omniboxEditText.getText(), len, 0);
+                }
+                omniboxEditText.scrollTo(0, 0);
+                InputMethodManager imm = (InputMethodManager) getSystemService(Context.INPUT_METHOD_SERVICE);
+                if (imm != null) imm.showSoftInput(omniboxEditText, InputMethodManager.SHOW_IMPLICIT);
+            });
+            omniboxEditText.postDelayed(() -> {
+                if (omniboxEditText != null) {
+                    omniboxEditText.scrollTo(0, 0);
+                }
+            }, 240);
+        }
+    }
 
-        omniboxHeaderWrapper.setOnTouchListener(new View.OnTouchListener() {
-            private float startX = 0f;
-            private float startY = 0f;
-            private boolean isSwiping = false;
+    private void setupOmniboxUrlGestureListener() {
+        if (omniboxEditText == null) return;
+
+        View.OnTouchListener urlGestureListener = new View.OnTouchListener() {
+            private float downRawX = 0f;
+            private float downRawY = 0f;
+            private long downTime = 0L;
+            private boolean hasMovedPastSlop = false;
+            private final int touchSlop = android.view.ViewConfiguration.get(MainActivity.this).getScaledTouchSlop();
+            private final int swipeThreshold = dpToPx(32);
 
             @Override
             public boolean onTouch(View v, MotionEvent event) {
+                if (omniboxEditText != null && omniboxEditText.hasFocus()) {
+                    return false;
+                }
+
                 switch (event.getActionMasked()) {
                     case MotionEvent.ACTION_DOWN:
-                        startX = event.getRawX();
-                        startY = event.getRawY();
-                        isSwiping = false;
-                        return false;
+                        downRawX = event.getRawX();
+                        downRawY = event.getRawY();
+                        downTime = System.currentTimeMillis();
+                        hasMovedPastSlop = false;
+                        return true;
 
-                    case MotionEvent.ACTION_MOVE:
-                        float dx = event.getRawX() - startX;
-                        float dy = Math.abs(event.getRawY() - startY);
-                        if (Math.abs(dx) > 30 && dy < 40 && omniboxEditText != null && !omniboxEditText.hasFocus()) {
-                            isSwiping = true;
-                            return true;
+                    case MotionEvent.ACTION_MOVE: {
+                        float dx = event.getRawX() - downRawX;
+                        float dy = event.getRawY() - downRawY;
+                        if (Math.hypot(dx, dy) >= touchSlop) {
+                            hasMovedPastSlop = true;
                         }
-                        break;
+                        return true;
+                    }
 
-                    case MotionEvent.ACTION_UP:
-                        if (isSwiping) {
-                            float deltaX = event.getRawX() - startX;
-                            if (Math.abs(deltaX) > 60) {
-                                if (deltaX > 0) {
-                                    switchToAdjacentTab(-1);
-                                } else {
-                                    switchToAdjacentTab(1);
-                                }
+                    case MotionEvent.ACTION_UP: {
+                        float dx = event.getRawX() - downRawX;
+                        float dy = event.getRawY() - downRawY;
+                        long duration = System.currentTimeMillis() - downTime;
+
+                        if (hasMovedPastSlop) {
+                            // 1. SWIPE DOWN -> Open Tab Switcher UI
+                            if (dy > swipeThreshold && dy > Math.abs(dx) * 1.15f) {
+                                try { v.performHapticFeedback(HapticFeedbackConstants.KEYBOARD_TAP); } catch (Throwable ignored) {}
+                                playUiFeedbackSound("tap");
+                                showTabGridView();
+                                return true;
+                            }
+                            // 2. SWIPE RIGHT -> Previous Tab
+                            else if (dx > swipeThreshold && dx > Math.abs(dy) * 1.15f) {
+                                try { v.performHapticFeedback(HapticFeedbackConstants.KEYBOARD_TAP); } catch (Throwable ignored) {}
+                                playUiFeedbackSound("tap");
+                                switchToAdjacentTab(-1);
+                                return true;
+                            }
+                            // 3. SWIPE LEFT -> Next Tab
+                            else if (dx < -swipeThreshold && Math.abs(dx) > Math.abs(dy) * 1.15f) {
+                                try { v.performHapticFeedback(HapticFeedbackConstants.KEYBOARD_TAP); } catch (Throwable ignored) {}
+                                playUiFeedbackSound("tap");
+                                switchToAdjacentTab(1);
                                 return true;
                             }
                         }
-                        break;
+
+                        // 4. TAP (Within touchSlop & duration < 400ms) -> Expand URL
+                        if (!hasMovedPastSlop && duration < 400) {
+                            expandOmniboxUrl();
+                            return true;
+                        }
+                        return true;
+                    }
+
+                    case MotionEvent.ACTION_CANCEL:
+                        hasMovedPastSlop = false;
+                        return false;
                 }
                 return false;
             }
-        });
+        };
+
+        omniboxEditText.setOnTouchListener(urlGestureListener);
+        if (omniboxUrlContainer != null) {
+            omniboxUrlContainer.setOnTouchListener(urlGestureListener);
+        }
+        View capsule = findViewById(R.id.omnibox_capsule);
+        if (capsule != null) {
+            capsule.setOnTouchListener(urlGestureListener);
+        }
+    }
+
+    private void setupOmniboxSwipeTabSwitcher() {
+        setupOmniboxUrlGestureListener();
     }
 
     public void switchToAdjacentTab(int direction) {
