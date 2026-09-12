@@ -67,7 +67,7 @@
             android:paddingEnd="9dp"
             android:paddingTop="3dp"
             android:paddingBottom="3dp"
-            android:text="v1.2.84-BetaC"
+            android:text="v1.2.85-BetaC"
             android:textColor="#38BDF8"
             android:textSize="10.5sp"
             android:textStyle="bold"

@@ -946,24 +946,66 @@
       outline: none;
     }
 
-    /* Casks Styling */
+    /* Permanent Glassy Casks Styling */
+    .casks-section {
+      margin-top: 10px;
+    }
+    .active-cask-card {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      background: rgba(255, 255, 255, 0.08) !important;
+      border: 1.5px solid rgba(255, 255, 255, 0.14) !important;
+      border-radius: 20px !important;
+      padding: 12px 14px !important;
+      cursor: pointer;
+      backdrop-filter: blur(18px) saturate(180%);
+      -webkit-backdrop-filter: blur(18px) saturate(180%);
+      box-shadow: 0 8px 24px rgba(0, 0, 0, 0.22) !important;
+      transition: all 0.22s cubic-bezier(0.2, 0.9, 0.3, 1) !important;
+    }
+    .active-cask-card:active {
+      transform: scale(0.97);
+      background: rgba(255, 255, 255, 0.13) !important;
+    }
+    .active-cask-card #active-cask-name {
+      color: #ffffff !important;
+      font-weight: 700;
+      font-size: 13.5px;
+    }
+    .active-cask-card #active-cask-desc {
+      color: #94a3b8 !important;
+      font-size: 10px;
+    }
+    .active-cask-card .oneui-pill-btn {
+      background: rgba(255, 255, 255, 0.12) !important;
+      border: 1px solid rgba(255, 255, 255, 0.2) !important;
+      color: #ffffff !important;
+      backdrop-filter: blur(10px);
+    }
+    .active-cask-card .oneui-pill-btn:active {
+      background: var(--accent-glow, rgba(0, 229, 255, 0.25)) !important;
+      border-color: var(--accent, #00E5FF) !important;
+    }
     .cask-item-row {
       display: flex;
       align-items: center;
       justify-content: space-between;
-      padding: 10px 12px;
-      border-radius: 14px;
-      background: var(--bg-deep);
-      border: 1.5px solid var(--border-glass);
+      padding: 11px 13px;
+      border-radius: 16px;
+      background: rgba(255, 255, 255, 0.08) !important;
+      border: 1.5px solid rgba(255, 255, 255, 0.12) !important;
       cursor: pointer;
       transition: all 0.2s ease;
+      color: #ffffff !important;
     }
     .cask-item-row:active {
       transform: scale(0.98);
+      background: rgba(255, 255, 255, 0.14) !important;
     }
     .cask-item-row.active {
-      border-color: var(--accent, #00E5FF);
-      background: var(--accent-glow, rgba(0, 229, 255, 0.08));
+      border-color: var(--accent, #00E5FF) !important;
+      background: var(--accent-glow, rgba(0, 229, 255, 0.15)) !important;
     }
     .preset-dropdown-item {
       display: flex;
@@ -1051,10 +1093,58 @@
     <!-- Swipeable Shortcuts Carousel (4 shortcuts per page, swipe left/right) -->
     <div class="shortcuts-carousel-wrapper">
       <div id="shortcuts-carousel" class="shortcuts-carousel">
-        <!-- Rendered via JS -->
+        <div class="shortcuts-page">
+          <div class="horizontal-grid">
+            <div class="app-icon-card" data-id="sc_chatgpt" data-idx="0">
+              <div class="app-icon-emoji" style="display:flex;align-items:center;justify-content:center;width:44px;height:44px;border-radius:14px;background:#ffffff;box-shadow:0 4px 12px rgba(0,0,0,0.15);">
+                <svg width="28" height="28" viewBox="0 0 24 24" fill="none">
+                  <path d="M20.5 9.5a4.8 4.8 0 0 0-.4-3.8 5 5 0 0 0-4.6-2.5 5.2 5.2 0 0 0-1.8.3 5 5 0 0 0-3.8-1.7 5.1 5.1 0 0 0-4.8 3.5 5 5 0 0 0-3 2.2 4.9 4.9 0 0 0-.5 4.8 5 5 0 0 0 .4 3.8 5 5 0 0 0 4.6 2.5 5.2 5.2 0 0 0 1.8-.3 5 5 0 0 0 3.8 1.7 5.1 5.1 0 0 0 4.8-3.5 5 5 0 0 0 3-2.2 4.9 4.9 0 0 0 .5-4.8z" stroke="#10a37f" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/>
+                </svg>
+              </div>
+              <div class="app-icon-title">ChatGPT</div>
+              <div class="app-icon-domain">chatgpt.com</div>
+            </div>
+            <div class="app-icon-card" data-id="sc_gemini" data-idx="1">
+              <div class="app-icon-emoji" style="display:flex;align-items:center;justify-content:center;width:44px;height:44px;border-radius:14px;background:rgba(255,255,255,0.06);">
+                <svg width="28" height="28" viewBox="0 0 24 24" fill="none">
+                  <path d="M12 2C12 7.5 7.5 12 2 12C7.5 12 12 16.5 12 22C12 16.5 16.5 12 22 12C16.5 12 12 7.5 12 2Z" fill="url(#gemini-grad-init)"/>
+                  <defs>
+                    <linearGradient id="gemini-grad-init" x1="2" y1="2" x2="22" y2="22" gradientUnits="userSpaceOnUse">
+                      <stop stop-color="#4E82EE"/>
+                      <stop offset="0.5" stop-color="#A56CF5"/>
+                      <stop offset="1" stop-color="#F2778A"/>
+                    </linearGradient>
+                  </defs>
+                </svg>
+              </div>
+              <div class="app-icon-title">Google Gemini</div>
+              <div class="app-icon-domain">gemini.google.com</div>
+            </div>
+            <div class="app-icon-card" data-id="sc_youtube" data-idx="2">
+              <div class="app-icon-emoji" style="display:flex;align-items:center;justify-content:center;width:44px;height:44px;border-radius:14px;background:rgba(255,255,255,0.06);">
+                <svg width="30" height="30" viewBox="0 0 24 24">
+                  <path fill="#FF0000" d="M23.498 6.186a3.016 3.016 0 0 0-2.122-2.136C19.505 3.545 12 3.545 12 3.545s-7.505 0-9.377.505A3.017 3.017 0 0 0 .502 6.186C0 8.07 0 12 0 12s0 3.93.502 5.814a3.016 3.016 0 0 0 2.122 2.136c1.871.505 9.376.505 9.376.505s7.505 0 9.377-.505a3.015 3.015 0 0 0 2.122-2.136C24 15.93 24 12 24 12s0-3.93-.502-5.814z"/>
+                  <path fill="#FFFFFF" d="M9.545 15.568V8.432L15.818 12l-6.273 3.568z"/>
+                </svg>
+              </div>
+              <div class="app-icon-title">YouTube</div>
+              <div class="app-icon-domain">youtube.com</div>
+            </div>
+            <div class="app-icon-card add-card" onclick="openAddShortcutModal()">
+              <div class="add-icon-circle">
+                <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round">
+                  <line x1="12" y1="5" x2="12" y2="19"></line>
+                  <line x1="5" y1="12" x2="19" y2="12"></line>
+                </svg>
+              </div>
+              <div class="app-icon-title" style="color:var(--text-muted);">Add Shortcut</div>
+              <div class="app-icon-domain">Any Website</div>
+            </div>
+          </div>
+        </div>
       </div>
       <!-- Pagination Dots Indicator -->
-      <div id="shortcuts-page-dots" class="page-dots"></div>
+      <div id="shortcuts-page-dots" class="page-dots"><span class="dot active"></span></div>
     </div>
 
     <!-- Dedicated Google Style Search Bar -->
@@ -1091,21 +1181,21 @@
     <!-- CASPIAN CASKS SECTION -->
     <div class="casks-section">
       <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 8px;">
-        <span style="font-size: 11px; font-weight: 700; letter-spacing: 1px; color: var(--text-muted);">CASPIAN CASKS</span>
-        <span id="cask-badge-active" style="font-size: 10px; font-weight: 700; color: var(--accent, #00E5FF); background: var(--accent-glow, rgba(0,229,255,0.12)); padding: 2px 8px; border-radius: 10px;">Active Vault</span>
+        <span style="font-size: 11px; font-weight: 700; letter-spacing: 1.2px; color: #94a3b8;">CASPIAN CASKS</span>
+        <span id="cask-badge-active" style="font-size: 10px; font-weight: 700; color: #00E5FF; background: rgba(0,229,255,0.15); border: 1px solid rgba(0,229,255,0.3); padding: 2px 9px; border-radius: 10px;">Active Vault</span>
       </div>
 
-      <div id="active-cask-selector" class="active-cask-card" style="display: flex; align-items: center; justify-content: space-between; background: var(--bg-card); border: 1.5px solid var(--border-glass); border-radius: 18px; padding: 10px 12px; cursor: pointer; transition: all 0.2s ease;">
-        <div style="display: flex; align-items: center; gap: 10px;">
-          <div id="active-cask-icon-wrap" style="width: 36px; height: 36px; border-radius: 12px; background: rgba(0,229,255,0.1); border: 1.5px solid var(--accent, #00E5FF); display: flex; align-items: center; justify-content: center; font-size: 18px;">
+      <div id="active-cask-selector" class="active-cask-card">
+        <div style="display: flex; align-items: center; gap: 11px;">
+          <div id="active-cask-icon-wrap" style="width: 38px; height: 38px; border-radius: 13px; background: rgba(0,229,255,0.12); border: 1.5px solid var(--accent, #00E5FF); display: flex; align-items: center; justify-content: center; font-size: 19px; box-shadow: 0 4px 12px rgba(0,229,255,0.2);">
             <span id="active-cask-icon">🌊</span>
           </div>
           <div>
-            <div id="active-cask-name" style="font-size: 13px; font-weight: 700; color: var(--text-main);">Caspian Cask</div>
-            <div style="font-size: 10px; color: var(--text-muted);">Isolated Session &amp; Cookies</div>
+            <div id="active-cask-name">Caspian Cask</div>
+            <div id="active-cask-desc">Isolated Session &amp; Cookies</div>
           </div>
         </div>
-        <button class="oneui-pill-btn secondary" style="padding: 6px 12px; font-size: 11px; border-radius: 12px;">
+        <button class="oneui-pill-btn secondary" style="padding: 7px 14px; font-size: 11.5px; border-radius: 12px;">
           <span>Switch</span>
           <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
             <polyline points="6 9 12 15 18 9"></polyline>
@@ -2335,8 +2425,10 @@
 
     // Add Shortcut Modal Logic
     let selectedShortcutEmoji = '';
+    let editingShortcutId = null;
     function openAddShortcutModal() {
       playTapSFX();
+      editingShortcutId = null;
       selectedShortcutEmoji = '';
       document.querySelectorAll('.shortcut-emoji-opt').forEach(el => el.style.border = 'none');
       document.getElementById('shortcut-name-input').value = '';
@@ -2348,6 +2440,7 @@
     function closeAddShortcutModal() {
       playTapSFX();
       document.getElementById('shortcut-modal').style.display = 'none';
+      editingShortcutId = null;
     }
 
     document.querySelectorAll('.shortcut-emoji-opt').forEach(el => {
@@ -2366,12 +2459,17 @@
       playTapSFX();
       const nameInput = document.getElementById('shortcut-name-input');
       const urlInput = document.getElementById('shortcut-url-input');
-      const name = nameInput ? nameInput.value.trim() : '';
+      let name = nameInput ? nameInput.value.trim() : '';
       let url = urlInput ? urlInput.value.trim() : '';
 
-      if (!name || !url) {
-        showToast('Please enter website name and URL');
+      if (!name && !url) {
+        showToast('Please enter website URL');
         return;
+      }
+
+      if (!url && name) {
+        url = name;
+        name = '';
       }
 
       if (!/^https?:\/\//i.test(url)) {
@@ -2384,6 +2482,12 @@
         domain = parsed.hostname.replace(/^www\./, '');
       } catch (e) {
         domain = url.replace(/^https?:\/\//, '').split('/')[0];
+      }
+
+      if (!name) {
+        const parts = domain.split('.');
+        const main = parts.length > 1 ? parts[0] : domain;
+        name = main.charAt(0).toUpperCase() + main.slice(1);
       }
 
       // Determine icon: custom emoji, or Google favicon service
@@ -2801,10 +2905,8 @@
     document.getElementById('btn-show-new-cask').addEventListener('click', showNewCaskForm);
     document.getElementById('btn-cancel-create-cask').addEventListener('click', hideNewCaskForm);
     document.getElementById('btn-confirm-create-cask').addEventListener('click', confirmCreateCask);
-
-    setTimeout(loadCaspianCasks, 100);
+    loadCaspianCasks();
     applyCaspianThemeColors();
-    setTimeout(applyCaspianThemeColors, 120);
   </script>
 </body>
 </html>

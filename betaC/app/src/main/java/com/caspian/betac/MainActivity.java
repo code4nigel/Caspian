@@ -2213,7 +2213,13 @@ public class MainActivity extends AppCompatActivity {
         tabGridFabAdd.setOnClickListener(v -> {
             playUiFeedbackSound("tap");
             addNewTab("hub", "", "file:///android_asset/launch_hub.html", false);
-            hideTabGridView();
+            if (tabGridOverlay != null && tabGridFabAdd.getWidth() > 0) {
+                float pX = tabGridFabAdd.getX() + (tabGridFabAdd.getWidth() / 2f);
+                float pY = tabGridFabAdd.getY() + (tabGridFabAdd.getHeight() / 2f);
+                hideTabGridView(pX, pY);
+            } else {
+                hideTabGridView();
+            }
         });
 
         // Bottom Dock: "Group" Button
@@ -2664,8 +2670,15 @@ public class MainActivity extends AppCompatActivity {
     }
 
     public void hideTabGridView() {
+        hideTabGridView(-1f, -1f);
+    }
+
+    public void hideTabGridView(float customPivotX, float customPivotY) {
         if (tabGridOverlay != null) {
-            if (omniboxTabsBtn != null && omniboxTabsBtn.getWidth() > 0) {
+            if (customPivotX >= 0 && customPivotY >= 0) {
+                tabGridOverlay.setPivotX(customPivotX);
+                tabGridOverlay.setPivotY(customPivotY);
+            } else if (omniboxTabsBtn != null && omniboxTabsBtn.getWidth() > 0) {
                 float pivotX = omniboxTabsBtn.getX() + (omniboxTabsBtn.getWidth() / 2f);
                 float pivotY = omniboxTabsBtn.getY() + (omniboxTabsBtn.getHeight() / 2f);
                 tabGridOverlay.setPivotX(pivotX);
@@ -17523,6 +17536,18 @@ public class MainActivity extends AppCompatActivity {
         tabsList.add(tab);
         if (switchTo || activeTabId == -1 || getTabById(activeTabId) == null) {
             switchToTab(id);
+            if (tab.webView != null) {
+                tab.webView.setAlpha(0.0f);
+                tab.webView.setScaleX(0.92f);
+                tab.webView.setScaleY(0.92f);
+                tab.webView.animate()
+                        .alpha(1.0f)
+                        .scaleX(1.0f)
+                        .scaleY(1.0f)
+                        .setDuration(260)
+                        .setInterpolator(new DecelerateInterpolator(2.0f))
+                        .start();
+            }
         } else {
             if (tab.webView != null && tab.webView.getParent() != webViewContainer) {
                 if (tab.webView.getParent() != null) {
