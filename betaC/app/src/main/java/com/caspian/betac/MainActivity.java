@@ -17652,6 +17652,7 @@ public class MainActivity extends AppCompatActivity {
                         t.webView.setVisibility(View.VISIBLE);
                         t.webView.bringToFront();
                         try { t.webView.onResume(); } catch (Throwable ignored) {}
+                        try { t.webView.evaluateJavascript("if(typeof window.__caspian_set_app_visibility === 'function') window.__caspian_set_app_visibility(true);", null); } catch (Throwable ignored) {}
                     } else {
                         // Keep background tab WebViews attached to container as INVISIBLE so background media playback continues uninterrupted
                         if (t.webView.getParent() == webViewContainer) {
@@ -17659,6 +17660,8 @@ public class MainActivity extends AppCompatActivity {
                         }
                         if (!t.isPlayingAudio) {
                             try { t.webView.onPause(); } catch (Throwable ignored) {}
+                        } else {
+                            try { t.webView.evaluateJavascript("if(typeof window.__caspian_set_app_visibility === 'function') window.__caspian_set_app_visibility(false);", null); } catch (Throwable ignored) {}
                         }
                     }
                 }
@@ -20392,6 +20395,8 @@ public class MainActivity extends AppCompatActivity {
                 if (t != null && t.webView != null) {
                     if (!t.isPlayingAudio) {
                         try { t.webView.onPause(); } catch (Throwable ignored) {}
+                    } else {
+                        try { t.webView.evaluateJavascript("if(typeof window.__caspian_set_app_visibility === 'function') window.__caspian_set_app_visibility(false);", null); } catch (Throwable ignored) {}
                     }
                 }
             }
@@ -21104,11 +21109,13 @@ public class MainActivity extends AppCompatActivity {
             TabItem activeTab = getTabById(activeTabId);
             if (activeTab != null && activeTab.webView != null) {
                 try { activeTab.webView.onResume(); } catch (Throwable ignored) {}
+                try { activeTab.webView.evaluateJavascript("if(typeof window.__caspian_set_app_visibility === 'function') window.__caspian_set_app_visibility(true);", null); } catch (Throwable ignored) {}
             }
             if (splitModeState > 0 && secondarySplitTabId != -1) {
                 TabItem splitTab = getTabById(secondarySplitTabId);
                 if (splitTab != null && splitTab.webView != null) {
                     try { splitTab.webView.onResume(); } catch (Throwable ignored) {}
+                    try { splitTab.webView.evaluateJavascript("if(typeof window.__caspian_set_app_visibility === 'function') window.__caspian_set_app_visibility(true);", null); } catch (Throwable ignored) {}
                 }
             }
         } catch (Throwable ignored) {}

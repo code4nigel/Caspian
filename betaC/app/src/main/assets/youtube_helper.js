@@ -69,13 +69,35 @@
   // -------------------------------------------------------------
   window.__caspian_explicit_pause = false;
   window.__caspian_pip_active = false;
+  window.__caspian_is_app_visible = true;
+  window.__caspian_set_app_visibility = function (visible) {
+    window.__caspian_is_app_visible = !!visible;
+    try {
+      if (document.documentElement) {
+        if (!visible) {
+          document.documentElement.classList.add('caspian-app-hidden');
+        } else {
+          document.documentElement.classList.remove('caspian-app-hidden');
+        }
+      }
+    } catch(e){}
+  };
 
   try {
-    Object.defineProperty(document, 'hidden', { get: () => false, configurable: true });
-    Object.defineProperty(document, 'visibilityState', { get: () => 'visible', configurable: true });
-    Object.defineProperty(document, 'webkitVisibilityState', { get: () => 'visible', configurable: true });
-    document.hasFocus = () => true;
-    window.hasFocus = () => true;
+    Object.defineProperty(document, 'hidden', {
+      get: () => !window.__caspian_is_app_visible,
+      configurable: true
+    });
+    Object.defineProperty(document, 'visibilityState', {
+      get: () => window.__caspian_is_app_visible ? 'visible' : 'hidden',
+      configurable: true
+    });
+    Object.defineProperty(document, 'webkitVisibilityState', {
+      get: () => window.__caspian_is_app_visible ? 'visible' : 'hidden',
+      configurable: true
+    });
+    document.hasFocus = () => window.__caspian_is_app_visible;
+    window.hasFocus = () => window.__caspian_is_app_visible;
   } catch (e) { }
 
   // Intercept and drop listeners that YouTube uses to pause videos (visibility, blur, freeze, pagehide)
@@ -816,13 +838,19 @@
               if (window.__CaspianYouTube) window.__CaspianYouTube.notifyState();
             });
           });
+          let _lastTimeSync = 0;
           v.addEventListener('timeupdate', () => {
-            const tabId = window.__caspian_tab_id || 0;
-            if (v.ended || (v.duration > 0 && Math.abs((v.currentTime || 0) - v.duration) < 0.5)) {
+            const now = Date.now();
+            const isNearEnd = (v.duration > 0 && Math.abs((v.currentTime || 0) - v.duration) < 0.5);
+            if (v.ended || isNearEnd) {
+              const tabId = window.__caspian_tab_id || 0;
               if (window.CaspianBridge && typeof window.CaspianBridge.onYouTubeVideoEnded === 'function') {
                 window.CaspianBridge.onYouTubeVideoEnded(tabId);
               }
             }
+            if (now - _lastTimeSync < 800) return;
+            _lastTimeSync = now;
+            const tabId = window.__caspian_tab_id || 0;
             if (window.CaspianBridge && typeof window.CaspianBridge.updateTabYouTubeTime === 'function') {
               window.CaspianBridge.updateTabYouTubeTime(tabId, v.currentTime || 0, v.duration || 0);
             } else if (window.CaspianBridge && typeof window.CaspianBridge.updateYouTubeTime === 'function') {
@@ -1232,6 +1260,10 @@
       visibility: hidden !important;
       height: 0 !important;
       pointer-events: none !important;
+    }
+    html.caspian-app-hidden * {
+      animation-play-state: paused !important;
+      transition: none !important;
     }
     /* Only scope settings gear button and menus inside fullscreen */
     :fullscreen .ytp-settings-button,
