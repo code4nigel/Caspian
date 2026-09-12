@@ -1358,5 +1358,12 @@ public class CaspianBridge {
             prefs.edit().putString("caspian_hub_wallpaper", base64Data != null ? base64Data : "").apply();
         }
     }
+
+    @JavascriptInterface
+    public void onScrobbyPlayerState(String stateJson) {
+        if (activity != null) {
+            activity.runOnUiThread(() -> activity.handleScrobbyPlayerState(stateJson));
+        }
+    }
 }
 

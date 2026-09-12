@@ -2149,6 +2149,7 @@
       renderShortcutsCarousel();
     }
 
+    let isCarouselScrolling = false;
     function renderShortcutsCarousel() {
       const carouselEl = document.getElementById('shortcuts-carousel');
       const dotsEl = document.getElementById('shortcuts-page-dots');
@@ -2184,7 +2185,31 @@
               <div class="app-icon-title" style="color:var(--text-muted);">Add Shortcut</div>
               <div class="app-icon-domain">Any Website</div>
             `;
-            addCard.addEventListener('click', openAddShortcutModal);
+            let addTouchStartX = 0;
+            let addTouchStartY = 0;
+            let addHasMoved = false;
+            addCard.addEventListener('touchstart', (e) => {
+              if (e.touches && e.touches.length > 0) {
+                addTouchStartX = e.touches[0].clientX;
+                addTouchStartY = e.touches[0].clientY;
+                addHasMoved = false;
+              }
+            }, { passive: true });
+            addCard.addEventListener('touchmove', (e) => {
+              if (e.touches && e.touches.length > 0) {
+                if (Math.hypot(e.touches[0].clientX - addTouchStartX, e.touches[0].clientY - addTouchStartY) > 7) {
+                  addHasMoved = true;
+                }
+              }
+            }, { passive: true });
+            addCard.addEventListener('click', (e) => {
+              if (addHasMoved || isCarouselScrolling) {
+                e.preventDefault();
+                e.stopPropagation();
+                return;
+              }
+              openAddShortcutModal();
+            });
             gridEl.appendChild(addCard);
           } else {
             const scIdx = currentShortcuts.findIndex(s => s.id === item.id);
@@ -2277,8 +2302,42 @@
               }
             });
 
+            // Touch displacement tracking to prevent swipes from triggering clicks
+            let touchStartX = 0;
+            let touchStartY = 0;
+            let hasScrolledOrMoved = false;
+
+            card.addEventListener('touchstart', (e) => {
+              if (e.touches && e.touches.length > 0) {
+                touchStartX = e.touches[0].clientX;
+                touchStartY = e.touches[0].clientY;
+                hasScrolledOrMoved = false;
+              }
+            }, { passive: true });
+
+            card.addEventListener('touchmove', (e) => {
+              if (e.touches && e.touches.length > 0) {
+                const dx = Math.abs(e.touches[0].clientX - touchStartX);
+                const dy = Math.abs(e.touches[0].clientY - touchStartY);
+                if (dx > 7 || dy > 7) {
+                  hasScrolledOrMoved = true;
+                }
+              }
+            }, { passive: true });
+
+            card.addEventListener('touchend', () => {
+              if (hasScrolledOrMoved) {
+                setTimeout(() => { hasScrolledOrMoved = false; }, 80);
+              }
+            }, { passive: true });
+
             // Launch action with iOS physics, or edit when in edit mode
             card.addEventListener('click', (e) => {
+              if (hasScrolledOrMoved || isCarouselScrolling) {
+                e.preventDefault();
+                e.stopPropagation();
+                return;
+              }
               if (isEditingShortcuts) {
                 openEditShortcutModal(item);
                 return;
@@ -2305,8 +2364,15 @@
         }
       }
 
-      // Scroll listener to update active page dot
+      // Scroll listener to update active page dot and track active scrolling state
+      let carouselScrollTimeout = null;
       carouselEl.addEventListener('scroll', () => {
+        isCarouselScrolling = true;
+        clearTimeout(carouselScrollTimeout);
+        carouselScrollTimeout = setTimeout(() => {
+          isCarouselScrolling = false;
+        }, 120);
+
         const scrollLeft = carouselEl.scrollLeft;
         const width = carouselEl.clientWidth || 1;
         const activeIdx = Math.round(scrollLeft / width);

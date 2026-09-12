@@ -1474,4 +1474,92 @@
       worker.postMessage('start');
     } catch(e) {}
   })();
+
+  // -------------------------------------------------------------
+  // 9. Scrobby Player State Dispatcher (YouTube Music -> CaspianBridge)
+  // -------------------------------------------------------------
+  (function() {
+    var lastScrobbySentTime = 0;
+    var lastSentCurrentTime = -1;
+    function dispatchScrobbyState() {
+      if (!window.CaspianBridge || typeof window.CaspianBridge.onScrobbyPlayerState !== 'function') return;
+      var isYtMusic = location.hostname.includes('music.youtube.com');
+      if (!isYtMusic) return;
+
+      var v = (window.__CaspianYouTube && window.__CaspianYouTube.getVideo) ? window.__CaspianYouTube.getVideo() : document.querySelector('video, audio');
+      if (!v) return;
+
+      var now = Date.now();
+      var cTime = Math.floor(v.currentTime || 0);
+      var paused = !!v.paused;
+
+      if (paused && cTime === lastSentCurrentTime && (now - lastScrobbySentTime < 3000)) return;
+      if (!paused && cTime === lastSentCurrentTime && (now - lastScrobbySentTime < 1000)) return;
+
+      lastScrobbySentTime = now;
+      lastSentCurrentTime = cTime;
+
+      var title = '';
+      var artist = '';
+      var album = '';
+      var artwork = '';
+
+      try {
+        var meta = (navigator.mediaSession && navigator.mediaSession.metadata) || __caspian_captured_media_metadata;
+        if (meta) {
+          if (meta.title) title = meta.title.trim();
+          if (meta.artist) artist = meta.artist.trim();
+          if (meta.album) album = meta.album.trim();
+          if (meta.artwork && meta.artwork.length > 0) {
+            var best = meta.artwork[meta.artwork.length - 1];
+            if (best && best.src) artwork = best.src;
+          }
+        }
+      } catch(e){}
+
+      if (!title || title === 'YouTube Music' || title === 'YouTube') {
+        var titleEl = document.querySelector('ytmusic-player-bar .content-info-wrapper yt-formatted-string.title, ytmusic-player-bar .middle-controls yt-formatted-string.title, ytmusic-player-bar yt-formatted-string.title, ytm-player-bar .player-bar-title, ytm-player-bar .title');
+        if (titleEl) {
+          var cand = (titleEl.getAttribute('title') || titleEl.textContent || titleEl.innerText || '').trim();
+          if (cand && cand !== 'YouTube Music') title = cand;
+        }
+      }
+      if (!title) {
+        var docT = (document.title || '').replace(/\s*-\s*YouTube\s+Music$/i, '').replace(/\s*-\s*YouTube$/i, '').trim();
+        if (docT && docT !== 'YouTube Music') title = docT;
+      }
+
+      if (!artist || artist === 'YouTube Music') {
+        var artistEl = document.querySelector('ytmusic-player-bar .content-info-wrapper yt-formatted-string.byline, ytmusic-player-bar .middle-controls yt-formatted-string.byline, ytmusic-player-bar .byline a, ytmusic-player-bar .byline, ytm-player-bar .player-bar-subtitle, ytm-player-bar .subtitle');
+        if (artistEl) {
+          var aCand = (artistEl.getAttribute('title') || artistEl.textContent || artistEl.innerText || '').trim();
+          if (aCand.includes('•')) aCand = aCand.split('•')[0].trim();
+          if (aCand && aCand !== 'YouTube Music') artist = aCand;
+        }
+      }
+
+      if (!artwork) {
+        var imgEl = document.querySelector('ytmusic-player-bar img#img, .thumbnail-image-wrapper img, img.ytmusic-player-bar, ytm-player-bar img');
+        if (imgEl && imgEl.src) artwork = imgEl.src;
+      }
+
+      if (!title || !artist || title === 'YouTube Music') return;
+
+      var payload = JSON.stringify({
+        title: title,
+        artist: artist,
+        album: album,
+        artwork: artwork,
+        currentTime: v.currentTime || 0,
+        duration: v.duration || 0,
+        paused: paused
+      });
+
+      try {
+        window.CaspianBridge.onScrobbyPlayerState(payload);
+      } catch(e){}
+    }
+
+    setInterval(dispatchScrobbyState, 1200);
+  })();
 })();

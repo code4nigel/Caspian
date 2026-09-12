@@ -17902,6 +17902,19 @@ public class MainActivity extends AppCompatActivity {
             @Override
             public boolean shouldOverrideUrlLoading(WebView view, WebResourceRequest request) {
                 String targetUrl = request.getUrl().toString();
+                if (targetUrl != null && targetUrl.contains("lastfm-callback")) {
+                    try {
+                        Uri uri = Uri.parse(targetUrl);
+                        String token = uri.getQueryParameter("token");
+                        if (token != null && !token.isEmpty()) {
+                            evaluateJavascriptInControlSheet("if (window.ScrobbyEngine) window.ScrobbyEngine.authenticateWithToken('" + token + "');");
+                            view.stopLoading();
+                            view.loadUrl("https://music.youtube.com");
+                            Toast.makeText(MainActivity.this, "Scrobby: Connected to Last.fm!", Toast.LENGTH_SHORT).show();
+                            return true;
+                        }
+                    } catch (Exception ignored) {}
+                }
                 if (tabItem.isDesktop && targetUrl.contains("://m.youtube.com")) {
                     String desktopUrl = targetUrl.replace("://m.youtube.com", "://www.youtube.com");
                     view.loadUrl(desktopUrl);
@@ -18006,6 +18019,19 @@ public class MainActivity extends AppCompatActivity {
 
             @Override
             public void onPageStarted(WebView view, String pageUrl, Bitmap favicon) {
+                if (pageUrl != null && pageUrl.contains("lastfm-callback")) {
+                    try {
+                        Uri uri = Uri.parse(pageUrl);
+                        String token = uri.getQueryParameter("token");
+                        if (token != null && !token.isEmpty()) {
+                            evaluateJavascriptInControlSheet("if (window.ScrobbyEngine) window.ScrobbyEngine.authenticateWithToken('" + token + "');");
+                            view.stopLoading();
+                            view.loadUrl("https://music.youtube.com");
+                            Toast.makeText(MainActivity.this, "Scrobby: Connected to Last.fm!", Toast.LENGTH_SHORT).show();
+                            return;
+                        }
+                    } catch (Exception ignored) {}
+                }
                 if (tabItem.isDesktop && pageUrl != null && pageUrl.contains("://m.youtube.com")) {
                     String desktopUrl = pageUrl.replace("://m.youtube.com", "://www.youtube.com");
                     view.stopLoading();
@@ -22264,5 +22290,25 @@ public class MainActivity extends AppCompatActivity {
             }
         }
         return super.dispatchTouchEvent(ev);
+    }
+
+    public void handleScrobbyPlayerState(String stateJson) {
+        if (stateJson == null || stateJson.trim().isEmpty()) return;
+        evaluateJavascriptInControlSheet("if (window.ScrobbyEngine) window.ScrobbyEngine.onPlayerStateReceived(" + stateJson + ");");
+    }
+
+    public void openExternalUrl(String url) {
+        if (url == null || url.trim().isEmpty()) return;
+        try {
+            if (url.startsWith("http://") || url.startsWith("https://")) {
+                addNewTab("web", null, url, false);
+                hideControlSheet();
+            } else {
+                Intent intent = new Intent(Intent.ACTION_VIEW, Uri.parse(url));
+                startActivity(intent);
+            }
+        } catch (Exception e) {
+            Log.e(TAG, "openExternalUrl error: " + e.getMessage());
+        }
     }
 }
