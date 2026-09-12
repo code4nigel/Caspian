@@ -1118,6 +1118,7 @@
 
   function executeFastForwardSkip() {
     try {
+      if (location.hostname.includes('music.youtube.com')) return;
       const player = document.getElementById('movie_player') || document.querySelector('.html5-video-player');
       const isAdActive = !!(player && (player.classList.contains('ad-showing') || player.classList.contains('ad-interrupting')));
       const adText = document.querySelector('.ytp-ad-text, .ytp-ad-preview-text, .ytp-ad-duration-remaining');

@@ -185,8 +185,9 @@
   }
 
   // Scrobby Core Constants
-  var API_KEY = 'f8409386dcfd73d2ff6db6f89093b137';
-  var SHARED_SECRET = '87a9cc5c3b9b4b3b2c286db50239cf3d';
+  // Web Scrobbler's registered, active production Last.fm API credentials
+  var DEFAULT_API_KEY = 'd9bb1870d3269646f740544d9def2c95';
+  var DEFAULT_SHARED_SECRET = '2160733a567d4a1a69a73fad54c564b2';
   var GITHUB_URL = 'https://github.com/code4nigel/Scrobby---The-LastFM-Scrobbler-Extension-';
   var API_URL = 'https://ws.audioscrobbler.com/2.0/';
 
@@ -197,6 +198,7 @@
     album: '',
     duration: 0,
     currentTime: 0,
+    maxPosition: 0,
     paused: true,
     artwork: '',
     accumulatedTime: 0,
@@ -204,6 +206,7 @@
     scrobbled: false,
     nowPlayingSent: false,
     startTimestamp: 0,
+    lastRepeatTimestamp: 0,
     sourceSite: '',
     repeatCount: 0
   };
@@ -217,7 +220,7 @@
     });
   }
 
-  // Settings & Preferences
+  // Settings & Preferences (Disabled/OFF by default)
   function getSettings() {
     var settings = {};
     try {
@@ -225,7 +228,9 @@
     } catch (e) {}
 
     return {
-      enabled: settings.enabled !== false,
+      enabled: settings.enabled === true, // Default to FALSE (OFF)
+      apiKey: (settings.apiKey && settings.apiKey.trim()) ? settings.apiKey.trim() : DEFAULT_API_KEY,
+      sharedSecret: (settings.sharedSecret && settings.sharedSecret.trim()) ? settings.sharedSecret.trim() : DEFAULT_SHARED_SECRET,
       sessionKey: localStorage.getItem('caspian_scrobby_session_key') || '',
       username: localStorage.getItem('caspian_scrobby_username') || '',
       cleanRemasters: settings.cleanRemasters !== false,
@@ -241,7 +246,9 @@
     var current = getSettings();
     var merged = Object.assign({}, current, updates);
     localStorage.setItem('caspian_scrobby_settings', JSON.stringify({
-      enabled: merged.enabled,
+      enabled: merged.enabled === true,
+      apiKey: merged.apiKey,
+      sharedSecret: merged.sharedSecret,
       cleanRemasters: merged.cleanRemasters,
       primaryArtistOnly: merged.primaryArtistOnly,
       scrobbleMode: merged.scrobbleMode,
@@ -281,14 +288,14 @@
 
     var finalParams = Object.assign({
       method: method,
-      api_key: API_KEY
+      api_key: settings.apiKey
     }, params);
 
     if (requiresAuth) {
       finalParams.sk = settings.sessionKey;
     }
 
-    finalParams.api_sig = generateSignature(finalParams, SHARED_SECRET);
+    finalParams.api_sig = generateSignature(finalParams, settings.sharedSecret);
     finalParams.format = 'json';
 
     var isPost = (method === 'track.scrobble' || method === 'track.updateNowPlaying' || method === 'auth.getSession');
@@ -334,8 +341,9 @@
   }
 
   function startAuthFlow() {
+    var settings = getSettings();
     var cbUrl = 'https://music.youtube.com/lastfm-callback';
-    var authUrl = 'https://www.last.fm/api/auth/?api_key=' + API_KEY + '&cb=' + encodeURIComponent(cbUrl);
+    var authUrl = 'https://www.last.fm/api/auth/?api_key=' + settings.apiKey + '&cb=' + encodeURIComponent(cbUrl);
     if (window.CaspianBridge && typeof window.CaspianBridge.openExternalUrl === 'function') {
       window.CaspianBridge.openExternalUrl(authUrl);
     } else if (window.CaspianBridge && typeof window.CaspianBridge.openUrl === 'function') {
@@ -464,6 +472,7 @@
         album: data.album || '',
         duration: data.duration || 0,
         currentTime: data.currentTime || 0,
+        maxPosition: data.currentTime || 0,
         paused: !!data.paused,
         artwork: data.artwork || '',
         accumulatedTime: 0,
@@ -471,6 +480,7 @@
         scrobbled: false,
         nowPlayingSent: false,
         startTimestamp: Math.floor(Date.now() / 1000),
+        lastRepeatTimestamp: Math.floor(Date.now() / 1000),
         sourceSite: data.sourceSite || 'music.youtube.com',
         repeatCount: 0
       };
@@ -480,23 +490,43 @@
         currentSong.nowPlayingSent = true;
       }
     } else {
-      // Loop & Repeat Multi-Scrobble Detection (from Scrobby)
-      var isRepeated = (currentSong.scrobbled && data.currentTime < 10) ||
-                         (data.currentTime < currentSong.currentTime - 10 && currentSong.currentTime > 15);
+      if (typeof data.currentTime === 'number' && data.currentTime > (currentSong.maxPosition || 0)) {
+        currentSong.maxPosition = data.currentTime;
+      }
+
+      var nowSec = Math.floor(Date.now() / 1000);
+      var timeSinceStartOrRepeat = nowSec - (currentSong.lastRepeatTimestamp || currentSong.startTimestamp || 0);
+
+      // Loop & Repeat Multi-Scrobble Detection:
+      // A song is repeated ONLY IF:
+      // 1. Playback is actively playing (!data.paused) - never trigger repeat during pause/buffer drops!
+      // 2. The song was previously near completion (currentTime >= duration - 15 OR maxPosition >= duration * 0.7 OR scrobbled is true)
+      // 3. The new currentTime has restarted back at the beginning (data.currentTime >= 0 && data.currentTime < 8)
+      // 4. Sufficient listening time has passed (> 25s) to avoid rapid re-triggering
+      var wasPlayedNearEnd = currentSong.duration > 20 && (
+        currentSong.currentTime >= (currentSong.duration - 15) ||
+        (currentSong.maxPosition || 0) >= (currentSong.duration * 0.7) ||
+        currentSong.scrobbled
+      );
+
+      var isRepeated = !data.paused &&
+                       wasPlayedNearEnd &&
+                       (data.currentTime >= 0 && data.currentTime < 8) &&
+                       (timeSinceStartOrRepeat > 25);
 
       if (isRepeated) {
         currentSong.repeatCount++;
-        currentSong.accumulatedTime = 0;
+        currentSong.accumulatedTime = data.currentTime || 0;
         currentSong.scrobbled = false;
         currentSong.nowPlayingSent = false;
-        currentSong.startTimestamp = Math.floor(Date.now() / 1000);
+        currentSong.startTimestamp = nowSec;
+        currentSong.lastRepeatTimestamp = nowSec;
+        currentSong.maxPosition = data.currentTime || 0;
         currentSong.currentTime = data.currentTime;
-        currentSong.lastUpdate = data.paused ? null : Date.now();
+        currentSong.lastUpdate = Date.now();
 
-        if (!currentSong.paused) {
-          sendNowPlaying(currentSong);
-          currentSong.nowPlayingSent = true;
-        }
+        sendNowPlaying(currentSong);
+        currentSong.nowPlayingSent = true;
       } else {
         if (!currentSong.paused && currentSong.lastUpdate) {
           var delta = (Date.now() - currentSong.lastUpdate) / 1000;

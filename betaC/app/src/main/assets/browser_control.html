@@ -62,7 +62,7 @@
         </div>
         <div style="display: flex; flex-direction: column;">
           <span class="sheet-brand-name">CASPIAN FLOW</span>
-          <span class="sheet-brand-tag">V1.2.20-BetaC</span>
+          <span class="sheet-brand-tag">V1.2.98-BetaC</span>
         </div>
       </div>
       <div class="header-icon-actions">
@@ -335,7 +335,7 @@
       <div id="card-scrobby" class="m3-card engine-card expandable" style="margin-top: 14px;">
         <div id="scrobby-header" class="m3-card-row" style="cursor: pointer;">
           <div class="m3-card-left">
-            <div id="scrobby-status-dot" class="status-dot active"></div>
+            <div id="scrobby-status-dot" class="status-dot"></div>
             <div>
               <div class="m3-card-title" style="display: flex; align-items: center; gap: 6px;">
                 <span>Scrobby</span>
@@ -353,9 +353,9 @@
               </svg>
               <span>GitHub</span>
             </button>
-            <button id="toggle-scrobby-btn" class="oneui-pill-btn primary"
+            <button id="toggle-scrobby-btn" class="oneui-pill-btn secondary"
               style="font-size: 11px; padding: 4px 10px;">
-              ON
+              OFF
             </button>
           </div>
         </div>
@@ -380,6 +380,25 @@
               <button id="scrobby-disconnect-btn" class="oneui-pill-btn danger" style="font-size: 11px; padding: 5px 10px; display: none;">
                 Disconnect
               </button>
+            </div>
+          </div>
+
+          <!-- Advanced API Credentials Toggle -->
+          <div style="margin-bottom: 12px;">
+            <div id="scrobby-api-toggle" style="display: flex; align-items: center; justify-content: space-between; cursor: pointer; padding: 4px 2px; font-size: 10.5px; color: var(--text-muted);">
+              <span>🔑 Custom Last.fm API Key (Optional)</span>
+              <span id="scrobby-api-toggle-icon">▼</span>
+            </div>
+            <div id="scrobby-api-form" style="display: none; margin-top: 6px; background: rgba(0,0,0,0.25); border: 1px solid var(--border-glass); border-radius: 10px; padding: 10px;">
+              <div style="font-size: 9.5px; color: var(--text-muted); margin-bottom: 6px;">Override built-in keys with your personal Last.fm developer API application credentials:</div>
+              <div style="display: flex; flex-direction: column; gap: 6px;">
+                <input type="text" id="scrobby-custom-api-key" placeholder="API Key" style="width: 100%; background: rgba(0,0,0,0.3); border: 1px solid var(--border-glass); border-radius: 6px; color: var(--text-main); font-size: 10.5px; padding: 6px 8px; box-sizing: border-box;" />
+                <input type="text" id="scrobby-custom-api-secret" placeholder="Shared Secret" style="width: 100%; background: rgba(0,0,0,0.3); border: 1px solid var(--border-glass); border-radius: 6px; color: var(--text-main); font-size: 10.5px; padding: 6px 8px; box-sizing: border-box;" />
+                <div style="display: flex; gap: 6px; justify-content: flex-end; margin-top: 2px;">
+                  <button id="scrobby-reset-api-btn" class="oneui-pill-btn secondary" style="font-size: 10px; padding: 4px 8px;">Reset Default</button>
+                  <button id="scrobby-save-api-btn" class="oneui-pill-btn primary" style="font-size: 10px; padding: 4px 10px;">Save Keys</button>
+                </div>
+              </div>
             </div>
           </div>
 
@@ -438,7 +457,7 @@
           </div>
 
           <!-- Custom Regex Rules Sub-Section -->
-          <div style="background: rgba(255,255,255,0.02); border: 1px solid var(--border-glass); border-radius: 12px; padding: 10px 12px;">
+          <div style="background: rgba(255,255,255,0.02); border: 1px solid var(--border-glass); border-radius: 12px; padding: 10px 12px; margin-bottom: 24px;">
             <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 6px;">
               <div style="font-size: 11px; font-weight: 700; color: var(--text-main);">🔍 Custom Regex Filters</div>
               <span id="scrobby-rules-count" style="font-size: 9.5px; color: var(--text-muted);">0 active</span>
@@ -447,15 +466,19 @@
               Replace or remove unwanted strings from YouTube Music titles and artists automatically.
             </div>
 
-            <!-- Add Regex Form -->
-            <div style="display: flex; gap: 6px; margin-bottom: 8px;">
-              <input type="text" id="scrobby-regex-find" placeholder="Pattern (e.g. \(Live\))" style="flex: 1.2; background: rgba(0,0,0,0.3); border: 1px solid var(--border-glass); border-radius: 8px; color: var(--text-main); font-size: 11px; padding: 6px 8px;" />
-              <input type="text" id="scrobby-regex-replace" placeholder="Replace with" style="flex: 1; background: rgba(0,0,0,0.3); border: 1px solid var(--border-glass); border-radius: 8px; color: var(--text-main); font-size: 11px; padding: 6px 8px;" />
-              <button id="scrobby-add-regex-btn" class="oneui-pill-btn secondary" style="font-size: 10.5px; padding: 6px 10px; font-weight: 700;">+ Add</button>
+            <!-- Add Regex Form (Mobile Optimized 2-Row Layout) -->
+            <div style="display: flex; flex-direction: column; gap: 8px; margin-bottom: 10px;">
+              <div style="display: flex; gap: 6px;">
+                <input type="text" id="scrobby-regex-find" placeholder="Pattern (e.g. \(Live\))" style="flex: 1; min-width: 0; background: rgba(0,0,0,0.3); border: 1px solid var(--border-glass); border-radius: 8px; color: var(--text-main); font-size: 11px; padding: 8px 10px; box-sizing: border-box;" />
+                <input type="text" id="scrobby-regex-replace" placeholder="Replace with (or empty)" style="flex: 1; min-width: 0; background: rgba(0,0,0,0.3); border: 1px solid var(--border-glass); border-radius: 8px; color: var(--text-main); font-size: 11px; padding: 8px 10px; box-sizing: border-box;" />
+              </div>
+              <button id="scrobby-add-regex-btn" class="oneui-pill-btn secondary" style="width: 100%; justify-content: center; font-size: 11px; padding: 8px 12px; font-weight: 700; gap: 6px; box-sizing: border-box;">
+                <span>+ Add Regex Rule</span>
+              </button>
             </div>
 
             <!-- Active Rules List Container -->
-            <div id="scrobby-rules-list" style="display: flex; flex-direction: column; gap: 4px; max-height: 120px; overflow-y: auto;">
+            <div id="scrobby-rules-list" style="display: flex; flex-direction: column; gap: 4px; max-height: 140px; overflow-y: auto;">
               <!-- Rendered dynamically -->
             </div>
           </div>
@@ -1751,7 +1774,7 @@
             <div id="updater-status-dot" class="status-dot active"></div>
             <div>
               <div class="m3-card-title">Caspian Flow Updates</div>
-              <div id="updater-status-sub" class="m3-card-sub">Current: V1.2.15-BetaC • Direct in-app GitHub updater.
+              <div id="updater-status-sub" class="m3-card-sub">Current: V1.2.98-BetaC • Direct in-app GitHub updater.
               </div>
             </div>
           </div>
@@ -2658,6 +2681,47 @@
         var rulesList = document.getElementById('scrobby-rules-list');
         var rulesCount = document.getElementById('scrobby-rules-count');
 
+        var apiToggle = document.getElementById('scrobby-api-toggle');
+        var apiForm = document.getElementById('scrobby-api-form');
+        var apiToggleIcon = document.getElementById('scrobby-api-toggle-icon');
+        var customApiKeyInput = document.getElementById('scrobby-custom-api-key');
+        var customApiSecretInput = document.getElementById('scrobby-custom-api-secret');
+        var saveApiBtn = document.getElementById('scrobby-save-api-btn');
+        var resetApiBtn = document.getElementById('scrobby-reset-api-btn');
+
+        if (apiToggle && apiForm) {
+          apiToggle.addEventListener('click', function(e) {
+            e.stopPropagation();
+            var isOpen = apiForm.style.display !== 'none';
+            apiForm.style.display = isOpen ? 'none' : 'block';
+            if (apiToggleIcon) apiToggleIcon.textContent = isOpen ? '▼' : '▲';
+          });
+        }
+
+        if (saveApiBtn) {
+          saveApiBtn.addEventListener('click', function(e) {
+            e.stopPropagation();
+            var k = (customApiKeyInput ? customApiKeyInput.value : '').trim();
+            var sec = (customApiSecretInput ? customApiSecretInput.value : '').trim();
+            if (!k || !sec) {
+              alert('Please enter both an API Key and Shared Secret.');
+              return;
+            }
+            window.ScrobbyEngine.saveSettings({ apiKey: k, sharedSecret: sec });
+            alert('Last.fm API credentials updated!');
+            updateUI();
+          });
+        }
+
+        if (resetApiBtn) {
+          resetApiBtn.addEventListener('click', function(e) {
+            e.stopPropagation();
+            window.ScrobbyEngine.saveSettings({ apiKey: '', sharedSecret: '' });
+            alert('Restored default Last.fm API credentials.');
+            updateUI();
+          });
+        }
+
         if (header && body) {
           header.addEventListener('click', function(e) {
             if (e.target.closest('.card-controls') || e.target.closest('button')) return;
@@ -2801,6 +2865,13 @@
           }
           if (statusDot) {
             statusDot.className = 'status-dot ' + (s.enabled ? 'active' : 'inactive');
+          }
+
+          if (customApiKeyInput && document.activeElement !== customApiKeyInput) {
+            customApiKeyInput.value = s.apiKey || '';
+          }
+          if (customApiSecretInput && document.activeElement !== customApiSecretInput) {
+            customApiSecretInput.value = s.sharedSecret || '';
           }
 
           if (s.sessionKey && s.username) {
