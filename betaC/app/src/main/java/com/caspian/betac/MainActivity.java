@@ -390,6 +390,10 @@ public class MainActivity extends AppCompatActivity {
     private LinearLayout tabGridBottomDock;
     private TextView btnTabDockMakeGroup;
     private FrameLayout tabGridFabAdd;
+    private FrameLayout tabGridDialContainer;
+    private FrameLayout tabGridDialPlus;
+    private FrameLayout tabGridDialClose;
+    private TextView tabGridDockTabCount;
     private TextView btnTabDockSelect;
     private boolean isGridSelectionMode = false;
 
@@ -2018,10 +2022,10 @@ public class MainActivity extends AppCompatActivity {
             splitRightCloseBtn = findViewById(R.id.split_right_close_btn);
 
             tabGridOverlay = findViewById(R.id.tab_grid_overlay);
-            tabGridHeaderRow = findViewById(R.id.tab_grid_header_row);
-            tabGridHeaderCapsule = findViewById(R.id.tab_grid_header_capsule);
-            tabGridCountBadge = findViewById(R.id.tab_grid_count_badge);
-            tabGridCloseViewBtn = findViewById(R.id.tab_grid_close_view_btn);
+            tabGridHeaderRow = null;
+            tabGridHeaderCapsule = null;
+            tabGridCountBadge = null;
+            tabGridCloseViewBtn = null;
             tabGridTopActions = findViewById(R.id.tab_grid_top_actions);
             btnTabGridTopSplit = findViewById(R.id.btn_tab_grid_top_split);
             btnTabGridTopDeselect = findViewById(R.id.btn_tab_grid_top_deselect);
@@ -2046,6 +2050,10 @@ public class MainActivity extends AppCompatActivity {
             tabGridBottomDock = findViewById(R.id.tab_grid_bottom_dock);
             btnTabDockMakeGroup = findViewById(R.id.btn_tab_dock_make_group);
             tabGridFabAdd = findViewById(R.id.tab_grid_fab_add);
+            tabGridDialContainer = findViewById(R.id.tab_grid_dial_container);
+            tabGridDialPlus = findViewById(R.id.tab_grid_dial_plus);
+            tabGridDialClose = findViewById(R.id.tab_grid_dial_close);
+            tabGridDockTabCount = findViewById(R.id.tab_grid_dock_tab_count);
             btnTabDockSelect = findViewById(R.id.btn_tab_dock_select);
 
             modalNewTabPlatform = findViewById(R.id.modal_new_tab_platform);
@@ -2302,10 +2310,29 @@ public class MainActivity extends AppCompatActivity {
     private void setupModernTabGridOverlay() {
         if (tabGridOverlay == null) return;
 
-        tabGridCloseViewBtn.setOnClickListener(v -> {
-            playUiFeedbackSound("tap");
-            hideTabGridView();
-        });
+        if (tabGridCloseViewBtn != null) {
+            tabGridCloseViewBtn.setOnClickListener(v -> {
+                playUiFeedbackSound("tap");
+                hideTabGridView();
+            });
+        }
+
+        if (tabGridDialClose != null) {
+            tabGridDialClose.setOnClickListener(v -> {
+                try { v.performHapticFeedback(HapticFeedbackConstants.KEYBOARD_TAP); } catch (Throwable ignored) {}
+                playUiFeedbackSound("tap");
+                hideTabGridView();
+            });
+        }
+
+        if (tabGridDialPlus != null) {
+            tabGridDialPlus.setOnClickListener(v -> {
+                try { v.performHapticFeedback(HapticFeedbackConstants.KEYBOARD_TAP); } catch (Throwable ignored) {}
+                playUiFeedbackSound("tap");
+                addNewTab("hub", "", "file:///android_asset/launch_hub.html", false);
+                hideTabGridView();
+            });
+        }
 
         if (btnTabGridFavorite != null) {
             btnTabGridFavorite.setOnClickListener(v -> {
@@ -2349,7 +2376,6 @@ public class MainActivity extends AppCompatActivity {
             });
         }
 
-        // Search Bar Top-Right Undo Button
         if (btnTabGridUndo != null) {
             btnTabGridUndo.setOnClickListener(v -> {
                 playUiFeedbackSound("tap");
@@ -2365,18 +2391,79 @@ public class MainActivity extends AppCompatActivity {
             });
         }
 
-        // Center Yellow Circular '+' Button (Opens Caspian Hub / New Tab page and switches to it)
-        tabGridFabAdd.setOnClickListener(v -> {
-            playUiFeedbackSound("tap");
-            addNewTab("hub", "", "file:///android_asset/launch_hub.html", false);
-            if (tabGridOverlay != null && tabGridFabAdd.getWidth() > 0) {
-                float pX = tabGridFabAdd.getX() + (tabGridFabAdd.getWidth() / 2f);
-                float pY = tabGridFabAdd.getY() + (tabGridFabAdd.getHeight() / 2f);
-                hideTabGridView(pX, pY);
-            } else {
-                hideTabGridView();
+        View.OnTouchListener dialGestureListener = new View.OnTouchListener() {
+            private float startY = 0f;
+            private float startX = 0f;
+            private boolean isDragging = false;
+
+            @Override
+            public boolean onTouch(View v, MotionEvent event) {
+                switch (event.getActionMasked()) {
+                    case MotionEvent.ACTION_DOWN:
+                        startY = event.getRawY();
+                        startX = event.getRawX();
+                        isDragging = false;
+                        return true;
+
+                    case MotionEvent.ACTION_MOVE:
+                        float dy = event.getRawY() - startY;
+                        float dx = event.getRawX() - startX;
+                        if (Math.hypot(dx, dy) > dpToPx(8)) {
+                            isDragging = true;
+                            if (tabGridDialContainer != null) {
+                                tabGridDialContainer.setTranslationY(dy * 0.22f);
+                            }
+                        }
+                        return true;
+
+                    case MotionEvent.ACTION_UP:
+                    case MotionEvent.ACTION_CANCEL:
+                        if (tabGridDialContainer != null) {
+                            tabGridDialContainer.animate().translationY(0f).setDuration(160).start();
+                        }
+                        float totalDy = event.getRawY() - startY;
+                        int threshold = dpToPx(20);
+
+                        if (isDragging && Math.abs(totalDy) > threshold) {
+                            if (totalDy < 0) {
+                                // Swipe UP -> Create New Tab
+                                try { v.performHapticFeedback(HapticFeedbackConstants.KEYBOARD_TAP); } catch (Throwable ignored) {}
+                                playUiFeedbackSound("tap");
+                                addNewTab("hub", "", "file:///android_asset/launch_hub.html", false);
+                                hideTabGridView();
+                                return true;
+                            } else {
+                                // Swipe DOWN -> Exit Tab Switcher
+                                try { v.performHapticFeedback(HapticFeedbackConstants.KEYBOARD_TAP); } catch (Throwable ignored) {}
+                                playUiFeedbackSound("tap");
+                                hideTabGridView();
+                                return true;
+                            }
+                        } else {
+                            // Single tap
+                            float localY = event.getY();
+                            int h = v.getHeight();
+                            try { v.performHapticFeedback(HapticFeedbackConstants.KEYBOARD_TAP); } catch (Throwable ignored) {}
+                            playUiFeedbackSound("tap");
+                            if (v == tabGridDialContainer && localY > h * 0.68f) {
+                                hideTabGridView();
+                            } else {
+                                addNewTab("hub", "", "file:///android_asset/launch_hub.html", false);
+                                hideTabGridView();
+                            }
+                            return true;
+                        }
+                }
+                return false;
             }
-        });
+        };
+
+        if (tabGridDialContainer != null) {
+            tabGridDialContainer.setOnTouchListener(dialGestureListener);
+        }
+        if (tabGridFabAdd != null) {
+            tabGridFabAdd.setOnTouchListener(dialGestureListener);
+        }
 
         // Bottom Dock: "Group" Button
         if (btnTabDockMakeGroup != null) {
@@ -2676,6 +2763,16 @@ public class MainActivity extends AppCompatActivity {
         if (btnTabDockSelect != null) {
             btnTabDockSelect.setTextColor(isLight ? 0xFF334155 : 0xFFDFE2F0);
         }
+        if (tabGridDialContainer != null) {
+            GradientDrawable dialGd = new GradientDrawable();
+            dialGd.setShape(GradientDrawable.OVAL);
+            dialGd.setColor(isLight ? 0xF0FFFFFF : 0xD9161E31);
+            dialGd.setStroke(dpToPx(1.5f), isLight ? 0xFFCBD5E1 : 0x3A00E5FF);
+            tabGridDialContainer.setBackground(dialGd);
+        }
+        if (tabGridDockTabCount != null) {
+            tabGridDockTabCount.setTextColor(0xFF181B25);
+        }
     }
 
     private void promptCreateTabGroup() {
@@ -2764,7 +2861,9 @@ public class MainActivity extends AppCompatActivity {
             layout.addView(row);
         }
 
-        popup.showAsDropDown(anchor, 0, dpToPx(4));
+        layout.measure(View.MeasureSpec.makeMeasureSpec(dpToPx(130), View.MeasureSpec.EXACTLY), View.MeasureSpec.makeMeasureSpec(0, View.MeasureSpec.UNSPECIFIED));
+        int popHeight = layout.getMeasuredHeight();
+        popup.showAsDropDown(anchor, 0, -popHeight - anchor.getHeight() - dpToPx(10));
     }
 
     public void showTabGridView() {
@@ -2777,8 +2876,9 @@ public class MainActivity extends AppCompatActivity {
         loadTabGroups();
         tabGridOverlay.setVisibility(View.VISIBLE);
         tabGridOverlay.bringToFront();
-        if (floatingCaspianCard != null) floatingCaspianCard.bringToFront();
-        tabGridCountBadge.setText(String.valueOf(tabsList.size()));
+        if (floatingCaspianCard != null) floatingCaspianCard.setVisibility(View.GONE);
+        if (tabGridCountBadge != null) tabGridCountBadge.setText(String.valueOf(tabsList.size()));
+        if (tabGridDockTabCount != null) tabGridDockTabCount.setText(String.valueOf(tabsList.size()));
         selectedGridTabIds.clear();
         isGridSelectionMode = false;
         currentGridGroupId = null;
@@ -2856,6 +2956,9 @@ public class MainActivity extends AppCompatActivity {
                         tabGridOverlay.setScaleY(1.0f);
                         tabGridOverlay.setAlpha(1.0f);
                         tabGridOverlay.setTranslationY(0f);
+                        if (floatingCaspianCard != null && customView == null) {
+                            floatingCaspianCard.setVisibility(View.VISIBLE);
+                        }
                         if ("orb".equalsIgnoreCase(omniboxScrollMode)) {
                             transitionToOrbState(currentOrbState, false);
                         }
@@ -2907,6 +3010,8 @@ public class MainActivity extends AppCompatActivity {
     private void renderTabGridCards(String filterQuery) {
         if (tabGridContentLayout == null) return;
         tabGridContentLayout.removeAllViews();
+        if (tabGridDockTabCount != null) tabGridDockTabCount.setText(String.valueOf(tabsList.size()));
+        if (tabGridCountBadge != null) tabGridCountBadge.setText(String.valueOf(tabsList.size()));
 
         int screenWidth = getResources().getDisplayMetrics().widthPixels;
         int totalHorizontalPaddingPx = dpToPx(14 * 2 + 6 * 4);

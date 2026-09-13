@@ -717,116 +717,11 @@
             android:paddingStart="14dp"
             android:paddingEnd="14dp">
 
-            <!-- Top Header Controls Bar (Left: Star Favorite, Center: Count Capsule, Right: Filter Dropdown) -->
-            <RelativeLayout
-                android:id="@+id/tab_grid_header_row"
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:minHeight="48dp"
-                android:paddingTop="2dp"
-                android:paddingBottom="2dp"
-                android:elevation="12dp">
-
-                <!-- Top Left Favorite Star Button -->
-                <TextView
-                    android:id="@+id/btn_tab_grid_favorite"
-                    android:layout_width="40dp"
-                    android:layout_height="40dp"
-                    android:layout_alignParentStart="true"
-                    android:layout_centerVertical="true"
-                    android:gravity="center"
-                    android:text="☆"
-                    android:textColor="#A2A9A9"
-                    android:textSize="24sp"
-                    android:includeFontPadding="false"
-                    android:background="@drawable/bg_liquid_glass_pill"
-                    android:clickable="true"
-                    android:focusable="true"
-                    android:elevation="4dp"
-                    android:contentDescription="Favorite Active Tab" />
-
-                <!-- Center Capsule (Touch isolated, Fix 8) -->
-                <LinearLayout
-                    android:id="@+id/tab_grid_header_capsule"
-                    android:layout_width="wrap_content"
-                    android:layout_height="44dp"
-                    android:layout_centerInParent="true"
-                    android:background="@drawable/bg_liquid_glass"
-                    android:orientation="horizontal"
-                    android:gravity="center_vertical"
-                    android:paddingStart="14dp"
-                    android:paddingEnd="14dp"
-                    android:clickable="true"
-                    android:focusable="true"
-                    android:elevation="4dp">
-
-                    <TextView
-                        android:id="@+id/tab_grid_count_badge"
-                        android:layout_width="wrap_content"
-                        android:layout_height="wrap_content"
-                        android:paddingStart="8dp"
-                        android:paddingEnd="8dp"
-                        android:paddingTop="2dp"
-                        android:paddingBottom="2dp"
-                        android:background="@drawable/bg_liquid_glass_pill"
-                        android:text="1"
-                        android:textColor="#00E5FF"
-                        android:textSize="12sp"
-                        android:textStyle="bold" />
-
-                    <ImageButton
-                        android:id="@+id/tab_grid_close_view_btn"
-                        android:layout_width="32dp"
-                        android:layout_height="32dp"
-                        android:layout_marginStart="14dp"
-                        android:background="?attr/selectableItemBackgroundBorderless"
-                        android:src="@drawable/ic_pod_close"
-                        android:tint="#A2A9A9"
-                        android:padding="4dp"
-                        android:contentDescription="Close Tab Grid" />
-                </LinearLayout>
-
-                <!-- Top Right Filter Dropdown Button -->
-                <LinearLayout
-                    android:id="@+id/btn_tab_grid_filter"
-                    android:layout_width="wrap_content"
-                    android:layout_height="40dp"
-                    android:layout_alignParentEnd="true"
-                    android:layout_centerVertical="true"
-                    android:background="@drawable/bg_liquid_glass_pill"
-                    android:orientation="horizontal"
-                    android:gravity="center_vertical"
-                    android:paddingStart="12dp"
-                    android:paddingEnd="10dp"
-                    android:clickable="true"
-                    android:focusable="true"
-                    android:elevation="4dp"
-                    android:contentDescription="Filter Tabs">
-
-                    <TextView
-                        android:id="@+id/tab_grid_filter_label"
-                        android:layout_width="wrap_content"
-                        android:layout_height="wrap_content"
-                        android:text="All"
-                        android:textColor="#DFE2F0"
-                        android:textSize="11.5sp"
-                        android:textStyle="bold" />
-
-                    <TextView
-                        android:layout_width="wrap_content"
-                        android:layout_height="wrap_content"
-                        android:layout_marginStart="4dp"
-                        android:text="▾"
-                        android:textColor="#A2A9A9"
-                        android:textSize="11sp" />
-                </LinearLayout>
-            </RelativeLayout>
-
-            <!-- Search Bar + Floating Multi-Select Actions (Overlayed on Right Side of Search Bar) -->
+            <!-- Search Bar + Floating Multi-Select Actions (Pushed to Top) -->
             <FrameLayout
                 android:layout_width="match_parent"
                 android:layout_height="42dp"
-                android:layout_marginTop="12dp">
+                android:layout_marginTop="2dp">
 
                 <LinearLayout
                     android:id="@+id/tab_grid_search_box"
@@ -1089,22 +984,67 @@
             </ScrollView>
         </LinearLayout>
 
-        <!-- Bottom Tab Dock Capsule (Image 2: Group | (+) | Select) -->
+        <!-- Bottom Tab Dock Capsule (Filter | Group | Dial Ring (+ / Count / x) | Select | Star) -->
         <LinearLayout
             android:id="@+id/tab_grid_bottom_dock"
             android:layout_width="wrap_content"
-            android:layout_height="52dp"
+            android:layout_height="56dp"
             android:layout_gravity="bottom|center_horizontal"
-            android:layout_marginBottom="24dp"
+            android:layout_marginBottom="22dp"
             android:background="@drawable/bg_liquid_glass"
             android:orientation="horizontal"
             android:gravity="center_vertical"
-            android:paddingStart="16dp"
-            android:paddingEnd="16dp"
+            android:clipChildren="false"
+            android:clipToPadding="false"
+            android:paddingStart="8dp"
+            android:paddingEnd="8dp"
             android:elevation="65dp"
             android:clickable="true"
             android:focusable="true">
 
+            <!-- 1. Bottom Left Filter Dropdown Button -->
+            <LinearLayout
+                android:id="@+id/btn_tab_grid_filter"
+                android:layout_width="wrap_content"
+                android:layout_height="38dp"
+                android:layout_marginStart="4dp"
+                android:layout_marginEnd="6dp"
+                android:background="@drawable/bg_liquid_glass_pill"
+                android:orientation="horizontal"
+                android:gravity="center_vertical"
+                android:paddingStart="10dp"
+                android:paddingEnd="10dp"
+                android:clickable="true"
+                android:focusable="true"
+                android:elevation="4dp"
+                android:contentDescription="Filter Tabs">
+
+                <ImageView
+                    android:layout_width="14dp"
+                    android:layout_height="14dp"
+                    android:src="@drawable/ic_tab_filter"
+                    android:tint="#DFE2F0" />
+
+                <TextView
+                    android:id="@+id/tab_grid_filter_label"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:layout_marginStart="5dp"
+                    android:text="All"
+                    android:textColor="#DFE2F0"
+                    android:textSize="11.5sp"
+                    android:textStyle="bold" />
+
+                <TextView
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:layout_marginStart="3dp"
+                    android:text="▴"
+                    android:textColor="#A2A9A9"
+                    android:textSize="10sp" />
+            </LinearLayout>
+
+            <!-- 2. Group Button -->
             <TextView
                 android:id="@+id/btn_tab_dock_make_group"
                 android:layout_width="wrap_content"
@@ -1112,34 +1052,87 @@
                 android:gravity="center"
                 android:text="Group"
                 android:textColor="#DFE2F0"
-                android:textSize="13.5sp"
+                android:textSize="13sp"
                 android:textStyle="bold"
-                android:paddingStart="16dp"
-                android:paddingEnd="16dp"
+                android:paddingStart="10dp"
+                android:paddingEnd="10dp"
                 android:clickable="true"
                 android:focusable="true" />
 
-            <!-- Center Warm Yellow Circular '+' Button (Image 2) -->
+            <!-- 3. Center Dial with Ring (+ upper half, x lower half, count in yellow circle center) -->
             <FrameLayout
-                android:id="@+id/tab_grid_fab_add"
-                android:layout_width="42dp"
-                android:layout_height="42dp"
-                android:layout_marginStart="4dp"
-                android:layout_marginEnd="4dp"
-                android:background="@drawable/bg_dock_yellow_circle"
+                android:id="@+id/tab_grid_dial_container"
+                android:layout_width="66dp"
+                android:layout_height="66dp"
+                android:layout_marginStart="6dp"
+                android:layout_marginEnd="6dp"
+                android:background="@drawable/bg_tab_dial_ring"
                 android:clickable="true"
                 android:focusable="true">
 
-                <TextView
+                <!-- Upper Half: Plus (+) Button -->
+                <FrameLayout
+                    android:id="@+id/tab_grid_dial_plus"
                     android:layout_width="match_parent"
-                    android:layout_height="match_parent"
-                    android:gravity="center"
-                    android:text="+"
-                    android:textColor="#181B25"
-                    android:textSize="24sp"
-                    android:textStyle="bold" />
+                    android:layout_height="22dp"
+                    android:layout_gravity="top|center_horizontal"
+                    android:background="?attr/selectableItemBackgroundBorderless"
+                    android:clickable="true"
+                    android:focusable="true">
+
+                    <ImageView
+                        android:id="@+id/tab_grid_dial_plus_icon"
+                        android:layout_width="14dp"
+                        android:layout_height="14dp"
+                        android:layout_gravity="center"
+                        android:src="@drawable/ic_arena_plus"
+                        android:tint="#00E5FF"
+                        android:contentDescription="New Tab" />
+                </FrameLayout>
+
+                <!-- Center Warm Yellow Circular Button with Tab Count -->
+                <FrameLayout
+                    android:id="@+id/tab_grid_fab_add"
+                    android:layout_width="38dp"
+                    android:layout_height="38dp"
+                    android:layout_gravity="center"
+                    android:background="@drawable/bg_dock_yellow_circle"
+                    android:clickable="true"
+                    android:focusable="true">
+
+                    <TextView
+                        android:id="@+id/tab_grid_dock_tab_count"
+                        android:layout_width="match_parent"
+                        android:layout_height="match_parent"
+                        android:gravity="center"
+                        android:text="1"
+                        android:textColor="#181B25"
+                        android:textSize="16sp"
+                        android:textStyle="bold" />
+                </FrameLayout>
+
+                <!-- Lower Half: Cross (✕) Close Button -->
+                <FrameLayout
+                    android:id="@+id/tab_grid_dial_close"
+                    android:layout_width="match_parent"
+                    android:layout_height="22dp"
+                    android:layout_gravity="bottom|center_horizontal"
+                    android:background="?attr/selectableItemBackgroundBorderless"
+                    android:clickable="true"
+                    android:focusable="true">
+
+                    <ImageView
+                        android:id="@+id/tab_grid_dial_close_icon"
+                        android:layout_width="13dp"
+                        android:layout_height="13dp"
+                        android:layout_gravity="center"
+                        android:src="@drawable/ic_pod_close"
+                        android:tint="#EF4444"
+                        android:contentDescription="Close Tab Grid" />
+                </FrameLayout>
             </FrameLayout>
 
+            <!-- 4. Select Button -->
             <TextView
                 android:id="@+id/btn_tab_dock_select"
                 android:layout_width="wrap_content"
@@ -1149,10 +1142,28 @@
                 android:textColor="#DFE2F0"
                 android:textSize="13sp"
                 android:textStyle="bold"
-                android:paddingStart="16dp"
-                android:paddingEnd="12dp"
+                android:paddingStart="10dp"
+                android:paddingEnd="10dp"
                 android:clickable="true"
                 android:focusable="true" />
+
+            <!-- 5. Bottom Right Favorite Star Button -->
+            <TextView
+                android:id="@+id/btn_tab_grid_favorite"
+                android:layout_width="38dp"
+                android:layout_height="38dp"
+                android:layout_marginStart="6dp"
+                android:layout_marginEnd="4dp"
+                android:gravity="center"
+                android:text="☆"
+                android:textColor="#A2A9A9"
+                android:textSize="22sp"
+                android:includeFontPadding="false"
+                android:background="@drawable/bg_liquid_glass_pill"
+                android:clickable="true"
+                android:focusable="true"
+                android:elevation="4dp"
+                android:contentDescription="Favorite Active Tab" />
         </LinearLayout>
 
         <!-- Beautiful Card-Based New Platform Tab Selector Modal with Vector Icons (Image 1 Fix) -->
