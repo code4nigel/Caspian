@@ -392,7 +392,7 @@ public class MainActivity extends AppCompatActivity {
     private LinearLayout tabGridContentLayout;
     private GridLayout tabGridContainer;
     private ScrollView tabGridCardsScroll;
-    private HorizontalScrollView tabRecentsScroll;
+    private RecentsHorizontalScrollView tabRecentsScroll;
     private LinearLayout tabRecentsContainer;
     private LinearLayout tabGridBottomDock;
     private FrameLayout btnTabDockNewTab;
@@ -3558,67 +3558,13 @@ public class MainActivity extends AppCompatActivity {
         tabGridContentLayout.addView(grid);
     }
 
-    private final Handler recentsSnapHandler = new Handler(Looper.getMainLooper());
-    private int recentsLastScrollX = -1;
-    private final Runnable recentsSnapRunnable = new Runnable() {
-        @Override
-        public void run() {
-            if (tabRecentsScroll == null || tabRecentsContainer == null) return;
-            int currentX = tabRecentsScroll.getScrollX();
-            if (currentX == recentsLastScrollX) {
-                snapToNearestRecentsCard();
-            } else {
-                recentsLastScrollX = currentX;
-                recentsSnapHandler.postDelayed(this, 50);
-            }
-        }
-    };
-
     private void setupRecentsScrollSnapping() {
-        if (tabRecentsScroll == null) return;
-        tabRecentsScroll.setOnTouchListener((v, event) -> {
-            switch (event.getAction()) {
-                case MotionEvent.ACTION_UP:
-                case MotionEvent.ACTION_CANCEL:
-                    recentsLastScrollX = tabRecentsScroll.getScrollX();
-                    recentsSnapHandler.removeCallbacks(recentsSnapRunnable);
-                    recentsSnapHandler.postDelayed(recentsSnapRunnable, 60);
-                    break;
-            }
-            return false;
-        });
+        // Snapping and fast 1-card fling physics are natively handled by RecentsHorizontalScrollView
     }
 
     private void snapToNearestRecentsCard() {
-        if (tabRecentsScroll == null || tabRecentsContainer == null) return;
-        int childCount = tabRecentsContainer.getChildCount();
-        if (childCount == 0) return;
-
-        int scrollX = tabRecentsScroll.getScrollX();
-        int viewportW = tabRecentsScroll.getWidth();
-        if (viewportW <= 0) return;
-        int targetCenter = scrollX + (viewportW / 2);
-
-        View closestChild = null;
-        int minDistance = Integer.MAX_VALUE;
-
-        for (int i = 0; i < childCount; i++) {
-            View child = tabRecentsContainer.getChildAt(i);
-            if (child == null || child.getVisibility() != View.VISIBLE) continue;
-            int childCenter = child.getLeft() + (child.getWidth() / 2);
-            int dist = Math.abs(childCenter - targetCenter);
-            if (dist < minDistance) {
-                minDistance = dist;
-                closestChild = child;
-            }
-        }
-
-        if (closestChild != null) {
-            int targetScrollX = closestChild.getLeft() - ((viewportW - closestChild.getWidth()) / 2);
-            targetScrollX = Math.max(0, targetScrollX);
-            if (Math.abs(scrollX - targetScrollX) > dpToPx(3)) {
-                tabRecentsScroll.smoothScrollTo(targetScrollX, 0);
-            }
+        if (tabRecentsScroll != null) {
+            tabRecentsScroll.snapToNearestCard();
         }
     }
 
@@ -3885,7 +3831,7 @@ public class MainActivity extends AppCompatActivity {
             final View targetCard = cardToCenter;
             tabRecentsScroll.post(() -> {
                 int targetX = targetCard.getLeft() - (screenWidth - cardWidth) / 2;
-                tabRecentsScroll.smoothScrollTo(Math.max(0, targetX), 0);
+                tabRecentsScroll.animateScrollTo(Math.max(0, targetX));
             });
         }
 
@@ -4235,7 +4181,7 @@ public class MainActivity extends AppCompatActivity {
                             longPressHandler.removeCallbacks(longPressRunnable);
                         }
                         if (!isDraggingOrLongPressed[0]) {
-                            if (dy < -dpToPx(12) && Math.abs(dy) > Math.abs(dx) * 1.4f) {
+                            if (dy < -dpToPx(8) && Math.abs(dy) > Math.abs(dx) * 0.85f) {
                                 isDraggingUp = true;
                                 if (card.getParent() != null) card.getParent().requestDisallowInterceptTouchEvent(true);
                                 card.setTranslationY(dy);
@@ -4258,7 +4204,7 @@ public class MainActivity extends AppCompatActivity {
                         if (isDraggingUp) {
                             float currentDy = card.getTranslationY();
                             int screenH = getResources().getDisplayMetrics().heightPixels;
-                            if (currentDy < -dpToPx(85)) {
+                            if (currentDy < -dpToPx(65)) {
                                 try { v.performHapticFeedback(HapticFeedbackConstants.KEYBOARD_TAP); } catch (Throwable ignored) {}
                                 playUiFeedbackSound("tap");
                                 card.animate()
@@ -4266,7 +4212,7 @@ public class MainActivity extends AppCompatActivity {
                                     .alpha(0f)
                                     .scaleX(0.7f)
                                     .scaleY(0.7f)
-                                    .setDuration(200)
+                                    .setDuration(160)
                                     .withEndAction(() -> {
                                         int closedIdx = -1;
                                         for (int i = 0; i < tabsList.size(); i++) {
@@ -5058,7 +5004,7 @@ public class MainActivity extends AppCompatActivity {
                     case MotionEvent.ACTION_MOVE:
                         float dy = event.getRawY() - startY;
                         float dx = event.getRawX() - startX;
-                        if (dy < -dpToPx(12) && Math.abs(dy) > Math.abs(dx) * 1.5f) {
+                        if (dy < -dpToPx(8) && Math.abs(dy) > Math.abs(dx) * 0.85f) {
                             isDraggingUp = true;
                             if (card.getParent() != null) card.getParent().requestDisallowInterceptTouchEvent(true);
                             card.setTranslationY(dy);
@@ -5076,7 +5022,7 @@ public class MainActivity extends AppCompatActivity {
                         if (isDraggingUp) {
                             float currentDy = card.getTranslationY();
                             int screenH = getResources().getDisplayMetrics().heightPixels;
-                            if (currentDy < -dpToPx(85)) {
+                            if (currentDy < -dpToPx(65)) {
                                 try { v.performHapticFeedback(HapticFeedbackConstants.KEYBOARD_TAP); } catch (Throwable ignored) {}
                                 playUiFeedbackSound("tap");
                                 card.animate()
@@ -5084,7 +5030,7 @@ public class MainActivity extends AppCompatActivity {
                                     .alpha(0f)
                                     .scaleX(0.7f)
                                     .scaleY(0.7f)
-                                    .setDuration(200)
+                                    .setDuration(160)
                                     .withEndAction(performSplitClose)
                                     .start();
                             } else {
@@ -18858,11 +18804,11 @@ public class MainActivity extends AppCompatActivity {
             caspianPillHost.setTextColor(isDark ? 0xFFFFFFFF : 0xFF0F172A);
         }
         int accentTint = isDark ? 0xFF00E5FF : 0xFF0284C7;
-        int iconTint = isDark ? 0xFF94A3B8 : 0xFF475569;
+        int iconTint = isDark ? 0xFFCBD5E1 : 0xFF475569;
         boolean isApplePie = isApplePieMode();
         if (caspianPillBtnNewTab != null) {
             caspianPillBtnNewTab.setVisibility(isApplePie ? View.VISIBLE : View.GONE);
-            caspianPillBtnNewTab.setColorFilter(accentTint);
+            caspianPillBtnNewTab.setColorFilter(iconTint);
         }
         if (caspianPillBtnBack != null) {
             caspianPillBtnBack.setVisibility(isApplePie ? View.GONE : View.VISIBLE);
@@ -18872,21 +18818,21 @@ public class MainActivity extends AppCompatActivity {
             caspianPillBtnMenu.setColorFilter(iconTint);
         }
         if (caspianPillBtnCollapse != null) {
-            caspianPillBtnCollapse.setColorFilter(accentTint);
+            caspianPillBtnCollapse.setColorFilter(iconTint);
         }
         if (caspianPillLock != null) {
             caspianPillLock.setVisibility(isApplePie ? View.GONE : View.VISIBLE);
-            caspianPillLock.setColorFilter(isDark ? 0xFF38BDF8 : 0xFF0284C7);
+            caspianPillLock.setColorFilter(iconTint);
         }
         if (caspianPillTabCount != null) {
-            caspianPillTabCount.setTextColor(accentTint);
+            caspianPillTabCount.setTextColor(isDark ? 0xFFDFE2F0 : 0xFF0F172A);
         }
         if (caspianPillTabBtn != null) {
             GradientDrawable tabBadgeBg = new GradientDrawable();
             tabBadgeBg.setShape(GradientDrawable.RECTANGLE);
             tabBadgeBg.setCornerRadius(dpToPx(7));
-            tabBadgeBg.setColor(isDark ? 0x3300E5FF : 0x220284C7);
-            tabBadgeBg.setStroke(dpToPx(1.2f), accentTint);
+            tabBadgeBg.setColor(isDark ? 0x22FFFFFF : 0x1A000000);
+            tabBadgeBg.setStroke(dpToPx(1.2f), isDark ? 0x38FFFFFF : 0x22000000);
             caspianPillTabBtn.setBackground(tabBadgeBg);
         }
         updateEdgeHandleOrientation(true);
