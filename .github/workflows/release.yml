@@ -5,7 +5,8 @@ on:
     branches:
       - main
     tags:
-      - '*'
+      - 'v*'
+      - 'Caspian-*'
   workflow_dispatch:
 
 permissions:
@@ -13,7 +14,7 @@ permissions:
 
 concurrency:
   group: release-pipeline
-  cancel-in-progress: false
+  cancel-in-progress: true
 
 jobs:
   publish-releases:
@@ -31,7 +32,7 @@ jobs:
           
           # Dynamically detect Caspian Extension version from manifest.json
           if [ -d "Caspian" ]; then
-            EXT_VER=$(node -p "try { require('./Caspian/manifest.json').version } catch(e) { '6.1.5' }")
+            EXT_VER=$(node -p "try { require('./Caspian/manifest.json').version } catch(e) { '6.3.0' }")
             echo "Packaging Caspian Extension v${EXT_VER}..."
             cd Caspian
             zip -r "../versions/Caspian-Extension-v${EXT_VER}.zip" ./* -x "*.git*"
@@ -49,285 +50,177 @@ jobs:
             cp -f betaC/versions/*.apk versions/ 2>/dev/null || true
           fi
 
-      - name: Publish Unified & Individual Releases via GitHub API
-        uses: actions/github-script@v7
-        with:
-          github-token: ${{ secrets.GITHUB_TOKEN }}
-          script: |
-            const fs = require('fs');
-            const path = require('path');
+      - name: Publish Unified & Individual Releases via GitHub CLI
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          set -euo pipefail
 
-            const { owner, repo } = context.repo;
+          # Dynamically detect Flow version from betaC/app/build.gradle.kts
+          FLOW_VER=$(grep 'versionName' betaC/app/build.gradle.kts | head -n1 | sed -E 's/.*"([^"]+)".*/\1/')
+          EXT_VER=$(node -p "try { require('./Caspian/manifest.json').version } catch(e) { '6.3.0' }")
+          echo "Detected Flow Version: v${FLOW_VER}, Extension Version: v${EXT_VER}"
 
-            // Dynamically read extension version from Caspian/manifest.json
-            let extVersion = '6.1.5';
-            try {
-              if (fs.existsSync('Caspian/manifest.json')) {
-                const manifest = JSON.parse(fs.readFileSync('Caspian/manifest.json', 'utf8'));
-                if (manifest.version) extVersion = manifest.version;
-              }
-            } catch (err) {
-              console.log('Error reading manifest.json:', err);
-            }
+          COMMIT_MSG=$(git log -1 --pretty=%B || echo "Automated release")
 
-            // Dynamically read Flow (Beta C) version from betaC/app/build.gradle.kts
-            let flowVersion = '1.1.41-BetaC';
-            try {
-              if (fs.existsSync('betaC/app/build.gradle.kts')) {
-                const gradleContent = fs.readFileSync('betaC/app/build.gradle.kts', 'utf8');
-                const match = gradleContent.match(/versionName\s*=\s*"([^"]+)"/);
-                if (match && match[1]) flowVersion = match[1];
-              }
-            } catch (err) {
-              console.log('Error reading build.gradle.kts:', err);
-            }
-            console.log(`Detected Flow Version: v${flowVersion}, Extension Version: v${extVersion}`);
+          # 1. Publish Caspian Flow (Beta C)
+          FLOW_TAG="Caspian-Flow-v${FLOW_VER}"
+          FLOW_TITLE="[Beta C] Caspian Flow v${FLOW_VER}"
+          FLOW_ASSET="versions/Caspian-Flow-v${FLOW_VER}.apk"
+          FLOW_NOTES="### 📱 Caspian Flow (Beta C)
 
-            // Helper to recursively find release assets
-            function getAssets(dir) {
-              let results = [];
-              if (!fs.existsSync(dir)) return results;
-              const list = fs.readdirSync(dir);
-              for (const file of list) {
-                const fullPath = path.join(dir, file);
-                const stat = fs.statSync(fullPath);
-                if (stat && stat.isDirectory()) {
-                  results = results.concat(getAssets(fullPath));
-                } else if (file.endsWith('.apk') || file.endsWith('.zip')) {
-                  results.push({ name: file, path: fullPath });
-                }
-              }
-              return results;
-            }
+${COMMIT_MSG}
 
-            const allAssets = getAssets('versions').concat(getAssets('betaC/versions'));
-            console.log(`Found ${allAssets.length} total release assets.`);
+- **Version Tag**: \`${FLOW_TAG}\`
+- **Artifact**: \`Caspian-Flow-v${FLOW_VER}.apk\`
 
-            // Define the 5 primary platforms and their latest files
-            const platformConfigs = [
-              {
-                id: 'flow',
-                productName: 'Caspian Flow (Beta C)',
-                tag: `Caspian-Flow-v${flowVersion}`,
-                title: `[Beta C] Caspian Flow v${flowVersion}`,
-                assetPattern: `Caspian-Flow-v${flowVersion}.apk`,
-                isPrerelease: true,
-                desc: 'Features true Multi-Profile isolated container vaults: tabs running in different casks stay logged in simultaneously without session/cookie conflicts, 1-tap Hub navigation from the header cask pill, and fixed Settings Cask modal.'
-              },
-              {
-                id: 'mobile',
-                productName: 'Caspian Mobile',
-                tag: 'Caspian-Mobile-v1.2.40',
-                title: '[Mobile] Caspian Mobile v1.2.40',
-                assetPattern: 'Caspian-Mobile-v1.2.40.apk',
-                isPrerelease: false,
-                desc: 'Official stable Android mobile application for ChatGPT, Gemini, YouTube and Web pruning.'
-              },
-              {
-                id: 'betaA',
-                productName: 'Caspian Beta A',
-                tag: 'Caspian-Beta-A-v1.2.48',
-                title: '[Beta A] Caspian Beta A v1.2.48',
-                assetPattern: 'Caspian-Beta-A-v1.2.48.apk',
-                isPrerelease: true,
-                desc: 'Experimental build featuring rich Gemini HTML formatter, custom SFX mapping and full-height launch.'
-              },
-              {
-                id: 'betaB',
-                productName: 'Caspian Beta B',
-                tag: 'Caspian-Beta-B-v1.0.5',
-                title: '[Beta B] Caspian Beta B v1.0.5',
-                assetPattern: 'Caspian-Beta-B-v1.0.5.apk',
-                isPrerelease: true,
-                desc: 'Compact lightweight build for rapid AI browsing and split window testing.'
-              },
-              {
-                id: 'extension',
-                productName: 'Caspian Extension',
-                tag: `Caspian-Extension-v${extVersion}`,
-                title: `[Extension] Caspian Extension v${extVersion}`,
-                assetPattern: `Caspian-Extension-v${extVersion}.zip`,
-                isPrerelease: false,
-                desc: 'Official Chromium Desktop Browser Extension for ChatGPT/Gemini DOM optimization, universal Flow Speed playback controller, YouTube feed limits & multi-format document exporter.'
-              }
-            ];
+Download the asset below to install or use."
 
-            async function uploadAsset(release, assetItem) {
-              const fileData = fs.readFileSync(assetItem.path);
-              const assetName = assetItem.name;
-              const contentType = assetName.endsWith('.apk') 
-                ? 'application/vnd.android.package-archive' 
-                : 'application/zip';
+          if [ -f "$FLOW_ASSET" ]; then
+            echo "Publishing ${FLOW_TITLE}..."
+            if gh release view "$FLOW_TAG" >/dev/null 2>&1; then
+              gh release edit "$FLOW_TAG" --title "$FLOW_TITLE" --notes "$FLOW_NOTES" --prerelease
+            else
+              gh release create "$FLOW_TAG" --title "$FLOW_TITLE" --notes "$FLOW_NOTES" --prerelease
+            fi
+            gh release upload "$FLOW_TAG" "$FLOW_ASSET" --clobber
+            echo "✓ Completed ${FLOW_TITLE}"
+          else
+            echo "Warning: ${FLOW_ASSET} not found!"
+          fi
 
-              // Remove existing asset with same name if already uploaded
-              if (release.assets && release.assets.length > 0) {
-                const existing = release.assets.find(a => a.name === assetName);
-                if (existing) {
-                  console.log(`  - Deleting existing asset ${assetName} (id: ${existing.id})...`);
-                  try {
-                    await github.rest.repos.deleteReleaseAsset({ owner, repo, asset_id: existing.id });
-                    await new Promise(r => setTimeout(r, 2000));
-                  } catch (delErr) {
-                    console.log(`  - Note: asset deletion error (${delErr.message}), proceeding...`);
-                  }
-                }
-              }
+          # 2. Publish Caspian Mobile
+          MOBILE_TAG="Caspian-Mobile-v1.2.40"
+          MOBILE_TITLE="[Mobile] Caspian Mobile v1.2.40"
+          MOBILE_ASSET="versions/Caspian-Mobile-v1.2.40.apk"
+          MOBILE_NOTES="### 📱 Caspian Mobile
 
-              console.log(`  - Uploading ${assetName} (${(fileData.length / 1024 / 1024).toFixed(2)} MB)...`);
-              for (let attempt = 1; attempt <= 3; attempt++) {
-                try {
-                  await github.rest.repos.uploadReleaseAsset({
-                    owner,
-                    repo,
-                    release_id: release.id,
-                    name: assetName,
-                    data: fileData,
-                    headers: {
-                      'content-type': contentType,
-                      'content-length': fileData.length
-                    }
-                  });
-                  break;
-                } catch (uploadErr) {
-                  console.log(`  - Upload attempt ${attempt} failed: ${uploadErr.message}`);
-                  if (attempt < 3) {
-                    await new Promise(r => setTimeout(r, 3000));
-                  } else {
-                    console.log(`  - Warning: asset upload for ${assetName} failed after 3 attempts.`);
-                  }
-                }
-              }
-            }
+Official stable Android mobile application for ChatGPT, Gemini, YouTube and Web pruning.
 
-            const matchedLatestFiles = [];
+- **Version Tag**: \`${MOBILE_TAG}\`
+- **Artifact**: \`Caspian-Mobile-v1.2.40.apk\`"
 
-            // 1. Publish Individual Standalone Releases
-            for (const config of platformConfigs) {
-              const matched = allAssets.find(a => 
-                a.name === config.assetPattern || 
-                a.name.includes(config.tag) ||
-                (config.id === 'flow' && (a.name.toLowerCase().includes('flow') || a.name.toLowerCase().includes('betac')) && a.name.includes(flowVersion))
-              );
-              if (!matched) {
-                console.log(`Warning: Could not find asset matching ${config.assetPattern}`);
-                continue;
-              }
+          if [ -f "$MOBILE_ASSET" ]; then
+            echo "Publishing ${MOBILE_TITLE}..."
+            if gh release view "$MOBILE_TAG" >/dev/null 2>&1; then
+              gh release edit "$MOBILE_TAG" --title "$MOBILE_TITLE" --notes "$MOBILE_NOTES"
+            else
+              gh release create "$MOBILE_TAG" --title "$MOBILE_TITLE" --notes "$MOBILE_NOTES"
+            fi
+            gh release upload "$MOBILE_TAG" "$MOBILE_ASSET" --clobber
+            echo "✓ Completed ${MOBILE_TITLE}"
+          fi
 
-              // Extract the latest commit message to use as the dynamic changelog
-              let commitMessage = '';
-              try {
-                const { execSync } = require('child_process');
-                commitMessage = execSync('git log -1 --pretty=%B').toString().trim();
-              } catch (e) {
-                console.log('Error reading commit message:', e);
-              }
+          # 3. Publish Caspian Beta A
+          BETA_A_TAG="Caspian-Beta-A-v1.2.48"
+          BETA_A_TITLE="[Beta A] Caspian Beta A v1.2.48"
+          BETA_A_ASSET="versions/Caspian-Beta-A-v1.2.48.apk"
+          BETA_A_NOTES="### 📱 Caspian Beta A
 
-              const releaseNotes = (config.id === 'flow' && commitMessage) ? commitMessage : config.desc;
-              const releaseBody = `### 📱 ${config.productName}\n\n${releaseNotes}\n\n- **Version Tag**: \`${config.tag}\`\n- **Artifact**: \`${matched.name}\`\n\nDownload the asset below to install or use.`;
+Experimental build featuring rich Gemini HTML formatter, custom SFX mapping and full-height launch.
 
-              matchedLatestFiles.push({ config, asset: matched });
-              console.log(`\n========================================`);
-              console.log(`Publishing: ${config.title}`);
+- **Version Tag**: \`${BETA_A_TAG}\`
+- **Artifact**: \`Caspian-Beta-A-v1.2.48.apk\`"
 
-              let release;
-              try {
-                const res = await github.rest.repos.getReleaseByTag({ owner, repo, tag: config.tag });
-                release = res.data;
-                console.log(`Existing release found (id: ${release.id}). Updating title/body...`);
-                await github.rest.repos.updateRelease({
-                  owner,
-                  repo,
-                  release_id: release.id,
-                  name: config.title,
-                  body: releaseBody,
-                  prerelease: config.isPrerelease,
-                  make_latest: "false"
-                });
-              } catch (e) {
-                console.log(`Creating new release for ${config.tag}...`);
-                const res = await github.rest.repos.createRelease({
-                  owner,
-                  repo,
-                  tag_name: config.tag,
-                  name: config.title,
-                  body: releaseBody,
-                  draft: false,
-                  prerelease: config.isPrerelease,
-                  make_latest: "false"
-                });
-                release = res.data;
-              }
+          if [ -f "$BETA_A_ASSET" ]; then
+            echo "Publishing ${BETA_A_TITLE}..."
+            if gh release view "$BETA_A_TAG" >/dev/null 2>&1; then
+              gh release edit "$BETA_A_TAG" --title "$BETA_A_TITLE" --notes "$BETA_A_NOTES" --prerelease
+            else
+              gh release create "$BETA_A_TAG" --title "$BETA_A_TITLE" --notes "$BETA_A_NOTES" --prerelease
+            fi
+            gh release upload "$BETA_A_TAG" "$BETA_A_ASSET" --clobber
+            echo "✓ Completed ${BETA_A_TITLE}"
+          fi
 
-              await uploadAsset(release, matched);
-              console.log(`✓ Completed release for ${config.title}`);
-            }
+          # 4. Publish Caspian Beta B
+          BETA_B_TAG="Caspian-Beta-B-v1.0.5"
+          BETA_B_TITLE="[Beta B] Caspian Beta B v1.0.5"
+          BETA_B_ASSET="versions/Caspian-Beta-B-v1.0.5.apk"
+          BETA_B_NOTES="### 📱 Caspian Beta B
 
-            // 2. Publish Unified "🌟 Caspian Multi-Platform Suite (Latest)" with the "Latest" badge
-            console.log(`\n========================================`);
-            console.log(`Publishing Unified Latest Suite Release...`);
+Compact lightweight build for rapid AI browsing and split window testing.
 
-            const latestTag = 'Caspian-Latest-Suite';
-            let suiteBody = `## 🌟 Caspian Multi-Platform Suite (Latest Releases)\n\n`;
-            suiteBody += `This release bundles the **latest official builds** for all Caspian applications across Android and Desktop.\n\n`;
-            suiteBody += `| Application | Latest Version | Platform | Asset Download |\n`;
-            suiteBody += `| :--- | :--- | :--- | :--- |\n`;
+- **Version Tag**: \`${BETA_B_TAG}\`
+- **Artifact**: \`Caspian-Beta-B-v1.0.5.apk\`"
 
-            for (const item of matchedLatestFiles) {
-              const platformType = item.asset.name.endsWith('.apk') ? 'Android APK' : 'Chromium Extension ZIP';
-              suiteBody += `| **${item.config.productName}** | \`${item.config.tag}\` | ${platformType} | \`${item.asset.name}\` |\n`;
-            }
+          if [ -f "$BETA_B_ASSET" ]; then
+            echo "Publishing ${BETA_B_TITLE}..."
+            if gh release view "$BETA_B_TAG" >/dev/null 2>&1; then
+              gh release edit "$BETA_B_TAG" --title "$BETA_B_TITLE" --notes "$BETA_B_NOTES" --prerelease
+            else
+              gh release create "$BETA_B_TAG" --title "$BETA_B_TITLE" --notes "$BETA_B_NOTES" --prerelease
+            fi
+            gh release upload "$BETA_B_TAG" "$BETA_B_ASSET" --clobber
+            echo "✓ Completed ${BETA_B_TITLE}"
+          fi
 
-            suiteBody += `\n### 📦 Direct Downloads\n`;
-            suiteBody += `Click on any of the attached assets below to download the latest build for your platform.\n`;
+          # 5. Publish Caspian Extension
+          EXT_TAG="Caspian-Extension-v${EXT_VER}"
+          EXT_TITLE="[Extension] Caspian Extension v${EXT_VER}"
+          EXT_ASSET="versions/Caspian-Extension-v${EXT_VER}.zip"
+          EXT_NOTES="### 🧩 Caspian Extension
 
-            let suiteRelease;
-            try {
-              const res = await github.rest.repos.getReleaseByTag({ owner, repo, tag: latestTag });
-              suiteRelease = res.data;
-              console.log(`Existing Latest Suite release found (id: ${suiteRelease.id}). Updating...`);
-              const updated = await github.rest.repos.updateRelease({
-                owner,
-                repo,
-                release_id: suiteRelease.id,
-                name: '🌟 Caspian Multi-Platform Suite (Latest)',
-                body: suiteBody,
-                prerelease: false,
-                make_latest: "true"
-              });
-              suiteRelease = updated.data;
-            } catch (e) {
-              console.log(`Creating new Latest Suite release...`);
-              const res = await github.rest.repos.createRelease({
-                owner,
-                repo,
-                tag_name: latestTag,
-                name: '🌟 Caspian Multi-Platform Suite (Latest)',
-                body: suiteBody,
-                draft: false,
-                prerelease: false,
-                make_latest: "true"
-              });
-              suiteRelease = res.data;
-            }
+Official Chromium Desktop Browser Extension for ChatGPT/Gemini DOM optimization, universal Flow Speed playback controller, YouTube feed limits & multi-format document exporter.
 
-            // Purge all old/obsolete assets from the Latest Suite release so only the 5 latest files exist
-            if (suiteRelease.assets && suiteRelease.assets.length > 0) {
-              const latestAssetNames = new Set(matchedLatestFiles.map(i => i.asset.name));
-              for (const asset of suiteRelease.assets) {
-                if (!latestAssetNames.has(asset.name)) {
-                  console.log(`Deleting obsolete asset ${asset.name} (id: ${asset.id}) from Latest Suite...`);
-                  try {
-                    await github.rest.repos.deleteReleaseAsset({ owner, repo, asset_id: asset.id });
-                  } catch (err) {
-                    console.log(`Failed to delete asset ${asset.name}:`, err);
-                  }
-                }
-              }
-            }
+- **Version Tag**: \`${EXT_TAG}\`
+- **Artifact**: \`Caspian-Extension-v${EXT_VER}.zip\`"
 
-            // Attach all latest assets to the unified suite release
-            for (const item of matchedLatestFiles) {
-              await uploadAsset(suiteRelease, item.asset);
-            }
+          if [ -f "$EXT_ASSET" ]; then
+            echo "Publishing ${EXT_TITLE}..."
+            if gh release view "$EXT_TAG" >/dev/null 2>&1; then
+              gh release edit "$EXT_TAG" --title "$EXT_TITLE" --notes "$EXT_NOTES"
+            else
+              gh release create "$EXT_TAG" --title "$EXT_TITLE" --notes "$EXT_NOTES"
+            fi
+            gh release upload "$EXT_TAG" "$EXT_ASSET" --clobber
+            echo "✓ Completed ${EXT_TITLE}"
+          fi
 
-            console.log(`\n🎉 Successfully published all releases and unified Latest Suite!`);
+          # 6. Publish Unified "🌟 Caspian Multi-Platform Suite (Latest)"
+          SUITE_TAG="Caspian-Latest-Suite"
+          SUITE_TITLE="🌟 Caspian Multi-Platform Suite (Latest)"
+          SUITE_NOTES="## 🌟 Caspian Multi-Platform Suite (Latest Releases)
+
+This release bundles the **latest official builds** for all Caspian applications across Android and Desktop.
+
+| Application | Latest Version | Platform | Asset Download |
+| :--- | :--- | :--- | :--- |
+| **Caspian Flow (Beta C)** | \`${FLOW_TAG}\` | Android APK | \`Caspian-Flow-v${FLOW_VER}.apk\` |
+| **Caspian Mobile** | \`${MOBILE_TAG}\` | Android APK | \`Caspian-Mobile-v1.2.40.apk\` |
+| **Caspian Beta A** | \`${BETA_A_TAG}\` | Android APK | \`Caspian-Beta-A-v1.2.48.apk\` |
+| **Caspian Beta B** | \`${BETA_B_TAG}\` | Android APK | \`Caspian-Beta-B-v1.0.5.apk\` |
+| **Caspian Extension** | \`${EXT_TAG}\` | Chromium Extension ZIP | \`Caspian-Extension-v${EXT_VER}.zip\` |
+
+### 📦 Direct Downloads
+Click on any of the attached assets below to download the latest build for your platform."
+
+          echo "Publishing ${SUITE_TITLE}..."
+          if gh release view "$SUITE_TAG" >/dev/null 2>&1; then
+            gh release edit "$SUITE_TAG" --title "$SUITE_TITLE" --notes "$SUITE_NOTES" --latest
+          else
+            gh release create "$SUITE_TAG" --title "$SUITE_TITLE" --notes "$SUITE_NOTES" --latest
+          fi
+
+          echo "Uploading all latest assets to Latest Suite..."
+          gh release upload "$SUITE_TAG" \
+            "$FLOW_ASSET" \
+            "$MOBILE_ASSET" \
+            "$BETA_A_ASSET" \
+            "$BETA_B_ASSET" \
+            "$EXT_ASSET" \
+            --clobber
+
+          # Clean up obsolete assets from Latest Suite
+          for old_asset in $(gh release view "$SUITE_TAG" --json assets -q '.assets[].name'); do
+            case "$old_asset" in
+              "Caspian-Flow-v${FLOW_VER}.apk"|"Caspian-Mobile-v1.2.40.apk"|"Caspian-Beta-A-v1.2.48.apk"|"Caspian-Beta-B-v1.0.5.apk"|"Caspian-Extension-v${EXT_VER}.zip")
+                ;;
+              *)
+                echo "Removing obsolete asset from Latest Suite: $old_asset"
+                gh release delete-asset "$SUITE_TAG" "$old_asset" --yes || true
+                ;;
+            esac
+          done
+
+          echo "🎉 Successfully published all releases and unified Latest Suite!"
