@@ -695,7 +695,22 @@ public class MainActivity extends AppCompatActivity {
     private final Map<String, String> assetScriptCache = new ConcurrentHashMap<>();
 
     private static final String DESKTOP_UA = "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/128.0.0.0 Safari/537.36";
-    private static final String MOBILE_UA = "Mozilla/5.0 (Linux; Android 10; K) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/128.0.0.0 Mobile Safari/537.36";
+    private static String MOBILE_UA = null;
+
+    private String getDynamicMobileUserAgent() {
+        if (MOBILE_UA != null && !MOBILE_UA.isEmpty() && !MOBILE_UA.contains("Android 10; K")) {
+            return MOBILE_UA;
+        }
+        try {
+            String defaultUa = WebSettings.getDefaultUserAgent(this);
+            if (defaultUa != null && !defaultUa.trim().isEmpty()) {
+                MOBILE_UA = defaultUa;
+                return MOBILE_UA;
+            }
+        } catch (Throwable ignored) {}
+        MOBILE_UA = "Mozilla/5.0 (Linux; Android " + Build.VERSION.RELEASE + "; " + Build.MODEL + ") AppleWebKit/537.36 (KHTML, like Gecko) Chrome/128.0.0.0 Mobile Safari/537.36";
+        return MOBILE_UA;
+    }
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -706,6 +721,17 @@ public class MainActivity extends AppCompatActivity {
             setContentView(R.layout.activity_main);
         } catch (Throwable t) {
             Log.e(TAG, "setContentView error: ", t);
+        }
+
+        try { getDynamicMobileUserAgent(); } catch (Throwable ignored) {}
+        try {
+            if (WebViewFeature.isFeatureSupported(WebViewFeature.START_SAFE_BROWSING)) {
+                androidx.webkit.WebViewCompat.startSafeBrowsing(getApplicationContext(), success -> {
+                    Log.d(TAG, "Safe Browsing initialized: " + success);
+                });
+            }
+        } catch (Throwable t) {
+            Log.e(TAG, "Failed to start Safe Browsing: ", t);
         }
 
         try { android.webkit.WebIconDatabase.getInstance().open(getDir("icons", MODE_PRIVATE).getPath()); } catch (Throwable ignored) {}
@@ -18107,8 +18133,8 @@ public class MainActivity extends AppCompatActivity {
         s.setUseWideViewPort(true);
         s.setBuiltInZoomControls(true);
         s.setDisplayZoomControls(false);
-        s.setUserAgentString(MOBILE_UA);
-        s.setMixedContentMode(WebSettings.MIXED_CONTENT_ALWAYS_ALLOW);
+        s.setUserAgentString(getDynamicMobileUserAgent());
+        s.setMixedContentMode(WebSettings.MIXED_CONTENT_COMPATIBILITY_MODE);
         applyWebViewTheme(horizonPeekWebView, isDarkTheme);
 
         horizonPeekWebView.setWebChromeClient(new WebChromeClient() {
@@ -20614,22 +20640,29 @@ public class MainActivity extends AppCompatActivity {
         settings.setDatabaseEnabled(!isIncognito);
         settings.setAllowFileAccess(true);
         settings.setAllowContentAccess(true);
-        settings.setMixedContentMode(WebSettings.MIXED_CONTENT_ALWAYS_ALLOW);
+        settings.setMixedContentMode(WebSettings.MIXED_CONTENT_COMPATIBILITY_MODE);
         settings.setUseWideViewPort(true);
         settings.setLoadWithOverviewMode(true);
         settings.setSupportZoom(true);
         settings.setBuiltInZoomControls(true);
         settings.setDisplayZoomControls(false);
-        settings.setUserAgentString(MOBILE_UA);
+        settings.setUserAgentString(getDynamicMobileUserAgent());
         settings.setMediaPlaybackRequiresUserGesture(false);
+
+        try {
+            if (WebViewFeature.isFeatureSupported(WebViewFeature.SAFE_BROWSING_ENABLE)) {
+                WebSettingsCompat.setSafeBrowsingEnabled(settings, true);
+            }
+        } catch (Throwable ignored) {}
 
         if (!isIncognito) {
             settings.setCacheMode(WebSettings.LOAD_DEFAULT);
             CaskManager.applyProfileToWebView(webView, finalCaskId);
             CookieManager.getInstance().setAcceptCookie(true);
-            CookieManager.getInstance().setAcceptThirdPartyCookies(webView, true);
+            CookieManager.getInstance().setAcceptThirdPartyCookies(webView, false);
         } else {
             settings.setCacheMode(WebSettings.LOAD_NO_CACHE);
+            CookieManager.getInstance().setAcceptThirdPartyCookies(webView, false);
         }
 
         webView.setLayerType(View.LAYER_TYPE_HARDWARE, null);
@@ -22043,7 +22076,7 @@ public class MainActivity extends AppCompatActivity {
         if (tab == null) tab = getActiveOrDominantTab();
         if (tab == null || tab.webView == null) return;
         tab.isDesktop = !tab.isDesktop;
-        tab.webView.getSettings().setUserAgentString(tab.isDesktop ? DESKTOP_UA : MOBILE_UA);
+        tab.webView.getSettings().setUserAgentString(tab.isDesktop ? DESKTOP_UA : getDynamicMobileUserAgent());
         tab.webView.getSettings().setUseWideViewPort(tab.isDesktop);
         tab.webView.getSettings().setLoadWithOverviewMode(tab.isDesktop);
         tab.webView.getSettings().setSupportZoom(true);

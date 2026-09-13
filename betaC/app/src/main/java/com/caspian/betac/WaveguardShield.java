@@ -407,8 +407,76 @@ public class WaveguardShield {
         return blockedDomains.size() + pathKeywords.size();
     }
 
+    public String getFingerprintDefenseJs() {
+        if (!isFingerprintEnabled) return "";
+        return "(function() {\n" +
+               "  if (window.__caspianShieldInjected) return;\n" +
+               "  window.__caspianShieldInjected = true;\n" +
+               "  try {\n" +
+               "    // 1. WebRTC IP Leak Defense: sanitize SDP candidate strings to protect internal/cellular IPs\n" +
+               "    if (window.RTCPeerConnection && window.RTCPeerConnection.prototype) {\n" +
+               "      var origSetRemote = window.RTCPeerConnection.prototype.setRemoteDescription;\n" +
+               "      window.RTCPeerConnection.prototype.setRemoteDescription = function(desc) {\n" +
+               "        if (desc && desc.sdp) {\n" +
+               "          desc.sdp = desc.sdp.replace(/a=candidate:.+?\\s(10\\.\\d{1,3}\\.\\d{1,3}\\.\\d{1,3}|172\\.(1[6-9]|2\\d|3[0-1])\\.\\d{1,3}\\.\\d{1,3}|192\\.168\\.\\d{1,3}\\.\\d{1,3})\\s.+/g, '');\n" +
+               "        }\n" +
+               "        return origSetRemote.apply(this, arguments);\n" +
+               "      };\n" +
+               "    }\n" +
+               "  } catch(e) {}\n" +
+               "  try {\n" +
+               "    // 2. Canvas Fingerprint Noise: subtle 1-bit perturbation to break deterministic tracking hashes\n" +
+               "    if (window.HTMLCanvasElement && HTMLCanvasElement.prototype) {\n" +
+               "      var origToDataURL = HTMLCanvasElement.prototype.toDataURL;\n" +
+               "      HTMLCanvasElement.prototype.toDataURL = function() {\n" +
+               "        try {\n" +
+               "          var ctx = this.getContext('2d');\n" +
+               "          if (ctx && this.width > 0 && this.height > 0 && this.width <= 320 && this.height <= 320) {\n" +
+               "            var img = ctx.getImageData(0, 0, 1, 1);\n" +
+               "            img.data[0] = (img.data[0] ^ 1);\n" +
+               "            ctx.putImageData(img, 0, 0);\n" +
+               "          }\n" +
+               "        } catch(e) {}\n" +
+               "        return origToDataURL.apply(this, arguments);\n" +
+               "      };\n" +
+               "    }\n" +
+               "    if (window.CanvasRenderingContext2D && CanvasRenderingContext2D.prototype) {\n" +
+               "      var origGetImageData = CanvasRenderingContext2D.prototype.getImageData;\n" +
+               "      CanvasRenderingContext2D.prototype.getImageData = function(x, y, w, h) {\n" +
+               "        var data = origGetImageData.apply(this, arguments);\n" +
+               "        if (w <= 320 && h <= 320 && data && data.data && data.data.length > 4) {\n" +
+               "          data.data[0] = (data.data[0] ^ 1);\n" +
+               "        }\n" +
+               "        return data;\n" +
+               "      };\n" +
+               "    }\n" +
+               "  } catch(e) {}\n" +
+               "  try {\n" +
+               "    // 3. AudioContext Fingerprint Shield\n" +
+               "    if (window.AudioBuffer && AudioBuffer.prototype) {\n" +
+               "      var origGetChannelData = AudioBuffer.prototype.getChannelData;\n" +
+               "      AudioBuffer.prototype.getChannelData = function() {\n" +
+               "        var arr = origGetChannelData.apply(this, arguments);\n" +
+               "        if (arr && arr.length > 0) {\n" +
+               "          arr[0] += 0.0000001;\n" +
+               "        }\n" +
+               "        return arr;\n" +
+               "      };\n" +
+               "    }\n" +
+               "  } catch(e) {}\n" +
+               "})();\n";
+    }
+
     public String getClientSideProtectionJs() {
-        return isGlobalEnabled ? cosmeticCssInjection : "";
+        if (!isGlobalEnabled) return "";
+        StringBuilder sb = new StringBuilder();
+        if (isCosmeticEnabled && cosmeticCssInjection != null && !cosmeticCssInjection.isEmpty()) {
+            sb.append(cosmeticCssInjection).append("\n");
+        }
+        if (isFingerprintEnabled) {
+            sb.append(getFingerprintDefenseJs());
+        }
+        return sb.toString();
     }
 
     public String getCosmeticCssInjection() {
