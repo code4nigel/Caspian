@@ -395,6 +395,9 @@ public class MainActivity extends AppCompatActivity {
     private FrameLayout tabGridDialClose;
     private TextView tabGridDockTabCount;
     private TextView btnTabDockSelect;
+    private ImageView tabGridFilterIcon;
+    private ImageView tabGridDialPlusIcon;
+    private ImageView tabGridDialCloseIcon;
     private boolean isGridSelectionMode = false;
 
     // Dynamic Toolbar Auto-Hide & Docking States
@@ -2036,7 +2039,8 @@ public class MainActivity extends AppCompatActivity {
             btnTabGridUndo = findViewById(R.id.btn_tab_grid_undo);
             btnTabGridFavorite = findViewById(R.id.btn_tab_grid_favorite);
             btnTabGridFilter = findViewById(R.id.btn_tab_grid_filter);
-            tabGridFilterLabel = findViewById(R.id.tab_grid_filter_label);
+            tabGridFilterIcon = findViewById(R.id.tab_grid_filter_icon);
+            tabGridFilterLabel = null;
             tabGridGroupBanner = findViewById(R.id.tab_grid_group_banner);
             tabGridGroupColorDot = findViewById(R.id.tab_grid_group_color_dot);
             tabGridGroupBannerTitle = findViewById(R.id.tab_grid_group_banner_title);
@@ -2053,6 +2057,8 @@ public class MainActivity extends AppCompatActivity {
             tabGridDialContainer = findViewById(R.id.tab_grid_dial_container);
             tabGridDialPlus = findViewById(R.id.tab_grid_dial_plus);
             tabGridDialClose = findViewById(R.id.tab_grid_dial_close);
+            tabGridDialPlusIcon = findViewById(R.id.tab_grid_dial_plus_icon);
+            tabGridDialCloseIcon = findViewById(R.id.tab_grid_dial_close_icon);
             tabGridDockTabCount = findViewById(R.id.tab_grid_dock_tab_count);
             btnTabDockSelect = findViewById(R.id.btn_tab_dock_select);
 
@@ -2601,23 +2607,23 @@ public class MainActivity extends AppCompatActivity {
         boolean isLight = !isDarkTheme;
         tabGridOverlay.setBackgroundColor(isLight ? 0xFFF1F5F9 : 0xFF050811);
 
-        // Favorite & Filter Top Buttons
+        // Independent Favorite (Star) & Filter Buttons (Oval/Circle)
         if (btnTabGridFavorite != null) {
             GradientDrawable favGd = new GradientDrawable();
-            favGd.setColor(isLight ? 0xFFFFFFFF : 0xE60F131D);
-            favGd.setCornerRadius(dpToPx(20));
-            favGd.setStroke(dpToPx(1.2f), isLight ? 0xFFCBD5E1 : 0x26FFFFFF);
+            favGd.setShape(GradientDrawable.OVAL);
+            favGd.setColor(isLight ? 0xFFFFFFFF : 0xF0181B25);
+            favGd.setStroke(dpToPx(1.5f), isLight ? 0xFFCBD5E1 : 0x33FFFFFF);
             btnTabGridFavorite.setBackground(favGd);
         }
         if (btnTabGridFilter != null) {
             GradientDrawable filGd = new GradientDrawable();
-            filGd.setColor(isLight ? 0xFFFFFFFF : 0xE60F131D);
-            filGd.setCornerRadius(dpToPx(20));
-            filGd.setStroke(dpToPx(1.2f), isLight ? 0xFFCBD5E1 : 0x26FFFFFF);
+            filGd.setShape(GradientDrawable.OVAL);
+            filGd.setColor(isLight ? 0xFFFFFFFF : 0xF0181B25);
+            filGd.setStroke(dpToPx(1.5f), isLight ? 0xFFCBD5E1 : 0x33FFFFFF);
             btnTabGridFilter.setBackground(filGd);
         }
-        if (tabGridFilterLabel != null) {
-            tabGridFilterLabel.setTextColor(isLight ? 0xFF0F172A : 0xFFDFE2F0);
+        if (tabGridFilterIcon != null) {
+            tabGridFilterIcon.setColorFilter(isLight ? 0xFF475569 : 0xFFDFE2F0);
         }
 
         // Header Capsule
@@ -2752,7 +2758,7 @@ public class MainActivity extends AppCompatActivity {
         if (tabGridBottomDock != null) {
             GradientDrawable dockGd = new GradientDrawable();
             dockGd.setColor(isLight ? 0xFFFFFFFF : 0xF0181B25);
-            dockGd.setCornerRadius(dpToPx(26));
+            dockGd.setCornerRadius(dpToPx(24));
             dockGd.setStroke(dpToPx(1.5f), isLight ? 0xFFCBD5E1 : 0x33FFFFFF);
             tabGridBottomDock.setBackground(dockGd);
         }
@@ -2767,8 +2773,15 @@ public class MainActivity extends AppCompatActivity {
             GradientDrawable dialGd = new GradientDrawable();
             dialGd.setShape(GradientDrawable.OVAL);
             dialGd.setColor(isLight ? 0xF0FFFFFF : 0xD9161E31);
-            dialGd.setStroke(dpToPx(1.5f), isLight ? 0xFFCBD5E1 : 0x3A00E5FF);
+            dialGd.setStroke(dpToPx(1.5f), isLight ? 0xFFCBD5E1 : 0x33FFFFFF);
             tabGridDialContainer.setBackground(dialGd);
+        }
+        int neutralIconColor = isLight ? 0xFF64748B : 0xFFA2A9A9;
+        if (tabGridDialPlusIcon != null) {
+            tabGridDialPlusIcon.setColorFilter(neutralIconColor);
+        }
+        if (tabGridDialCloseIcon != null) {
+            tabGridDialCloseIcon.setColorFilter(neutralIconColor);
         }
         if (tabGridDockTabCount != null) {
             tabGridDockTabCount.setTextColor(0xFF181B25);
@@ -2863,7 +2876,8 @@ public class MainActivity extends AppCompatActivity {
 
         layout.measure(View.MeasureSpec.makeMeasureSpec(dpToPx(130), View.MeasureSpec.EXACTLY), View.MeasureSpec.makeMeasureSpec(0, View.MeasureSpec.UNSPECIFIED));
         int popHeight = layout.getMeasuredHeight();
-        popup.showAsDropDown(anchor, 0, -popHeight - anchor.getHeight() - dpToPx(10));
+        int xOffset = -(dpToPx(130) - anchor.getWidth());
+        popup.showAsDropDown(anchor, xOffset, -popHeight - anchor.getHeight() - dpToPx(10));
     }
 
     public void showTabGridView() {
