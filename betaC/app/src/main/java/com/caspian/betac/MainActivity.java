@@ -196,6 +196,7 @@ public class MainActivity extends AppCompatActivity {
         public String splitRole = "";
         public String splitName = "";
         public boolean isRestoredFromSavedState = false;
+        public boolean userExplicitFullOmnibox = false;
 
         public TabItem(int id, String title, String url, String service, WebView webView, boolean isIncognito) {
             this.id = id;
@@ -452,6 +453,7 @@ public class MainActivity extends AppCompatActivity {
     public static final int ORB_STATE_BOTTOM_PILL = 2;
     public static final int ORB_STATE_FLOATING_ORB = 3;
     private int currentOrbState = ORB_STATE_FULL_TOP;
+    private int previousOrbStateBeforeHandle = ORB_STATE_BOTTOM_PILL;
     private FrameLayout caspianFloatingPill;
     private ImageButton caspianPillBtnBack;
     private LinearLayout caspianPillCenter;
@@ -7633,14 +7635,21 @@ public class MainActivity extends AppCompatActivity {
                                 showTabGridView();
                                 return true;
                             }
-                            // 2. SWIPE RIGHT -> Previous Tab
+                            // 2. SWIPE DOWN in Orb Full Omnibox -> Minimize into Edge Semicircle Handle
+                            else if ("orb".equalsIgnoreCase(omniboxScrollMode) && dy > swipeThreshold && dy > Math.abs(dx) * 1.15f) {
+                                try { v.performHapticFeedback(HapticFeedbackConstants.KEYBOARD_TAP); } catch (Throwable ignored) {}
+                                playUiFeedbackSound("tap");
+                                transitionToOrbState(ORB_STATE_FLOATING_ORB, true);
+                                return true;
+                            }
+                            // 3. SWIPE RIGHT -> Previous Tab
                             else if (dx > swipeThreshold && dx > Math.abs(dy) * 1.15f) {
                                 try { v.performHapticFeedback(HapticFeedbackConstants.KEYBOARD_TAP); } catch (Throwable ignored) {}
                                 playUiFeedbackSound("tap");
                                 switchToAdjacentTab(-1);
                                 return true;
                             }
-                            // 3. SWIPE LEFT -> Next Tab
+                            // 4. SWIPE LEFT -> Next Tab
                             else if (dx < -swipeThreshold && Math.abs(dx) > Math.abs(dy) * 1.15f) {
                                 try { v.performHapticFeedback(HapticFeedbackConstants.KEYBOARD_TAP); } catch (Throwable ignored) {}
                                 playUiFeedbackSound("tap");
@@ -7672,6 +7681,10 @@ public class MainActivity extends AppCompatActivity {
         View capsule = findViewById(R.id.omnibox_capsule);
         if (capsule != null) {
             capsule.setOnTouchListener(urlGestureListener);
+        }
+        View omniboxHdr = findViewById(R.id.omnibox_header);
+        if (omniboxHdr != null) {
+            omniboxHdr.setOnTouchListener(urlGestureListener);
         }
     }
 
@@ -11780,6 +11793,15 @@ public class MainActivity extends AppCompatActivity {
         return url.contains("launch_hub.html") || url.contains("incognito_hub.html") || "hub".equalsIgnoreCase(activeTab.service);
     }
 
+    public boolean isAiChatUrl(String url, String service) {
+        if (url == null) url = "";
+        String lower = url.toLowerCase();
+        return lower.contains("chatgpt.com") || lower.contains("gemini.google.com") ||
+               lower.contains("claude.ai") || lower.contains("chat.deepseek.com") ||
+               "chatgpt".equalsIgnoreCase(service) || "gemini".equalsIgnoreCase(service) ||
+               "claude".equalsIgnoreCase(service);
+    }
+
     public void dockToolbarAtTop(boolean animate) {
         currentToolbarState = TOOLBAR_STATE_DOCKED_TOP;
         if ("orb".equalsIgnoreCase(omniboxScrollMode)) {
@@ -11992,6 +12014,12 @@ public class MainActivity extends AppCompatActivity {
 
     public void handleWebViewScroll(CaspianWebView webView, int scrollX, int scrollY, int oldScrollX, int oldScrollY) {
         if ("orb".equalsIgnoreCase(omniboxScrollMode)) {
+            if (currentOrbState == ORB_STATE_FLOATING_ORB) {
+                // When in edge semicircle mode, scrolling should never bring the omnibox back.
+                // User must manually tap the semicircle handle to reopen.
+                return;
+            }
+
             if (isToolbarScrollLocked || isInternalPageWithoutToolbarAutohide()) {
                 if (currentOrbState != ORB_STATE_FULL_TOP) {
                     transitionToOrbState(ORB_STATE_FULL_TOP, false);
@@ -12015,9 +12043,7 @@ public class MainActivity extends AppCompatActivity {
                     transitionToOrbState(ORB_STATE_BOTTOM_PILL, true);
                 }
             } else if (deltaY < -12) {
-                if (currentOrbState == ORB_STATE_FLOATING_ORB) {
-                    transitionToOrbState(ORB_STATE_BOTTOM_PILL, true);
-                } else if (currentOrbState == ORB_STATE_BOTTOM_PILL) {
+                if (currentOrbState == ORB_STATE_BOTTOM_PILL) {
                     transitionToOrbState(ORB_STATE_FULL_TOP, true);
                 }
             }
@@ -16490,7 +16516,20 @@ public class MainActivity extends AppCompatActivity {
 
     public void transitionToOrbState(int targetState, boolean animate) {
         if (!"orb".equalsIgnoreCase(omniboxScrollMode)) return;
+        if (targetState == ORB_STATE_FLOATING_ORB) {
+            if (currentOrbState == ORB_STATE_FULL_TOP || currentOrbState == ORB_STATE_BOTTOM_PILL) {
+                previousOrbStateBeforeHandle = currentOrbState;
+            }
+        }
         currentOrbState = targetState;
+        TabItem curTab = getActiveOrDominantTab();
+        if (curTab != null) {
+            if (targetState == ORB_STATE_FULL_TOP) {
+                curTab.userExplicitFullOmnibox = true;
+            } else if (targetState == ORB_STATE_BOTTOM_PILL) {
+                curTab.userExplicitFullOmnibox = false;
+            }
+        }
         if (tabGridOverlay != null && tabGridOverlay.getVisibility() == View.VISIBLE) {
             if (caspianFloatingPill != null) caspianFloatingPill.setVisibility(View.GONE);
             if (caspianFloatingOrb != null) caspianFloatingOrb.setVisibility(View.GONE);
@@ -16979,7 +17018,8 @@ public class MainActivity extends AppCompatActivity {
                             if (!isOrbDragging && clickDuration < 350) {
                                 caspianFloatingOrb.performHapticFeedback(HapticFeedbackConstants.KEYBOARD_TAP);
                                 playUiFeedbackSound("tap");
-                                transitionToOrbState(ORB_STATE_BOTTOM_PILL, true);
+                                int targetState = (previousOrbStateBeforeHandle == ORB_STATE_FULL_TOP) ? ORB_STATE_FULL_TOP : ORB_STATE_BOTTOM_PILL;
+                                transitionToOrbState(targetState, true);
                             }
                             isOrbDragging = false;
                             return true;
@@ -19607,7 +19647,15 @@ public class MainActivity extends AppCompatActivity {
         updateOmniboxState();
         accumulatedScrollDelta = 0;
         TabItem curSwitchedTab = getTabById(tabId);
-        if (curSwitchedTab != null && (isInternalPageWithoutToolbarAutohide() || curSwitchedTab.webView == null || (curSwitchedTab.webView.getScrollY() <= 0 && isToolbarInDedicatedSection))) {
+        if ("orb".equalsIgnoreCase(omniboxScrollMode)) {
+            if (curSwitchedTab != null && isAiChatUrl(curSwitchedTab.url, curSwitchedTab.service)) {
+                if (curSwitchedTab.userExplicitFullOmnibox) {
+                    transitionToOrbState(ORB_STATE_FULL_TOP, false);
+                } else {
+                    transitionToOrbState(ORB_STATE_BOTTOM_PILL, false);
+                }
+            }
+        } else if (curSwitchedTab != null && (isInternalPageWithoutToolbarAutohide() || curSwitchedTab.webView == null || (curSwitchedTab.webView.getScrollY() <= 0 && isToolbarInDedicatedSection))) {
             if ("bottom".equalsIgnoreCase(omniboxPosition)) {
                 dockToolbarAtBottom(false);
             } else {
@@ -20205,6 +20253,14 @@ public class MainActivity extends AppCompatActivity {
             caspianPillTabCount.setText(String.valueOf(tabsList.size()));
         }
         updateCaspianPillData();
+        if ("orb".equalsIgnoreCase(omniboxScrollMode) && currentTab != null) {
+            String u = currentTab.url != null ? currentTab.url : "";
+            if (isAiChatUrl(u, currentTab.service)) {
+                if (!currentTab.userExplicitFullOmnibox && currentOrbState != ORB_STATE_BOTTOM_PILL && currentOrbState != ORB_STATE_FLOATING_ORB) {
+                    transitionToOrbState(ORB_STATE_BOTTOM_PILL, false);
+                }
+            }
+        }
 
         if (omniboxShieldIcon != null) {
             omniboxShieldIcon.setColorFilter(themeAccent);
