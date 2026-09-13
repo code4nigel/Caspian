@@ -1979,6 +1979,11 @@ public class MainActivity extends AppCompatActivity {
 
             if ("orb".equalsIgnoreCase(omniboxScrollMode)) {
                 applyOmniboxPosition("bottom");
+                isToolbarInDedicatedSection = false;
+                if (webviewsParentContainer != null) {
+                    webviewsParentContainer.setTranslationY(0f);
+                }
+                applyCaspianPillTheme();
             } else {
                 applyOmniboxPosition(omniboxPosition);
             }
@@ -5314,6 +5319,7 @@ public class MainActivity extends AppCompatActivity {
 
         updateOmniboxTabStrip();
         applyTabGridTheme();
+        applyCaspianPillTheme();
         if (tabGridOverlay != null && tabGridOverlay.getVisibility() == View.VISIBLE && tabGridSearchInput != null) {
             renderTabGridCards(tabGridSearchInput.getText().toString());
         }
@@ -10594,6 +10600,10 @@ public class MainActivity extends AppCompatActivity {
 
     public void updateOmniboxScrimBackground() {
         if (omniboxHeaderWrapper == null) return;
+        if ("orb".equalsIgnoreCase(omniboxScrollMode)) {
+            omniboxHeaderWrapper.setBackground(null);
+            return;
+        }
         boolean isBottom = "bottom".equalsIgnoreCase(omniboxPosition);
         TabItem currentTab = getActiveOrDominantTab();
         boolean isIncognito = currentTab != null && currentTab.isIncognito;
@@ -11980,14 +11990,14 @@ public class MainActivity extends AppCompatActivity {
                 if (currentOrbState != ORB_STATE_FULL_TOP) {
                     transitionToOrbState(ORB_STATE_FULL_TOP, true);
                 }
-            } else if (deltaY > 12 && scrollY > dpToPx(35)) {
+            } else if (deltaY > 12 && scrollY > dpToPx(24)) {
                 if (currentOrbState == ORB_STATE_FULL_TOP) {
                     transitionToOrbState(ORB_STATE_BOTTOM_PILL, true);
                 }
-            } else if (deltaY < -18) {
+            } else if (deltaY < -12) {
                 if (currentOrbState == ORB_STATE_FLOATING_ORB) {
                     transitionToOrbState(ORB_STATE_BOTTOM_PILL, true);
-                } else if (currentOrbState == ORB_STATE_BOTTOM_PILL && scrollY < dpToPx(120)) {
+                } else if (currentOrbState == ORB_STATE_BOTTOM_PILL) {
                     transitionToOrbState(ORB_STATE_FULL_TOP, true);
                 }
             }
@@ -12191,8 +12201,15 @@ public class MainActivity extends AppCompatActivity {
                 } catch (Throwable ignored) {}
             }
             applyOmniboxPosition("bottom");
-            isToolbarInDedicatedSection = true;
-            dockToolbarAtBottom(true);
+            isToolbarInDedicatedSection = false;
+            if (webviewsParentContainer != null) {
+                webviewsParentContainer.setTranslationY(0f);
+            }
+            if (omniboxHeaderWrapper != null) {
+                omniboxHeaderWrapper.setTranslationY(0f);
+                omniboxHeaderWrapper.setBackground(null);
+            }
+            applyCaspianPillTheme();
             transitionToOrbState(ORB_STATE_FULL_TOP, true);
         } else {
             hideCaspianOrbElements();
@@ -16460,6 +16477,7 @@ public class MainActivity extends AppCompatActivity {
             return;
         }
         runOnUiThread(() -> {
+            applyCaspianPillTheme();
             int toolbarH = getToolbarHeight();
             long duration = animate ? 240 : 0;
             Interpolator springDecel = new OvershootInterpolator(1.15f);
@@ -16467,6 +16485,7 @@ public class MainActivity extends AppCompatActivity {
             switch (targetState) {
                 case ORB_STATE_FULL_TOP:
                     if (omniboxHeaderWrapper != null) {
+                        omniboxHeaderWrapper.setBackground(null);
                         omniboxHeaderWrapper.setVisibility(View.VISIBLE);
                         if (animate) {
                             omniboxHeaderWrapper.animate().cancel();
@@ -16500,6 +16519,7 @@ public class MainActivity extends AppCompatActivity {
                         if (animate && caspianFloatingOrb.getVisibility() == View.VISIBLE) {
                             caspianFloatingOrb.animate().cancel();
                             caspianFloatingOrb.animate()
+                                    .translationX(dpToPx(35))
                                     .scaleX(0f)
                                     .scaleY(0f)
                                     .alpha(0f)
@@ -16514,6 +16534,7 @@ public class MainActivity extends AppCompatActivity {
 
                 case ORB_STATE_BOTTOM_PILL:
                     updateCaspianPillData();
+                    boolean comingFromOrb = (caspianFloatingOrb != null && caspianFloatingOrb.getVisibility() == View.VISIBLE);
                     if (omniboxHeaderWrapper != null) {
                         if (animate) {
                             omniboxHeaderWrapper.animate().cancel();
@@ -16532,19 +16553,37 @@ public class MainActivity extends AppCompatActivity {
                         caspianFloatingPill.setVisibility(View.VISIBLE);
                         if (animate) {
                             caspianFloatingPill.animate().cancel();
-                            caspianFloatingPill.setTranslationY(dpToPx(80));
-                            caspianFloatingPill.setScaleX(0.85f);
-                            caspianFloatingPill.setScaleY(0.85f);
-                            caspianFloatingPill.setAlpha(0f);
-                            caspianFloatingPill.animate()
-                                    .translationY(0f)
-                                    .scaleX(1f)
-                                    .scaleY(1f)
-                                    .alpha(1f)
-                                    .setDuration(duration + 40)
-                                    .setInterpolator(springDecel)
-                                    .start();
+                            if (comingFromOrb) {
+                                caspianFloatingPill.setTranslationY(0f);
+                                caspianFloatingPill.setTranslationX(dpToPx(120));
+                                caspianFloatingPill.setScaleX(0.35f);
+                                caspianFloatingPill.setScaleY(0.5f);
+                                caspianFloatingPill.setAlpha(0f);
+                                caspianFloatingPill.animate()
+                                        .translationX(0f)
+                                        .scaleX(1f)
+                                        .scaleY(1f)
+                                        .alpha(1f)
+                                        .setDuration(duration + 40)
+                                        .setInterpolator(springDecel)
+                                        .start();
+                            } else {
+                                caspianFloatingPill.setTranslationX(0f);
+                                caspianFloatingPill.setTranslationY(dpToPx(80));
+                                caspianFloatingPill.setScaleX(0.85f);
+                                caspianFloatingPill.setScaleY(0.85f);
+                                caspianFloatingPill.setAlpha(0f);
+                                caspianFloatingPill.animate()
+                                        .translationY(0f)
+                                        .scaleX(1f)
+                                        .scaleY(1f)
+                                        .alpha(1f)
+                                        .setDuration(duration + 40)
+                                        .setInterpolator(springDecel)
+                                        .start();
+                            }
                         } else {
+                            caspianFloatingPill.setTranslationX(0f);
                             caspianFloatingPill.setTranslationY(0f);
                             caspianFloatingPill.setScaleX(1f);
                             caspianFloatingPill.setScaleY(1f);
@@ -16555,8 +16594,7 @@ public class MainActivity extends AppCompatActivity {
                         if (animate && caspianFloatingOrb.getVisibility() == View.VISIBLE) {
                             caspianFloatingOrb.animate().cancel();
                             caspianFloatingOrb.animate()
-                                    .scaleX(0f)
-                                    .scaleY(0f)
+                                    .translationX(dpToPx(35))
                                     .alpha(0f)
                                     .setDuration(duration)
                                     .withEndAction(() -> caspianFloatingOrb.setVisibility(View.GONE))
@@ -16575,8 +16613,9 @@ public class MainActivity extends AppCompatActivity {
                         if (animate && caspianFloatingPill.getVisibility() == View.VISIBLE) {
                             caspianFloatingPill.animate().cancel();
                             caspianFloatingPill.animate()
-                                    .scaleX(0.3f)
-                                    .scaleY(0.3f)
+                                    .translationX(dpToPx(130))
+                                    .scaleX(0.25f)
+                                    .scaleY(0.4f)
                                     .alpha(0f)
                                     .setDuration(duration)
                                     .withEndAction(() -> caspianFloatingPill.setVisibility(View.GONE))
@@ -16586,23 +16625,27 @@ public class MainActivity extends AppCompatActivity {
                         }
                     }
                     if (caspianFloatingOrb != null) {
+                        updateEdgeHandleOrientation(true);
                         caspianFloatingOrb.setVisibility(View.VISIBLE);
                         if (animate) {
                             caspianFloatingOrb.animate().cancel();
-                            caspianFloatingOrb.setScaleX(0.3f);
-                            caspianFloatingOrb.setScaleY(0.3f);
+                            caspianFloatingOrb.setTranslationX(dpToPx(35));
+                            caspianFloatingOrb.setScaleX(0.6f);
+                            caspianFloatingOrb.setScaleY(0.6f);
                             caspianFloatingOrb.setAlpha(0f);
                             caspianFloatingOrb.animate()
+                                    .translationX(0f)
                                     .scaleX(1f)
                                     .scaleY(1f)
-                                    .alpha(0.65f)
-                                    .setDuration(duration + 60)
+                                    .alpha(1f)
+                                    .setDuration(duration + 40)
                                     .setInterpolator(springDecel)
                                     .start();
                         } else {
+                            caspianFloatingOrb.setTranslationX(0f);
                             caspianFloatingOrb.setScaleX(1f);
                             caspianFloatingOrb.setScaleY(1f);
-                            caspianFloatingOrb.setAlpha(0.65f);
+                            caspianFloatingOrb.setAlpha(1f);
                         }
                     }
                     break;
@@ -16612,6 +16655,7 @@ public class MainActivity extends AppCompatActivity {
 
     public void updateCaspianPillData() {
         runOnUiThread(() -> {
+            applyCaspianPillTheme();
             TabItem tab = getActiveOrDominantTab();
             if (tab != null) {
                 String host = "caspian";
@@ -16630,7 +16674,7 @@ public class MainActivity extends AppCompatActivity {
                 if (caspianPillHost != null) caspianPillHost.setText(host);
                 if (caspianPillLock != null) {
                     boolean isSecure = tab.url != null && tab.url.startsWith("https://");
-                    caspianPillLock.setColorFilter(isSecure ? Color.parseColor("#38BDF8") : Color.parseColor("#94A3B8"));
+                    caspianPillLock.setColorFilter(isSecure ? (isDarkTheme ? Color.parseColor("#38BDF8") : Color.parseColor("#0284C7")) : Color.parseColor("#94A3B8"));
                 }
             }
             if (caspianPillTabCount != null) {
@@ -16647,17 +16691,114 @@ public class MainActivity extends AppCompatActivity {
         });
     }
 
+    public void applyCaspianPillTheme() {
+        boolean isDark = isDarkTheme;
+        if (caspianFloatingPill != null) {
+            caspianFloatingPill.setBackgroundResource(isDark ? R.drawable.bg_caspian_floating_pill : R.drawable.bg_caspian_floating_pill_light);
+        }
+        if (caspianPillHost != null) {
+            caspianPillHost.setTextColor(isDark ? 0xFFFFFFFF : 0xFF0F172A);
+        }
+        int iconTint = isDark ? 0xFF94A3B8 : 0xFF475569;
+        if (caspianPillBtnBack != null) {
+            caspianPillBtnBack.setColorFilter(iconTint);
+        }
+        if (caspianPillBtnMenu != null) {
+            caspianPillBtnMenu.setColorFilter(iconTint);
+        }
+        int accentTint = isDark ? 0xFF00E5FF : 0xFF0284C7;
+        if (caspianPillBtnCollapse != null) {
+            caspianPillBtnCollapse.setColorFilter(accentTint);
+        }
+        if (caspianPillLock != null) {
+            caspianPillLock.setColorFilter(isDark ? 0xFF38BDF8 : 0xFF0284C7);
+        }
+        if (caspianPillTabCount != null) {
+            caspianPillTabCount.setTextColor(accentTint);
+        }
+        if (caspianPillTabBtn != null) {
+            GradientDrawable tabBadgeBg = new GradientDrawable();
+            tabBadgeBg.setShape(GradientDrawable.RECTANGLE);
+            tabBadgeBg.setCornerRadius(dpToPx(7));
+            tabBadgeBg.setColor(isDark ? 0x3300E5FF : 0x220284C7);
+            tabBadgeBg.setStroke(dpToPx(1.2f), accentTint);
+            caspianPillTabBtn.setBackground(tabBadgeBg);
+        }
+        updateEdgeHandleOrientation(true);
+    }
+
+    public void updateEdgeHandleOrientation(boolean isRightSide) {
+        if (caspianFloatingOrb == null) return;
+        boolean isDark = isDarkTheme;
+        GradientDrawable gd = new GradientDrawable();
+        gd.setShape(GradientDrawable.RECTANGLE);
+        float r = dpToPx(28);
+        if (isRightSide) {
+            gd.setCornerRadii(new float[]{r, r, 0f, 0f, 0f, 0f, r, r});
+        } else {
+            gd.setCornerRadii(new float[]{0f, 0f, r, r, r, r, 0f, 0f});
+        }
+        gd.setColor(isDark ? 0xF0333742 : 0xF5FFFFFF);
+        gd.setStroke(dpToPx(1.2f), isDark ? 0x33FFFFFF : 0xFFCBD5E1);
+        caspianFloatingOrb.setBackground(gd);
+        if (caspianOrbIcon != null) {
+            caspianOrbIcon.setRotation(isRightSide ? 0f : 180f);
+            caspianOrbIcon.setColorFilter(isDark ? 0xFFFFFFFF : 0xFF0F172A);
+        }
+    }
+
+    public void switchToNextTab() {
+        if (tabsList == null || tabsList.isEmpty()) return;
+        int currentIndex = -1;
+        for (int i = 0; i < tabsList.size(); i++) {
+            if (tabsList.get(i).id == activeTabId) {
+                currentIndex = i;
+                break;
+            }
+        }
+        int nextIndex = (currentIndex != -1 && currentIndex + 1 < tabsList.size()) ? currentIndex + 1 : 0;
+        if (tabsList.size() > 1) {
+            animatePillTabTransition(-1);
+            switchToTab(tabsList.get(nextIndex).id, true);
+        }
+    }
+
+    public void switchToPreviousTab() {
+        if (tabsList == null || tabsList.isEmpty()) return;
+        int currentIndex = -1;
+        for (int i = 0; i < tabsList.size(); i++) {
+            if (tabsList.get(i).id == activeTabId) {
+                currentIndex = i;
+                break;
+            }
+        }
+        int prevIndex = (currentIndex > 0) ? currentIndex - 1 : (tabsList.size() - 1);
+        if (tabsList.size() > 1) {
+            animatePillTabTransition(1);
+            switchToTab(tabsList.get(prevIndex).id, true);
+        }
+    }
+
+    private void animatePillTabTransition(int direction) {
+        if (caspianFloatingPill == null) return;
+        float startX = (direction > 0) ? -dpToPx(48) : dpToPx(48);
+        caspianFloatingPill.setTranslationX(startX);
+        caspianFloatingPill.setAlpha(0.6f);
+        caspianFloatingPill.animate()
+                .translationX(0f)
+                .alpha(1f)
+                .setDuration(220)
+                .setInterpolator(new DecelerateInterpolator(1.6f))
+                .start();
+    }
+
     @SuppressLint("ClickableViewAccessibility")
     private void setupCaspianOrbListeners() {
         if (caspianPillBtnBack != null) {
             caspianPillBtnBack.setOnClickListener(v -> {
                 playUiFeedbackSound("tap");
-                TabItem active = getTabById(activeTabId);
-                if (active != null && active.webView != null && active.webView.canGoBack()) {
-                    active.webView.goBack();
-                } else {
-                    onBackPressed();
-                }
+                v.performHapticFeedback(HapticFeedbackConstants.KEYBOARD_TAP);
+                transitionToOrbState(ORB_STATE_FLOATING_ORB, true);
             });
         }
 
@@ -16699,6 +16840,7 @@ public class MainActivity extends AppCompatActivity {
             caspianFloatingPill.setOnTouchListener(new View.OnTouchListener() {
                 private float downX = 0f;
                 private float downY = 0f;
+                private boolean isSwiping = false;
 
                 @Override
                 public boolean onTouch(View v, MotionEvent event) {
@@ -16706,14 +16848,52 @@ public class MainActivity extends AppCompatActivity {
                         case MotionEvent.ACTION_DOWN:
                             downX = event.getRawX();
                             downY = event.getRawY();
+                            isSwiping = false;
                             return false;
+
+                        case MotionEvent.ACTION_MOVE:
+                            float mdx = event.getRawX() - downX;
+                            float mdy = event.getRawY() - downY;
+                            if (Math.abs(mdx) > dpToPx(16) || Math.abs(mdy) > dpToPx(16)) {
+                                isSwiping = true;
+                                if (Math.abs(mdx) > Math.abs(mdy)) {
+                                    caspianFloatingPill.setTranslationX(mdx * 0.35f);
+                                }
+                            }
+                            return isSwiping;
+
                         case MotionEvent.ACTION_UP:
-                            float dx = event.getRawX() - downX;
-                            float dy = event.getRawY() - downY;
-                            if (Math.abs(dx) > dpToPx(45) && Math.abs(dx) > Math.abs(dy)) {
-                                v.performHapticFeedback(HapticFeedbackConstants.KEYBOARD_TAP);
-                                transitionToOrbState(ORB_STATE_FLOATING_ORB, true);
-                                return true;
+                        case MotionEvent.ACTION_CANCEL:
+                            caspianFloatingPill.animate().translationX(0f).setDuration(160).start();
+                            float udx = event.getRawX() - downX;
+                            float udy = event.getRawY() - downY;
+                            float absDx = Math.abs(udx);
+                            float absDy = Math.abs(udy);
+                            int threshold = dpToPx(30);
+
+                            if (isSwiping || absDx > threshold || absDy > threshold) {
+                                if (absDy > absDx && absDy > threshold) {
+                                    if (udy < 0) {
+                                        playUiFeedbackSound("tap");
+                                        showTabGridView();
+                                        return true;
+                                    } else {
+                                        playUiFeedbackSound("tap");
+                                        v.performHapticFeedback(HapticFeedbackConstants.KEYBOARD_TAP);
+                                        transitionToOrbState(ORB_STATE_FLOATING_ORB, true);
+                                        return true;
+                                    }
+                                } else if (absDx > absDy && absDx > threshold) {
+                                    if (udx < 0) {
+                                        v.performHapticFeedback(HapticFeedbackConstants.KEYBOARD_TAP);
+                                        switchToNextTab();
+                                        return true;
+                                    } else {
+                                        v.performHapticFeedback(HapticFeedbackConstants.KEYBOARD_TAP);
+                                        switchToPreviousTab();
+                                        return true;
+                                    }
+                                }
                             }
                             break;
                     }
@@ -16724,7 +16904,10 @@ public class MainActivity extends AppCompatActivity {
 
         if (caspianFloatingOrb != null) {
             caspianFloatingOrb.setOnTouchListener(new View.OnTouchListener() {
-                private long touchStartTime = 0;
+                private float orbDownX = 0f, orbDownY = 0f;
+                private float orbStartY = 0f;
+                private boolean isOrbDragging = false;
+                private long touchStartTime = 0L;
 
                 @Override
                 public boolean onTouch(View v, MotionEvent event) {
@@ -16732,90 +16915,35 @@ public class MainActivity extends AppCompatActivity {
                         case MotionEvent.ACTION_DOWN:
                             orbDownX = event.getRawX();
                             orbDownY = event.getRawY();
-                            orbStartX = caspianFloatingOrb.getX();
                             orbStartY = caspianFloatingOrb.getY();
                             isOrbDragging = false;
                             touchStartTime = System.currentTimeMillis();
-
-                            if (orbVelocityTracker == null) {
-                                orbVelocityTracker = VelocityTracker.obtain();
-                            } else {
-                                orbVelocityTracker.clear();
-                            }
-                            orbVelocityTracker.addMovement(event);
-
-                            CaspianPhysics.cancelSpring(caspianFloatingOrb, DynamicAnimation.X);
-                            CaspianPhysics.cancelSpring(caspianFloatingOrb, DynamicAnimation.Y);
                             caspianFloatingOrb.animate().cancel();
-                            caspianFloatingOrb.setAlpha(1.0f);
-                            CaspianPhysics.applyPressSquish(caspianFloatingOrb);
+                            caspianFloatingOrb.setScaleX(0.92f);
+                            caspianFloatingOrb.setScaleY(0.92f);
                             return true;
 
                         case MotionEvent.ACTION_MOVE:
-                            if (orbVelocityTracker != null) orbVelocityTracker.addMovement(event);
-                            float deltaX = event.getRawX() - orbDownX;
                             float deltaY = event.getRawY() - orbDownY;
-                            if (!isOrbDragging && Math.hypot(deltaX, deltaY) > ViewConfiguration.get(MainActivity.this).getScaledTouchSlop()) {
+                            if (!isOrbDragging && Math.abs(deltaY) > ViewConfiguration.get(MainActivity.this).getScaledTouchSlop()) {
                                 isOrbDragging = true;
                             }
                             if (isOrbDragging) {
-                                int screenW = getResources().getDisplayMetrics().widthPixels;
                                 int screenH = getResources().getDisplayMetrics().heightPixels;
-                                int orbW = caspianFloatingOrb.getWidth() > 0 ? caspianFloatingOrb.getWidth() : dpToPx(48);
-                                int orbH = caspianFloatingOrb.getHeight() > 0 ? caspianFloatingOrb.getHeight() : dpToPx(48);
-
-                                float targetX = Math.max(0, Math.min(screenW - orbW, orbStartX + deltaX));
-                                float targetY = Math.max(dpToPx(40), Math.min(screenH - orbH - dpToPx(50), orbStartY + deltaY));
-                                caspianFloatingOrb.setX(targetX);
+                                int orbH = caspianFloatingOrb.getHeight() > 0 ? caspianFloatingOrb.getHeight() : dpToPx(56);
+                                float targetY = Math.max(dpToPx(60), Math.min(screenH - orbH - dpToPx(60), orbStartY + deltaY));
                                 caspianFloatingOrb.setY(targetY);
                             }
                             return true;
 
                         case MotionEvent.ACTION_UP:
                         case MotionEvent.ACTION_CANCEL:
-                            CaspianPhysics.applyReleasePop(caspianFloatingOrb);
-                            if (orbVelocityTracker != null) {
-                                orbVelocityTracker.addMovement(event);
-                                orbVelocityTracker.computeCurrentVelocity(1000);
-                            }
-                            float velX = orbVelocityTracker != null ? orbVelocityTracker.getXVelocity() : 0f;
-                            float velY = orbVelocityTracker != null ? orbVelocityTracker.getYVelocity() : 0f;
-                            if (orbVelocityTracker != null) {
-                                orbVelocityTracker.recycle();
-                                orbVelocityTracker = null;
-                            }
-
+                            caspianFloatingOrb.animate().scaleX(1f).scaleY(1f).setDuration(120).start();
                             long clickDuration = System.currentTimeMillis() - touchStartTime;
-                            if (!isOrbDragging && clickDuration < 300) {
+                            if (!isOrbDragging && clickDuration < 350) {
                                 caspianFloatingOrb.performHapticFeedback(HapticFeedbackConstants.KEYBOARD_TAP);
                                 playUiFeedbackSound("tap");
                                 transitionToOrbState(ORB_STATE_BOTTOM_PILL, true);
-                            } else {
-                                int screenW = getResources().getDisplayMetrics().widthPixels;
-                                int screenH = getResources().getDisplayMetrics().heightPixels;
-                                int orbW = caspianFloatingOrb.getWidth() > 0 ? caspianFloatingOrb.getWidth() : dpToPx(48);
-                                int orbH = caspianFloatingOrb.getHeight() > 0 ? caspianFloatingOrb.getHeight() : dpToPx(48);
-
-                                float currentCenterX = caspianFloatingOrb.getX() + (orbW / 2f);
-                                boolean snapToLeft = currentCenterX < (screenW / 2f);
-                                if (Math.abs(velX) > 500f) {
-                                    snapToLeft = velX < 0;
-                                }
-
-                                float targetX = snapToLeft ? dpToPx(8) : (screenW - orbW - dpToPx(8));
-                                float currentY = caspianFloatingOrb.getY();
-                                float projectedY = currentY + (velY * 0.12f);
-                                float targetY = Math.max(dpToPx(60), Math.min(screenH - orbH - dpToPx(80), projectedY));
-
-                                CaspianPhysics.animateSpringWithVelocity(caspianFloatingOrb, DynamicAnimation.X, targetX, velX, CaspianPhysics.DAMPING_BOUNCY, CaspianPhysics.STIFFNESS_RESPONSIVE);
-                                CaspianPhysics.animateSpringWithVelocity(caspianFloatingOrb, DynamicAnimation.Y, targetY, velY, CaspianPhysics.DAMPING_BOUNCY, CaspianPhysics.STIFFNESS_RESPONSIVE);
-                                caspianFloatingOrb.performHapticFeedback(HapticFeedbackConstants.KEYBOARD_TAP);
-
-                                caspianFloatingOrb.animate()
-                                        .alpha(0.65f)
-                                        .setStartDelay(350)
-                                        .setDuration(300)
-                                        .start();
                             }
                             isOrbDragging = false;
                             return true;

@@ -2717,14 +2717,14 @@
         </LinearLayout>
     </FrameLayout>
 
-    <!-- Caspian Orb: State 3 Edge-Docked Floating Orb -->
+    <!-- Caspian Orb: State 3 Edge-Docked Semicircle Handle -->
     <FrameLayout
         android:id="@+id/caspian_floating_orb"
-        android:layout_width="48dp"
-        android:layout_height="48dp"
+        android:layout_width="30dp"
+        android:layout_height="56dp"
         android:layout_gravity="bottom|end"
-        android:layout_marginEnd="16dp"
-        android:layout_marginBottom="96dp"
+        android:layout_marginEnd="0dp"
+        android:layout_marginBottom="110dp"
         android:background="@drawable/bg_caspian_floating_orb"
         android:elevation="370dp"
         android:clickable="true"
@@ -2733,12 +2733,12 @@
 
         <ImageView
             android:id="@+id/caspian_orb_icon"
-            android:layout_width="24dp"
-            android:layout_height="24dp"
+            android:layout_width="20dp"
+            android:layout_height="20dp"
             android:layout_gravity="center"
-            android:src="@drawable/ic_launcher_wave"
-            android:tint="#00E5FF"
-            android:contentDescription="Caspian Orb" />
+            android:src="@drawable/ic_pod_back"
+            android:tint="#FFFFFF"
+            android:contentDescription="Expand Omnibox" />
     </FrameLayout>
 
     <!-- 15. Horizon Peek Glass Modal -->
