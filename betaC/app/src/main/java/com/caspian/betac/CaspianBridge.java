@@ -981,6 +981,10 @@ public class CaspianBridge {
                 activity.runOnUiThread(() -> {
                     CaskManager.CaskItem active = manager.getActiveCask();
                     showToast(active.icon + " Switched to " + active.name + "! ✨");
+                    MainActivity.TabItem currentTab = activity.getActiveOrDominantTab();
+                    if (currentTab != null) {
+                        activity.changeTabCask(currentTab.id, caskId);
+                    }
                     activity.reloadActiveTabOrHub();
                     String payload = manager.getCasksPayloadJson();
                     String js = "if(window.onCaspianCasksUpdated) window.onCaspianCasksUpdated(" + JSONObject.quote(payload) + ");";

@@ -2399,7 +2399,10 @@ public class MainActivity extends AppCompatActivity {
             btnTabDockNewTab.setOnClickListener(v -> {
                 try { v.performHapticFeedback(HapticFeedbackConstants.KEYBOARD_TAP); } catch (Throwable ignored) {}
                 playUiFeedbackSound("tap");
-                addNewTab("hub", "", "file:///android_asset/launch_hub.html", false);
+                TabItem cur = getActiveOrDominantTab();
+                CaskManager cm = new CaskManager(this);
+                String targetCask = (cur != null && cur.caskId != null) ? cur.caskId : cm.getActiveCaskId();
+                addNewTab("hub", "", "file:///android_asset/launch_hub.html", false, targetCask);
                 hideTabGridView();
             });
         }
@@ -10263,13 +10266,18 @@ public class MainActivity extends AppCompatActivity {
         AICommandRouter.RouteResult route = AICommandRouter.resolve(rawInput, currentSearchEngine);
 
         TabItem currentTab = getActiveOrDominantTab();
+        CaskManager cm = new CaskManager(this);
+        String activeCask = cm.getActiveCaskId();
         if (currentTab != null) {
+            if (activeCask != null && !activeCask.equals(currentTab.caskId)) {
+                changeTabCask(currentTab.id, activeCask);
+            }
             currentTab.service = route.service;
             currentTab.pendingPrompt = route.promptPayload;
             currentTab.isReaderMode = route.isReaderMode;
             currentTab.webView.loadUrl(route.targetUrl);
         } else {
-            addNewTab(route.service, route.promptPayload, route.targetUrl, false);
+            addNewTab(route.service, route.promptPayload, route.targetUrl, false, activeCask);
         }
         if (isOrbOrApplePieMode()) {
             if (currentTab != null) {
@@ -18909,7 +18917,10 @@ public class MainActivity extends AppCompatActivity {
             caspianPillBtnNewTab.setOnClickListener(v -> {
                 playUiFeedbackSound("tap");
                 v.performHapticFeedback(HapticFeedbackConstants.KEYBOARD_TAP);
-                addNewTab("hub", "", "file:///android_asset/launch_hub.html", true);
+                TabItem cur = getActiveOrDominantTab();
+                CaskManager cm = new CaskManager(this);
+                String targetCask = (cur != null && cur.caskId != null) ? cur.caskId : cm.getActiveCaskId();
+                addNewTab("hub", "", "file:///android_asset/launch_hub.html", false, targetCask);
             });
         }
 
@@ -21056,6 +21067,7 @@ public class MainActivity extends AppCompatActivity {
                 }
 
                 applyWebViewTheme(view, isDarkTheme);
+                CaskManager.flushCookies(tabItem.caskId);
 
                 if (tabItem.isDesktop) {
                     view.evaluateJavascript(
@@ -21673,13 +21685,8 @@ public class MainActivity extends AppCompatActivity {
         if (tab == null) return;
         tab.isRestoredFromSavedState = false;
 
-        // On legacy devices lacking Multi-Profile, swap vault cookies when switching between tabs with different casks
-        if (!CaskManager.isMultiProfileSupported() && previousTab != null && previousTab.caskId != null && !previousTab.caskId.equals(tab.caskId)) {
-            CaskManager cm = new CaskManager(this);
-            cm.saveActiveCookiesToVault(previousTab.caskId);
-            CookieManager.getInstance().removeAllCookies(null);
-            cm.restoreCaskCookiesFromVault(tab.caskId);
-        }
+        // Flush cookies on tab switch to ensure persistent session state
+        CaskManager.flushCookies(tab.caskId);
 
         if (tab.splitPartnerId != -1 && getTabById(tab.splitPartnerId) != null) {
             TabItem partner = getTabById(tab.splitPartnerId);

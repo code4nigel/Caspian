@@ -43,13 +43,32 @@ public class CaskManager {
         try {
             if (isMultiProfileSupported()) {
                 androidx.webkit.ProfileStore store = androidx.webkit.ProfileStore.getInstance();
-                store.getOrCreateProfile(caskId);
+                androidx.webkit.Profile profile = store.getOrCreateProfile(caskId);
                 androidx.webkit.WebViewCompat.setProfile(webView, caskId);
+
+                CookieManager pcm = profile.getCookieManager();
+                if (pcm != null) {
+                    pcm.setAcceptCookie(true);
+                    pcm.setAcceptThirdPartyCookies(webView, true);
+                }
                 Log.d(TAG, "Successfully assigned Multi-Profile: " + caskId + " to WebView");
             }
         } catch (Throwable t) {
             Log.e(TAG, "Error applying profile " + caskId + " to webView", t);
         }
+    }
+
+    public static void flushCookies(String caskId) {
+        try {
+            if (isMultiProfileSupported() && caskId != null) {
+                androidx.webkit.ProfileStore store = androidx.webkit.ProfileStore.getInstance();
+                androidx.webkit.Profile profile = store.getOrCreateProfile(caskId);
+                if (profile != null && profile.getCookieManager() != null) {
+                    profile.getCookieManager().flush();
+                }
+            }
+            CookieManager.getInstance().flush();
+        } catch (Throwable ignored) {}
     }
 
     // Known common domains for session cookie capture

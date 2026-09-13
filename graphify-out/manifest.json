@@ -324,9 +324,9 @@
     "semantic_hash": ""
   },
   "betaC/app/build.gradle.kts": {
-    "mtime": 1789315651.49201,
-    "seen": 1789315752.9027932,
-    "ast_hash": "a7c5af6cf3aa2afffb11ec13ea9b235d",
+    "mtime": 1789316887.9583516,
+    "seen": 1789318060.147754,
+    "ast_hash": "aafee8dad72e209269f510fbf2b65f01",
     "semantic_hash": ""
   },
   "betaC/app/src/main/assets/adblock_rules.json": {
@@ -402,15 +402,15 @@
     "semantic_hash": ""
   },
   "betaC/app/src/main/java/com/caspian/betac/CaskManager.java": {
-    "mtime": 1788598215.544674,
-    "seen": 1789062562.2365227,
-    "ast_hash": "9e4c58ec8a1c404fe131b7b2fef17704",
+    "mtime": 1789317826.5159986,
+    "seen": 1789318060.1478338,
+    "ast_hash": "0e169a577c5db06be7a4351711ca68d0",
     "semantic_hash": ""
   },
   "betaC/app/src/main/java/com/caspian/betac/CaspianBridge.java": {
-    "mtime": 1789291092.5998049,
-    "seen": 1789309597.8509073,
-    "ast_hash": "ecdea264f1170af273e918792a9b42d4",
+    "mtime": 1789317841.8394897,
+    "seen": 1789318060.147837,
+    "ast_hash": "c93b847f14b61e065dab94f2c0621db1",
     "semantic_hash": ""
   },
   "betaC/app/src/main/java/com/caspian/betac/CaspianDownloadManager.java": {
@@ -450,9 +450,9 @@
     "semantic_hash": ""
   },
   "betaC/app/src/main/java/com/caspian/betac/MainActivity.java": {
-    "mtime": 1789316748.5351162,
-    "seen": 1789316880.3947127,
-    "ast_hash": "b0977d49228a014b7f41612e34945dec",
+    "mtime": 1789317924.6327486,
+    "seen": 1789318060.1478565,
+    "ast_hash": "3681eade43bb683735e3dd51f8b10fd7",
     "semantic_hash": ""
   },
   "betaC/app/src/main/java/com/caspian/betac/SearchSuggestionService.java": {
@@ -648,9 +648,9 @@
     "semantic_hash": ""
   },
   "betaC/app/src/main/assets/browser_control.html": {
-    "mtime": 1789315651.6349185,
-    "seen": 1789315752.902881,
-    "ast_hash": "6a4c8c7bce12de3a1d114c6887f5fa9b",
+    "mtime": 1789316888.1286674,
+    "seen": 1789318060.1479557,
+    "ast_hash": "19d41cf396244c072295c04b5f7c97ff",
     "semantic_hash": ""
   },
   "betaC/app/src/main/assets/incognito_hub.html": {
