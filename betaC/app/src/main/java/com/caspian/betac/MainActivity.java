@@ -328,6 +328,7 @@ public class MainActivity extends AppCompatActivity {
     private FrameLayout omniboxTabsBtn;
     private TextView omniboxTabsCount;
     private ImageButton omniboxMenuBtn;
+    private ImageButton omniboxBtnCollapseOrb;
     private ProgressBar browserProgressBar;
 
     private FrameLayout omniboxSuggestionsContainer;
@@ -1926,6 +1927,7 @@ public class MainActivity extends AppCompatActivity {
             omniboxTabsBtn = findViewById(R.id.omnibox_tabs_btn);
             omniboxTabsCount = findViewById(R.id.omnibox_tabs_count);
             omniboxMenuBtn = findViewById(R.id.omnibox_menu_btn);
+            omniboxBtnCollapseOrb = findViewById(R.id.omnibox_btn_collapse_orb);
             browserProgressBar = findViewById(R.id.browser_progress_bar);
 
             omniboxSuggestionsContainer = findViewById(R.id.omnibox_suggestions_container);
@@ -5442,6 +5444,7 @@ public class MainActivity extends AppCompatActivity {
         if (omniboxForwardBtn != null) omniboxForwardBtn.setColorFilter(defaultIconTint);
         if (omniboxReloadBtn != null) omniboxReloadBtn.setColorFilter(defaultIconTint);
         if (omniboxMenuBtn != null) omniboxMenuBtn.setColorFilter(defaultIconTint);
+        if (omniboxBtnCollapseOrb != null) omniboxBtnCollapseOrb.setColorFilter(defaultIconTint);
         if (omniboxFinderBtn != null) omniboxFinderBtn.setColorFilter(defaultIconTint);
         if (omniboxFinderClose != null) omniboxFinderClose.setColorFilter(defaultIconTint);
         if (omniboxFinderPrev != null) omniboxFinderPrev.setColorFilter(defaultIconTint);
@@ -7686,6 +7689,17 @@ public class MainActivity extends AppCompatActivity {
         });
 
         omniboxMenuBtn.setOnClickListener(v -> showBrowserMenu(v));
+
+        if (omniboxBtnCollapseOrb != null) {
+            omniboxBtnCollapseOrb.setOnClickListener(v -> {
+                playUiFeedbackSound("tap");
+                v.performHapticFeedback(HapticFeedbackConstants.KEYBOARD_TAP);
+                TabItem cur = getTabById(activeTabId);
+                if (cur != null) cur.userExplicitFullOmnibox = false;
+                previousOrbStateBeforeHandle = ORB_STATE_FULL_TOP;
+                transitionToOrbState(ORB_STATE_FLOATING_ORB, true);
+            });
+        }
     }
 
     private int dpToPx(int dp) {
@@ -7896,6 +7910,7 @@ public class MainActivity extends AppCompatActivity {
                 if (omniboxSplitBtn != null) omniboxSplitBtn.setVisibility(View.GONE);
                 if (omniboxTabsBtn != null) omniboxTabsBtn.setVisibility(View.GONE);
                 if (omniboxMenuBtn != null) omniboxMenuBtn.setVisibility(View.GONE);
+                if (omniboxBtnCollapseOrb != null) omniboxBtnCollapseOrb.setVisibility(View.GONE);
 
                 // 2. Show full actual URL (including query parameters like ?v=...)
                 TabItem currentTab = getActiveOrDominantTab();
@@ -7943,6 +7958,7 @@ public class MainActivity extends AppCompatActivity {
                 if (omniboxSplitBtn != null) omniboxSplitBtn.setVisibility(View.VISIBLE);
                 if (omniboxTabsBtn != null) omniboxTabsBtn.setVisibility(View.VISIBLE);
                 if (omniboxMenuBtn != null) omniboxMenuBtn.setVisibility(View.VISIBLE);
+                if (omniboxBtnCollapseOrb != null) omniboxBtnCollapseOrb.setVisibility("orb".equalsIgnoreCase(omniboxScrollMode) ? View.VISIBLE : View.GONE);
 
                 if (omniboxCopyBtn != null) omniboxCopyBtn.setVisibility(View.GONE);
                 if (omniboxPasteBtn != null) omniboxPasteBtn.setVisibility(View.GONE);
@@ -11904,9 +11920,18 @@ public class MainActivity extends AppCompatActivity {
                         webviewsParentContainer.setTranslationY(0f);
                     }
                     applyToolbarMotion(0f, 0f, false);
+                    if (omniboxBtnCollapseOrb != null) {
+                        omniboxBtnCollapseOrb.setVisibility(View.VISIBLE);
+                    }
                 } else if (isBottom) {
+                    if (omniboxBtnCollapseOrb != null) {
+                        omniboxBtnCollapseOrb.setVisibility(View.GONE);
+                    }
                     dockToolbarAtBottom(false);
                 } else {
+                    if (omniboxBtnCollapseOrb != null) {
+                        omniboxBtnCollapseOrb.setVisibility(View.GONE);
+                    }
                     dockToolbarAtTop(false);
                 }
             } catch (Throwable ignored) {}
@@ -19133,6 +19158,11 @@ public class MainActivity extends AppCompatActivity {
                 if (tabItem.id == activeTabId) {
                     browserProgressBar.setVisibility(View.GONE);
                     updateOmniboxState();
+                    if ("orb".equalsIgnoreCase(omniboxScrollMode) && isAiChatUrl(pageUrl, tabItem.service)) {
+                        if (!tabItem.userExplicitFullOmnibox) {
+                            transitionToOrbState(ORB_STATE_FLOATING_ORB, true);
+                        }
+                    }
                 }
 
                 applyWebViewTheme(view, isDarkTheme);
@@ -19813,7 +19843,7 @@ public class MainActivity extends AppCompatActivity {
                 if (curSwitchedTab.userExplicitFullOmnibox) {
                     transitionToOrbState(ORB_STATE_FULL_TOP, false);
                 } else {
-                    transitionToOrbState(ORB_STATE_BOTTOM_PILL, false);
+                    transitionToOrbState(ORB_STATE_FLOATING_ORB, false);
                 }
             } else {
                 if (curSwitchedTab != null && curSwitchedTab.userExplicitFullOmnibox) {
@@ -20423,10 +20453,13 @@ public class MainActivity extends AppCompatActivity {
         if ("orb".equalsIgnoreCase(omniboxScrollMode) && currentTab != null) {
             String u = currentTab.url != null ? currentTab.url : "";
             if (isAiChatUrl(u, currentTab.service)) {
-                if (!currentTab.userExplicitFullOmnibox && currentOrbState != ORB_STATE_BOTTOM_PILL && currentOrbState != ORB_STATE_FLOATING_ORB) {
-                    transitionToOrbState(ORB_STATE_BOTTOM_PILL, false);
+                if (!currentTab.userExplicitFullOmnibox && currentOrbState != ORB_STATE_FLOATING_ORB) {
+                    transitionToOrbState(ORB_STATE_FLOATING_ORB, false);
                 }
             }
+        }
+        if (omniboxBtnCollapseOrb != null) {
+            omniboxBtnCollapseOrb.setVisibility("orb".equalsIgnoreCase(omniboxScrollMode) ? View.VISIBLE : View.GONE);
         }
 
         if (omniboxShieldIcon != null) {

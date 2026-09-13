@@ -693,6 +693,19 @@
                     android:src="@drawable/ic_browser_menu"
                     android:tint="#FFFFFF"
                     android:contentDescription="More Options" />
+
+                <!-- Collapse to Edge Semicircle Handle Button (">") -->
+                <ImageButton
+                    android:id="@+id/omnibox_btn_collapse_orb"
+                    android:layout_width="24dp"
+                    android:layout_height="24dp"
+                    android:layout_marginStart="2dp"
+                    android:padding="2.5dp"
+                    android:background="?attr/selectableItemBackgroundBorderless"
+                    android:src="@drawable/ic_chevron_right"
+                    android:tint="#A2A9A9"
+                    android:visibility="gone"
+                    android:contentDescription="Collapse to Edge Handle" />
             </LinearLayout>
             </LinearLayout>
         </FrameLayout>
@@ -2623,17 +2636,6 @@
             android:orientation="horizontal"
             android:gravity="center_vertical">
 
-            <!-- Back Arrow -->
-            <ImageButton
-                android:id="@+id/caspian_pill_btn_back"
-                android:layout_width="34dp"
-                android:layout_height="34dp"
-                android:padding="6dp"
-                android:background="?attr/selectableItemBackgroundBorderless"
-                android:src="@drawable/ic_pod_back"
-                android:tint="#94A3B8"
-                android:contentDescription="Back" />
-
             <!-- Center Domain Capsule -->
             <LinearLayout
                 android:id="@+id/caspian_pill_center"
@@ -2672,7 +2674,7 @@
                     android:ellipsize="end" />
             </LinearLayout>
 
-            <!-- Collapse to Ball (Orb) Button -->
+            <!-- Quick Toolbars Button -->
             <ImageButton
                 android:id="@+id/caspian_pill_btn_collapse"
                 android:layout_width="34dp"
@@ -2682,7 +2684,7 @@
                 android:background="?attr/selectableItemBackgroundBorderless"
                 android:src="@drawable/ic_shrink_bubble"
                 android:tint="#00E5FF"
-                android:contentDescription="Collapse to Ball" />
+                android:contentDescription="Quick Toolbars" />
 
             <!-- Active Tab Counter Badge Pill -->
             <FrameLayout
@@ -2715,6 +2717,17 @@
                 android:src="@drawable/ic_stitch_more_vert"
                 android:tint="#94A3B8"
                 android:contentDescription="Menu" />
+
+            <!-- Collapse to Edge Handle Button (">") -->
+            <ImageButton
+                android:id="@+id/caspian_pill_btn_back"
+                android:layout_width="34dp"
+                android:layout_height="34dp"
+                android:padding="6dp"
+                android:background="?attr/selectableItemBackgroundBorderless"
+                android:src="@drawable/ic_chevron_right"
+                android:tint="#94A3B8"
+                android:contentDescription="Collapse to Edge Handle" />
         </LinearLayout>
     </FrameLayout>
 
