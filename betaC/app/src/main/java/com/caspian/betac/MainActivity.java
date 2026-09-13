@@ -252,8 +252,16 @@ public class MainActivity extends AppCompatActivity {
         public String faviconB64;
         public String favicon64;
         public String touchIconUrl;
+        public String groupId;
+        public String groupTitle;
+        public String groupColor;
+        public String groupIcon;
 
         public ClosedTabRecord(TabItem tab) {
+            this(tab, null, null, null, null);
+        }
+
+        public ClosedTabRecord(TabItem tab, String groupId, String groupTitle, String groupColor, String groupIcon) {
             this.service = tab.service;
             this.pendingPrompt = tab.pendingPrompt;
             this.url = tab.url;
@@ -264,6 +272,29 @@ public class MainActivity extends AppCompatActivity {
             this.faviconB64 = tab.faviconB64;
             this.favicon64 = tab.favicon64;
             this.touchIconUrl = tab.touchIconUrl;
+            this.groupId = groupId;
+            this.groupTitle = groupTitle;
+            this.groupColor = groupColor;
+            this.groupIcon = groupIcon;
+        }
+    }
+
+    public TabGroup getGroupByTabId(int tabId) {
+        for (TabGroup g : tabGroupsList) {
+            if (g.tabIds != null && g.tabIds.contains(tabId)) {
+                return g;
+            }
+        }
+        return null;
+    }
+
+    private ClosedTabRecord createClosedTabRecord(TabItem tab) {
+        if (tab == null) return null;
+        TabGroup g = getGroupByTabId(tab.id);
+        if (g != null) {
+            return new ClosedTabRecord(tab, g.id, g.title, g.color, g.icon);
+        } else {
+            return new ClosedTabRecord(tab);
         }
     }
 
@@ -302,9 +333,19 @@ public class MainActivity extends AppCompatActivity {
     private View btnOmniboxUndoCloseTab;
     private TextView iconOmniboxUndoClose;
     private TextView textOmniboxUndoClose;
-    private final Handler tabStripUndoHandler = new Handler(Looper.getMainLooper());
-    private final Runnable tabStripUndoDismissRunnable = this::dismissTabStripUndoButton;
     private BookmarkManager bookmarkManager;
+    private final Handler undoExpiryHandler = new Handler(Looper.getMainLooper());
+    private final Runnable undoExpiryRunnable = () -> {
+        closedTabBatches.clear();
+        notifyUndoStateChanged();
+    };
+
+    public void scheduleUndoExpiryTimer() {
+        undoExpiryHandler.removeCallbacks(undoExpiryRunnable);
+        if (hasClosedTabsToUndo()) {
+            undoExpiryHandler.postDelayed(undoExpiryRunnable, 15000);
+        }
+    }
     
     private LinearLayout omniboxUrlContainer;
     private FrameLayout omniboxShieldBtn;
@@ -399,7 +440,7 @@ public class MainActivity extends AppCompatActivity {
     private ImageView tabDockNewTabIcon;
     private FrameLayout btnTabDockClose;
     private ImageView tabDockCloseIcon;
-    private String tabSwitcherViewStyle = "normal"; // "normal" or "recents"
+    private String tabSwitcherViewStyle = "recents"; // "normal" or "recents"
     private int recentsTargetFocusTabId = -1;
     private boolean isRecentsTransitionAnimating = false;
     private TextView btnTabDockMakeGroup;
@@ -426,7 +467,7 @@ public class MainActivity extends AppCompatActivity {
     private boolean isToolbarInDedicatedSection = true;
     private float currentDedicatedScrollOffset = 0f;
     private long lastToolbarDedicatedHideTime = 0L;
-    private String omniboxScrollMode = "overlay"; // "overlay" (dynamic fullscreen overlay) or "separate" (always dedicated space)
+    private String omniboxScrollMode = "applepie"; // "applepie" (floating pill), "orb", "overlay" or "separate"
 
     private FrameLayout modalNewTabPlatform;
     private ImageButton btnClosePlatformModal;
@@ -1922,22 +1963,15 @@ public class MainActivity extends AppCompatActivity {
                 btnOmniboxUndoCloseTab.setOnClickListener(v -> {
                     playUiFeedbackSound("tap");
                     restoreLastClosedTab();
-                    updateOmniboxTabStrip();
-                    if (hasClosedTabsToUndo()) {
-                        tabStripUndoHandler.removeCallbacks(tabStripUndoDismissRunnable);
-                        tabStripUndoHandler.postDelayed(tabStripUndoDismissRunnable, 30000);
-                    } else {
-                        dismissTabStripUndoButton();
-                    }
                 });
             }
 
             omniboxPosition = getSharedPreferences(PREFS_NAME, MODE_PRIVATE).getString("omnibox_position", "top");
-            omniboxScrollMode = getSharedPreferences(PREFS_NAME, MODE_PRIVATE).getString("omnibox_scroll_mode", "overlay");
+            omniboxScrollMode = getSharedPreferences(PREFS_NAME, MODE_PRIVATE).getString("omnibox_scroll_mode", "applepie");
             preOrbOmniboxPosition = getSharedPreferences(PREFS_NAME, MODE_PRIVATE).getString("pre_orb_omnibox_position", null);
             omniboxMenuStyle = getSharedPreferences(PREFS_NAME, MODE_PRIVATE).getString("omnibox_menu_style", "grid");
             isTabStripEnabled = getSharedPreferences(PREFS_NAME, MODE_PRIVATE).getBoolean("tab_strip_enabled", true);
-            tabSwitcherViewStyle = getSharedPreferences(PREFS_NAME, MODE_PRIVATE).getString("tab_switcher_view_style", "normal");
+            tabSwitcherViewStyle = getSharedPreferences(PREFS_NAME, MODE_PRIVATE).getString("tab_switcher_view_style", "recents");
             omniboxHeader = findViewById(R.id.omnibox_header);
             omniboxCapsule = findViewById(R.id.omnibox_capsule);
             omniboxBackBtn = findViewById(R.id.omnibox_back_btn);
@@ -2903,7 +2937,7 @@ public class MainActivity extends AppCompatActivity {
     }
 
     public String getTabSwitcherViewStyle() {
-        return tabSwitcherViewStyle != null ? tabSwitcherViewStyle : "normal";
+        return tabSwitcherViewStyle != null ? tabSwitcherViewStyle : "recents";
     }
 
     public void setTabSwitcherViewStyle(String style) {
@@ -3089,7 +3123,16 @@ public class MainActivity extends AppCompatActivity {
         if (tabGridDockTabCount != null) tabGridDockTabCount.setText(String.valueOf(tabsList.size()));
         selectedGridTabIds.clear();
         isGridSelectionMode = false;
-        currentGridGroupId = null;
+        if (currentGridGroupId != null) {
+            boolean groupExists = false;
+            for (TabGroup g : tabGroupsList) {
+                if (g.id.equals(currentGridGroupId)) {
+                    groupExists = true;
+                    break;
+                }
+            }
+            if (!groupExists) currentGridGroupId = null;
+        }
         applyTabGridTheme();
         updateTabGridSelectionUi();
         updateTabGridFavoriteButton();
@@ -3247,7 +3290,16 @@ public class MainActivity extends AppCompatActivity {
 
             selectedGridTabIds.clear();
             isGridSelectionMode = false;
-            currentGridGroupId = null;
+            if (currentGridGroupId != null) {
+                boolean groupExists = false;
+                for (TabGroup g : tabGroupsList) {
+                    if (g.id.equals(currentGridGroupId)) {
+                        groupExists = true;
+                        break;
+                    }
+                }
+                if (!groupExists) currentGridGroupId = null;
+            }
             updateTabGridSelectionUi();
             if (modalNewTabPlatform != null) modalNewTabPlatform.setVisibility(View.GONE);
             hideKeyboard();
@@ -14266,7 +14318,7 @@ public class MainActivity extends AppCompatActivity {
     }
 
     public String getOmniboxScrollMode() {
-        return (this.omniboxScrollMode != null) ? this.omniboxScrollMode : "overlay";
+        return (this.omniboxScrollMode != null) ? this.omniboxScrollMode : "applepie";
     }
 
     public void setInterfaceDensity(String density) {
@@ -21776,8 +21828,14 @@ public class MainActivity extends AppCompatActivity {
     }
 
     public void notifyUndoStateChanged() {
-        evaluateJavascriptInControlSheet("if(typeof updateUndoButtonState === 'function') updateUndoButtonState(" + hasClosedTabsToUndo() + ");");
-        runOnUiThread(this::updateTabGridUndoButton);
+        boolean hasUndo = hasClosedTabsToUndo();
+        evaluateJavascriptInControlSheet("if(typeof updateUndoButtonState === 'function') updateUndoButtonState(" + hasUndo + ");");
+        runOnUiThread(() -> {
+            updateTabGridUndoButton();
+            if (btnOmniboxUndoCloseTab != null) {
+                btnOmniboxUndoCloseTab.setVisibility(hasUndo ? View.VISIBLE : View.GONE);
+            }
+        });
     }
 
     public void closeTab(int tabId) {
@@ -21803,9 +21861,10 @@ public class MainActivity extends AppCompatActivity {
             }
             if (last != null && recordHistory && !last.isIncognito && !"hub".equalsIgnoreCase(last.service)) {
                 List<ClosedTabRecord> batch = new ArrayList<>();
-                batch.add(new ClosedTabRecord(last));
+                batch.add(createClosedTabRecord(last));
                 closedTabBatches.add(batch);
                 if (closedTabBatches.size() > 30) closedTabBatches.remove(0);
+                scheduleUndoExpiryTimer();
                 notifyUndoStateChanged();
             }
             last.url = "file:///android_asset/launch_hub.html";
@@ -21823,9 +21882,10 @@ public class MainActivity extends AppCompatActivity {
         if (toRemove != null) {
             if (recordHistory && !toRemove.isIncognito) {
                 List<ClosedTabRecord> batch = new ArrayList<>();
-                batch.add(new ClosedTabRecord(toRemove));
+                batch.add(createClosedTabRecord(toRemove));
                 closedTabBatches.add(batch);
                 if (closedTabBatches.size() > 30) closedTabBatches.remove(0);
+                scheduleUndoExpiryTimer();
                 notifyUndoStateChanged();
             }
             if (toRemove.isIncognito) {
@@ -21883,12 +21943,13 @@ public class MainActivity extends AppCompatActivity {
         for (int id : ids) {
             TabItem tab = getTabById(id);
             if (tab != null && !tab.isIncognito && !tab.isFavorite) {
-                batch.add(new ClosedTabRecord(tab));
+                batch.add(createClosedTabRecord(tab));
             }
         }
         if (!batch.isEmpty()) {
             closedTabBatches.add(batch);
             if (closedTabBatches.size() > 30) closedTabBatches.remove(0);
+            scheduleUndoExpiryTimer();
             notifyUndoStateChanged();
         }
         for (int id : ids) {
@@ -21917,11 +21978,35 @@ public class MainActivity extends AppCompatActivity {
                         restoredTab.faviconB64 = rec.faviconB64;
                         restoredTab.favicon64 = rec.favicon64;
                         restoredTab.touchIconUrl = rec.touchIconUrl;
+
+                        // Restore into tab group if this tab belonged to one
+                        if (rec.groupId != null) {
+                            TabGroup targetGroup = null;
+                            for (TabGroup g : tabGroupsList) {
+                                if (g.id.equals(rec.groupId)) {
+                                    targetGroup = g;
+                                    break;
+                                }
+                            }
+                            if (targetGroup == null && rec.groupTitle != null) {
+                                targetGroup = new TabGroup(rec.groupId, rec.groupTitle, rec.groupColor, rec.groupIcon);
+                                tabGroupsList.add(targetGroup);
+                            }
+                            if (targetGroup != null && !targetGroup.tabIds.contains(restoredTab.id)) {
+                                targetGroup.tabIds.add(restoredTab.id);
+                            }
+                            saveTabGroups();
+                            updateOmniboxTabStrip();
+                        }
                     }
                 }
             }
+            scheduleUndoExpiryTimer();
             notifyUndoStateChanged();
             evaluateJavascriptInControlSheet("if(typeof renderOpenTabs === 'function') renderOpenTabs();");
+            if (tabGridOverlay != null && tabGridOverlay.getVisibility() == View.VISIBLE) {
+                renderTabGridCards(tabGridSearchInput != null ? tabGridSearchInput.getText().toString() : "");
+            }
             return batch.size();
         }
         return 0;
@@ -22070,12 +22155,13 @@ public class MainActivity extends AppCompatActivity {
         List<ClosedTabRecord> batch = new ArrayList<>();
         for (TabItem item : nonFavorites) {
             if (!item.isIncognito) {
-                batch.add(new ClosedTabRecord(item));
+                batch.add(createClosedTabRecord(item));
             }
         }
         if (!batch.isEmpty()) {
             closedTabBatches.add(batch);
             if (closedTabBatches.size() > 30) closedTabBatches.remove(0);
+            scheduleUndoExpiryTimer();
             notifyUndoStateChanged();
         }
 
@@ -22403,21 +22489,14 @@ public class MainActivity extends AppCompatActivity {
     }
 
     public void showTabStripUndoButton() {
-        runOnUiThread(() -> {
-            if (btnOmniboxUndoCloseTab != null && hasClosedTabsToUndo()) {
-                btnOmniboxUndoCloseTab.setVisibility(View.VISIBLE);
-                tabStripUndoHandler.removeCallbacks(tabStripUndoDismissRunnable);
-                tabStripUndoHandler.postDelayed(tabStripUndoDismissRunnable, 30000);
-            }
-        });
+        scheduleUndoExpiryTimer();
+        notifyUndoStateChanged();
     }
 
     public void dismissTabStripUndoButton() {
-        runOnUiThread(() -> {
-            if (btnOmniboxUndoCloseTab != null) {
-                btnOmniboxUndoCloseTab.setVisibility(View.GONE);
-            }
-        });
+        undoExpiryHandler.removeCallbacks(undoExpiryRunnable);
+        closedTabBatches.clear();
+        notifyUndoStateChanged();
     }
 
     public void updateOmniboxTabStrip() {
