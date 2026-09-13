@@ -130,6 +130,8 @@ import androidx.appcompat.app.AppCompatActivity;
 import androidx.cardview.widget.CardView;
 import androidx.core.app.ActivityCompat;
 import androidx.core.content.ContextCompat;
+import androidx.core.view.ViewCompat;
+import androidx.core.view.WindowInsetsCompat;
 
 import androidx.webkit.WebSettingsCompat;
 import androidx.webkit.WebViewFeature;
@@ -2040,6 +2042,7 @@ public class MainActivity extends AppCompatActivity {
             caspianFloatingOrb = findViewById(R.id.caspian_floating_orb);
             caspianOrbIcon = findViewById(R.id.caspian_orb_icon);
             setupCaspianOrbListeners();
+            setupKeyboardInsetsListener();
 
             if (isOrbOrApplePieMode()) {
                 applyOmniboxPosition("bottom");
@@ -3187,7 +3190,7 @@ public class MainActivity extends AppCompatActivity {
                             if (floatingCaspianCard != null && customView == null) {
                                 floatingCaspianCard.setVisibility(View.VISIBLE);
                             }
-                            if ("orb".equalsIgnoreCase(omniboxScrollMode)) {
+                            if (isOrbOrApplePieMode()) {
                                 transitionToOrbState(currentOrbState, false);
                             }
                         }).start();
@@ -3220,7 +3223,7 @@ public class MainActivity extends AppCompatActivity {
                         if (floatingCaspianCard != null && customView == null) {
                             floatingCaspianCard.setVisibility(View.VISIBLE);
                         }
-                        if ("orb".equalsIgnoreCase(omniboxScrollMode)) {
+                        if (isOrbOrApplePieMode()) {
                             transitionToOrbState(currentOrbState, false);
                         }
                     })
@@ -3693,6 +3696,9 @@ public class MainActivity extends AppCompatActivity {
                     }
                     if (floatingCaspianCard != null && customView == null) {
                         floatingCaspianCard.setVisibility(View.VISIBLE);
+                    }
+                    if (isOrbOrApplePieMode()) {
+                        transitionToOrbState(currentOrbState, false);
                     }
                     isRecentsTransitionAnimating = false;
                 }).start();
@@ -10322,6 +10328,16 @@ public class MainActivity extends AppCompatActivity {
             currentTab.webView.loadUrl(route.targetUrl);
         } else {
             addNewTab(route.service, route.promptPayload, route.targetUrl, false);
+        }
+        if (isOrbOrApplePieMode()) {
+            if (currentTab != null) {
+                currentTab.userExplicitFullOmnibox = false;
+            }
+            if ("applepie".equalsIgnoreCase(omniboxScrollMode)) {
+                transitionToOrbState(ORB_STATE_BOTTOM_PILL, true);
+            } else if (currentTab != null && isAiChatUrl(route.targetUrl, route.service)) {
+                transitionToOrbState(ORB_STATE_FLOATING_ORB, true);
+            }
         }
     }
 
@@ -18646,8 +18662,11 @@ public class MainActivity extends AppCompatActivity {
                                         .setInterpolator(springDecel)
                                         .start();
                             } else {
+                                boolean isTopPill = (caspianFloatingPill.getLayoutParams() instanceof FrameLayout.LayoutParams)
+                                        && (((FrameLayout.LayoutParams) caspianFloatingPill.getLayoutParams()).gravity & Gravity.VERTICAL_GRAVITY_MASK) == Gravity.TOP;
+                                float startTransY = isTopPill ? -dpToPx(60) : dpToPx(80);
                                 caspianFloatingPill.setTranslationX(0f);
-                                caspianFloatingPill.setTranslationY(dpToPx(80));
+                                caspianFloatingPill.setTranslationY(startTransY);
                                 caspianFloatingPill.setScaleX(0.85f);
                                 caspianFloatingPill.setScaleY(0.85f);
                                 caspianFloatingPill.setAlpha(0f);
@@ -18757,6 +18776,77 @@ public class MainActivity extends AppCompatActivity {
             }
             if (caspianPillTabCount != null) {
                 caspianPillTabCount.setText(String.valueOf(tabsList.size()));
+            }
+            if (caspianFloatingPill != null && isOrbOrApplePieMode()) {
+                FrameLayout.LayoutParams lp = (FrameLayout.LayoutParams) caspianFloatingPill.getLayoutParams();
+                if (lp == null) {
+                    lp = new FrameLayout.LayoutParams(ViewGroup.LayoutParams.WRAP_CONTENT, dpToPx(48));
+                }
+                boolean isChat = tab != null && isAiChatUrl(tab.url, tab.service);
+                if ("applepie".equalsIgnoreCase(omniboxScrollMode) && isChat) {
+                    lp.gravity = Gravity.TOP | Gravity.CENTER_HORIZONTAL;
+                    lp.topMargin = dpToPx(38);
+                    lp.bottomMargin = 0;
+                } else {
+                    lp.gravity = Gravity.BOTTOM | Gravity.CENTER_HORIZONTAL;
+                    lp.bottomMargin = dpToPx(24);
+                    lp.topMargin = 0;
+                }
+                caspianFloatingPill.setLayoutParams(lp);
+            }
+        });
+    }
+
+    private boolean isSoftKeyboardVisible = false;
+
+    private void setupKeyboardInsetsListener() {
+        try {
+            View decor = getWindow().getDecorView();
+            ViewCompat.setOnApplyWindowInsetsListener(decor, (v, insets) -> {
+                try {
+                    int imeHeight = insets.getInsets(WindowInsetsCompat.Type.ime()).bottom;
+                    boolean isVisible = insets.isVisible(WindowInsetsCompat.Type.ime()) || imeHeight > dpToPx(80);
+                    if (isVisible != isSoftKeyboardVisible) {
+                        isSoftKeyboardVisible = isVisible;
+                        onSoftKeyboardVisibilityChanged(isVisible);
+                    }
+                } catch (Throwable ignored) {}
+                return ViewCompat.onApplyWindowInsets(v, insets);
+            });
+        } catch (Throwable ignored) {}
+    }
+
+    private void onSoftKeyboardVisibilityChanged(boolean isVisible) {
+        runOnUiThread(() -> {
+            if (!isOrbOrApplePieMode()) return;
+            if (currentOrbState == ORB_STATE_BOTTOM_PILL && caspianFloatingPill != null) {
+                if (isVisible) {
+                    boolean isTopPill = (caspianFloatingPill.getLayoutParams() instanceof FrameLayout.LayoutParams)
+                            && (((FrameLayout.LayoutParams) caspianFloatingPill.getLayoutParams()).gravity & Gravity.VERTICAL_GRAVITY_MASK) == Gravity.TOP;
+                    float transY = isTopPill ? -dpToPx(35) : dpToPx(35);
+                    caspianFloatingPill.animate().cancel();
+                    caspianFloatingPill.animate()
+                            .alpha(0f)
+                            .translationY(transY)
+                            .setDuration(160)
+                            .withEndAction(() -> {
+                                if (isSoftKeyboardVisible && caspianFloatingPill != null) {
+                                    caspianFloatingPill.setVisibility(View.GONE);
+                                }
+                            })
+                            .start();
+                } else {
+                    if (splashOverlay != null && splashOverlay.getVisibility() == View.VISIBLE) return;
+                    if (tabGridOverlay != null && tabGridOverlay.getVisibility() == View.VISIBLE) return;
+                    caspianFloatingPill.setVisibility(View.VISIBLE);
+                    caspianFloatingPill.animate().cancel();
+                    caspianFloatingPill.animate()
+                            .alpha(1f)
+                            .translationY(0f)
+                            .setDuration(220)
+                            .setInterpolator(new OvershootInterpolator(1.12f))
+                            .start();
+                }
             }
         });
     }
@@ -21007,6 +21097,10 @@ public class MainActivity extends AppCompatActivity {
                         if (!tabItem.userExplicitFullOmnibox) {
                             transitionToOrbState(ORB_STATE_FLOATING_ORB, true);
                         }
+                    } else if ("applepie".equalsIgnoreCase(omniboxScrollMode)) {
+                        if (!tabItem.userExplicitFullOmnibox) {
+                            transitionToOrbState(ORB_STATE_BOTTOM_PILL, false);
+                        }
                     }
                 }
 
@@ -21536,7 +21630,7 @@ public class MainActivity extends AppCompatActivity {
                         .setInterpolator(new DecelerateInterpolator(2.0f))
                         .start();
             }
-            if ("orb".equalsIgnoreCase(omniboxScrollMode)) {
+            if (isOrbOrApplePieMode()) {
                 transitionToOrbState(ORB_STATE_BOTTOM_PILL, true);
             }
         } else {

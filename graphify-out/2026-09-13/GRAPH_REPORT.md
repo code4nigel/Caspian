@@ -1,11 +1,11 @@
 # Graph Report - Chatgpt Pruner  (2026-09-13)
 
 ## Corpus Check
-- 104 files · ~532,402 words
+- 104 files · ~532,107 words
 - Verdict: corpus is large enough that graph structure adds value.
 
 ## Summary
-- 2054 nodes · 5155 edges · 118 communities (59 shown, 17 thin omitted)
+- 2052 nodes · 5138 edges · 121 communities (62 shown, 17 thin omitted)
 - Extraction: 96% EXTRACTED · 4% INFERRED · 0% AMBIGUOUS · INFERRED: 183 edges (avg confidence: 0.81)
 - Token cost: 0 input · 0 output
 
@@ -23,15 +23,15 @@
 - CaspianBridge
 - CaspianBridge
 - CaspianDownloadManager
-- .updateOmniboxState
+- .showBrowserActionGrid
 - rippleframe.js
 - WaveguardShield
-- ai/MainActivity.java
-- MainActivity
-- MainActivity
-- MainActivity
-- CaspianWebView
 - betac/MainActivity.java
+- MainActivity
+- MainActivity
+- MainActivity
+- CaspianMediaService
+- WhirlpoolOverlayView
 - android.view.View
 - BookmarkManager
 - GitHubUpdateManager
@@ -39,15 +39,16 @@
 - CaspianBridge
 - Caspian-Android/assets/mobile_control.js
 - Caspian-Beta-A/assets/mobile_control.js
+- CaspianWebView
 - Caspian: AI Chat Pruner, Universal Media Speed Engine & Productivity Suite
 - HistoryManager
 - pdf_viewer.js
 - CaskManager
-- android.content.Context
-- CaspianMediaService
+- android.os.Handler
+- .setupLiquidGlassYouTubeRemote
+- android.webkit.WebView
 - .switchTab
-- .switchTab
-- ChatAdapter
+- android.widget.TextView
 - ChatGPTApiClient
 - .setupFloatingYouTubeRemote
 - content.js
@@ -59,20 +60,22 @@
 - Stitch_history_UI/DESIGN.md
 - stitch_light_card/DESIGN.md
 - stitch_light_list/DESIGN.md
-- .onCreate
 - SwipeableViewFlipper
 - .resolve
-- android.webkit.WebView
+- android.content.Context
 - .onCreate
 - speed_content.js
 - main/assets/mobile_pruner.js
 - AdBlockShield
-- default_icon
+- Override
+- ChatMessage
+- .evaluateJavascriptInControlSheet
 - main/assets/youtube_helper.js
 - .getTabById
 - 🌊 Caspian Mobile - Standalone Android Application
 - Caspian-Beta-B/assets/mobile_control.js
-- .onBackPressed
+- Override
+- org.json.JSONObject
 - WhisperLib
 - publish-releases.sh
 - Caspian-Android/assets/youtube_helper.js
@@ -93,7 +96,7 @@
 - applyYouTubeOptimizations
 
 ## God Nodes (most connected - your core abstractions)
-1. `MainActivity` - 443 edges
+1. `MainActivity` - 441 edges
 2. `CaspianBridge` - 163 edges
 3. `MainActivity` - 114 edges
 4. `MainActivity` - 114 edges
@@ -119,11 +122,11 @@
 ## Import Cycles
 - None detected.
 
-## Communities (118 total, 17 thin omitted)
+## Communities (121 total, 17 thin omitted)
 
 ### Community 1 - "MainActivity"
 Cohesion: 0.03
-Nodes (20): android.content.BroadcastReceiver, android.media.MediaPlayer, android.media.SoundPool, android.support.v4.media.session.MediaSessionCompat, android.view.TextureView, android.view.VelocityTracker, android.webkit.PermissionRequest, android.widget.GridLayout (+12 more)
+Nodes (11): android.graphics.Bitmap, AudioRecord, CustomViewCallback, Intent, WakeLock, WebView, MainActivity, MultiTabDragState (+3 more)
 
 ### Community 2 - "browser_control.js"
 Cohesion: 0.05
@@ -131,19 +134,15 @@ Nodes (83): applyCustomBg(), applyCustomGradient(), applyInterfaceDensity(), att
 
 ### Community 3 - ".dpToPx"
 Cohesion: 0.14
-Nodes (14): Button, EditText, FrameLayout, Handler, HorizontalScrollView, ImageButton, LinearLayout, TextView (+6 more)
+Nodes (12): Button, EditText, FrameLayout, HorizontalScrollView, ImageButton, LinearLayout, TextView, TabGroup (+4 more)
 
 ### Community 4 - "popup.js"
 Cohesion: 0.07
 Nodes (50): accentPicker, applyFontScale(), applyUiZoom(), DEFAULT_PRESETS, DEFAULTS, DEV_FACTS, escapeHtml(), exportGoogleDocFile() (+42 more)
 
 ### Community 8 - "CaspianDownloadManager"
-Cohesion: 0.07
-Nodes (10): CaspianDownloadManager, DownloadItem, DownloadListener, DownloadTask, Handler, JSONObject, Override, Intent (+2 more)
-
-### Community 9 - ".updateOmniboxState"
-Cohesion: 0.05
-Nodes (5): android.content.res.Configuration, android.widget.TableLayout, SpeechWaveformView, BroadcastReceiver, TableLayout
+Cohesion: 0.11
+Nodes (7): CaspianDownloadManager, DownloadItem, DownloadListener, DownloadTask, Handler, Override, FileOutputStream
 
 ### Community 10 - "rippleframe.js"
 Cohesion: 0.13
@@ -153,45 +152,49 @@ Nodes (40): applyBlurToRegion(), applyCrop(), cancelCropMode(), clearStoredCaptu
 Cohesion: 0.08
 Nodes (5): android.webkit.WebResourceResponse, JSONObject, WebResourceResponse, OnUpdateListener, WaveguardShield
 
-### Community 12 - "ai/MainActivity.java"
-Cohesion: 0.15
-Nodes (14): android.content.Intent, android.media.AudioRecord, android.net.Uri, android.os.Bundle, android.speech.SpeechRecognizer, android.webkit.ValueCallback, android.widget.EditText, android.widget.ImageButton (+6 more)
+### Community 12 - "betac/MainActivity.java"
+Cohesion: 0.09
+Nodes (27): android.content.BroadcastReceiver, android.content.Intent, android.media.AudioRecord, android.media.MediaPlayer, android.media.SoundPool, android.net.Uri, android.os.Bundle, android.speech.SpeechRecognizer (+19 more)
 
 ### Community 13 - "MainActivity"
-Cohesion: 0.07
-Nodes (7): android.annotation.SuppressLint, StreamCallback, ChatMessage, Intent, Override, WebView, MainActivity
+Cohesion: 0.09
+Nodes (4): Intent, Override, WebView, MainActivity
 
 ### Community 14 - "MainActivity"
 Cohesion: 0.09
 Nodes (6): AudioRecord, Intent, MediaPlayer, PermissionRequest, TextureView, MainActivity
 
 ### Community 15 - "MainActivity"
-Cohesion: 0.09
+Cohesion: 0.10
 Nodes (6): AudioRecord, Intent, MediaPlayer, PermissionRequest, TextureView, MainActivity
 
-### Community 16 - "CaspianWebView"
-Cohesion: 0.14
-Nodes (4): CaspianWebView, Override, OnLinkLongPressListener, OnScrollStateListener
+### Community 16 - "CaspianMediaService"
+Cohesion: 0.21
+Nodes (8): android.app.Notification, android.app.Service, android.os.IBinder, CaspianMediaService, Handler, Override, WakeLock, WifiLock
 
-### Community 17 - "betac/MainActivity.java"
-Cohesion: 0.11
-Nodes (17): android.graphics.Bitmap, android.graphics.PointF, android.graphics.Rect, android.widget.Button, android.widget.HorizontalScrollView, android.widget.LinearLayout, android.widget.TextView, DrawingView (+9 more)
+### Community 17 - "WhirlpoolOverlayView"
+Cohesion: 0.12
+Nodes (15): android.graphics.PointF, android.graphics.Rect, android.view.MotionEvent, android.widget.Button, android.widget.FrameLayout, android.widget.HorizontalScrollView, DrawingView, Button (+7 more)
 
 ### Community 18 - "android.view.View"
 Cohesion: 0.06
-Nodes (23): android.graphics.Canvas, android.graphics.Paint, android.graphics.RectF, android.util.AttributeSet, android.view.View, android.view.ViewGroup, androidx.dynamicanimation.animation.SpringAnimation, CabRadialMenuView (+15 more)
+Nodes (22): android.graphics.Canvas, android.graphics.Paint, android.graphics.RectF, android.view.View, android.view.ViewGroup, androidx.dynamicanimation.animation.SpringAnimation, CabRadialMenuView, Override (+14 more)
 
 ### Community 19 - "BookmarkManager"
-Cohesion: 0.14
+Cohesion: 0.15
 Nodes (3): BookmarkItem, BookmarkManager, JSONObject
 
 ### Community 20 - "GitHubUpdateManager"
-Cohesion: 0.14
+Cohesion: 0.17
 Nodes (6): android.app.Activity, DownloadCallback, GitHubUpdateManager, JSONObject, UpdateCheckCallback, UpdateInfo
 
 ### Community 21 - "scrobby_engine.js"
 Cohesion: 0.14
 Nodes (26): authenticateWithToken(), callLastFm(), cleanTrackInfo(), disconnect(), emitState(), generateSignature(), getRecentScrobbles(), getSettings() (+18 more)
+
+### Community 22 - "CaspianBridge"
+Cohesion: 0.10
+Nodes (3): android.widget.Toast, CaspianBridge, java.io.FileOutputStream
 
 ### Community 23 - "Caspian-Android/assets/mobile_control.js"
 Cohesion: 0.19
@@ -201,12 +204,16 @@ Nodes (18): applyCustomBg(), applyCustomGradient(), getSFXFileForType(), handleC
 Cohesion: 0.19
 Nodes (18): applyCustomBg(), applyCustomGradient(), getSFXFileForType(), handleCreateNewTab(), openGroupOptionsMenu(), openTabOptionsMenu(), playSFX(), renderOpenTabs() (+10 more)
 
+### Community 25 - "CaspianWebView"
+Cohesion: 0.09
+Nodes (4): CaspianWebView, Override, OnLinkLongPressListener, OnScrollStateListener
+
 ### Community 26 - "Caspian: AI Chat Pruner, Universal Media Speed Engine & Productivity Suite"
 Cohesion: 0.09
 Nodes (22): 1-Click Setup with Configuration File, 1. RippleFrame: Full-Page Scrolling Screenshot & Annotation Studio, 2. Real-Time AI Chat DOM Pruning, 3. Flow Speed: Universal Media Playback Controller, 4. Universal Transcript Exporter, 4. YouTube Home Feed Cleaner & Instant Feedback, 5. Temporary Chat Vault, 6. Settings Backup & Migration (JSON Import / Export) (+14 more)
 
 ### Community 27 - "HistoryManager"
-Cohesion: 0.13
+Cohesion: 0.15
 Nodes (5): android.database.sqlite.SQLiteDatabase, android.database.sqlite.SQLiteOpenHelper, HistoryEntry, HistoryManager, Override
 
 ### Community 28 - "pdf_viewer.js"
@@ -214,32 +221,36 @@ Cohesion: 0.23
 Nodes (20): calculateFitWidthScale(), cancelAllRenderTasks(), clearSearchHighlights(), createPagePlaceholders(), executeSearch(), hideAiMenu(), init(), jumpToPage() (+12 more)
 
 ### Community 29 - "CaskManager"
-Cohesion: 0.22
+Cohesion: 0.23
 Nodes (4): CaskItem, CaskManager, JSONObject, WebView
 
-### Community 31 - "android.content.Context"
-Cohesion: 0.24
-Nodes (8): android.app.NotificationManager, android.content.Context, android.content.SharedPreferences, android.os.Handler, SearchSuggestionService, SuggestionCallback, java.net.HttpURLConnection, org.json.JSONObject
+### Community 31 - "android.os.Handler"
+Cohesion: 0.31
+Nodes (5): android.app.NotificationManager, android.os.Handler, SearchSuggestionService, SuggestionCallback, java.net.HttpURLConnection
 
-### Community 32 - "CaspianMediaService"
-Cohesion: 0.09
-Nodes (10): android.app.Notification, android.app.Service, android.os.IBinder, android.support.v4.media.session.PlaybackStateCompat, CaspianMediaService, Handler, Intent, Override (+2 more)
+### Community 33 - "android.webkit.WebView"
+Cohesion: 0.21
+Nodes (3): android.webkit.WebView, WebView, TabItem
 
-### Community 35 - "ChatAdapter"
-Cohesion: 0.22
-Nodes (8): Adapter, androidx.annotation.NonNull, androidx.recyclerview.widget.RecyclerView, ChatAdapter, ChatViewHolder, Override, io.noties.markwon.Markwon, ViewHolder
+### Community 35 - "android.widget.TextView"
+Cohesion: 0.20
+Nodes (10): Adapter, android.widget.LinearLayout, android.widget.TextView, androidx.annotation.NonNull, androidx.recyclerview.widget.RecyclerView, ChatAdapter, ChatViewHolder, Override (+2 more)
 
 ### Community 36 - "ChatGPTApiClient"
 Cohesion: 0.29
 Nodes (5): ChatGPTApiClient, Handler, ModelItem, ModelsCallback, okhttp3.OkHttpClient
+
+### Community 37 - ".setupFloatingYouTubeRemote"
+Cohesion: 0.17
+Nodes (3): android.annotation.SuppressLint, SoundPool, SpeechWaveformView
 
 ### Community 38 - "content.js"
 Cohesion: 0.25
 Nodes (11): applyTurbo(), checkAndRestoreTransferContext(), clearAllPruning(), domObserver, extractConversationData(), getChatTitle(), getTopLevelTurns(), isSiteDisabled() (+3 more)
 
 ### Community 39 - "manifest.json"
-Cohesion: 0.14
-Nodes (13): background, service_worker, content_scripts, description, host_permissions, icons, 128, 16 (+5 more)
+Cohesion: 0.10
+Nodes (19): action, default_icon, default_popup, background, service_worker, content_scripts, 128, 16 (+11 more)
 
 ### Community 40 - "stitch_designs/caspian_ai_browser/DESIGN.md"
 Cohesion: 0.14
@@ -270,16 +281,16 @@ Cohesion: 0.14
 Nodes (13): Action Pods, Badges & Chips, Brand & Style, Cards, Colors, Components, Elevation & Depth, Input Fields (+5 more)
 
 ### Community 48 - "SwipeableViewFlipper"
-Cohesion: 0.18
-Nodes (5): android.view.MotionEvent, android.widget.ViewFlipper, Override, OnPageChangeListener, SwipeableViewFlipper
+Cohesion: 0.27
+Nodes (4): android.widget.ViewFlipper, Override, OnPageChangeListener, SwipeableViewFlipper
 
 ### Community 49 - ".resolve"
 Cohesion: 0.24
 Nodes (7): AICommandRouter, RouteResult, SearchEngine, BING, BRAVE, DUCKDUCKGO, GOOGLE
 
-### Community 50 - "android.webkit.WebView"
-Cohesion: 0.35
-Nodes (4): android.webkit.WebView, android.widget.FrameLayout, android.widget.Toast, java.io.FileOutputStream
+### Community 50 - "android.content.Context"
+Cohesion: 0.23
+Nodes (3): android.content.Context, android.util.AttributeSet, Intent
 
 ### Community 54 - "speed_content.js"
 Cohesion: 0.29
@@ -289,17 +300,13 @@ Nodes (9): applySpeedToAllMedia(), attachMediaListeners(), cycleToNextSpeed(), i
 Cohesion: 0.35
 Nodes (9): applyPruningDirect(), clearAllPruning(), ensurePrunerStyles(), findVisibleCenterTurnIndex(), getTopLevelTurns(), initObserver(), loadState(), onScrollHandler() (+1 more)
 
-### Community 57 - "default_icon"
-Cohesion: 0.33
-Nodes (6): action, default_icon, default_popup, 128, 16, 48
-
 ### Community 60 - "main/assets/youtube_helper.js"
 Cohesion: 0.21
 Nodes (7): cleanYouTubeData(), executeFastForwardSkip(), handleSettingsInteraction(), reparentFsMenus(), scheduleAdFallbackTick(), set(), triggerFastForwardSkipThrottled()
 
 ### Community 62 - ".getTabById"
 Cohesion: 0.07
-Nodes (4): android.app.RemoteAction, CaspianMenuItem, ClosedTabRecord, RemoteAction
+Nodes (5): android.app.RemoteAction, CaspianMenuItem, PopupWindow, Rect, RemoteAction
 
 ### Community 63 - "🌊 Caspian Mobile - Standalone Android Application"
 Cohesion: 0.22
@@ -308,6 +315,14 @@ Nodes (8): Build Command, 🛠️ Building From Source, 🌊 Caspian Mobile - St
 ### Community 64 - "Caspian-Beta-B/assets/mobile_control.js"
 Cohesion: 0.33
 Nodes (6): renderOpenTabs(), restoreSavedSettings(), setTheme(), syncAppVersion(), syncHostPageTheme(), updateDebugRecUI()
+
+### Community 65 - "Override"
+Cohesion: 0.15
+Nodes (3): CustomViewCallback, FrameLayout, Override
+
+### Community 66 - "org.json.JSONObject"
+Cohesion: 0.32
+Nodes (3): android.content.SharedPreferences, JSONObject, org.json.JSONObject
 
 ### Community 68 - "publish-releases.sh"
 Cohesion: 1.00
@@ -365,17 +380,17 @@ Nodes (4): gradlew script, die(), save(), warn()
 ## Suggested Questions
 _Questions this graph is uniquely positioned to answer:_
 
-- **Why does `MainActivity` connect `MainActivity` to `android.webkit.JavascriptInterface`, `.dpToPx`, `.saveOpenTabsState`, `CaspianDownloadManager`, `.updateOmniboxState`, `WaveguardShield`, `ai/MainActivity.java`, `CaspianWebView`, `betac/MainActivity.java`, `android.view.View`, `BookmarkManager`, `GitHubUpdateManager`, `.switchToTab`, `android.content.Context`, `CaspianMediaService`, `SwipeableViewFlipper`, `.resolve`, `android.webkit.WebView`, `.getTabById`?**
-  _High betweenness centrality (0.301) - this node is a cross-community bridge._
-- **Why does `CaspianBridge` connect `android.webkit.JavascriptInterface` to `MainActivity`, `WaveguardShield`, `android.webkit.WebView`, `GitHubUpdateManager`, `.getInstance`, `.getCasksPayloadJson`?**
-  _High betweenness centrality (0.113) - this node is a cross-community bridge._
-- **Why does `MainActivity` connect `MainActivity` to `.switchTab`, `CaspianBridge`, `.onBackPressed`, `.setupFloatingYouTubeRemote`, `ai/MainActivity.java`, `betac/MainActivity.java`, `android.view.View`, `android.webkit.WebView`, `.onCreate`, `.getActiveTab`, `android.content.Context`?**
-  _High betweenness centrality (0.065) - this node is a cross-community bridge._
+- **Why does `MainActivity` connect `MainActivity` to `android.webkit.JavascriptInterface`, `.dpToPx`, `.updateOmniboxState`, `CaspianDownloadManager`, `.showBrowserActionGrid`, `WaveguardShield`, `betac/MainActivity.java`, `WhirlpoolOverlayView`, `android.view.View`, `BookmarkManager`, `CaspianWebView`, `android.os.Handler`, `.setupLiquidGlassYouTubeRemote`, `android.webkit.WebView`, `android.widget.TextView`, `.resolve`, `Override`, `.evaluateJavascriptInControlSheet`, `.getTabById`?**
+  _High betweenness centrality (0.296) - this node is a cross-community bridge._
+- **Why does `CaspianBridge` connect `android.webkit.JavascriptInterface` to `MainActivity`, `WaveguardShield`, `GitHubUpdateManager`, `.getInstance`, `CaspianBridge`, `.getCasksPayloadJson`?**
+  _High betweenness centrality (0.112) - this node is a cross-community bridge._
+- **Why does `MainActivity` connect `MainActivity` to `android.webkit.WebView`, `.switchTab`, `android.widget.TextView`, `CaspianBridge`, `.onBackPressed`, `.setupFloatingYouTubeRemote`, `betac/MainActivity.java`, `WhirlpoolOverlayView`, `android.view.View`, `.onCreate`, `.getActiveTab`, `android.os.Handler`?**
+  _High betweenness centrality (0.066) - this node is a cross-community bridge._
 - **What connects `studioTabIds`, `manifest_version`, `name` to the rest of the system?**
   _148 weakly-connected nodes found - possible documentation gaps or missing edges._
 - **Should `android.webkit.JavascriptInterface` be split into smaller, more focused modules?**
-  _Cohesion score 0.02951443986036179 - nodes in this community are weakly interconnected._
+  _Cohesion score 0.029194036075487435 - nodes in this community are weakly interconnected._
 - **Should `MainActivity` be split into smaller, more focused modules?**
-  _Cohesion score 0.02672176308539945 - nodes in this community are weakly interconnected._
+  _Cohesion score 0.029975429975429974 - nodes in this community are weakly interconnected._
 - **Should `browser_control.js` be split into smaller, more focused modules?**
   _Cohesion score 0.05396825396825397 - nodes in this community are weakly interconnected._
