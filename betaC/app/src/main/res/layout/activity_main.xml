@@ -2601,6 +2601,134 @@
             android:layout_gravity="center" />
     </FrameLayout>
 
+    <!-- Caspian Orb: State 2 Floating Bottom Pill -->
+    <FrameLayout
+        android:id="@+id/caspian_floating_pill"
+        android:layout_width="wrap_content"
+        android:layout_height="48dp"
+        android:layout_gravity="bottom|center_horizontal"
+        android:layout_marginBottom="24dp"
+        android:background="@drawable/bg_caspian_floating_pill"
+        android:elevation="360dp"
+        android:clickable="true"
+        android:focusable="true"
+        android:paddingStart="8dp"
+        android:paddingEnd="8dp"
+        android:visibility="gone">
+
+        <LinearLayout
+            android:layout_width="wrap_content"
+            android:layout_height="match_parent"
+            android:orientation="horizontal"
+            android:gravity="center_vertical">
+
+            <!-- Back Arrow -->
+            <ImageButton
+                android:id="@+id/caspian_pill_btn_back"
+                android:layout_width="34dp"
+                android:layout_height="34dp"
+                android:padding="6dp"
+                android:background="?attr/selectableItemBackgroundBorderless"
+                android:src="@drawable/ic_pod_back"
+                android:tint="#94A3B8"
+                android:contentDescription="Back" />
+
+            <!-- Center Domain Capsule -->
+            <LinearLayout
+                android:id="@+id/caspian_pill_center"
+                android:layout_width="wrap_content"
+                android:layout_height="34dp"
+                android:minWidth="130dp"
+                android:orientation="horizontal"
+                android:gravity="center"
+                android:paddingStart="10dp"
+                android:paddingEnd="10dp"
+                android:layout_marginStart="4dp"
+                android:layout_marginEnd="4dp"
+                android:background="?attr/selectableItemBackgroundBorderless"
+                android:clickable="true"
+                android:focusable="true">
+
+                <ImageView
+                    android:id="@+id/caspian_pill_lock"
+                    android:layout_width="14dp"
+                    android:layout_height="14dp"
+                    android:src="@drawable/ic_browser_lock"
+                    android:tint="#38BDF8"
+                    android:layout_marginEnd="6dp"
+                    android:contentDescription="SSL" />
+
+                <TextView
+                    android:id="@+id/caspian_pill_host"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="caspian"
+                    android:textColor="#FFFFFF"
+                    android:textSize="13sp"
+                    android:textStyle="bold"
+                    android:maxWidth="160dp"
+                    android:singleLine="true"
+                    android:ellipsize="end" />
+            </LinearLayout>
+
+            <!-- Active Tab Counter Badge Pill -->
+            <FrameLayout
+                android:id="@+id/caspian_pill_tab_btn"
+                android:layout_width="32dp"
+                android:layout_height="26dp"
+                android:layout_marginEnd="4dp"
+                android:background="@drawable/bg_tab_badge"
+                android:clickable="true"
+                android:focusable="true">
+
+                <TextView
+                    android:id="@+id/caspian_pill_tab_count"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:layout_gravity="center"
+                    android:text="1"
+                    android:textColor="#38BDF8"
+                    android:textSize="11sp"
+                    android:textStyle="bold" />
+            </FrameLayout>
+
+            <!-- Menu Trigger -->
+            <ImageButton
+                android:id="@+id/caspian_pill_btn_menu"
+                android:layout_width="34dp"
+                android:layout_height="34dp"
+                android:padding="6dp"
+                android:background="?attr/selectableItemBackgroundBorderless"
+                android:src="@drawable/ic_stitch_more_vert"
+                android:tint="#94A3B8"
+                android:contentDescription="Menu" />
+        </LinearLayout>
+    </FrameLayout>
+
+    <!-- Caspian Orb: State 3 Edge-Docked Floating Orb -->
+    <FrameLayout
+        android:id="@+id/caspian_floating_orb"
+        android:layout_width="48dp"
+        android:layout_height="48dp"
+        android:layout_gravity="bottom|end"
+        android:layout_marginEnd="16dp"
+        android:layout_marginBottom="96dp"
+        android:background="@drawable/bg_caspian_floating_orb"
+        android:elevation="370dp"
+        android:clickable="true"
+        android:focusable="true"
+        android:visibility="gone">
+
+        <ImageView
+            android:id="@+id/caspian_orb_icon"
+            android:layout_width="24dp"
+            android:layout_height="24dp"
+            android:layout_gravity="center"
+            android:src="@drawable/ic_launcher_wave"
+            android:tint="#00E5FF"
+            android:contentDescription="Caspian Orb" />
+    </FrameLayout>
+
     <!-- 15. Horizon Peek Glass Modal -->
     <include layout="@layout/dialog_horizon_peek" />
 

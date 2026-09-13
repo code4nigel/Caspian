@@ -83,12 +83,14 @@ import android.view.SurfaceView;
 import android.view.TextureView;
 import android.view.View;
 import android.view.ViewGroup;
+import android.view.ViewConfiguration;
 import android.view.WindowManager;
 import android.view.animation.AccelerateInterpolator;
 import android.view.animation.DecelerateInterpolator;
 import android.view.animation.Interpolator;
 import android.view.animation.OvershootInterpolator;
 import android.view.animation.PathInterpolator;
+import androidx.dynamicanimation.animation.DynamicAnimation;
 import android.view.inputmethod.EditorInfo;
 import android.view.inputmethod.InputMethodManager;
 import android.webkit.ConsoleMessage;
@@ -436,6 +438,7 @@ public class MainActivity extends AppCompatActivity {
     private TextView horizonPeekHost;
     private ImageButton horizonPeekActionSplit;
     private ImageButton horizonPeekActionTab;
+    private ImageButton horizonPeekActionBgTab;
     private ImageButton horizonPeekActionCopy;
     private ImageButton horizonPeekActionClose;
     private ProgressBar horizonPeekProgress;
@@ -443,6 +446,26 @@ public class MainActivity extends AppCompatActivity {
     private CaspianWebView horizonPeekWebView;
     private String currentHorizonPeekUrl = null;
     private boolean isHorizonPeekOpen = false;
+
+    // Caspian Orb (3-Stage Morphing Omnibox)
+    public static final int ORB_STATE_FULL_TOP = 1;
+    public static final int ORB_STATE_BOTTOM_PILL = 2;
+    public static final int ORB_STATE_FLOATING_ORB = 3;
+    private int currentOrbState = ORB_STATE_FULL_TOP;
+    private FrameLayout caspianFloatingPill;
+    private ImageButton caspianPillBtnBack;
+    private LinearLayout caspianPillCenter;
+    private ImageView caspianPillLock;
+    private TextView caspianPillHost;
+    private FrameLayout caspianPillTabBtn;
+    private TextView caspianPillTabCount;
+    private ImageButton caspianPillBtnMenu;
+    private FrameLayout caspianFloatingOrb;
+    private ImageView caspianOrbIcon;
+    private float orbDownX = 0f, orbDownY = 0f;
+    private float orbStartX = 0f, orbStartY = 0f;
+    private boolean isOrbDragging = false;
+    private VelocityTracker orbVelocityTracker = null;
 
     private FrameLayout ytFloatingRemoteContainer;
     private HorizontalScrollView ytFloatingRemoteScroll;
@@ -1903,6 +1926,7 @@ public class MainActivity extends AppCompatActivity {
             horizonPeekHost = findViewById(R.id.horizon_peek_host);
             horizonPeekActionSplit = findViewById(R.id.horizon_peek_action_split);
             horizonPeekActionTab = findViewById(R.id.horizon_peek_action_tab);
+            horizonPeekActionBgTab = findViewById(R.id.horizon_peek_action_bg_tab);
             horizonPeekActionCopy = findViewById(R.id.horizon_peek_action_copy);
             horizonPeekActionClose = findViewById(R.id.horizon_peek_action_close);
             horizonPeekProgress = findViewById(R.id.horizon_peek_progress);
@@ -1930,11 +1954,27 @@ public class MainActivity extends AppCompatActivity {
             if (horizonPeekActionTab != null) {
                 horizonPeekActionTab.setOnClickListener(v -> promoteHorizonPeekToTab());
             }
+            if (horizonPeekActionBgTab != null) {
+                horizonPeekActionBgTab.setOnClickListener(v -> promoteHorizonPeekToBackgroundTab());
+            }
             if (horizonPeekActionSplit != null) {
                 horizonPeekActionSplit.setOnClickListener(v -> promoteHorizonPeekToSplit());
             }
 
             setupHorizonPeekDragGesture();
+
+            // Caspian Orb Initialization
+            caspianFloatingPill = findViewById(R.id.caspian_floating_pill);
+            caspianPillBtnBack = findViewById(R.id.caspian_pill_btn_back);
+            caspianPillCenter = findViewById(R.id.caspian_pill_center);
+            caspianPillLock = findViewById(R.id.caspian_pill_lock);
+            caspianPillHost = findViewById(R.id.caspian_pill_host);
+            caspianPillTabBtn = findViewById(R.id.caspian_pill_tab_btn);
+            caspianPillTabCount = findViewById(R.id.caspian_pill_tab_count);
+            caspianPillBtnMenu = findViewById(R.id.caspian_pill_btn_menu);
+            caspianFloatingOrb = findViewById(R.id.caspian_floating_orb);
+            caspianOrbIcon = findViewById(R.id.caspian_orb_icon);
+            setupCaspianOrbListeners();
 
             applyOmniboxPosition(omniboxPosition);
 
@@ -11718,7 +11758,7 @@ public class MainActivity extends AppCompatActivity {
     }
 
     public void hideToolbar(boolean animate) {
-        if (isToolbarScrollLocked || isInternalPageWithoutToolbarAutohide() || "separate".equalsIgnoreCase(omniboxScrollMode)) return;
+        if (isToolbarScrollLocked || isInternalPageWithoutToolbarAutohide() || "separate".equalsIgnoreCase(omniboxScrollMode) || "orb".equalsIgnoreCase(omniboxScrollMode)) return;
         currentToolbarState = TOOLBAR_STATE_FULLSCREEN_HIDDEN;
         isToolbarInDedicatedSection = false;
         int toolbarH = getToolbarHeight();
@@ -11798,7 +11838,7 @@ public class MainActivity extends AppCompatActivity {
     }
 
     public boolean handlePreScrollDrag(CaspianWebView webView, float dragOffsetY) {
-        if (isToolbarScrollLocked || isInternalPageWithoutToolbarAutohide() || "separate".equalsIgnoreCase(omniboxScrollMode)) return false;
+        if (isToolbarScrollLocked || isInternalPageWithoutToolbarAutohide() || "separate".equalsIgnoreCase(omniboxScrollMode) || "orb".equalsIgnoreCase(omniboxScrollMode)) return false;
         if (omniboxEditText != null && omniboxEditText.hasFocus()) return false;
 
         boolean isBottomMode = "bottom".equalsIgnoreCase(omniboxPosition);
@@ -11853,7 +11893,7 @@ public class MainActivity extends AppCompatActivity {
     }
 
     public void handlePreScrollDragEnd(CaspianWebView webView, float dragOffsetY) {
-        if (isToolbarScrollLocked || isInternalPageWithoutToolbarAutohide() || "separate".equalsIgnoreCase(omniboxScrollMode)) return;
+        if (isToolbarScrollLocked || isInternalPageWithoutToolbarAutohide() || "separate".equalsIgnoreCase(omniboxScrollMode) || "orb".equalsIgnoreCase(omniboxScrollMode)) return;
         if (omniboxEditText != null && omniboxEditText.hasFocus()) return;
 
         boolean isBottomMode = "bottom".equalsIgnoreCase(omniboxPosition);
@@ -11898,6 +11938,39 @@ public class MainActivity extends AppCompatActivity {
     }
 
     public void handleWebViewScroll(CaspianWebView webView, int scrollX, int scrollY, int oldScrollX, int oldScrollY) {
+        if ("orb".equalsIgnoreCase(omniboxScrollMode)) {
+            if (isToolbarScrollLocked || isInternalPageWithoutToolbarAutohide()) {
+                if (currentOrbState != ORB_STATE_FULL_TOP) {
+                    transitionToOrbState(ORB_STATE_FULL_TOP, false);
+                }
+                return;
+            }
+            if (omniboxEditText != null && omniboxEditText.hasFocus()) {
+                if (currentOrbState != ORB_STATE_FULL_TOP) {
+                    transitionToOrbState(ORB_STATE_FULL_TOP, false);
+                }
+                return;
+            }
+
+            int deltaY = scrollY - oldScrollY;
+            if (scrollY <= dpToPx(10)) {
+                if (currentOrbState != ORB_STATE_FULL_TOP) {
+                    transitionToOrbState(ORB_STATE_FULL_TOP, true);
+                }
+            } else if (deltaY > 12 && scrollY > dpToPx(35)) {
+                if (currentOrbState == ORB_STATE_FULL_TOP) {
+                    transitionToOrbState(ORB_STATE_BOTTOM_PILL, true);
+                }
+            } else if (deltaY < -18) {
+                if (currentOrbState == ORB_STATE_FLOATING_ORB) {
+                    transitionToOrbState(ORB_STATE_BOTTOM_PILL, true);
+                } else if (currentOrbState == ORB_STATE_BOTTOM_PILL && scrollY < dpToPx(120)) {
+                    transitionToOrbState(ORB_STATE_FULL_TOP, true);
+                }
+            }
+            return;
+        }
+
         if (isToolbarScrollLocked || isInternalPageWithoutToolbarAutohide() || "separate".equalsIgnoreCase(omniboxScrollMode)) {
             if ("bottom".equalsIgnoreCase(omniboxPosition)) {
                 dockToolbarAtBottom(false);
@@ -12013,7 +12086,7 @@ public class MainActivity extends AppCompatActivity {
     }
 
     public void handleWebViewOverScrolled(CaspianWebView webView, int scrollX, int scrollY, boolean clampedX, boolean clampedY) {
-        if (isToolbarScrollLocked || isInternalPageWithoutToolbarAutohide() || "separate".equalsIgnoreCase(omniboxScrollMode)) return;
+        if (isToolbarScrollLocked || isInternalPageWithoutToolbarAutohide() || "separate".equalsIgnoreCase(omniboxScrollMode) || "orb".equalsIgnoreCase(omniboxScrollMode)) return;
         boolean isBottomMode = "bottom".equalsIgnoreCase(omniboxPosition);
         if (clampedY) {
             if (scrollY < 0 && !isBottomMode) {
@@ -12035,7 +12108,7 @@ public class MainActivity extends AppCompatActivity {
     }
 
     public void handleWebViewScrollIdle(CaspianWebView webView) {
-        if (isToolbarScrollLocked || isInternalPageWithoutToolbarAutohide() || "separate".equalsIgnoreCase(omniboxScrollMode)) return;
+        if (isToolbarScrollLocked || isInternalPageWithoutToolbarAutohide() || "separate".equalsIgnoreCase(omniboxScrollMode) || "orb".equalsIgnoreCase(omniboxScrollMode)) return;
         // In dedicated section, allow user to pause anywhere like a native page component without snapping.
     }
 
@@ -12069,7 +12142,13 @@ public class MainActivity extends AppCompatActivity {
     }
 
     public void setOmniboxScrollMode(String mode) {
-        this.omniboxScrollMode = (mode != null && mode.equalsIgnoreCase("separate")) ? "separate" : "overlay";
+        if ("orb".equalsIgnoreCase(mode)) {
+            this.omniboxScrollMode = "orb";
+        } else if ("separate".equalsIgnoreCase(mode)) {
+            this.omniboxScrollMode = "separate";
+        } else {
+            this.omniboxScrollMode = "overlay";
+        }
         try {
             getSharedPreferences(PREFS_NAME, MODE_PRIVATE)
                     .edit()
@@ -12077,7 +12156,12 @@ public class MainActivity extends AppCompatActivity {
                     .apply();
         } catch (Throwable ignored) {}
 
-        if ("separate".equalsIgnoreCase(this.omniboxScrollMode)) {
+        if ("orb".equalsIgnoreCase(this.omniboxScrollMode)) {
+            isToolbarInDedicatedSection = true;
+            dockToolbarAtTop(true);
+            transitionToOrbState(ORB_STATE_FULL_TOP, true);
+        } else if ("separate".equalsIgnoreCase(this.omniboxScrollMode)) {
+            hideCaspianOrbElements();
             isToolbarInDedicatedSection = true;
             if ("bottom".equalsIgnoreCase(omniboxPosition)) {
                 dockToolbarAtBottom(true);
@@ -12085,6 +12169,7 @@ public class MainActivity extends AppCompatActivity {
                 dockToolbarAtTop(true);
             }
         } else {
+            hideCaspianOrbElements();
             if ("bottom".equalsIgnoreCase(omniboxPosition)) {
                 dockToolbarAtBottom(true);
             } else {
@@ -16068,31 +16153,172 @@ public class MainActivity extends AppCompatActivity {
     private void promoteHorizonPeekToTab() {
         if (currentHorizonPeekUrl == null) return;
         String url = currentHorizonPeekUrl;
-        closeHorizonPeek(false);
+        CaspianWebView peekWv = horizonPeekWebView;
+
+        if (peekWv != null && horizonPeekWebviewContainer != null) {
+            horizonPeekWebviewContainer.removeView(peekWv);
+            horizonPeekWebView = null; // Detached so cleanup won't destroy it!
+            closeHorizonPeek(false);
+
+            int newId = nextTabId++;
+            String peekTitle = (horizonPeekTitle != null && horizonPeekTitle.getText() != null)
+                    ? horizonPeekTitle.getText().toString() : "Horizon Peek";
+            TabItem tab = new TabItem(newId, peekTitle, url, "web", peekWv, false);
+            CaskManager cm = new CaskManager(this);
+            String activeCask = cm.getActiveCaskId();
+            CaskManager.CaskItem cask = cm.getCaskById(activeCask);
+            if (cask != null) {
+                tab.caskId = cask.id;
+                tab.caskName = cask.name;
+                tab.caskIcon = cask.icon;
+                tab.caskColor = cask.color;
+            }
+            setupTabClientsAndListeners(tab, peekWv);
+            tabsList.add(tab);
+            activeTabId = newId;
+
+            if (webViewContainer != null) {
+                if (peekWv.getParent() != null) {
+                    ((ViewGroup) peekWv.getParent()).removeView(peekWv);
+                }
+                webViewContainer.addView(peekWv);
+                peekWv.setVisibility(View.VISIBLE);
+                peekWv.bringToFront();
+            }
+
+            switchToTab(newId, true);
+            saveOpenTabsState();
+            updateOmniboxTabStrip();
+            updateOmniboxState();
+            Toast.makeText(this, "Adopted preview as active tab", Toast.LENGTH_SHORT).show();
+        } else {
+            closeHorizonPeek(false);
+            int newId = nextTabId++;
+            TabItem tab = createNewTabInstance(newId, url, "web", null, false);
+            tabsList.add(tab);
+            activeTabId = newId;
+            switchToTab(newId, true);
+            saveOpenTabsState();
+            updateOmniboxTabStrip();
+            Toast.makeText(this, "Promoted to new tab", Toast.LENGTH_SHORT).show();
+        }
+    }
+
+    private void promoteHorizonPeekToBackgroundTab() {
+        if (currentHorizonPeekUrl == null) return;
+        String url = currentHorizonPeekUrl;
+
         int newId = nextTabId++;
-        TabItem tab = createNewTabInstance(newId, url, "web", null, false);
-        tabsList.add(tab);
-        activeTabId = newId;
-        switchToTab(newId, true);
+        TabItem bgTab = createNewTabInstance(newId, url, "web", null, false);
+        tabsList.add(bgTab);
         saveOpenTabsState();
         updateOmniboxTabStrip();
-        Toast.makeText(this, "Promoted to new tab", Toast.LENGTH_SHORT).show();
+        updateOmniboxState();
+
+        // Animate peek sheet scaling down toward omnibox tab counter
+        if (horizonPeekSheet != null && horizonPeekRoot != null) {
+            horizonPeekSheet.animate()
+                    .scaleX(0.2f)
+                    .scaleY(0.2f)
+                    .alpha(0f)
+                    .translationY(-dpToPx(180))
+                    .setDuration(280)
+                    .setInterpolator(new AccelerateInterpolator(1.8f))
+                    .withEndAction(() -> {
+                        cleanupHorizonPeek();
+                        if (horizonPeekSheet != null) {
+                            horizonPeekSheet.setScaleX(1f);
+                            horizonPeekSheet.setScaleY(1f);
+                            horizonPeekSheet.setTranslationY(0f);
+                        }
+                    })
+                    .start();
+            horizonPeekRoot.animate().alpha(0f).setDuration(280).start();
+        } else {
+            closeHorizonPeek(false);
+        }
+
+        animateTabBadgePulse();
+        Toast.makeText(this, "Queued in background", Toast.LENGTH_SHORT).show();
     }
 
     private void promoteHorizonPeekToSplit() {
         if (currentHorizonPeekUrl == null) return;
         String url = currentHorizonPeekUrl;
-        closeHorizonPeek(false);
-        int newId = nextTabId++;
-        TabItem newTab = createNewTabInstance(newId, url, "web", null, false);
-        tabsList.add(newTab);
-        secondarySplitTabId = newId;
-        splitModeState = 1; // Horizontal Split
-        applySplitViewLayout();
-        updateOmniboxState();
-        saveOpenTabsState();
-        updateOmniboxTabStrip();
-        Toast.makeText(this, "Opened in Split Screen", Toast.LENGTH_SHORT).show();
+        CaspianWebView peekWv = horizonPeekWebView;
+
+        if (peekWv != null && horizonPeekWebviewContainer != null) {
+            horizonPeekWebviewContainer.removeView(peekWv);
+            horizonPeekWebView = null;
+            closeHorizonPeek(false);
+
+            int newId = nextTabId++;
+            String peekTitle = (horizonPeekTitle != null && horizonPeekTitle.getText() != null)
+                    ? horizonPeekTitle.getText().toString() : "Horizon Peek";
+            TabItem newTab = new TabItem(newId, peekTitle, url, "web", peekWv, false);
+            setupTabClientsAndListeners(newTab, peekWv);
+            tabsList.add(newTab);
+            secondarySplitTabId = newId;
+            splitModeState = 1;
+            applySplitViewLayout();
+            updateOmniboxState();
+            saveOpenTabsState();
+            updateOmniboxTabStrip();
+            Toast.makeText(this, "Opened in Split Screen", Toast.LENGTH_SHORT).show();
+        } else {
+            closeHorizonPeek(false);
+            int newId = nextTabId++;
+            TabItem newTab = createNewTabInstance(newId, url, "web", null, false);
+            tabsList.add(newTab);
+            secondarySplitTabId = newId;
+            splitModeState = 1; // Horizontal Split
+            applySplitViewLayout();
+            updateOmniboxState();
+            saveOpenTabsState();
+            updateOmniboxTabStrip();
+            Toast.makeText(this, "Opened in Split Screen", Toast.LENGTH_SHORT).show();
+        }
+    }
+
+    private void animateTabBadgePulse() {
+        try {
+            if (omniboxTabsBtn != null) {
+                omniboxTabsBtn.animate()
+                        .scaleX(1.35f)
+                        .scaleY(1.35f)
+                        .setDuration(130)
+                        .setInterpolator(new DecelerateInterpolator(2.0f))
+                        .withEndAction(() -> {
+                            if (omniboxTabsBtn != null) {
+                                omniboxTabsBtn.animate()
+                                        .scaleX(1.0f)
+                                        .scaleY(1.0f)
+                                        .setDuration(180)
+                                        .setInterpolator(new OvershootInterpolator(1.5f))
+                                        .start();
+                            }
+                        })
+                        .start();
+                omniboxTabsBtn.performHapticFeedback(HapticFeedbackConstants.KEYBOARD_TAP);
+            }
+            if (caspianPillTabBtn != null && caspianPillTabBtn.getVisibility() == View.VISIBLE) {
+                caspianPillTabBtn.animate()
+                        .scaleX(1.35f)
+                        .scaleY(1.35f)
+                        .setDuration(130)
+                        .withEndAction(() -> {
+                            if (caspianPillTabBtn != null) {
+                                caspianPillTabBtn.animate()
+                                        .scaleX(1.0f)
+                                        .scaleY(1.0f)
+                                        .setDuration(180)
+                                        .setInterpolator(new OvershootInterpolator(1.5f))
+                                        .start();
+                            }
+                        })
+                        .start();
+            }
+        } catch (Throwable ignored) {}
     }
 
     @SuppressLint("ClickableViewAccessibility")
@@ -16102,20 +16328,36 @@ public class MainActivity extends AppCompatActivity {
         View.OnTouchListener swipeListener = new View.OnTouchListener() {
             private float startY = 0f;
             private boolean isDragging = false;
+            private VelocityTracker velocityTracker = null;
 
             @Override
             public boolean onTouch(View v, MotionEvent event) {
                 switch (event.getActionMasked()) {
                     case MotionEvent.ACTION_DOWN:
                         startY = event.getRawY();
-                        isDragging = true;
+                        isDragging = false;
+                        if (velocityTracker == null) {
+                            velocityTracker = VelocityTracker.obtain();
+                        } else {
+                            velocityTracker.clear();
+                        }
+                        velocityTracker.addMovement(event);
+                        horizonPeekSheet.animate().cancel();
                         return true;
 
                     case MotionEvent.ACTION_MOVE:
+                        if (velocityTracker != null) velocityTracker.addMovement(event);
+                        float rawY = event.getRawY();
+                        float dy = rawY - startY;
+                        if (!isDragging && Math.abs(dy) > ViewConfiguration.get(MainActivity.this).getScaledTouchSlop()) {
+                            isDragging = true;
+                        }
                         if (isDragging) {
-                            float dy = event.getRawY() - startY;
                             if (dy > 0) {
                                 horizonPeekSheet.setTranslationY(dy);
+                            } else {
+                                float upwardResistance = (float) (-Math.pow(Math.abs(dy), 0.75) * 2.5);
+                                horizonPeekSheet.setTranslationY(upwardResistance);
                             }
                             return true;
                         }
@@ -16123,19 +16365,34 @@ public class MainActivity extends AppCompatActivity {
 
                     case MotionEvent.ACTION_UP:
                     case MotionEvent.ACTION_CANCEL:
+                        if (velocityTracker != null) {
+                            velocityTracker.addMovement(event);
+                            velocityTracker.computeCurrentVelocity(1000);
+                        }
+                        float velY = (velocityTracker != null) ? velocityTracker.getYVelocity() : 0f;
+                        if (velocityTracker != null) {
+                            velocityTracker.recycle();
+                            velocityTracker = null;
+                        }
+
                         if (isDragging) {
                             isDragging = false;
-                            float dy = event.getRawY() - startY;
-                            if (dy > dpToPx(80)) {
+                            float finalDy = event.getRawY() - startY;
+                            if (finalDy > dpToPx(160) || velY > 1200f) {
                                 closeHorizonPeek(true);
                             } else {
                                 horizonPeekSheet.animate()
                                         .translationY(0f)
-                                        .setDuration(200)
-                                        .setInterpolator(new DecelerateInterpolator(1.8f))
+                                        .setDuration(260)
+                                        .setInterpolator(new OvershootInterpolator(1.25f))
                                         .start();
                             }
                             return true;
+                        } else {
+                            horizonPeekSheet.animate()
+                                    .translationY(0f)
+                                    .setDuration(200)
+                                    .start();
                         }
                         break;
                 }
@@ -16146,6 +16403,375 @@ public class MainActivity extends AppCompatActivity {
         horizonPeekHandleBar.setOnTouchListener(swipeListener);
         if (horizonPeekHeader != null) {
             horizonPeekHeader.setOnTouchListener(swipeListener);
+        }
+    }
+
+    public void transitionToOrbState(int targetState, boolean animate) {
+        if (!"orb".equalsIgnoreCase(omniboxScrollMode)) return;
+        currentOrbState = targetState;
+        runOnUiThread(() -> {
+            int toolbarH = getToolbarHeight();
+            long duration = animate ? 240 : 0;
+            Interpolator springDecel = new OvershootInterpolator(1.15f);
+
+            switch (targetState) {
+                case ORB_STATE_FULL_TOP:
+                    if (omniboxHeaderWrapper != null) {
+                        omniboxHeaderWrapper.setVisibility(View.VISIBLE);
+                        if (animate) {
+                            omniboxHeaderWrapper.animate().cancel();
+                            omniboxHeaderWrapper.animate()
+                                    .translationY(0f)
+                                    .alpha(1f)
+                                    .setDuration(duration)
+                                    .setInterpolator(new DecelerateInterpolator(1.8f))
+                                    .start();
+                        } else {
+                            omniboxHeaderWrapper.setTranslationY(0f);
+                            omniboxHeaderWrapper.setAlpha(1f);
+                        }
+                    }
+                    if (browserProgressBar != null) {
+                        browserProgressBar.setVisibility(View.VISIBLE);
+                        browserProgressBar.setTranslationY(0f);
+                    }
+                    if (caspianFloatingPill != null) {
+                        if (animate && caspianFloatingPill.getVisibility() == View.VISIBLE) {
+                            caspianFloatingPill.animate().cancel();
+                            caspianFloatingPill.animate()
+                                    .translationY(dpToPx(80))
+                                    .scaleX(0.85f)
+                                    .scaleY(0.85f)
+                                    .alpha(0f)
+                                    .setDuration(duration)
+                                    .withEndAction(() -> caspianFloatingPill.setVisibility(View.GONE))
+                                    .start();
+                        } else {
+                            caspianFloatingPill.setVisibility(View.GONE);
+                        }
+                    }
+                    if (caspianFloatingOrb != null) {
+                        if (animate && caspianFloatingOrb.getVisibility() == View.VISIBLE) {
+                            caspianFloatingOrb.animate().cancel();
+                            caspianFloatingOrb.animate()
+                                    .scaleX(0f)
+                                    .scaleY(0f)
+                                    .alpha(0f)
+                                    .setDuration(duration)
+                                    .withEndAction(() -> caspianFloatingOrb.setVisibility(View.GONE))
+                                    .start();
+                        } else {
+                            caspianFloatingOrb.setVisibility(View.GONE);
+                        }
+                    }
+                    break;
+
+                case ORB_STATE_BOTTOM_PILL:
+                    updateCaspianPillData();
+                    if (omniboxHeaderWrapper != null) {
+                        if (animate) {
+                            omniboxHeaderWrapper.animate().cancel();
+                            omniboxHeaderWrapper.animate()
+                                    .translationY((float) -toolbarH)
+                                    .alpha(0f)
+                                    .setDuration(duration)
+                                    .withEndAction(() -> omniboxHeaderWrapper.setVisibility(View.GONE))
+                                    .start();
+                        } else {
+                            omniboxHeaderWrapper.setTranslationY((float) -toolbarH);
+                            omniboxHeaderWrapper.setVisibility(View.GONE);
+                        }
+                    }
+                    if (browserProgressBar != null) {
+                        browserProgressBar.setTranslationY((float) -toolbarH);
+                    }
+                    if (caspianFloatingPill != null) {
+                        caspianFloatingPill.setVisibility(View.VISIBLE);
+                        if (animate) {
+                            caspianFloatingPill.animate().cancel();
+                            caspianFloatingPill.setTranslationY(dpToPx(80));
+                            caspianFloatingPill.setScaleX(0.85f);
+                            caspianFloatingPill.setScaleY(0.85f);
+                            caspianFloatingPill.setAlpha(0f);
+                            caspianFloatingPill.animate()
+                                    .translationY(0f)
+                                    .scaleX(1f)
+                                    .scaleY(1f)
+                                    .alpha(1f)
+                                    .setDuration(duration + 40)
+                                    .setInterpolator(springDecel)
+                                    .start();
+                        } else {
+                            caspianFloatingPill.setTranslationY(0f);
+                            caspianFloatingPill.setScaleX(1f);
+                            caspianFloatingPill.setScaleY(1f);
+                            caspianFloatingPill.setAlpha(1f);
+                        }
+                    }
+                    if (caspianFloatingOrb != null) {
+                        if (animate && caspianFloatingOrb.getVisibility() == View.VISIBLE) {
+                            caspianFloatingOrb.animate().cancel();
+                            caspianFloatingOrb.animate()
+                                    .scaleX(0f)
+                                    .scaleY(0f)
+                                    .alpha(0f)
+                                    .setDuration(duration)
+                                    .withEndAction(() -> caspianFloatingOrb.setVisibility(View.GONE))
+                                    .start();
+                        } else {
+                            caspianFloatingOrb.setVisibility(View.GONE);
+                        }
+                    }
+                    break;
+
+                case ORB_STATE_FLOATING_ORB:
+                    if (omniboxHeaderWrapper != null) {
+                        omniboxHeaderWrapper.setVisibility(View.GONE);
+                    }
+                    if (caspianFloatingPill != null) {
+                        if (animate && caspianFloatingPill.getVisibility() == View.VISIBLE) {
+                            caspianFloatingPill.animate().cancel();
+                            caspianFloatingPill.animate()
+                                    .scaleX(0.3f)
+                                    .scaleY(0.3f)
+                                    .alpha(0f)
+                                    .setDuration(duration)
+                                    .withEndAction(() -> caspianFloatingPill.setVisibility(View.GONE))
+                                    .start();
+                        } else {
+                            caspianFloatingPill.setVisibility(View.GONE);
+                        }
+                    }
+                    if (caspianFloatingOrb != null) {
+                        caspianFloatingOrb.setVisibility(View.VISIBLE);
+                        if (animate) {
+                            caspianFloatingOrb.animate().cancel();
+                            caspianFloatingOrb.setScaleX(0.3f);
+                            caspianFloatingOrb.setScaleY(0.3f);
+                            caspianFloatingOrb.setAlpha(0f);
+                            caspianFloatingOrb.animate()
+                                    .scaleX(1f)
+                                    .scaleY(1f)
+                                    .alpha(0.65f)
+                                    .setDuration(duration + 60)
+                                    .setInterpolator(springDecel)
+                                    .start();
+                        } else {
+                            caspianFloatingOrb.setScaleX(1f);
+                            caspianFloatingOrb.setScaleY(1f);
+                            caspianFloatingOrb.setAlpha(0.65f);
+                        }
+                    }
+                    break;
+            }
+        });
+    }
+
+    public void updateCaspianPillData() {
+        runOnUiThread(() -> {
+            TabItem tab = getActiveOrDominantTab();
+            if (tab != null) {
+                String host = "caspian";
+                if (tab.url != null && !tab.url.isEmpty()) {
+                    try {
+                        Uri u = Uri.parse(tab.url);
+                        if (u.getHost() != null && !u.getHost().isEmpty()) {
+                            host = u.getHost().replaceFirst("^www\\.", "");
+                        } else {
+                            host = tab.url;
+                        }
+                    } catch (Throwable ignored) {
+                        host = tab.url;
+                    }
+                }
+                if (caspianPillHost != null) caspianPillHost.setText(host);
+                if (caspianPillLock != null) {
+                    boolean isSecure = tab.url != null && tab.url.startsWith("https://");
+                    caspianPillLock.setColorFilter(isSecure ? Color.parseColor("#38BDF8") : Color.parseColor("#94A3B8"));
+                }
+            }
+            if (caspianPillTabCount != null) {
+                caspianPillTabCount.setText(String.valueOf(tabsList.size()));
+            }
+        });
+    }
+
+    private void hideCaspianOrbElements() {
+        runOnUiThread(() -> {
+            if (caspianFloatingPill != null) caspianFloatingPill.setVisibility(View.GONE);
+            if (caspianFloatingOrb != null) caspianFloatingOrb.setVisibility(View.GONE);
+            currentOrbState = ORB_STATE_FULL_TOP;
+        });
+    }
+
+    @SuppressLint("ClickableViewAccessibility")
+    private void setupCaspianOrbListeners() {
+        if (caspianPillBtnBack != null) {
+            caspianPillBtnBack.setOnClickListener(v -> {
+                playUiFeedbackSound("tap");
+                TabItem active = getTabById(activeTabId);
+                if (active != null && active.webView != null && active.webView.canGoBack()) {
+                    active.webView.goBack();
+                } else {
+                    onBackPressed();
+                }
+            });
+        }
+
+        if (caspianPillCenter != null) {
+            caspianPillCenter.setOnClickListener(v -> {
+                playUiFeedbackSound("tap");
+                transitionToOrbState(ORB_STATE_FULL_TOP, true);
+                if (omniboxEditText != null) {
+                    omniboxEditText.requestFocus();
+                    InputMethodManager imm = (InputMethodManager) getSystemService(Context.INPUT_METHOD_SERVICE);
+                    if (imm != null) imm.showSoftInput(omniboxEditText, InputMethodManager.SHOW_IMPLICIT);
+                }
+            });
+        }
+
+        if (caspianPillTabBtn != null) {
+            caspianPillTabBtn.setOnClickListener(v -> {
+                playUiFeedbackSound("tap");
+                showTabGridView();
+            });
+        }
+
+        if (caspianPillBtnMenu != null) {
+            caspianPillBtnMenu.setOnClickListener(v -> {
+                playUiFeedbackSound("tap");
+                showBrowserMenu(v);
+            });
+        }
+
+        if (caspianFloatingPill != null) {
+            caspianFloatingPill.setOnTouchListener(new View.OnTouchListener() {
+                private float downX = 0f;
+                private float downY = 0f;
+
+                @Override
+                public boolean onTouch(View v, MotionEvent event) {
+                    switch (event.getActionMasked()) {
+                        case MotionEvent.ACTION_DOWN:
+                            downX = event.getRawX();
+                            downY = event.getRawY();
+                            return false;
+                        case MotionEvent.ACTION_UP:
+                            float dx = event.getRawX() - downX;
+                            float dy = event.getRawY() - downY;
+                            if (Math.abs(dx) > dpToPx(45) && Math.abs(dx) > Math.abs(dy)) {
+                                v.performHapticFeedback(HapticFeedbackConstants.KEYBOARD_TAP);
+                                transitionToOrbState(ORB_STATE_FLOATING_ORB, true);
+                                return true;
+                            }
+                            break;
+                    }
+                    return false;
+                }
+            });
+        }
+
+        if (caspianFloatingOrb != null) {
+            caspianFloatingOrb.setOnTouchListener(new View.OnTouchListener() {
+                private long touchStartTime = 0;
+
+                @Override
+                public boolean onTouch(View v, MotionEvent event) {
+                    switch (event.getActionMasked()) {
+                        case MotionEvent.ACTION_DOWN:
+                            orbDownX = event.getRawX();
+                            orbDownY = event.getRawY();
+                            orbStartX = caspianFloatingOrb.getX();
+                            orbStartY = caspianFloatingOrb.getY();
+                            isOrbDragging = false;
+                            touchStartTime = System.currentTimeMillis();
+
+                            if (orbVelocityTracker == null) {
+                                orbVelocityTracker = VelocityTracker.obtain();
+                            } else {
+                                orbVelocityTracker.clear();
+                            }
+                            orbVelocityTracker.addMovement(event);
+
+                            CaspianPhysics.cancelSpring(caspianFloatingOrb, DynamicAnimation.X);
+                            CaspianPhysics.cancelSpring(caspianFloatingOrb, DynamicAnimation.Y);
+                            caspianFloatingOrb.animate().cancel();
+                            caspianFloatingOrb.setAlpha(1.0f);
+                            CaspianPhysics.applyPressSquish(caspianFloatingOrb);
+                            return true;
+
+                        case MotionEvent.ACTION_MOVE:
+                            if (orbVelocityTracker != null) orbVelocityTracker.addMovement(event);
+                            float deltaX = event.getRawX() - orbDownX;
+                            float deltaY = event.getRawY() - orbDownY;
+                            if (!isOrbDragging && Math.hypot(deltaX, deltaY) > ViewConfiguration.get(MainActivity.this).getScaledTouchSlop()) {
+                                isOrbDragging = true;
+                            }
+                            if (isOrbDragging) {
+                                int screenW = getResources().getDisplayMetrics().widthPixels;
+                                int screenH = getResources().getDisplayMetrics().heightPixels;
+                                int orbW = caspianFloatingOrb.getWidth() > 0 ? caspianFloatingOrb.getWidth() : dpToPx(48);
+                                int orbH = caspianFloatingOrb.getHeight() > 0 ? caspianFloatingOrb.getHeight() : dpToPx(48);
+
+                                float targetX = Math.max(0, Math.min(screenW - orbW, orbStartX + deltaX));
+                                float targetY = Math.max(dpToPx(40), Math.min(screenH - orbH - dpToPx(50), orbStartY + deltaY));
+                                caspianFloatingOrb.setX(targetX);
+                                caspianFloatingOrb.setY(targetY);
+                            }
+                            return true;
+
+                        case MotionEvent.ACTION_UP:
+                        case MotionEvent.ACTION_CANCEL:
+                            CaspianPhysics.applyReleasePop(caspianFloatingOrb);
+                            if (orbVelocityTracker != null) {
+                                orbVelocityTracker.addMovement(event);
+                                orbVelocityTracker.computeCurrentVelocity(1000);
+                            }
+                            float velX = orbVelocityTracker != null ? orbVelocityTracker.getXVelocity() : 0f;
+                            float velY = orbVelocityTracker != null ? orbVelocityTracker.getYVelocity() : 0f;
+                            if (orbVelocityTracker != null) {
+                                orbVelocityTracker.recycle();
+                                orbVelocityTracker = null;
+                            }
+
+                            long clickDuration = System.currentTimeMillis() - touchStartTime;
+                            if (!isOrbDragging && clickDuration < 300) {
+                                caspianFloatingOrb.performHapticFeedback(HapticFeedbackConstants.KEYBOARD_TAP);
+                                playUiFeedbackSound("tap");
+                                transitionToOrbState(ORB_STATE_BOTTOM_PILL, true);
+                            } else {
+                                int screenW = getResources().getDisplayMetrics().widthPixels;
+                                int screenH = getResources().getDisplayMetrics().heightPixels;
+                                int orbW = caspianFloatingOrb.getWidth() > 0 ? caspianFloatingOrb.getWidth() : dpToPx(48);
+                                int orbH = caspianFloatingOrb.getHeight() > 0 ? caspianFloatingOrb.getHeight() : dpToPx(48);
+
+                                float currentCenterX = caspianFloatingOrb.getX() + (orbW / 2f);
+                                boolean snapToLeft = currentCenterX < (screenW / 2f);
+                                if (Math.abs(velX) > 500f) {
+                                    snapToLeft = velX < 0;
+                                }
+
+                                float targetX = snapToLeft ? dpToPx(8) : (screenW - orbW - dpToPx(8));
+                                float currentY = caspianFloatingOrb.getY();
+                                float projectedY = currentY + (velY * 0.12f);
+                                float targetY = Math.max(dpToPx(60), Math.min(screenH - orbH - dpToPx(80), projectedY));
+
+                                CaspianPhysics.animateSpringWithVelocity(caspianFloatingOrb, DynamicAnimation.X, targetX, velX, CaspianPhysics.DAMPING_BOUNCY, CaspianPhysics.STIFFNESS_RESPONSIVE);
+                                CaspianPhysics.animateSpringWithVelocity(caspianFloatingOrb, DynamicAnimation.Y, targetY, velY, CaspianPhysics.DAMPING_BOUNCY, CaspianPhysics.STIFFNESS_RESPONSIVE);
+                                caspianFloatingOrb.performHapticFeedback(HapticFeedbackConstants.KEYBOARD_TAP);
+
+                                caspianFloatingOrb.animate()
+                                        .alpha(0.65f)
+                                        .setStartDelay(350)
+                                        .setDuration(300)
+                                        .start();
+                            }
+                            isOrbDragging = false;
+                            return true;
+                    }
+                    return false;
+                }
+            });
         }
     }
 
@@ -17794,9 +18420,6 @@ public class MainActivity extends AppCompatActivity {
             settings.setCacheMode(WebSettings.LOAD_NO_CACHE);
         }
 
-        webView.addJavascriptInterface(new CaspianBridge(this, id), "CaspianBridge");
-        applyWebViewTheme(webView, isDarkTheme);
-
         webView.setLayerType(View.LAYER_TYPE_HARDWARE, null);
         settings.setRenderPriority(WebSettings.RenderPriority.HIGH);
         settings.setOffscreenPreRaster(true);
@@ -17823,6 +18446,17 @@ public class MainActivity extends AppCompatActivity {
             tabItem.caskIcon = cask.icon;
             tabItem.caskColor = cask.color;
         }
+
+        setupTabClientsAndListeners(tabItem, webView);
+        webView.loadUrl(url);
+        return tabItem;
+    }
+
+    @SuppressLint("SetJavaScriptEnabled")
+    private void setupTabClientsAndListeners(final TabItem tabItem, final CaspianWebView webView) {
+        final int id = tabItem.id;
+        webView.addJavascriptInterface(new CaspianBridge(this, id), "CaspianBridge");
+        applyWebViewTheme(webView, isDarkTheme);
 
         webView.setOnScrollChangeListener((v, scrollX, scrollY, oldScrollX, oldScrollY) -> {
             if (isGoogleDockAutoCollapse && searchNavContainer != null && searchNavContainer.getVisibility() == View.VISIBLE) {
@@ -18565,9 +19199,6 @@ public class MainActivity extends AppCompatActivity {
                 return true;
             }
         });
-
-        webView.loadUrl(url);
-        return tabItem;
     }
 
     public void addNewTab(String service, String prompt) {
@@ -19355,6 +19986,10 @@ public class MainActivity extends AppCompatActivity {
             omniboxTabsCount.setText(String.valueOf(tabsList.size()));
             omniboxTabsCount.setTextColor(themeAccent);
         }
+        if (caspianPillTabCount != null) {
+            caspianPillTabCount.setText(String.valueOf(tabsList.size()));
+        }
+        updateCaspianPillData();
 
         if (omniboxShieldIcon != null) {
             omniboxShieldIcon.setColorFilter(themeAccent);

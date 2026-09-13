@@ -116,6 +116,18 @@
                     android:tint="#38BDF8"
                     android:contentDescription="Open as Tab" />
 
+                <!-- 3. Queue in Background Tab Button -->
+                <ImageButton
+                    android:id="@+id/horizon_peek_action_bg_tab"
+                    android:layout_width="28dp"
+                    android:layout_height="28dp"
+                    android:layout_marginEnd="4dp"
+                    android:padding="5dp"
+                    android:background="?attr/selectableItemBackgroundBorderless"
+                    android:src="@drawable/ic_arena_plus"
+                    android:tint="#10B981"
+                    android:contentDescription="Queue in Background Tab" />
+
                 <!-- 3. Copy Link Button -->
                 <ImageButton
                     android:id="@+id/horizon_peek_action_copy"
