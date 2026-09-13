@@ -2463,6 +2463,7 @@
   // Omnibox Placement & Menu Style Customization
   const omniboxPosTop = document.getElementById('omnibox-pos-top');
   const omniboxPosBottom = document.getElementById('omnibox-pos-bottom');
+  const omniboxModeApplePie = document.getElementById('omnibox-mode-applepie');
   const omniboxModeOverlay = document.getElementById('omnibox-mode-overlay');
   const omniboxModeSeparate = document.getElementById('omnibox-mode-separate');
   const omniboxModeOrb = document.getElementById('omnibox-mode-orb');
@@ -2503,6 +2504,7 @@
 
     if (omniboxPosTop) omniboxPosTop.classList.toggle('active', currentPos === 'top');
     if (omniboxPosBottom) omniboxPosBottom.classList.toggle('active', currentPos === 'bottom');
+    if (omniboxModeApplePie) omniboxModeApplePie.classList.toggle('active', currentScrollMode === 'applepie');
     if (omniboxModeOverlay) omniboxModeOverlay.classList.toggle('active', currentScrollMode === 'overlay');
     if (omniboxModeSeparate) omniboxModeSeparate.classList.toggle('active', currentScrollMode === 'separate');
     if (omniboxModeOrb) omniboxModeOrb.classList.toggle('active', currentScrollMode === 'orb');
@@ -2545,7 +2547,8 @@
     updateOmniboxCustomizationUI();
     if (window.CaspianBridge && typeof window.CaspianBridge.showToast === 'function') {
       let toastMsg = 'Omnibox: Dynamic Overlay Mode';
-      if (mode === 'orb') toastMsg = 'Omnibox: Caspian Orb 🔮 (3-Stage Morph)';
+      if (mode === 'applepie') toastMsg = 'Omnibox: Apple Pie 🥧 (Fluid Gesture Rail)';
+      else if (mode === 'orb') toastMsg = 'Omnibox: Caspian Orb 🔮 (3-Stage Morph)';
       else if (mode === 'separate') toastMsg = 'Omnibox: Always Dedicated Mode';
       window.CaspianBridge.showToast(toastMsg);
     }
@@ -2565,6 +2568,7 @@
 
   if (omniboxPosTop) omniboxPosTop.addEventListener('click', () => setOmniboxPlacement('top'));
   if (omniboxPosBottom) omniboxPosBottom.addEventListener('click', () => setOmniboxPlacement('bottom'));
+  if (omniboxModeApplePie) omniboxModeApplePie.addEventListener('click', () => setOmniboxScrollMode('applepie'));
   if (omniboxModeOverlay) omniboxModeOverlay.addEventListener('click', () => setOmniboxScrollMode('overlay'));
   if (omniboxModeSeparate) omniboxModeSeparate.addEventListener('click', () => setOmniboxScrollMode('separate'));
   if (omniboxModeOrb) omniboxModeOrb.addEventListener('click', () => setOmniboxScrollMode('orb'));

@@ -2041,13 +2041,16 @@ public class MainActivity extends AppCompatActivity {
             caspianOrbIcon = findViewById(R.id.caspian_orb_icon);
             setupCaspianOrbListeners();
 
-            if ("orb".equalsIgnoreCase(omniboxScrollMode)) {
+            if (isOrbOrApplePieMode()) {
                 applyOmniboxPosition("bottom");
                 isToolbarInDedicatedSection = false;
                 if (webviewsParentContainer != null) {
                     webviewsParentContainer.setTranslationY(0f);
                 }
                 applyCaspianPillTheme();
+                if ("applepie".equalsIgnoreCase(omniboxScrollMode)) {
+                    transitionToOrbState(ORB_STATE_BOTTOM_PILL, false);
+                }
             } else {
                 applyOmniboxPosition(omniboxPosition);
             }
@@ -9498,8 +9501,12 @@ public class MainActivity extends AppCompatActivity {
                 v.performHapticFeedback(HapticFeedbackConstants.KEYBOARD_TAP);
                 TabItem cur = getTabById(activeTabId);
                 if (cur != null) cur.userExplicitFullOmnibox = false;
-                previousOrbStateBeforeHandle = ORB_STATE_FULL_TOP;
-                transitionToOrbState(ORB_STATE_FLOATING_ORB, true);
+                if ("applepie".equalsIgnoreCase(omniboxScrollMode)) {
+                    transitionToOrbState(ORB_STATE_BOTTOM_PILL, true);
+                } else {
+                    previousOrbStateBeforeHandle = ORB_STATE_FULL_TOP;
+                    transitionToOrbState(ORB_STATE_FLOATING_ORB, true);
+                }
             });
         }
     }
@@ -9573,7 +9580,7 @@ public class MainActivity extends AppCompatActivity {
                         long duration = System.currentTimeMillis() - downTime;
 
                         if (hasMovedPastSlop) {
-                            boolean isBottomOmnibox = "bottom".equalsIgnoreCase(omniboxPosition) || "orb".equalsIgnoreCase(omniboxScrollMode);
+                            boolean isBottomOmnibox = "bottom".equalsIgnoreCase(omniboxPosition) || isOrbOrApplePieMode();
                             boolean isTabSwitcherSwipe = isBottomOmnibox
                                     ? (dy < -swipeThreshold && Math.abs(dy) > Math.abs(dx) * 1.15f)
                                     : (dy > swipeThreshold && dy > Math.abs(dx) * 1.15f);
@@ -9585,11 +9592,15 @@ public class MainActivity extends AppCompatActivity {
                                 showTabGridView();
                                 return true;
                             }
-                            // 2. SWIPE DOWN in Orb Full Omnibox -> Minimize into Edge Semicircle Handle
-                            else if ("orb".equalsIgnoreCase(omniboxScrollMode) && dy > swipeThreshold && dy > Math.abs(dx) * 1.15f) {
+                            // 2. SWIPE DOWN in Orb / Apple Pie Full Omnibox -> Dock / Minimize
+                            else if (isOrbOrApplePieMode() && dy > swipeThreshold && dy > Math.abs(dx) * 1.15f) {
                                 try { v.performHapticFeedback(HapticFeedbackConstants.KEYBOARD_TAP); } catch (Throwable ignored) {}
-                                playUiFeedbackSound("tap");
-                                transitionToOrbState(ORB_STATE_FLOATING_ORB, true);
+                                playUiFeedbackSound("pop_button_v2");
+                                if ("applepie".equalsIgnoreCase(omniboxScrollMode)) {
+                                    transitionToOrbState(ORB_STATE_BOTTOM_PILL, true);
+                                } else {
+                                    transitionToOrbState(ORB_STATE_FLOATING_ORB, true);
+                                }
                                 return true;
                             }
                             // 3. SWIPE RIGHT -> Previous Tab
@@ -9760,7 +9771,7 @@ public class MainActivity extends AppCompatActivity {
                 if (omniboxSplitBtn != null) omniboxSplitBtn.setVisibility(View.VISIBLE);
                 if (omniboxTabsBtn != null) omniboxTabsBtn.setVisibility(View.VISIBLE);
                 if (omniboxMenuBtn != null) omniboxMenuBtn.setVisibility(View.VISIBLE);
-                if (omniboxBtnCollapseOrb != null) omniboxBtnCollapseOrb.setVisibility("orb".equalsIgnoreCase(omniboxScrollMode) ? View.VISIBLE : View.GONE);
+                if (omniboxBtnCollapseOrb != null) omniboxBtnCollapseOrb.setVisibility(isOrbOrApplePieMode() ? View.VISIBLE : View.GONE);
 
                 if (omniboxCopyBtn != null) omniboxCopyBtn.setVisibility(View.GONE);
                 if (omniboxPasteBtn != null) omniboxPasteBtn.setVisibility(View.GONE);
@@ -13716,7 +13727,7 @@ public class MainActivity extends AppCompatActivity {
 
                 updateOmniboxScrimBackground();
 
-                if ("orb".equalsIgnoreCase(omniboxScrollMode)) {
+                if (isOrbOrApplePieMode()) {
                     isToolbarInDedicatedSection = false;
                     if (webviewsParentContainer != null) {
                         webviewsParentContainer.setTranslationY(0f);
@@ -13778,7 +13789,7 @@ public class MainActivity extends AppCompatActivity {
 
     public void dockToolbarAtBottom(boolean animate) {
         currentToolbarState = TOOLBAR_STATE_DOCKED_BOTTOM;
-        if ("orb".equalsIgnoreCase(omniboxScrollMode)) {
+        if (isOrbOrApplePieMode()) {
             isToolbarInDedicatedSection = false;
             applyToolbarMotion(0f, 0f, animate);
             return;
@@ -13790,7 +13801,7 @@ public class MainActivity extends AppCompatActivity {
     }
 
     public void hideToolbar(boolean animate) {
-        if (isToolbarScrollLocked || isInternalPageWithoutToolbarAutohide() || "separate".equalsIgnoreCase(omniboxScrollMode) || "orb".equalsIgnoreCase(omniboxScrollMode)) return;
+        if (isToolbarScrollLocked || isInternalPageWithoutToolbarAutohide() || "separate".equalsIgnoreCase(omniboxScrollMode) || isOrbOrApplePieMode()) return;
         currentToolbarState = TOOLBAR_STATE_FULLSCREEN_HIDDEN;
         isToolbarInDedicatedSection = false;
         int toolbarH = getToolbarHeight();
@@ -13804,7 +13815,7 @@ public class MainActivity extends AppCompatActivity {
         if (splashOverlay != null && splashOverlay.getVisibility() == View.VISIBLE) {
             return;
         }
-        if ("orb".equalsIgnoreCase(omniboxScrollMode)) {
+        if (isOrbOrApplePieMode()) {
             if (currentOrbState != ORB_STATE_FULL_TOP) {
                 return;
             }
@@ -13824,7 +13835,7 @@ public class MainActivity extends AppCompatActivity {
             if (omniboxHeaderWrapper != null) omniboxHeaderWrapper.setVisibility(View.GONE);
             return;
         }
-        if ("orb".equalsIgnoreCase(omniboxScrollMode)) {
+        if (isOrbOrApplePieMode()) {
             targetWebViewY = 0f;
             if (currentOrbState != ORB_STATE_FULL_TOP) {
                 if (omniboxHeaderWrapper != null) omniboxHeaderWrapper.setVisibility(View.GONE);
@@ -13890,7 +13901,7 @@ public class MainActivity extends AppCompatActivity {
     }
 
     public boolean handlePreScrollDrag(CaspianWebView webView, float dragOffsetY) {
-        if (isToolbarScrollLocked || isInternalPageWithoutToolbarAutohide() || "separate".equalsIgnoreCase(omniboxScrollMode) || "orb".equalsIgnoreCase(omniboxScrollMode)) return false;
+        if (isToolbarScrollLocked || isInternalPageWithoutToolbarAutohide() || "separate".equalsIgnoreCase(omniboxScrollMode) || isOrbOrApplePieMode()) return false;
         if (omniboxEditText != null && omniboxEditText.hasFocus()) return false;
 
         boolean isBottomMode = "bottom".equalsIgnoreCase(omniboxPosition);
@@ -13945,7 +13956,7 @@ public class MainActivity extends AppCompatActivity {
     }
 
     public void handlePreScrollDragEnd(CaspianWebView webView, float dragOffsetY) {
-        if (isToolbarScrollLocked || isInternalPageWithoutToolbarAutohide() || "separate".equalsIgnoreCase(omniboxScrollMode) || "orb".equalsIgnoreCase(omniboxScrollMode)) return;
+        if (isToolbarScrollLocked || isInternalPageWithoutToolbarAutohide() || "separate".equalsIgnoreCase(omniboxScrollMode) || isOrbOrApplePieMode()) return;
         if (omniboxEditText != null && omniboxEditText.hasFocus()) return;
 
         boolean isBottomMode = "bottom".equalsIgnoreCase(omniboxPosition);
@@ -13990,6 +14001,17 @@ public class MainActivity extends AppCompatActivity {
     }
 
     public void handleWebViewScroll(CaspianWebView webView, int scrollX, int scrollY, int oldScrollX, int oldScrollY) {
+        if ("applepie".equalsIgnoreCase(omniboxScrollMode)) {
+            // Apple Pie: The pill is the steady, non-intrusive bottom resting hub.
+            // Scrolling does NOT pop open the 110dp full omnibox, leaving chatboxes and web inputs 100% visible!
+            // When full omnibox was explicitly opened by the user, scrolling down smoothly docks back into the pill.
+            int deltaY = scrollY - oldScrollY;
+            if (deltaY > 15 && currentOrbState == ORB_STATE_FULL_TOP) {
+                transitionToOrbState(ORB_STATE_BOTTOM_PILL, true);
+            }
+            return;
+        }
+
         if ("orb".equalsIgnoreCase(omniboxScrollMode)) {
             if (currentOrbState == ORB_STATE_FLOATING_ORB) {
                 // When in edge semicircle mode, scrolling should never bring the omnibox back.
@@ -14142,7 +14164,7 @@ public class MainActivity extends AppCompatActivity {
     }
 
     public void handleWebViewOverScrolled(CaspianWebView webView, int scrollX, int scrollY, boolean clampedX, boolean clampedY) {
-        if (isToolbarScrollLocked || isInternalPageWithoutToolbarAutohide() || "separate".equalsIgnoreCase(omniboxScrollMode) || "orb".equalsIgnoreCase(omniboxScrollMode)) return;
+        if (isToolbarScrollLocked || isInternalPageWithoutToolbarAutohide() || "separate".equalsIgnoreCase(omniboxScrollMode) || isOrbOrApplePieMode()) return;
         boolean isBottomMode = "bottom".equalsIgnoreCase(omniboxPosition);
         if (clampedY) {
             if (scrollY < 0 && !isBottomMode) {
@@ -14197,9 +14219,19 @@ public class MainActivity extends AppCompatActivity {
         return this.omniboxMenuStyle;
     }
 
+    public boolean isOrbOrApplePieMode() {
+        return "orb".equalsIgnoreCase(omniboxScrollMode) || "applepie".equalsIgnoreCase(omniboxScrollMode);
+    }
+
+    public boolean isApplePieMode() {
+        return "applepie".equalsIgnoreCase(omniboxScrollMode);
+    }
+
     public void setOmniboxScrollMode(String mode) {
         String oldMode = this.omniboxScrollMode;
-        if ("orb".equalsIgnoreCase(mode)) {
+        if ("applepie".equalsIgnoreCase(mode)) {
+            this.omniboxScrollMode = "applepie";
+        } else if ("orb".equalsIgnoreCase(mode)) {
             this.omniboxScrollMode = "orb";
         } else if ("separate".equalsIgnoreCase(mode)) {
             this.omniboxScrollMode = "separate";
@@ -14213,8 +14245,8 @@ public class MainActivity extends AppCompatActivity {
                     .apply();
         } catch (Throwable ignored) {}
 
-        if ("orb".equalsIgnoreCase(this.omniboxScrollMode)) {
-            if (!"orb".equalsIgnoreCase(oldMode)) {
+        if (isOrbOrApplePieMode()) {
+            if (!("orb".equalsIgnoreCase(oldMode) || "applepie".equalsIgnoreCase(oldMode))) {
                 preOrbOmniboxPosition = omniboxPosition;
                 try {
                     getSharedPreferences(PREFS_NAME, MODE_PRIVATE)
@@ -14233,7 +14265,11 @@ public class MainActivity extends AppCompatActivity {
                 omniboxHeaderWrapper.setBackground(null);
             }
             applyCaspianPillTheme();
-            transitionToOrbState(ORB_STATE_FULL_TOP, true);
+            if ("applepie".equalsIgnoreCase(this.omniboxScrollMode)) {
+                transitionToOrbState(ORB_STATE_BOTTOM_PILL, true);
+            } else {
+                transitionToOrbState(ORB_STATE_FULL_TOP, true);
+            }
         } else {
             hideCaspianOrbElements();
             String restorePos = preOrbOmniboxPosition != null ? preOrbOmniboxPosition :
@@ -18492,7 +18528,7 @@ public class MainActivity extends AppCompatActivity {
     }
 
     public void transitionToOrbState(int targetState, boolean animate) {
-        if (!"orb".equalsIgnoreCase(omniboxScrollMode)) return;
+        if (!isOrbOrApplePieMode()) return;
         if (targetState == ORB_STATE_FLOATING_ORB) {
             if (currentOrbState == ORB_STATE_FULL_TOP || currentOrbState == ORB_STATE_BOTTOM_PILL) {
                 previousOrbStateBeforeHandle = currentOrbState;
@@ -21647,7 +21683,13 @@ public class MainActivity extends AppCompatActivity {
         updateOmniboxState();
         accumulatedScrollDelta = 0;
         TabItem curSwitchedTab = getTabById(tabId);
-        if ("orb".equalsIgnoreCase(omniboxScrollMode)) {
+        if ("applepie".equalsIgnoreCase(omniboxScrollMode)) {
+            if (curSwitchedTab != null && curSwitchedTab.userExplicitFullOmnibox) {
+                transitionToOrbState(ORB_STATE_FULL_TOP, false);
+            } else {
+                transitionToOrbState(ORB_STATE_BOTTOM_PILL, false);
+            }
+        } else if ("orb".equalsIgnoreCase(omniboxScrollMode)) {
             if (curSwitchedTab != null && isAiChatUrl(curSwitchedTab.url, curSwitchedTab.service)) {
                 if (curSwitchedTab.userExplicitFullOmnibox) {
                     transitionToOrbState(ORB_STATE_FULL_TOP, false);
@@ -22268,7 +22310,7 @@ public class MainActivity extends AppCompatActivity {
             }
         }
         if (omniboxBtnCollapseOrb != null) {
-            omniboxBtnCollapseOrb.setVisibility("orb".equalsIgnoreCase(omniboxScrollMode) ? View.VISIBLE : View.GONE);
+            omniboxBtnCollapseOrb.setVisibility(isOrbOrApplePieMode() ? View.VISIBLE : View.GONE);
         }
 
         if (omniboxShieldIcon != null) {
