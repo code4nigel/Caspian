@@ -13705,7 +13705,7 @@ public class MainActivity extends AppCompatActivity {
                         wpLp = new FrameLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.MATCH_PARENT);
                     }
                     wpLp.topMargin = 0;
-                    wpLp.bottomMargin = 0;
+                    wpLp.bottomMargin = ("applepie".equalsIgnoreCase(omniboxScrollMode) && !isSoftKeyboardVisible) ? dpToPx(68) : 0;
                     webviewsParentContainer.setLayoutParams(wpLp);
                 }
 
@@ -18662,11 +18662,8 @@ public class MainActivity extends AppCompatActivity {
                                         .setInterpolator(springDecel)
                                         .start();
                             } else {
-                                boolean isTopPill = (caspianFloatingPill.getLayoutParams() instanceof FrameLayout.LayoutParams)
-                                        && (((FrameLayout.LayoutParams) caspianFloatingPill.getLayoutParams()).gravity & Gravity.VERTICAL_GRAVITY_MASK) == Gravity.TOP;
-                                float startTransY = isTopPill ? -dpToPx(60) : dpToPx(80);
                                 caspianFloatingPill.setTranslationX(0f);
-                                caspianFloatingPill.setTranslationY(startTransY);
+                                caspianFloatingPill.setTranslationY(dpToPx(80));
                                 caspianFloatingPill.setScaleX(0.85f);
                                 caspianFloatingPill.setScaleY(0.85f);
                                 caspianFloatingPill.setAlpha(0f);
@@ -18782,16 +18779,9 @@ public class MainActivity extends AppCompatActivity {
                 if (lp == null) {
                     lp = new FrameLayout.LayoutParams(ViewGroup.LayoutParams.WRAP_CONTENT, dpToPx(48));
                 }
-                boolean isChat = tab != null && isAiChatUrl(tab.url, tab.service);
-                if ("applepie".equalsIgnoreCase(omniboxScrollMode) && isChat) {
-                    lp.gravity = Gravity.TOP | Gravity.CENTER_HORIZONTAL;
-                    lp.topMargin = dpToPx(38);
-                    lp.bottomMargin = 0;
-                } else {
-                    lp.gravity = Gravity.BOTTOM | Gravity.CENTER_HORIZONTAL;
-                    lp.bottomMargin = dpToPx(24);
-                    lp.topMargin = 0;
-                }
+                lp.gravity = Gravity.BOTTOM | Gravity.CENTER_HORIZONTAL;
+                lp.bottomMargin = dpToPx(16);
+                lp.topMargin = 0;
                 caspianFloatingPill.setLayoutParams(lp);
             }
         });
@@ -18819,15 +18809,19 @@ public class MainActivity extends AppCompatActivity {
     private void onSoftKeyboardVisibilityChanged(boolean isVisible) {
         runOnUiThread(() -> {
             if (!isOrbOrApplePieMode()) return;
+            if ("applepie".equalsIgnoreCase(omniboxScrollMode) && webviewsParentContainer != null) {
+                FrameLayout.LayoutParams wpLp = (FrameLayout.LayoutParams) webviewsParentContainer.getLayoutParams();
+                if (wpLp != null) {
+                    wpLp.bottomMargin = isVisible ? 0 : dpToPx(68);
+                    webviewsParentContainer.setLayoutParams(wpLp);
+                }
+            }
             if (currentOrbState == ORB_STATE_BOTTOM_PILL && caspianFloatingPill != null) {
                 if (isVisible) {
-                    boolean isTopPill = (caspianFloatingPill.getLayoutParams() instanceof FrameLayout.LayoutParams)
-                            && (((FrameLayout.LayoutParams) caspianFloatingPill.getLayoutParams()).gravity & Gravity.VERTICAL_GRAVITY_MASK) == Gravity.TOP;
-                    float transY = isTopPill ? -dpToPx(35) : dpToPx(35);
                     caspianFloatingPill.animate().cancel();
                     caspianFloatingPill.animate()
                             .alpha(0f)
-                            .translationY(transY)
+                            .translationY(dpToPx(35))
                             .setDuration(160)
                             .withEndAction(() -> {
                                 if (isSoftKeyboardVisible && caspianFloatingPill != null) {
