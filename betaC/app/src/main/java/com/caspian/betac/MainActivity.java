@@ -476,6 +476,7 @@ public class MainActivity extends AppCompatActivity {
     private int currentOrbState = ORB_STATE_FULL_TOP;
     private int previousOrbStateBeforeHandle = ORB_STATE_BOTTOM_PILL;
     private FrameLayout caspianFloatingPill;
+    private ImageButton caspianPillBtnNewTab;
     private ImageButton caspianPillBtnBack;
     private LinearLayout caspianPillCenter;
     private ImageView caspianPillLock;
@@ -2031,6 +2032,7 @@ public class MainActivity extends AppCompatActivity {
 
             // Caspian Orb Initialization
             caspianFloatingPill = findViewById(R.id.caspian_floating_pill);
+            caspianPillBtnNewTab = findViewById(R.id.caspian_pill_btn_new_tab);
             caspianPillBtnBack = findViewById(R.id.caspian_pill_btn_back);
             caspianPillCenter = findViewById(R.id.caspian_pill_center);
             caspianPillLock = findViewById(R.id.caspian_pill_lock);
@@ -7286,9 +7288,11 @@ public class MainActivity extends AppCompatActivity {
             return;
         }
 
+        boolean isGemini = currentUrl != null && currentUrl.contains("gemini.google.com");
+
         try {
             if (WebViewFeature.isFeatureSupported(WebViewFeature.FORCE_DARK)) {
-                WebSettingsCompat.setForceDark(webView.getSettings(), isDark ? WebSettingsCompat.FORCE_DARK_ON : WebSettingsCompat.FORCE_DARK_OFF);
+                WebSettingsCompat.setForceDark(webView.getSettings(), (isDark && !isGemini) ? WebSettingsCompat.FORCE_DARK_ON : WebSettingsCompat.FORCE_DARK_OFF);
             }
         } catch (Throwable ignored) {}
         try {
@@ -7298,7 +7302,7 @@ public class MainActivity extends AppCompatActivity {
         } catch (Throwable ignored) {}
         try {
             if (WebViewFeature.isFeatureSupported(WebViewFeature.ALGORITHMIC_DARKENING)) {
-                WebSettingsCompat.setAlgorithmicDarkeningAllowed(webView.getSettings(), isDark);
+                WebSettingsCompat.setAlgorithmicDarkeningAllowed(webView.getSettings(), isDark && !isGemini);
             }
         } catch (Throwable ignored) {}
 
@@ -7341,19 +7345,11 @@ public class MainActivity extends AppCompatActivity {
                     "        document.body.setAttribute('dark-theme', isDark ? 'true' : 'false');\n" +
                     "      }\n" +
                     "      try { localStorage.setItem('user_preferred_theme', isDark ? 'dark' : 'light'); } catch(e){}\n" +
-                    "      if (document.head) {\n" +
+                    "      // Clean up any previously injected styles so Gemini native gradient renders cleanly\n" +
+                    "      try {\n" +
                     "        var existingGeminiStyle = document.getElementById('caspian-gemini-theme-style');\n" +
-                    "        if (!existingGeminiStyle) {\n" +
-                    "          existingGeminiStyle = document.createElement('style');\n" +
-                    "          existingGeminiStyle.id = 'caspian-gemini-theme-style';\n" +
-                    "          document.head.appendChild(existingGeminiStyle);\n" +
-                    "        }\n" +
-                    "        if (isDark) {\n" +
-                    "          existingGeminiStyle.textContent = 'body, html, .main-container, mat-sidenav-container, mat-sidenav-content, .conversation-container, .chat-history { background-color: #131314 !important; color: #e3e3e3 !important; } .header, .side-nav, input-area { background: #1e1f20 !important; }';\n" +
-                    "        } else {\n" +
-                    "          existingGeminiStyle.textContent = 'body, html, .main-container, mat-sidenav-container, mat-sidenav-content, .conversation-container, .chat-history { background-color: #ffffff !important; color: #1f1f1f !important; } .header, .side-nav, input-area { background: #f0f4f9 !important; }';\n" +
-                    "        }\n" +
-                    "      }\n" +
+                    "        if (existingGeminiStyle) existingGeminiStyle.remove();\n" +
+                    "      } catch(e){}\n" +
                     "    } else if (host.includes('google.')) {\n" +
                     "      // Remove any previously injected Gemini style from Google Search\n" +
                     "      try {\n" +
@@ -18861,18 +18857,25 @@ public class MainActivity extends AppCompatActivity {
         if (caspianPillHost != null) {
             caspianPillHost.setTextColor(isDark ? 0xFFFFFFFF : 0xFF0F172A);
         }
+        int accentTint = isDark ? 0xFF00E5FF : 0xFF0284C7;
         int iconTint = isDark ? 0xFF94A3B8 : 0xFF475569;
+        boolean isApplePie = isApplePieMode();
+        if (caspianPillBtnNewTab != null) {
+            caspianPillBtnNewTab.setVisibility(isApplePie ? View.VISIBLE : View.GONE);
+            caspianPillBtnNewTab.setColorFilter(accentTint);
+        }
         if (caspianPillBtnBack != null) {
+            caspianPillBtnBack.setVisibility(isApplePie ? View.GONE : View.VISIBLE);
             caspianPillBtnBack.setColorFilter(iconTint);
         }
         if (caspianPillBtnMenu != null) {
             caspianPillBtnMenu.setColorFilter(iconTint);
         }
-        int accentTint = isDark ? 0xFF00E5FF : 0xFF0284C7;
         if (caspianPillBtnCollapse != null) {
             caspianPillBtnCollapse.setColorFilter(accentTint);
         }
         if (caspianPillLock != null) {
+            caspianPillLock.setVisibility(isApplePie ? View.GONE : View.VISIBLE);
             caspianPillLock.setColorFilter(isDark ? 0xFF38BDF8 : 0xFF0284C7);
         }
         if (caspianPillTabCount != null) {
@@ -18956,6 +18959,14 @@ public class MainActivity extends AppCompatActivity {
 
     @SuppressLint("ClickableViewAccessibility")
     private void setupCaspianOrbListeners() {
+        if (caspianPillBtnNewTab != null) {
+            caspianPillBtnNewTab.setOnClickListener(v -> {
+                playUiFeedbackSound("tap");
+                v.performHapticFeedback(HapticFeedbackConstants.KEYBOARD_TAP);
+                addNewTab("hub", "", "file:///android_asset/launch_hub.html", true);
+            });
+        }
+
         if (caspianPillBtnBack != null) {
             caspianPillBtnBack.setOnClickListener(v -> {
                 playUiFeedbackSound("tap");

@@ -2715,6 +2715,20 @@
             android:orientation="horizontal"
             android:gravity="center_vertical">
 
+            <!-- Quick New Tab Button (Left side of Pill) -->
+            <ImageButton
+                android:id="@+id/caspian_pill_btn_new_tab"
+                android:layout_width="32dp"
+                android:layout_height="32dp"
+                android:padding="6dp"
+                android:layout_marginStart="2dp"
+                android:layout_marginEnd="2dp"
+                android:background="?attr/selectableItemBackgroundBorderless"
+                android:src="@drawable/ic_arena_plus"
+                android:tint="#38BDF8"
+                android:contentDescription="New Tab"
+                android:visibility="gone" />
+
             <!-- Center Domain Capsule -->
             <LinearLayout
                 android:id="@+id/caspian_pill_center"
