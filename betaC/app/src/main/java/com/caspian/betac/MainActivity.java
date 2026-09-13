@@ -457,11 +457,13 @@ public class MainActivity extends AppCompatActivity {
     private LinearLayout caspianPillCenter;
     private ImageView caspianPillLock;
     private TextView caspianPillHost;
+    private ImageButton caspianPillBtnCollapse;
     private FrameLayout caspianPillTabBtn;
     private TextView caspianPillTabCount;
     private ImageButton caspianPillBtnMenu;
     private FrameLayout caspianFloatingOrb;
     private ImageView caspianOrbIcon;
+    private String preOrbOmniboxPosition = null;
     private float orbDownX = 0f, orbDownY = 0f;
     private float orbStartX = 0f, orbStartY = 0f;
     private boolean isOrbDragging = false;
@@ -1867,6 +1869,7 @@ public class MainActivity extends AppCompatActivity {
 
             omniboxPosition = getSharedPreferences(PREFS_NAME, MODE_PRIVATE).getString("omnibox_position", "top");
             omniboxScrollMode = getSharedPreferences(PREFS_NAME, MODE_PRIVATE).getString("omnibox_scroll_mode", "overlay");
+            preOrbOmniboxPosition = getSharedPreferences(PREFS_NAME, MODE_PRIVATE).getString("pre_orb_omnibox_position", null);
             omniboxMenuStyle = getSharedPreferences(PREFS_NAME, MODE_PRIVATE).getString("omnibox_menu_style", "grid");
             isTabStripEnabled = getSharedPreferences(PREFS_NAME, MODE_PRIVATE).getBoolean("tab_strip_enabled", true);
             omniboxHeader = findViewById(R.id.omnibox_header);
@@ -1935,9 +1938,6 @@ public class MainActivity extends AppCompatActivity {
             if (horizonPeekActionClose != null) {
                 horizonPeekActionClose.setOnClickListener(v -> closeHorizonPeek(true));
             }
-            if (horizonPeekRoot != null) {
-                horizonPeekRoot.setOnClickListener(v -> closeHorizonPeek(true));
-            }
             if (horizonPeekActionCopy != null) {
                 horizonPeekActionCopy.setOnClickListener(v -> {
                     if (currentHorizonPeekUrl != null) {
@@ -1969,6 +1969,7 @@ public class MainActivity extends AppCompatActivity {
             caspianPillCenter = findViewById(R.id.caspian_pill_center);
             caspianPillLock = findViewById(R.id.caspian_pill_lock);
             caspianPillHost = findViewById(R.id.caspian_pill_host);
+            caspianPillBtnCollapse = findViewById(R.id.caspian_pill_btn_collapse);
             caspianPillTabBtn = findViewById(R.id.caspian_pill_tab_btn);
             caspianPillTabCount = findViewById(R.id.caspian_pill_tab_count);
             caspianPillBtnMenu = findViewById(R.id.caspian_pill_btn_menu);
@@ -1976,7 +1977,11 @@ public class MainActivity extends AppCompatActivity {
             caspianOrbIcon = findViewById(R.id.caspian_orb_icon);
             setupCaspianOrbListeners();
 
-            applyOmniboxPosition(omniboxPosition);
+            if ("orb".equalsIgnoreCase(omniboxScrollMode)) {
+                applyOmniboxPosition("bottom");
+            } else {
+                applyOmniboxPosition(omniboxPosition);
+            }
 
             splitArenaBroadcastContainer = findViewById(R.id.split_arena_broadcast_container);
             splitArenaInput = findViewById(R.id.split_arena_input);
@@ -2742,6 +2747,8 @@ public class MainActivity extends AppCompatActivity {
 
     public void showTabGridView() {
         if (tabGridOverlay == null) return;
+        if (caspianFloatingPill != null) caspianFloatingPill.setVisibility(View.GONE);
+        if (caspianFloatingOrb != null) caspianFloatingOrb.setVisibility(View.GONE);
         TabItem currentTab = getTabById(activeTabId);
         if (currentTab != null) captureTabSnapshot(currentTab);
 
@@ -2827,6 +2834,9 @@ public class MainActivity extends AppCompatActivity {
                         tabGridOverlay.setScaleY(1.0f);
                         tabGridOverlay.setAlpha(1.0f);
                         tabGridOverlay.setTranslationY(0f);
+                        if ("orb".equalsIgnoreCase(omniboxScrollMode)) {
+                            transitionToOrbState(currentOrbState, false);
+                        }
                     })
                     .start();
 
@@ -7519,7 +7529,16 @@ public class MainActivity extends AppCompatActivity {
 
         omniboxToolbarsBtn.setOnClickListener(v -> {
             playUiFeedbackSound("tap");
-            showQuickToolbarsPopup(v);
+            if ("orb".equalsIgnoreCase(omniboxScrollMode)) {
+                v.performHapticFeedback(HapticFeedbackConstants.KEYBOARD_TAP);
+                transitionToOrbState(ORB_STATE_FLOATING_ORB, true);
+                return;
+            }
+            try {
+                showQuickToolbarsPopup(v);
+            } catch (Throwable t) {
+                Log.e(TAG, "Quick toolbars popup error", t);
+            }
         });
 
         omniboxSplitBtn.setOnClickListener(v -> cycleSplitViewMode());
@@ -7965,260 +7984,264 @@ public class MainActivity extends AppCompatActivity {
     }
 
     private void showQuickToolbarsPopup(View anchor) {
-        com.google.android.material.bottomsheet.BottomSheetDialog dialog =
-                new com.google.android.material.bottomsheet.BottomSheetDialog(this);
-        View dialogView = LayoutInflater.from(this).inflate(R.layout.dialog_quick_toolbars, null);
-        dialog.setContentView(dialogView);
+        try {
+            com.google.android.material.bottomsheet.BottomSheetDialog dialog =
+                    new com.google.android.material.bottomsheet.BottomSheetDialog(this);
+            View dialogView = LayoutInflater.from(this).inflate(R.layout.dialog_quick_toolbars, null);
+            dialog.setContentView(dialogView);
 
-        if (dialog.getWindow() != null) {
-            dialog.getWindow().setWindowAnimations(0); // Disable generic window animation in favor of S-shaped animation
-            View bs = dialog.getWindow().findViewById(com.google.android.material.R.id.design_bottom_sheet);
-            if (bs != null) bs.setBackgroundResource(android.R.color.transparent);
-        }
-
-        final boolean[] isClosing = new boolean[]{false};
-        final Runnable performSClosing = () -> {
-            if (isClosing[0]) return;
-            isClosing[0] = true;
-            playUiFeedbackSound("tap");
-
-            android.animation.ValueAnimator closeAnim = android.animation.ValueAnimator.ofFloat(0f, 1f);
-            closeAnim.setDuration(280);
-            closeAnim.setInterpolator(new android.view.animation.PathInterpolator(0.38f, 0.0f, 0.22f, 1.0f));
-            closeAnim.addUpdateListener(anim -> {
-                float f = anim.getAnimatedFraction(); // 0 -> 1
-                // S-wave exit trajectory
-                float sX = -(float) Math.sin(f * Math.PI) * dpToPx(26);
-                float rot = -2.2f * (float) Math.sin(f * Math.PI);
-                dialogView.setTranslationX(sX);
-                dialogView.setTranslationY(dpToPx(380) * f);
-                dialogView.setRotation(rot);
-                dialogView.setScaleX(1.0f - (0.08f * f));
-                dialogView.setScaleY(1.0f - (0.08f * f));
-                dialogView.setAlpha(1f - f);
-            });
-            closeAnim.addListener(new android.animation.AnimatorListenerAdapter() {
-                @Override
-                public void onAnimationEnd(android.animation.Animator animation) {
-                    try {
-                        dialog.dismiss();
-                    } catch (Exception ignored) {}
-                }
-            });
-            closeAnim.start();
-        };
-
-        // Close button
-        View btnClose = dialogView.findViewById(R.id.btn_close_quick_toolbars);
-        if (btnClose != null) {
-            btnClose.setOnClickListener(v -> performSClosing.run());
-        }
-
-        // Drag handle tap dismiss
-        View dragHandle = dialogView.findViewById(R.id.quick_toolbars_drag_handle);
-        if (dragHandle != null) {
-            dragHandle.setOnClickListener(v -> performSClosing.run());
-        }
-
-        // Back key intercept
-        dialog.setOnKeyListener((dialogInterface, keyCode, event) -> {
-            if (keyCode == android.view.KeyEvent.KEYCODE_BACK && event.getAction() == android.view.KeyEvent.ACTION_UP) {
-                if (!isClosing[0]) {
-                    performSClosing.run();
-                    return true;
-                }
+            if (dialog.getWindow() != null) {
+                dialog.getWindow().setWindowAnimations(0); // Disable generic window animation in favor of S-shaped animation
+                View bs = dialog.getWindow().findViewById(com.google.android.material.R.id.design_bottom_sheet);
+                if (bs != null) bs.setBackgroundResource(android.R.color.transparent);
             }
-            return false;
-        });
 
-        // Outside backdrop tap intercept
-        if (dialog.getWindow() != null) {
-            View touchOutside = dialog.getWindow().findViewById(com.google.android.material.R.id.touch_outside);
-            if (touchOutside != null) {
-                touchOutside.setOnClickListener(v -> performSClosing.run());
-            }
-        }
-
-        // 1. ChatGPT Dock
-        View rowChatgpt = dialogView.findViewById(R.id.row_dock_chatgpt);
-        androidx.appcompat.widget.SwitchCompat switchChatgpt = dialogView.findViewById(R.id.switch_dock_chatgpt);
-        if (switchChatgpt != null) {
-            switchChatgpt.setChecked(!isChatgptDockExplicitlyHidden);
-            switchChatgpt.setOnClickListener(v -> {
+            final boolean[] isClosing = new boolean[]{false};
+            final Runnable performSClosing = () -> {
+                if (isClosing[0]) return;
+                isClosing[0] = true;
                 playUiFeedbackSound("tap");
-                boolean targetShow = switchChatgpt.isChecked();
-                toggleChatGPTDock(targetShow);
-            });
-        }
-        if (rowChatgpt != null) {
-            rowChatgpt.setOnClickListener(v -> {
-                playUiFeedbackSound("tap");
-                boolean newTarget = isChatgptDockExplicitlyHidden;
-                toggleChatGPTDock(newTarget);
-                if (switchChatgpt != null) switchChatgpt.setChecked(newTarget);
-            });
-        }
 
-        // 2. Gemini Dock
-        View rowGemini = dialogView.findViewById(R.id.row_dock_gemini);
-        androidx.appcompat.widget.SwitchCompat switchGemini = dialogView.findViewById(R.id.switch_dock_gemini);
-        if (switchGemini != null) {
-            switchGemini.setChecked(!isGeminiDockExplicitlyHidden);
-            switchGemini.setOnClickListener(v -> {
-                playUiFeedbackSound("tap");
-                boolean targetShow = switchGemini.isChecked();
-                toggleGeminiDock(targetShow);
-            });
-        }
-        if (rowGemini != null) {
-            rowGemini.setOnClickListener(v -> {
-                playUiFeedbackSound("tap");
-                boolean newTarget = isGeminiDockExplicitlyHidden;
-                toggleGeminiDock(newTarget);
-                if (switchGemini != null) switchGemini.setChecked(newTarget);
-            });
-        }
-
-        // 3. YouTube Remote
-        View rowYouTube = dialogView.findViewById(R.id.row_dock_youtube);
-        androidx.appcompat.widget.SwitchCompat switchYouTube = dialogView.findViewById(R.id.switch_dock_youtube);
-        if (switchYouTube != null) {
-            switchYouTube.setChecked(!isYtRemoteExplicitlyHidden);
-            switchYouTube.setOnClickListener(v -> {
-                playUiFeedbackSound("tap");
-                boolean targetShow = switchYouTube.isChecked();
-                toggleFloatingYouTubeRemote(targetShow);
-            });
-        }
-        if (rowYouTube != null) {
-            rowYouTube.setOnClickListener(v -> {
-                playUiFeedbackSound("tap");
-                boolean newTarget = isYtRemoteExplicitlyHidden;
-                toggleFloatingYouTubeRemote(newTarget);
-                if (switchYouTube != null) switchYouTube.setChecked(newTarget);
-            });
-        }
-
-        // 4. Google Dock
-        View rowGoogle = dialogView.findViewById(R.id.row_dock_google);
-        androidx.appcompat.widget.SwitchCompat switchGoogle = dialogView.findViewById(R.id.switch_dock_google);
-        if (switchGoogle != null) {
-            switchGoogle.setChecked(!isSearchNavExplicitlyHidden);
-            switchGoogle.setOnClickListener(v -> {
-                playUiFeedbackSound("tap");
-                boolean targetShow = switchGoogle.isChecked();
-                toggleGoogleSearchDock(targetShow);
-            });
-        }
-        if (rowGoogle != null) {
-            rowGoogle.setOnClickListener(v -> {
-                playUiFeedbackSound("tap");
-                boolean newTarget = isSearchNavExplicitlyHidden;
-                toggleGoogleSearchDock(newTarget);
-                if (switchGoogle != null) switchGoogle.setChecked(newTarget);
-            });
-        }
-
-        // 5. Waveguard Shield
-        View rowWaveguard = dialogView.findViewById(R.id.row_dock_waveguard);
-        androidx.appcompat.widget.SwitchCompat switchWaveguard = dialogView.findViewById(R.id.switch_dock_waveguard);
-        TextView titleWaveguard = dialogView.findViewById(R.id.title_dock_waveguard);
-        TextView subWaveguard = dialogView.findViewById(R.id.sub_dock_waveguard);
-
-        TabItem qTab = getActiveOrDominantTab();
-        String qUrl = qTab != null ? (qTab.url != null ? qTab.url : (qTab.webView != null ? qTab.webView.getUrl() : null)) : null;
-        String qHost = null;
-        if (qUrl != null && !qUrl.startsWith("caspian:") && !qUrl.startsWith("about:") && !qUrl.startsWith("file:")) {
-            try { qHost = Uri.parse(qUrl).getHost(); } catch (Exception ignored) {}
-        }
-        final String activeSiteHost = qHost;
-
-        boolean isSiteShieldActive;
-        if (waveguardShield != null && waveguardShield.isGlobalEnabled()) {
-            isSiteShieldActive = (activeSiteHost == null || !waveguardShield.isSiteWhitelisted(activeSiteHost));
-        } else {
-            isSiteShieldActive = false;
-        }
-
-        if (activeSiteHost != null && !activeSiteHost.isEmpty() && activeSiteHost.contains(".")) {
-            String cleanH = activeSiteHost.startsWith("www.") ? activeSiteHost.substring(4) : activeSiteHost;
-            if (titleWaveguard != null) titleWaveguard.setText("Shield on " + cleanH);
-            if (subWaveguard != null) subWaveguard.setText(isSiteShieldActive ? "Shields UP (Blocking ads & trackers)" : "Shields DOWN (Paused for this site)");
-        }
-
-        if (switchWaveguard != null) {
-            switchWaveguard.setChecked(isSiteShieldActive);
-            Runnable performWaveguardToggle = () -> {
-                playUiFeedbackSound("tap");
-                if (waveguardShield != null) {
-                    boolean target = switchWaveguard.isChecked();
-                    if (activeSiteHost != null && activeSiteHost.contains(".")) {
-                        waveguardShield.setSiteWhitelisted(activeSiteHost, !target);
-                        if (subWaveguard != null) subWaveguard.setText(target ? "Shields UP (Blocking ads & trackers)" : "Shields DOWN (Paused for this site)");
-                        if (qTab != null && qTab.webView != null) {
-                            qTab.webView.reload();
-                        }
-                    } else {
-                        waveguardShield.setGlobalEnabled(target);
+                android.animation.ValueAnimator closeAnim = android.animation.ValueAnimator.ofFloat(0f, 1f);
+                closeAnim.setDuration(280);
+                closeAnim.setInterpolator(new android.view.animation.PathInterpolator(0.38f, 0.0f, 0.22f, 1.0f));
+                closeAnim.addUpdateListener(anim -> {
+                    float f = anim.getAnimatedFraction(); // 0 -> 1
+                    // S-wave exit trajectory
+                    float sX = -(float) Math.sin(f * Math.PI) * dpToPx(26);
+                    float rot = -2.2f * (float) Math.sin(f * Math.PI);
+                    dialogView.setTranslationX(sX);
+                    dialogView.setTranslationY(dpToPx(380) * f);
+                    dialogView.setRotation(rot);
+                    dialogView.setScaleX(1.0f - (0.08f * f));
+                    dialogView.setScaleY(1.0f - (0.08f * f));
+                    dialogView.setAlpha(1f - f);
+                });
+                closeAnim.addListener(new android.animation.AnimatorListenerAdapter() {
+                    @Override
+                    public void onAnimationEnd(android.animation.Animator animation) {
+                        try {
+                            dialog.dismiss();
+                        } catch (Exception ignored) {}
                     }
-                    updateOmniboxState();
-                    syncWaveguardToControlWeb();
-                }
+                });
+                closeAnim.start();
             };
-            switchWaveguard.setOnClickListener(v -> performWaveguardToggle.run());
-            if (rowWaveguard != null) {
-                rowWaveguard.setOnClickListener(v -> {
-                    switchWaveguard.toggle();
-                    performWaveguardToggle.run();
+
+            // Close button
+            View btnClose = dialogView.findViewById(R.id.btn_close_quick_toolbars);
+            if (btnClose != null) {
+                btnClose.setOnClickListener(v -> performSClosing.run());
+            }
+
+            // Drag handle tap dismiss
+            View dragHandle = dialogView.findViewById(R.id.quick_toolbars_drag_handle);
+            if (dragHandle != null) {
+                dragHandle.setOnClickListener(v -> performSClosing.run());
+            }
+
+            // Back key intercept
+            dialog.setOnKeyListener((dialogInterface, keyCode, event) -> {
+                if (keyCode == android.view.KeyEvent.KEYCODE_BACK && event.getAction() == android.view.KeyEvent.ACTION_UP) {
+                    if (!isClosing[0]) {
+                        performSClosing.run();
+                        return true;
+                    }
+                }
+                return false;
+            });
+
+            // Outside backdrop tap intercept
+            if (dialog.getWindow() != null) {
+                View touchOutside = dialog.getWindow().findViewById(com.google.android.material.R.id.touch_outside);
+                if (touchOutside != null) {
+                    touchOutside.setOnClickListener(v -> performSClosing.run());
+                }
+            }
+
+            // 1. ChatGPT Dock
+            View rowChatgpt = dialogView.findViewById(R.id.row_dock_chatgpt);
+            androidx.appcompat.widget.SwitchCompat switchChatgpt = dialogView.findViewById(R.id.switch_dock_chatgpt);
+            if (switchChatgpt != null) {
+                switchChatgpt.setChecked(!isChatgptDockExplicitlyHidden);
+                switchChatgpt.setOnClickListener(v -> {
+                    playUiFeedbackSound("tap");
+                    boolean targetShow = switchChatgpt.isChecked();
+                    toggleChatGPTDock(targetShow);
                 });
             }
-        }
+            if (rowChatgpt != null) {
+                rowChatgpt.setOnClickListener(v -> {
+                    playUiFeedbackSound("tap");
+                    boolean newTarget = isChatgptDockExplicitlyHidden;
+                    toggleChatGPTDock(newTarget);
+                    if (switchChatgpt != null) switchChatgpt.setChecked(newTarget);
+                });
+            }
 
-        applyQuickToolbarsTheme(dialogView, isDarkTheme);
+            // 2. Gemini Dock
+            View rowGemini = dialogView.findViewById(R.id.row_dock_gemini);
+            androidx.appcompat.widget.SwitchCompat switchGemini = dialogView.findViewById(R.id.switch_dock_gemini);
+            if (switchGemini != null) {
+                switchGemini.setChecked(!isGeminiDockExplicitlyHidden);
+                switchGemini.setOnClickListener(v -> {
+                    playUiFeedbackSound("tap");
+                    boolean targetShow = switchGemini.isChecked();
+                    toggleGeminiDock(targetShow);
+                });
+            }
+            if (rowGemini != null) {
+                rowGemini.setOnClickListener(v -> {
+                    playUiFeedbackSound("tap");
+                    boolean newTarget = isGeminiDockExplicitlyHidden;
+                    toggleGeminiDock(newTarget);
+                    if (switchGemini != null) switchGemini.setChecked(newTarget);
+                });
+            }
 
-        // Fluid S-shaped entrance animation on show
-        dialog.setOnShowListener(d -> {
-            dialogView.setAlpha(0f);
-            dialogView.setTranslationY(dpToPx(380));
-            dialogView.setScaleX(0.90f);
-            dialogView.setScaleY(0.90f);
+            // 3. YouTube Remote
+            View rowYouTube = dialogView.findViewById(R.id.row_dock_youtube);
+            androidx.appcompat.widget.SwitchCompat switchYouTube = dialogView.findViewById(R.id.switch_dock_youtube);
+            if (switchYouTube != null) {
+                switchYouTube.setChecked(!isYtRemoteExplicitlyHidden);
+                switchYouTube.setOnClickListener(v -> {
+                    playUiFeedbackSound("tap");
+                    boolean targetShow = switchYouTube.isChecked();
+                    toggleFloatingYouTubeRemote(targetShow);
+                });
+            }
+            if (rowYouTube != null) {
+                rowYouTube.setOnClickListener(v -> {
+                    playUiFeedbackSound("tap");
+                    boolean newTarget = isYtRemoteExplicitlyHidden;
+                    toggleFloatingYouTubeRemote(newTarget);
+                    if (switchYouTube != null) switchYouTube.setChecked(newTarget);
+                });
+            }
 
-            android.animation.ValueAnimator sAnim = android.animation.ValueAnimator.ofFloat(0f, 1f);
-            sAnim.setDuration(400);
-            sAnim.setInterpolator(new android.view.animation.PathInterpolator(0.34f, 0.05f, 0.18f, 1.0f));
-            sAnim.addUpdateListener(anim -> {
-                float f = anim.getAnimatedFraction(); // 0 -> 1
-                // Dynamic S-curve lateral wave: swings out and settles back smoothly
-                float sX = (float) Math.sin(f * Math.PI) * (1f - f) * dpToPx(30);
-                float rot = 2.4f * (1f - f) * (float) Math.cos(f * Math.PI * 0.7f);
-                dialogView.setTranslationX(sX);
-                dialogView.setTranslationY(dpToPx(380) * (1f - f));
-                dialogView.setRotation(rot);
-                dialogView.setScaleX(0.90f + (0.10f * f));
-                dialogView.setScaleY(0.90f + (0.10f * f));
-                dialogView.setAlpha(Math.min(1f, f * 2.2f));
-            });
-            sAnim.start();
+            // 4. Google Dock
+            View rowGoogle = dialogView.findViewById(R.id.row_dock_google);
+            androidx.appcompat.widget.SwitchCompat switchGoogle = dialogView.findViewById(R.id.switch_dock_google);
+            if (switchGoogle != null) {
+                switchGoogle.setChecked(!isSearchNavExplicitlyHidden);
+                switchGoogle.setOnClickListener(v -> {
+                    playUiFeedbackSound("tap");
+                    boolean targetShow = switchGoogle.isChecked();
+                    toggleGoogleSearchDock(targetShow);
+                });
+            }
+            if (rowGoogle != null) {
+                rowGoogle.setOnClickListener(v -> {
+                    playUiFeedbackSound("tap");
+                    boolean newTarget = isSearchNavExplicitlyHidden;
+                    toggleGoogleSearchDock(newTarget);
+                    if (switchGoogle != null) switchGoogle.setChecked(newTarget);
+                });
+            }
 
-            // Cascading entrance for dock rows
-            int[] rows = {R.id.row_dock_chatgpt, R.id.row_dock_gemini, R.id.row_dock_youtube, R.id.row_dock_google, R.id.row_dock_waveguard};
-            for (int i = 0; i < rows.length; i++) {
-                View row = dialogView.findViewById(rows[i]);
-                if (row != null) {
-                    row.setAlpha(0f);
-                    row.setTranslationX(dpToPx(24));
-                    row.animate()
-                            .alpha(1f)
-                            .translationX(0f)
-                            .setStartDelay(100 + (i * 35))
-                            .setDuration(260)
-                            .setInterpolator(new android.view.animation.DecelerateInterpolator(1.4f))
-                            .start();
+            // 5. Waveguard Shield
+            View rowWaveguard = dialogView.findViewById(R.id.row_dock_waveguard);
+            androidx.appcompat.widget.SwitchCompat switchWaveguard = dialogView.findViewById(R.id.switch_dock_waveguard);
+            TextView titleWaveguard = dialogView.findViewById(R.id.title_dock_waveguard);
+            TextView subWaveguard = dialogView.findViewById(R.id.sub_dock_waveguard);
+
+            TabItem qTab = getActiveOrDominantTab();
+            String qUrl = qTab != null ? (qTab.url != null ? qTab.url : (qTab.webView != null ? qTab.webView.getUrl() : null)) : null;
+            String qHost = null;
+            if (qUrl != null && !qUrl.startsWith("caspian:") && !qUrl.startsWith("about:") && !qUrl.startsWith("file:")) {
+                try { qHost = Uri.parse(qUrl).getHost(); } catch (Exception ignored) {}
+            }
+            final String activeSiteHost = qHost;
+
+            boolean isSiteShieldActive;
+            if (waveguardShield != null && waveguardShield.isGlobalEnabled()) {
+                isSiteShieldActive = (activeSiteHost == null || !waveguardShield.isSiteWhitelisted(activeSiteHost));
+            } else {
+                isSiteShieldActive = false;
+            }
+
+            if (activeSiteHost != null && !activeSiteHost.isEmpty() && activeSiteHost.contains(".")) {
+                String cleanH = activeSiteHost.startsWith("www.") ? activeSiteHost.substring(4) : activeSiteHost;
+                if (titleWaveguard != null) titleWaveguard.setText("Shield on " + cleanH);
+                if (subWaveguard != null) subWaveguard.setText(isSiteShieldActive ? "Shields UP (Blocking ads & trackers)" : "Shields DOWN (Paused for this site)");
+            }
+
+            if (switchWaveguard != null) {
+                switchWaveguard.setChecked(isSiteShieldActive);
+                Runnable performWaveguardToggle = () -> {
+                    playUiFeedbackSound("tap");
+                    if (waveguardShield != null) {
+                        boolean target = switchWaveguard.isChecked();
+                        if (activeSiteHost != null && activeSiteHost.contains(".")) {
+                            waveguardShield.setSiteWhitelisted(activeSiteHost, !target);
+                            if (subWaveguard != null) subWaveguard.setText(target ? "Shields UP (Blocking ads & trackers)" : "Shields DOWN (Paused for this site)");
+                            if (qTab != null && qTab.webView != null) {
+                                qTab.webView.reload();
+                            }
+                        } else {
+                            waveguardShield.setGlobalEnabled(target);
+                        }
+                        updateOmniboxState();
+                        syncWaveguardToControlWeb();
+                    }
+                };
+                switchWaveguard.setOnClickListener(v -> performWaveguardToggle.run());
+                if (rowWaveguard != null) {
+                    rowWaveguard.setOnClickListener(v -> {
+                        switchWaveguard.toggle();
+                        performWaveguardToggle.run();
+                    });
                 }
             }
-        });
 
-        dialog.show();
+            applyQuickToolbarsTheme(dialogView, isDarkTheme);
+
+            // Fluid S-shaped entrance animation on show
+            dialog.setOnShowListener(d -> {
+                dialogView.setAlpha(0f);
+                dialogView.setTranslationY(dpToPx(380));
+                dialogView.setScaleX(0.90f);
+                dialogView.setScaleY(0.90f);
+
+                android.animation.ValueAnimator sAnim = android.animation.ValueAnimator.ofFloat(0f, 1f);
+                sAnim.setDuration(400);
+                sAnim.setInterpolator(new android.view.animation.PathInterpolator(0.34f, 0.05f, 0.18f, 1.0f));
+                sAnim.addUpdateListener(anim -> {
+                    float f = anim.getAnimatedFraction(); // 0 -> 1
+                    // Dynamic S-curve lateral wave: swings out and settles back smoothly
+                    float sX = (float) Math.sin(f * Math.PI) * (1f - f) * dpToPx(30);
+                    float rot = 2.4f * (1f - f) * (float) Math.cos(f * Math.PI * 0.7f);
+                    dialogView.setTranslationX(sX);
+                    dialogView.setTranslationY(dpToPx(380) * (1f - f));
+                    dialogView.setRotation(rot);
+                    dialogView.setScaleX(0.90f + (0.10f * f));
+                    dialogView.setScaleY(0.90f + (0.10f * f));
+                    dialogView.setAlpha(Math.min(1f, f * 2.2f));
+                });
+                sAnim.start();
+
+                // Cascading entrance for dock rows
+                int[] rows = {R.id.row_dock_chatgpt, R.id.row_dock_gemini, R.id.row_dock_youtube, R.id.row_dock_google, R.id.row_dock_waveguard};
+                for (int i = 0; i < rows.length; i++) {
+                    View row = dialogView.findViewById(rows[i]);
+                    if (row != null) {
+                        row.setAlpha(0f);
+                        row.setTranslationX(dpToPx(24));
+                        row.animate()
+                                .alpha(1f)
+                                .translationX(0f)
+                                .setStartDelay(100 + (i * 35))
+                                .setDuration(260)
+                                .setInterpolator(new android.view.animation.DecelerateInterpolator(1.4f))
+                                .start();
+                    }
+                }
+            });
+
+            dialog.show();
+        } catch (Throwable t) {
+            Log.e(TAG, "showQuickToolbarsPopup error: " + t.getMessage(), t);
+        }
     }
 
     private void applyQuickToolbarsTheme(View root, boolean isDark) {
@@ -12142,6 +12165,7 @@ public class MainActivity extends AppCompatActivity {
     }
 
     public void setOmniboxScrollMode(String mode) {
+        String oldMode = this.omniboxScrollMode;
         if ("orb".equalsIgnoreCase(mode)) {
             this.omniboxScrollMode = "orb";
         } else if ("separate".equalsIgnoreCase(mode)) {
@@ -12157,19 +12181,40 @@ public class MainActivity extends AppCompatActivity {
         } catch (Throwable ignored) {}
 
         if ("orb".equalsIgnoreCase(this.omniboxScrollMode)) {
-            isToolbarInDedicatedSection = true;
-            dockToolbarAtTop(true);
-            transitionToOrbState(ORB_STATE_FULL_TOP, true);
-        } else if ("separate".equalsIgnoreCase(this.omniboxScrollMode)) {
-            hideCaspianOrbElements();
-            isToolbarInDedicatedSection = true;
-            if ("bottom".equalsIgnoreCase(omniboxPosition)) {
-                dockToolbarAtBottom(true);
-            } else {
-                dockToolbarAtTop(true);
+            if (!"orb".equalsIgnoreCase(oldMode)) {
+                preOrbOmniboxPosition = omniboxPosition;
+                try {
+                    getSharedPreferences(PREFS_NAME, MODE_PRIVATE)
+                            .edit()
+                            .putString("pre_orb_omnibox_position", preOrbOmniboxPosition)
+                            .apply();
+                } catch (Throwable ignored) {}
             }
+            applyOmniboxPosition("bottom");
+            isToolbarInDedicatedSection = true;
+            dockToolbarAtBottom(true);
+            transitionToOrbState(ORB_STATE_FULL_TOP, true);
         } else {
             hideCaspianOrbElements();
+            String restorePos = preOrbOmniboxPosition != null ? preOrbOmniboxPosition :
+                    getSharedPreferences(PREFS_NAME, MODE_PRIVATE).getString("pre_orb_omnibox_position", null);
+            if (restorePos != null) {
+                applyOmniboxPosition(restorePos);
+                preOrbOmniboxPosition = null;
+                try {
+                    getSharedPreferences(PREFS_NAME, MODE_PRIVATE)
+                            .edit()
+                            .remove("pre_orb_omnibox_position")
+                            .apply();
+                } catch (Throwable ignored) {}
+            } else {
+                applyOmniboxPosition(omniboxPosition);
+            }
+            if ("separate".equalsIgnoreCase(this.omniboxScrollMode)) {
+                isToolbarInDedicatedSection = true;
+            } else {
+                isToolbarInDedicatedSection = false;
+            }
             if ("bottom".equalsIgnoreCase(omniboxPosition)) {
                 dockToolbarAtBottom(true);
             } else {
@@ -16409,6 +16454,11 @@ public class MainActivity extends AppCompatActivity {
     public void transitionToOrbState(int targetState, boolean animate) {
         if (!"orb".equalsIgnoreCase(omniboxScrollMode)) return;
         currentOrbState = targetState;
+        if (tabGridOverlay != null && tabGridOverlay.getVisibility() == View.VISIBLE) {
+            if (caspianFloatingPill != null) caspianFloatingPill.setVisibility(View.GONE);
+            if (caspianFloatingOrb != null) caspianFloatingOrb.setVisibility(View.GONE);
+            return;
+        }
         runOnUiThread(() -> {
             int toolbarH = getToolbarHeight();
             long duration = animate ? 240 : 0;
@@ -16430,10 +16480,6 @@ public class MainActivity extends AppCompatActivity {
                             omniboxHeaderWrapper.setTranslationY(0f);
                             omniboxHeaderWrapper.setAlpha(1f);
                         }
-                    }
-                    if (browserProgressBar != null) {
-                        browserProgressBar.setVisibility(View.VISIBLE);
-                        browserProgressBar.setTranslationY(0f);
                     }
                     if (caspianFloatingPill != null) {
                         if (animate && caspianFloatingPill.getVisibility() == View.VISIBLE) {
@@ -16472,18 +16518,15 @@ public class MainActivity extends AppCompatActivity {
                         if (animate) {
                             omniboxHeaderWrapper.animate().cancel();
                             omniboxHeaderWrapper.animate()
-                                    .translationY((float) -toolbarH)
+                                    .translationY((float) toolbarH)
                                     .alpha(0f)
                                     .setDuration(duration)
                                     .withEndAction(() -> omniboxHeaderWrapper.setVisibility(View.GONE))
                                     .start();
                         } else {
-                            omniboxHeaderWrapper.setTranslationY((float) -toolbarH);
+                            omniboxHeaderWrapper.setTranslationY((float) toolbarH);
                             omniboxHeaderWrapper.setVisibility(View.GONE);
                         }
-                    }
-                    if (browserProgressBar != null) {
-                        browserProgressBar.setTranslationY((float) -toolbarH);
                     }
                     if (caspianFloatingPill != null) {
                         caspianFloatingPill.setVisibility(View.VISIBLE);
@@ -16627,6 +16670,14 @@ public class MainActivity extends AppCompatActivity {
                     InputMethodManager imm = (InputMethodManager) getSystemService(Context.INPUT_METHOD_SERVICE);
                     if (imm != null) imm.showSoftInput(omniboxEditText, InputMethodManager.SHOW_IMPLICIT);
                 }
+            });
+        }
+
+        if (caspianPillBtnCollapse != null) {
+            caspianPillBtnCollapse.setOnClickListener(v -> {
+                playUiFeedbackSound("tap");
+                v.performHapticFeedback(HapticFeedbackConstants.KEYBOARD_TAP);
+                transitionToOrbState(ORB_STATE_FLOATING_ORB, true);
             });
         }
 

@@ -2671,6 +2671,18 @@
                     android:ellipsize="end" />
             </LinearLayout>
 
+            <!-- Collapse to Ball (Orb) Button -->
+            <ImageButton
+                android:id="@+id/caspian_pill_btn_collapse"
+                android:layout_width="34dp"
+                android:layout_height="34dp"
+                android:padding="6dp"
+                android:layout_marginEnd="2dp"
+                android:background="?attr/selectableItemBackgroundBorderless"
+                android:src="@drawable/ic_shrink_bubble"
+                android:tint="#00E5FF"
+                android:contentDescription="Collapse to Ball" />
+
             <!-- Active Tab Counter Badge Pill -->
             <FrameLayout
                 android:id="@+id/caspian_pill_tab_btn"
