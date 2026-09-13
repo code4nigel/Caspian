@@ -1,6 +1,25 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
+# Resilient command runner with exponential backoff for GitHub API/network calls
+run_with_retry() {
+  local retries=4
+  local delay=3
+  local count=0
+  until "$@"; do
+    local exit_code=$?
+    count=$((count + 1))
+    if [ $count -lt $retries ]; then
+      echo "Command failed (exit $exit_code). Retrying in ${delay}s... (Attempt $count of $retries)"
+      sleep $delay
+      delay=$((delay * 2))
+    else
+      echo "Command failed permanently after $retries attempts: $*"
+      return $exit_code
+    fi
+  done
+}
+
 # Dynamically detect Flow version from betaC/app/build.gradle.kts
 FLOW_VER=$(grep 'versionName' betaC/app/build.gradle.kts | head -n1 | sed -E 's/.*"([^"]+)".*/\1/')
 EXT_VER=$(node -p "try { require('./Caspian/manifest.json').version } catch(e) { '6.3.0' }")
@@ -8,10 +27,11 @@ echo "Detected Flow Version: v${FLOW_VER}, Extension Version: v${EXT_VER}"
 
 COMMIT_MSG=$(git log -1 --pretty=%B || echo "Automated release")
 
-# 1. Publish Caspian Flow (Beta C)
+# 1. Publish Caspian Flow (Beta C) under BOTH Caspian-Flow-v* and v* tags
 FLOW_TAG="Caspian-Flow-v${FLOW_VER}"
 FLOW_TITLE="[Beta C] Caspian Flow v${FLOW_VER}"
 FLOW_ASSET="versions/Caspian-Flow-v${FLOW_VER}.apk"
+FLOW_ALT_ASSET="versions/app-v${FLOW_VER}.apk"
 FLOW_NOTES="### 📱 Caspian Flow (Beta C)
 
 ${COMMIT_MSG}
@@ -21,18 +41,28 @@ ${COMMIT_MSG}
 
 Download the asset below to install or use."
 
-if [ -f "$FLOW_ASSET" ]; then
-  echo "Publishing ${FLOW_TITLE}..."
-  if gh release view "$FLOW_TAG" >/dev/null 2>&1; then
-    gh release edit "$FLOW_TAG" --title "$FLOW_TITLE" --notes "$FLOW_NOTES" --prerelease
+publish_flow_release() {
+  local tag="$1"
+  local title="$2"
+  if [ -f "$FLOW_ASSET" ]; then
+    echo "Publishing ${title} for tag ${tag}..."
+    if run_with_retry gh release view "$tag" >/dev/null 2>&1; then
+      run_with_retry gh release edit "$tag" --title "$title" --notes "$FLOW_NOTES" --prerelease
+    else
+      run_with_retry gh release create "$tag" --title "$title" --notes "$FLOW_NOTES" --prerelease
+    fi
+    run_with_retry gh release upload "$tag" "$FLOW_ASSET" --clobber
+    if [ -f "$FLOW_ALT_ASSET" ]; then
+      run_with_retry gh release upload "$tag" "$FLOW_ALT_ASSET" --clobber
+    fi
+    echo "✓ Completed ${title} (${tag})"
   else
-    gh release create "$FLOW_TAG" --title "$FLOW_TITLE" --notes "$FLOW_NOTES" --prerelease
+    echo "Warning: ${FLOW_ASSET} not found!"
   fi
-  gh release upload "$FLOW_TAG" "$FLOW_ASSET" --clobber
-  echo "✓ Completed ${FLOW_TITLE}"
-else
-  echo "Warning: ${FLOW_ASSET} not found!"
-fi
+}
+
+publish_flow_release "$FLOW_TAG" "$FLOW_TITLE"
+publish_flow_release "v${FLOW_VER}" "v${FLOW_VER} - Caspian Flow"
 
 # 2. Publish Caspian Mobile
 MOBILE_TAG="Caspian-Mobile-v1.2.40"
@@ -47,12 +77,12 @@ Official stable Android mobile application for ChatGPT, Gemini, YouTube and Web 
 
 if [ -f "$MOBILE_ASSET" ]; then
   echo "Publishing ${MOBILE_TITLE}..."
-  if gh release view "$MOBILE_TAG" >/dev/null 2>&1; then
-    gh release edit "$MOBILE_TAG" --title "$MOBILE_TITLE" --notes "$MOBILE_NOTES"
+  if run_with_retry gh release view "$MOBILE_TAG" >/dev/null 2>&1; then
+    run_with_retry gh release edit "$MOBILE_TAG" --title "$MOBILE_TITLE" --notes "$MOBILE_NOTES"
   else
-    gh release create "$MOBILE_TAG" --title "$MOBILE_TITLE" --notes "$MOBILE_NOTES"
+    run_with_retry gh release create "$MOBILE_TAG" --title "$MOBILE_TITLE" --notes "$MOBILE_NOTES"
   fi
-  gh release upload "$MOBILE_TAG" "$MOBILE_ASSET" --clobber
+  run_with_retry gh release upload "$MOBILE_TAG" "$MOBILE_ASSET" --clobber
   echo "✓ Completed ${MOBILE_TITLE}"
 fi
 
@@ -69,12 +99,12 @@ Experimental build featuring rich Gemini HTML formatter, custom SFX mapping and 
 
 if [ -f "$BETA_A_ASSET" ]; then
   echo "Publishing ${BETA_A_TITLE}..."
-  if gh release view "$BETA_A_TAG" >/dev/null 2>&1; then
-    gh release edit "$BETA_A_TAG" --title "$BETA_A_TITLE" --notes "$BETA_A_NOTES" --prerelease
+  if run_with_retry gh release view "$BETA_A_TAG" >/dev/null 2>&1; then
+    run_with_retry gh release edit "$BETA_A_TAG" --title "$BETA_A_TITLE" --notes "$BETA_A_NOTES" --prerelease
   else
-    gh release create "$BETA_A_TAG" --title "$BETA_A_TITLE" --notes "$BETA_A_NOTES" --prerelease
+    run_with_retry gh release create "$BETA_A_TAG" --title "$BETA_A_TITLE" --notes "$BETA_A_NOTES" --prerelease
   fi
-  gh release upload "$BETA_A_TAG" "$BETA_A_ASSET" --clobber
+  run_with_retry gh release upload "$BETA_A_TAG" "$BETA_A_ASSET" --clobber
   echo "✓ Completed ${BETA_A_TITLE}"
 fi
 
@@ -91,12 +121,12 @@ Compact lightweight build for rapid AI browsing and split window testing.
 
 if [ -f "$BETA_B_ASSET" ]; then
   echo "Publishing ${BETA_B_TITLE}..."
-  if gh release view "$BETA_B_TAG" >/dev/null 2>&1; then
-    gh release edit "$BETA_B_TAG" --title "$BETA_B_TITLE" --notes "$BETA_B_NOTES" --prerelease
+  if run_with_retry gh release view "$BETA_B_TAG" >/dev/null 2>&1; then
+    run_with_retry gh release edit "$BETA_B_TAG" --title "$BETA_B_TITLE" --notes "$BETA_B_NOTES" --prerelease
   else
-    gh release create "$BETA_B_TAG" --title "$BETA_B_TITLE" --notes "$BETA_B_NOTES" --prerelease
+    run_with_retry gh release create "$BETA_B_TAG" --title "$BETA_B_TITLE" --notes "$BETA_B_NOTES" --prerelease
   fi
-  gh release upload "$BETA_B_TAG" "$BETA_B_ASSET" --clobber
+  run_with_retry gh release upload "$BETA_B_TAG" "$BETA_B_ASSET" --clobber
   echo "✓ Completed ${BETA_B_TITLE}"
 fi
 
@@ -113,12 +143,12 @@ Official Chromium Desktop Browser Extension for ChatGPT/Gemini DOM optimization,
 
 if [ -f "$EXT_ASSET" ]; then
   echo "Publishing ${EXT_TITLE}..."
-  if gh release view "$EXT_TAG" >/dev/null 2>&1; then
-    gh release edit "$EXT_TAG" --title "$EXT_TITLE" --notes "$EXT_NOTES"
+  if run_with_retry gh release view "$EXT_TAG" >/dev/null 2>&1; then
+    run_with_retry gh release edit "$EXT_TAG" --title "$EXT_TITLE" --notes "$EXT_NOTES"
   else
-    gh release create "$EXT_TAG" --title "$EXT_TITLE" --notes "$EXT_NOTES"
+    run_with_retry gh release create "$EXT_TAG" --title "$EXT_TITLE" --notes "$EXT_NOTES"
   fi
-  gh release upload "$EXT_TAG" "$EXT_ASSET" --clobber
+  run_with_retry gh release upload "$EXT_TAG" "$EXT_ASSET" --clobber
   echo "✓ Completed ${EXT_TITLE}"
 fi
 
@@ -141,14 +171,14 @@ This release bundles the **latest official builds** for all Caspian applications
 Click on any of the attached assets below to download the latest build for your platform."
 
 echo "Publishing ${SUITE_TITLE}..."
-if gh release view "$SUITE_TAG" >/dev/null 2>&1; then
-  gh release edit "$SUITE_TAG" --title "$SUITE_TITLE" --notes "$SUITE_NOTES" --latest
+if run_with_retry gh release view "$SUITE_TAG" >/dev/null 2>&1; then
+  run_with_retry gh release edit "$SUITE_TAG" --title "$SUITE_TITLE" --notes "$SUITE_NOTES" --latest
 else
-  gh release create "$SUITE_TAG" --title "$SUITE_TITLE" --notes "$SUITE_NOTES" --latest
+  run_with_retry gh release create "$SUITE_TAG" --title "$SUITE_TITLE" --notes "$SUITE_NOTES" --latest
 fi
 
 echo "Uploading all latest assets to Latest Suite..."
-gh release upload "$SUITE_TAG" \
+run_with_retry gh release upload "$SUITE_TAG" \
   "$FLOW_ASSET" \
   "$MOBILE_ASSET" \
   "$BETA_A_ASSET" \
@@ -157,13 +187,13 @@ gh release upload "$SUITE_TAG" \
   --clobber
 
 # Clean up obsolete assets from Latest Suite
-for old_asset in $(gh release view "$SUITE_TAG" --json assets -q '.assets[].name'); do
+for old_asset in $(gh release view "$SUITE_TAG" --json assets -q '.assets[].name' 2>/dev/null || true); do
   case "$old_asset" in
-    "Caspian-Flow-v${FLOW_VER}.apk"|"Caspian-Mobile-v1.2.40.apk"|"Caspian-Beta-A-v1.2.48.apk"|"Caspian-Beta-B-v1.0.5.apk"|"Caspian-Extension-v${EXT_VER}.zip")
+    "Caspian-Flow-v${FLOW_VER}.apk"|"app-v${FLOW_VER}.apk"|"Caspian-Mobile-v1.2.40.apk"|"Caspian-Beta-A-v1.2.48.apk"|"Caspian-Beta-B-v1.0.5.apk"|"Caspian-Extension-v${EXT_VER}.zip")
       ;;
     *)
       echo "Removing obsolete asset from Latest Suite: $old_asset"
-      gh release delete-asset "$SUITE_TAG" "$old_asset" --yes || true
+      gh release delete-asset "$SUITE_TAG" "$old_asset" --yes 2>/dev/null || true
       ;;
   esac
 done

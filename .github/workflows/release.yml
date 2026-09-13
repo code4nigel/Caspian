@@ -13,8 +13,8 @@ permissions:
   contents: write
 
 concurrency:
-  group: release-pipeline
-  cancel-in-progress: true
+  group: release-pipeline-${{ github.ref }}
+  cancel-in-progress: false
 
 jobs:
   publish-releases:
