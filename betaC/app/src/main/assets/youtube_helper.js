@@ -1400,12 +1400,24 @@
                 }
                 window.CaspianBridge.updateTabMediaPlaybackModes(tabId, repMode, shufOn);
               }
+
+              // Set native HTML5 video loop for Repeat-One to prevent Chromium background audio teardown
+              if (v) {
+                if (repMode === 2) {
+                  if (!v.loop) v.loop = true;
+                  if (v.paused && (v.ended || v.currentTime === 0)) {
+                    try { v.play().catch(function(){}); } catch(e){}
+                  }
+                } else {
+                  if (v.loop) v.loop = false;
+                }
+              }
             }
           } catch(e){}
         }
 
         // Continuous Background Auto-Advance Watcher:
-        // When video ends, if in background or screen off, ensure next track starts within 2.5s
+        // When video ends, if in background or screen off, ensure next track starts or loops properly
         try {
           var vidEl = window.__CaspianYouTube.getVideo();
           if (vidEl && !vidEl.__caspian_advance_hooked) {
@@ -1414,9 +1426,17 @@
               setTimeout(function() {
                 var curV = window.__CaspianYouTube.getVideo();
                 if (curV && (curV.ended || curV.paused)) {
-                  window.__CaspianYouTube.nextTrack();
+                  var isRepOne = (window.__CaspianYouTube && window.__CaspianYouTube._lastRepMode === 2) || (curV && curV.loop);
+                  if (isRepOne) {
+                    try {
+                      curV.currentTime = 0;
+                      curV.play().catch(function(){});
+                    } catch(e){}
+                  } else {
+                    window.__CaspianYouTube.nextTrack();
+                  }
                 }
-              }, 2200);
+              }, 1200);
             }, { passive: true });
           }
         } catch(e){}

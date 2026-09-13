@@ -2468,11 +2468,14 @@
   const omniboxModeOrb = document.getElementById('omnibox-mode-orb');
   const menuStyleList = document.getElementById('menu-style-list');
   const menuStyleGrid = document.getElementById('menu-style-grid');
+  const tabViewNormal = document.getElementById('tab-view-normal');
+  const tabViewRecents = document.getElementById('tab-view-recents');
 
   function updateOmniboxCustomizationUI() {
     let currentPos = 'top';
     let currentScrollMode = 'overlay';
     let currentStyle = 'grid';
+    let currentTabView = 'normal';
 
     if (window.CaspianBridge && typeof window.CaspianBridge.getOmniboxPosition === 'function') {
       try { currentPos = window.CaspianBridge.getOmniboxPosition() || 'top'; } catch (e) {}
@@ -2492,6 +2495,12 @@
       currentStyle = localStorage.getItem('omnibox_menu_style') || 'grid';
     }
 
+    if (window.CaspianBridge && typeof window.CaspianBridge.getTabSwitcherViewStyle === 'function') {
+      try { currentTabView = window.CaspianBridge.getTabSwitcherViewStyle() || 'normal'; } catch (e) {}
+    } else {
+      currentTabView = localStorage.getItem('tab_switcher_view_style') || 'normal';
+    }
+
     if (omniboxPosTop) omniboxPosTop.classList.toggle('active', currentPos === 'top');
     if (omniboxPosBottom) omniboxPosBottom.classList.toggle('active', currentPos === 'bottom');
     if (omniboxModeOverlay) omniboxModeOverlay.classList.toggle('active', currentScrollMode === 'overlay');
@@ -2499,6 +2508,20 @@
     if (omniboxModeOrb) omniboxModeOrb.classList.toggle('active', currentScrollMode === 'orb');
     if (menuStyleList) menuStyleList.classList.toggle('active', currentStyle === 'list');
     if (menuStyleGrid) menuStyleGrid.classList.toggle('active', currentStyle === 'grid');
+    if (tabViewNormal) tabViewNormal.classList.toggle('active', currentTabView === 'normal');
+    if (tabViewRecents) tabViewRecents.classList.toggle('active', currentTabView === 'recents');
+  }
+
+  function setTabSwitcherViewStyle(style) {
+    try { playSFX('tm_header'); } catch (e) {}
+    localStorage.setItem('tab_switcher_view_style', style);
+    if (window.CaspianBridge && typeof window.CaspianBridge.setTabSwitcherViewStyle === 'function') {
+      window.CaspianBridge.setTabSwitcherViewStyle(style);
+    }
+    updateOmniboxCustomizationUI();
+    if (window.CaspianBridge && typeof window.CaspianBridge.showToast === 'function') {
+      window.CaspianBridge.showToast('Tab Switcher: ' + (style === 'recents' ? 'Recents Cards View' : 'Normal Grid View'));
+    }
   }
 
   function setOmniboxPlacement(pos) {
@@ -2547,6 +2570,8 @@
   if (omniboxModeOrb) omniboxModeOrb.addEventListener('click', () => setOmniboxScrollMode('orb'));
   if (menuStyleList) menuStyleList.addEventListener('click', () => setOmniboxMenuStyle('list'));
   if (menuStyleGrid) menuStyleGrid.addEventListener('click', () => setOmniboxMenuStyle('grid'));
+  if (tabViewNormal) tabViewNormal.addEventListener('click', () => setTabSwitcherViewStyle('normal'));
+  if (tabViewRecents) tabViewRecents.addEventListener('click', () => setTabSwitcherViewStyle('recents'));
 
   const btnResetMenuGrid = document.getElementById('btn-reset-menu-grid');
   if (btnResetMenuGrid) {

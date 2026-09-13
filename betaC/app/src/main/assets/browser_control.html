@@ -1112,85 +1112,99 @@
       </div>
 
       <!-- Interface & Omnibox Customization Card -->
-      <div class="m3-card" id="settings-card-omnibox" style="margin-top: 14px;">
-        <div class="m3-card-row" style="margin-bottom: 12px;">
-          <div>
-            <div class="m3-card-title">INTERFACE & OMNIBOX</div>
-            <div class="m3-card-sub">Customize bar placement and action menu layout.</div>
-          </div>
-        </div>
+      <details class="m3-card" id="settings-card-omnibox" style="margin-top: 14px; cursor: pointer; padding-bottom: 12px;">
+        <summary
+          style="font-size: 11px; font-weight: 700; color: var(--text-sub); letter-spacing: 0.5px; user-select: none; outline: none; list-style: none; display: flex; align-items: center; justify-content: space-between;">
+          <span>INTERFACE &amp; OMNIBOX ▼</span>
+          <span style="font-size: 10px; opacity: 0.7;">Bar Placement &amp; View Style</span>
+        </summary>
 
-        <!-- Omnibox Position -->
-        <div class="setting-row" style="margin-bottom: 12px;">
-          <div>
-            <div class="setting-label">Omnibox Placement</div>
-            <div class="setting-desc" style="font-size: 10.5px; color: var(--text-muted);">Anchor address bar at top or bottom</div>
+        <div style="margin-top: 12px; border-top: 1px dashed var(--border-glass); padding-top: 10px; cursor: default;"
+          onclick="event.stopPropagation();">
+          <!-- Omnibox Position -->
+          <div class="setting-row" style="margin-bottom: 12px;">
+            <div>
+              <div class="setting-label">Omnibox Placement</div>
+              <div class="setting-desc" style="font-size: 10.5px; color: var(--text-muted);">Anchor address bar at top or bottom</div>
+            </div>
+            <div class="mode-pill-toggle">
+              <button id="omnibox-pos-top" class="mode-pill active" data-pos="top">Top Bar</button>
+              <button id="omnibox-pos-bottom" class="mode-pill" data-pos="bottom">Bottom Bar</button>
+            </div>
           </div>
-          <div class="mode-pill-toggle">
-            <button id="omnibox-pos-top" class="mode-pill active" data-pos="top">Top Bar</button>
-            <button id="omnibox-pos-bottom" class="mode-pill" data-pos="bottom">Bottom Bar</button>
-          </div>
-        </div>
 
-        <!-- Omnibox Scroll Behavior -->
-        <div class="setting-row" style="margin-bottom: 12px;">
-          <div>
-            <div class="setting-label">Scroll Behavior</div>
-            <div class="setting-desc" style="font-size: 10.5px; color: var(--text-muted);">Dynamic overlay, dedicated space, or Caspian Orb 3-stage morphing</div>
+          <!-- Omnibox Scroll Behavior -->
+          <div class="setting-row" style="margin-bottom: 12px;">
+            <div>
+              <div class="setting-label">Scroll Behavior</div>
+              <div class="setting-desc" style="font-size: 10.5px; color: var(--text-muted);">Dynamic overlay, dedicated space, or Caspian Orb 3-stage morphing</div>
+            </div>
+            <div class="mode-pill-toggle">
+              <button id="omnibox-mode-overlay" class="mode-pill active" data-mode="overlay">Dynamic Overlay</button>
+              <button id="omnibox-mode-separate" class="mode-pill" data-mode="separate">Dedicated</button>
+              <button id="omnibox-mode-orb" class="mode-pill" data-mode="orb">Caspian Orb 🔮</button>
+            </div>
           </div>
-          <div class="mode-pill-toggle">
-            <button id="omnibox-mode-overlay" class="mode-pill active" data-mode="overlay">Dynamic Overlay</button>
-            <button id="omnibox-mode-separate" class="mode-pill" data-mode="separate">Dedicated</button>
-            <button id="omnibox-mode-orb" class="mode-pill" data-mode="orb">Caspian Orb 🔮</button>
-          </div>
-        </div>
 
-        <!-- Omnibox Menu Style -->
-        <div class="setting-row">
-          <div>
-            <div class="setting-label">Action Menu Style</div>
-            <div class="setting-desc" style="font-size: 10.5px; color: var(--text-muted);">Choose between Grid Action Sheet and Classic List</div>
+          <!-- Tab Switcher View Style -->
+          <div class="setting-row" style="margin-bottom: 12px;">
+            <div>
+              <div class="setting-label">Tab Switcher View</div>
+              <div class="setting-desc" style="font-size: 10.5px; color: var(--text-muted);">Vertical 2-column grid or iOS/Android Recents card deck</div>
+            </div>
+            <div class="mode-pill-toggle" id="tab-switcher-view-toggle">
+              <button id="tab-view-normal" class="mode-pill active" data-view="normal">Normal</button>
+              <button id="tab-view-recents" class="mode-pill" data-view="recents">Recents</button>
+            </div>
           </div>
-          <div class="mode-pill-toggle">
-            <button id="menu-style-list" class="mode-pill active" data-style="list">Classic List</button>
-            <button id="menu-style-grid" class="mode-pill" data-style="grid">Grid Sheet</button>
-          </div>
-        </div>
 
-        <!-- Reset Card Menu Layout -->
-        <div class="setting-row" style="margin-top: 8px;">
-          <div>
-            <div class="setting-label">Menu Grid Layout</div>
-            <div class="setting-desc" style="font-size: 10.5px; color: var(--text-muted);">Reset action cards and buttons to default arrangement</div>
+          <!-- Omnibox Menu Style -->
+          <div class="setting-row">
+            <div>
+              <div class="setting-label">Action Menu Style</div>
+              <div class="setting-desc" style="font-size: 10.5px; color: var(--text-muted);">Choose between Grid Action Sheet and Classic List</div>
+            </div>
+            <div class="mode-pill-toggle">
+              <button id="menu-style-list" class="mode-pill active" data-style="list">Classic List</button>
+              <button id="menu-style-grid" class="mode-pill" data-style="grid">Grid Sheet</button>
+            </div>
           </div>
-          <button id="btn-reset-menu-grid" class="btn-clean" style="padding: 6px 14px; font-size: 11px; font-weight: 600; border-radius: 8px; background: rgba(56, 189, 248, 0.12); color: #38bdf8; border: 1px solid rgba(56, 189, 248, 0.3); cursor: pointer;">Reset Layout</button>
-        </div>
 
-        <!-- Tab Strip Capsule Setting (default ON) -->
-        <div class="setting-row" style="margin-top: 12px;">
-          <div>
-            <div class="setting-label">Tab Strip Capsule</div>
-            <div class="setting-desc" style="font-size: 10.5px; color: var(--text-muted);">Keep the horizontal tab strip capsule visible</div>
+          <!-- Reset Card Menu Layout -->
+          <div class="setting-row" style="margin-top: 8px;">
+            <div>
+              <div class="setting-label">Menu Grid Layout</div>
+              <div class="setting-desc" style="font-size: 10.5px; color: var(--text-muted);">Reset action cards and buttons to default arrangement</div>
+            </div>
+            <button id="btn-reset-menu-grid" class="btn-clean" style="padding: 6px 14px; font-size: 11px; font-weight: 600; border-radius: 8px; background: rgba(56, 189, 248, 0.12); color: #38bdf8; border: 1px solid rgba(56, 189, 248, 0.3); cursor: pointer;">Reset Layout</button>
           </div>
-          <div class="mode-pill-toggle">
-            <button id="tab-strip-toggle-on" class="mode-pill active" data-state="on">On</button>
-            <button id="tab-strip-toggle-off" class="mode-pill" data-state="off">Off</button>
-          </div>
-        </div>
 
-        <!-- Interface Density Setting -->
-        <div class="setting-row" style="margin-top: 12px;">
-          <div>
-            <div class="setting-label">Interface Density</div>
-            <div class="setting-desc" style="font-size: 10.5px; color: var(--text-muted);">Scale layout compactness and information density</div>
+          <!-- Tab Strip Capsule Setting (default ON) -->
+          <div class="setting-row" style="margin-top: 12px;">
+            <div>
+              <div class="setting-label">Tab Strip Capsule</div>
+              <div class="setting-desc" style="font-size: 10.5px; color: var(--text-muted);">Keep the horizontal tab strip capsule visible</div>
+            </div>
+            <div class="mode-pill-toggle">
+              <button id="tab-strip-toggle-on" class="mode-pill active" data-state="on">On</button>
+              <button id="tab-strip-toggle-off" class="mode-pill" data-state="off">Off</button>
+            </div>
           </div>
-          <div class="mode-pill-toggle" id="interface-density-toggle">
-            <button id="density-compact" class="mode-pill" data-density="compact" title="Compact Pro: Low DPI simulation, fits more cards & tabs">Compact</button>
-            <button id="density-default" class="mode-pill active" data-density="default" title="Default: Balanced for standard phone screens">Default</button>
-            <button id="density-spacious" class="mode-pill" data-density="spacious" title="Spacious: Larger text & touch targets">Spacious</button>
+
+          <!-- Interface Density Setting -->
+          <div class="setting-row" style="margin-top: 12px;">
+            <div>
+              <div class="setting-label">Interface Density</div>
+              <div class="setting-desc" style="font-size: 10.5px; color: var(--text-muted);">Scale layout compactness and information density</div>
+            </div>
+            <div class="mode-pill-toggle" id="interface-density-toggle">
+              <button id="density-compact" class="mode-pill" data-density="compact" title="Compact Pro: Low DPI simulation, fits more cards & tabs">Compact</button>
+              <button id="density-default" class="mode-pill active" data-density="default" title="Default: Balanced for standard phone screens">Default</button>
+              <button id="density-spacious" class="mode-pill" data-density="spacious" title="Spacious: Larger text & touch targets">Spacious</button>
+            </div>
           </div>
         </div>
-      </div>
+      </details>
 
       <!-- Visuals & Animations Card -->
       <details class="m3-card" id="settings-card-visuals" style="cursor: pointer; padding-bottom: 12px;">

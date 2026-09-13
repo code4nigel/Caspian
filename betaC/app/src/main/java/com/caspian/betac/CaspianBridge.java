@@ -1266,6 +1266,21 @@ public class CaspianBridge {
     }
 
     @JavascriptInterface
+    public void setTabSwitcherViewStyle(String style) {
+        if (activity != null) {
+            activity.runOnUiThread(() -> activity.setTabSwitcherViewStyle(style));
+        }
+    }
+
+    @JavascriptInterface
+    public String getTabSwitcherViewStyle() {
+        if (activity != null) {
+            return activity.getTabSwitcherViewStyle();
+        }
+        return "normal";
+    }
+
+    @JavascriptInterface
     public void setOmniboxScrollMode(String mode) {
         if (activity != null) {
             activity.runOnUiThread(() -> activity.setOmniboxScrollMode(mode));
