@@ -85,6 +85,7 @@ import android.view.View;
 import android.view.ViewGroup;
 import android.view.ViewConfiguration;
 import android.view.WindowManager;
+import android.view.animation.AccelerateDecelerateInterpolator;
 import android.view.animation.AccelerateInterpolator;
 import android.view.animation.DecelerateInterpolator;
 import android.view.animation.Interpolator;
@@ -397,6 +398,8 @@ public class MainActivity extends AppCompatActivity {
     private FrameLayout btnTabDockClose;
     private ImageView tabDockCloseIcon;
     private String tabSwitcherViewStyle = "normal"; // "normal" or "recents"
+    private int recentsTargetFocusTabId = -1;
+    private boolean isRecentsTransitionAnimating = false;
     private TextView btnTabDockMakeGroup;
     private FrameLayout tabGridFabAdd;
     private FrameLayout tabGridDialContainer;
@@ -3056,40 +3059,69 @@ public class MainActivity extends AppCompatActivity {
         updateTabGridUndoButton();
         renderTabGridCards("");
 
-        // iOS Smooth Zoom & Scale Entrance Animation
-        if (omniboxTabsBtn != null && omniboxTabsBtn.getWidth() > 0) {
-            float pivotX = omniboxTabsBtn.getX() + (omniboxTabsBtn.getWidth() / 2f);
-            float pivotY = omniboxTabsBtn.getY() + (omniboxTabsBtn.getHeight() / 2f);
-            tabGridOverlay.setPivotX(pivotX);
-            tabGridOverlay.setPivotY(pivotY);
-        } else {
+        // Smooth Zoom & Scale Entrance Animation
+        if ("recents".equals(tabSwitcherViewStyle)) {
             tabGridOverlay.setPivotX(getResources().getDisplayMetrics().widthPixels / 2f);
-            tabGridOverlay.setPivotY(getResources().getDisplayMetrics().heightPixels * 0.85f);
-        }
-        tabGridOverlay.setScaleX(0.86f);
-        tabGridOverlay.setScaleY(0.86f);
-        tabGridOverlay.setAlpha(0.0f);
-        tabGridOverlay.setTranslationY(dpToPx(24));
+            tabGridOverlay.setPivotY(getResources().getDisplayMetrics().heightPixels / 2f);
+            tabGridOverlay.setScaleX(1.0f);
+            tabGridOverlay.setScaleY(1.0f);
+            tabGridOverlay.setTranslationY(0f);
+            tabGridOverlay.setAlpha(0.0f);
+            tabGridOverlay.animate().cancel();
+            tabGridOverlay.animate()
+                    .alpha(1.0f)
+                    .setDuration(280)
+                    .setInterpolator(new AccelerateDecelerateInterpolator())
+                    .start();
 
-        tabGridOverlay.animate().cancel();
-        tabGridOverlay.animate()
-                .scaleX(1.0f)
-                .scaleY(1.0f)
-                .alpha(1.0f)
-                .translationY(0f)
-                .setDuration(240)
-                .setInterpolator(new DecelerateInterpolator(2.0f))
-                .start();
+            if (browserContentLayout != null) {
+                browserContentLayout.animate().cancel();
+                browserContentLayout.setScaleX(1.0f);
+                browserContentLayout.setScaleY(1.0f);
+                browserContentLayout.setTranslationY(0f);
+                browserContentLayout.animate()
+                        .scaleX(0.76f)
+                        .scaleY(0.76f)
+                        .translationY(dpToPx(10))
+                        .setDuration(280)
+                        .setInterpolator(new PathInterpolator(0.2f, 0f, 0f, 1f))
+                        .start();
+            }
+        } else {
+            if (omniboxTabsBtn != null && omniboxTabsBtn.getWidth() > 0) {
+                float pivotX = omniboxTabsBtn.getX() + (omniboxTabsBtn.getWidth() / 2f);
+                float pivotY = omniboxTabsBtn.getY() + (omniboxTabsBtn.getHeight() / 2f);
+                tabGridOverlay.setPivotX(pivotX);
+                tabGridOverlay.setPivotY(pivotY);
+            } else {
+                tabGridOverlay.setPivotX(getResources().getDisplayMetrics().widthPixels / 2f);
+                tabGridOverlay.setPivotY(getResources().getDisplayMetrics().heightPixels * 0.85f);
+            }
+            tabGridOverlay.setScaleX(0.86f);
+            tabGridOverlay.setScaleY(0.86f);
+            tabGridOverlay.setAlpha(0.0f);
+            tabGridOverlay.setTranslationY(dpToPx(24));
 
-        if (browserContentLayout != null) {
-            browserContentLayout.animate().cancel();
-            browserContentLayout.animate()
-                    .scaleX(0.92f)
-                    .scaleY(0.92f)
-                    .translationY(dpToPx(16))
+            tabGridOverlay.animate().cancel();
+            tabGridOverlay.animate()
+                    .scaleX(1.0f)
+                    .scaleY(1.0f)
+                    .alpha(1.0f)
+                    .translationY(0f)
                     .setDuration(240)
                     .setInterpolator(new DecelerateInterpolator(2.0f))
                     .start();
+
+            if (browserContentLayout != null) {
+                browserContentLayout.animate().cancel();
+                browserContentLayout.animate()
+                        .scaleX(0.92f)
+                        .scaleY(0.92f)
+                        .translationY(dpToPx(16))
+                        .setDuration(240)
+                        .setInterpolator(new DecelerateInterpolator(2.0f))
+                        .start();
+            }
         }
 
         playAssetSound("sfx/pop_click.mp3");
@@ -3101,6 +3133,38 @@ public class MainActivity extends AppCompatActivity {
 
     public void hideTabGridView(float customPivotX, float customPivotY) {
         if (tabGridOverlay != null) {
+            if ("recents".equals(tabSwitcherViewStyle)) {
+                if (browserContentLayout != null) {
+                    browserContentLayout.animate().cancel();
+                    browserContentLayout.animate()
+                            .scaleX(1.0f)
+                            .scaleY(1.0f)
+                            .translationY(0f)
+                            .setDuration(240)
+                            .setInterpolator(new PathInterpolator(0.2f, 0f, 0f, 1f))
+                            .start();
+                }
+                tabGridOverlay.animate().cancel();
+                tabGridOverlay.animate()
+                        .alpha(0.0f)
+                        .setDuration(220)
+                        .setInterpolator(new AccelerateDecelerateInterpolator())
+                        .withEndAction(() -> {
+                            tabGridOverlay.setVisibility(View.GONE);
+                            tabGridOverlay.setAlpha(1.0f);
+                            tabGridOverlay.setScaleX(1.0f);
+                            tabGridOverlay.setScaleY(1.0f);
+                            tabGridOverlay.setTranslationY(0f);
+                            if (floatingCaspianCard != null && customView == null) {
+                                floatingCaspianCard.setVisibility(View.VISIBLE);
+                            }
+                            if ("orb".equalsIgnoreCase(omniboxScrollMode)) {
+                                transitionToOrbState(currentOrbState, false);
+                            }
+                        }).start();
+                return;
+            }
+
             if (customPivotX >= 0 && customPivotY >= 0) {
                 tabGridOverlay.setPivotX(customPivotX);
                 tabGridOverlay.setPivotY(customPivotY);
@@ -3460,6 +3524,154 @@ public class MainActivity extends AppCompatActivity {
         tabGridContentLayout.addView(grid);
     }
 
+    private final Handler recentsSnapHandler = new Handler(Looper.getMainLooper());
+    private int recentsLastScrollX = -1;
+    private final Runnable recentsSnapRunnable = new Runnable() {
+        @Override
+        public void run() {
+            if (tabRecentsScroll == null || tabRecentsContainer == null) return;
+            int currentX = tabRecentsScroll.getScrollX();
+            if (currentX == recentsLastScrollX) {
+                snapToNearestRecentsCard();
+            } else {
+                recentsLastScrollX = currentX;
+                recentsSnapHandler.postDelayed(this, 50);
+            }
+        }
+    };
+
+    private void setupRecentsScrollSnapping() {
+        if (tabRecentsScroll == null) return;
+        tabRecentsScroll.setOnTouchListener((v, event) -> {
+            switch (event.getAction()) {
+                case MotionEvent.ACTION_UP:
+                case MotionEvent.ACTION_CANCEL:
+                    recentsLastScrollX = tabRecentsScroll.getScrollX();
+                    recentsSnapHandler.removeCallbacks(recentsSnapRunnable);
+                    recentsSnapHandler.postDelayed(recentsSnapRunnable, 60);
+                    break;
+            }
+            return false;
+        });
+    }
+
+    private void snapToNearestRecentsCard() {
+        if (tabRecentsScroll == null || tabRecentsContainer == null) return;
+        int childCount = tabRecentsContainer.getChildCount();
+        if (childCount == 0) return;
+
+        int scrollX = tabRecentsScroll.getScrollX();
+        int viewportW = tabRecentsScroll.getWidth();
+        if (viewportW <= 0) return;
+        int targetCenter = scrollX + (viewportW / 2);
+
+        View closestChild = null;
+        int minDistance = Integer.MAX_VALUE;
+
+        for (int i = 0; i < childCount; i++) {
+            View child = tabRecentsContainer.getChildAt(i);
+            if (child == null || child.getVisibility() != View.VISIBLE) continue;
+            int childCenter = child.getLeft() + (child.getWidth() / 2);
+            int dist = Math.abs(childCenter - targetCenter);
+            if (dist < minDistance) {
+                minDistance = dist;
+                closestChild = child;
+            }
+        }
+
+        if (closestChild != null) {
+            int targetScrollX = closestChild.getLeft() - ((viewportW - closestChild.getWidth()) / 2);
+            targetScrollX = Math.max(0, targetScrollX);
+            if (Math.abs(scrollX - targetScrollX) > dpToPx(3)) {
+                tabRecentsScroll.smoothScrollTo(targetScrollX, 0);
+            }
+        }
+    }
+
+    private void animateRecentsCardToFullscreen(View card, TabItem tab) {
+        if (isRecentsTransitionAnimating) return;
+        isRecentsTransitionAnimating = true;
+
+        playUiFeedbackSound("tap");
+        switchToTab(tab.id, false);
+
+        if (tabGridBottomDock != null) {
+            tabGridBottomDock.animate().alpha(0f).translationY(dpToPx(40)).setDuration(180).start();
+        }
+        if (tabGridHeaderRow != null) {
+            tabGridHeaderRow.animate().alpha(0f).translationY(-dpToPx(20)).setDuration(180).start();
+        }
+
+        int screenW = getResources().getDisplayMetrics().widthPixels;
+        int screenH = getResources().getDisplayMetrics().heightPixels;
+
+        int[] loc = new int[2];
+        card.getLocationOnScreen(loc);
+        float cardCenterX = loc[0] + (card.getWidth() / 2f);
+        float cardCenterY = loc[1] + (card.getHeight() / 2f);
+        float targetCenterX = screenW / 2f;
+        float targetCenterY = screenH / 2f;
+        float transX = targetCenterX - cardCenterX;
+        float transY = targetCenterY - cardCenterY;
+
+        float targetScaleX = (float) screenW / (float) Math.max(1, card.getWidth());
+        float targetScaleY = (float) screenH / (float) Math.max(1, card.getHeight());
+
+        card.bringToFront();
+        card.animate()
+            .translationX(card.getTranslationX() + transX)
+            .translationY(card.getTranslationY() + transY)
+            .scaleX(targetScaleX)
+            .scaleY(targetScaleY)
+            .setDuration(280)
+            .setInterpolator(new PathInterpolator(0.2f, 0f, 0f, 1f))
+            .start();
+
+        if (browserContentLayout != null) {
+            browserContentLayout.setScaleX(0.85f);
+            browserContentLayout.setScaleY(0.85f);
+            browserContentLayout.animate()
+                .scaleX(1.0f)
+                .scaleY(1.0f)
+                .setDuration(280)
+                .setInterpolator(new PathInterpolator(0.2f, 0f, 0f, 1f))
+                .start();
+        }
+
+        if (tabGridOverlay != null) {
+            tabGridOverlay.animate()
+                .alpha(0f)
+                .setDuration(260)
+                .setStartDelay(40)
+                .setInterpolator(new AccelerateDecelerateInterpolator())
+                .withEndAction(() -> {
+                    tabGridOverlay.setVisibility(View.GONE);
+                    tabGridOverlay.setAlpha(1f);
+                    tabGridOverlay.setScaleX(1f);
+                    tabGridOverlay.setScaleY(1f);
+                    tabGridOverlay.setTranslationY(0f);
+                    card.setScaleX(1f);
+                    card.setScaleY(1f);
+                    card.setTranslationX(0f);
+                    card.setTranslationY(0f);
+                    if (tabGridBottomDock != null) {
+                        tabGridBottomDock.setAlpha(1f);
+                        tabGridBottomDock.setTranslationY(0f);
+                    }
+                    if (tabGridHeaderRow != null) {
+                        tabGridHeaderRow.setAlpha(1f);
+                        tabGridHeaderRow.setTranslationY(0f);
+                    }
+                    if (floatingCaspianCard != null && customView == null) {
+                        floatingCaspianCard.setVisibility(View.VISIBLE);
+                    }
+                    isRecentsTransitionAnimating = false;
+                }).start();
+        } else {
+            isRecentsTransitionAnimating = false;
+        }
+    }
+
     private void renderTabRecentsCards(String filterQuery) {
         if (tabRecentsContainer == null) return;
         tabRecentsContainer.removeAllViews();
@@ -3471,7 +3683,11 @@ public class MainActivity extends AppCompatActivity {
         int cardWidth = (int) (screenWidth * 0.76f);
         int cardHeight = (int) (screenHeight * 0.60f);
 
+        int sidePadding = Math.max(dpToPx(16), (screenWidth - cardWidth) / 2);
+        tabRecentsContainer.setPadding(sidePadding, 0, sidePadding, dpToPx(90));
+
         View activeCardView = null;
+        View targetFocusCard = null;
 
         if (currentGridGroupId != null) {
             TabGroup activeGroup = null;
@@ -3552,6 +3768,7 @@ public class MainActivity extends AppCompatActivity {
                     if (!matchesTabFilter(tab, filterQuery)) continue;
                     View card = createRecentsTabCard(tab, cardWidth, cardHeight, filterQuery);
                     if (tab.id == activeTabId) activeCardView = card;
+                    if (recentsTargetFocusTabId != -1 && tab.id == recentsTargetFocusTabId) targetFocusCard = card;
                     tabRecentsContainer.addView(card);
                 }
             }
@@ -3590,11 +3807,13 @@ public class MainActivity extends AppCompatActivity {
                         }
                         View card = createRecentsSplitCard(leftTab, rightTab, cardWidth, cardHeight, filterQuery);
                         if (leftTab.id == activeTabId || rightTab.id == activeTabId) activeCardView = card;
+                        if (recentsTargetFocusTabId != -1 && (leftTab.id == recentsTargetFocusTabId || rightTab.id == recentsTargetFocusTabId)) targetFocusCard = card;
                         tabRecentsContainer.addView(card);
                     } else {
                         if (!matchesTabFilter(tab, filterQuery)) continue;
                         View card = createRecentsTabCard(tab, cardWidth, cardHeight, filterQuery);
                         if (tab.id == activeTabId) activeCardView = card;
+                        if (recentsTargetFocusTabId != -1 && tab.id == recentsTargetFocusTabId) targetFocusCard = card;
                         tabRecentsContainer.addView(card);
                     }
                 }
@@ -3605,6 +3824,7 @@ public class MainActivity extends AppCompatActivity {
                     if (group.tabIds.isEmpty()) continue;
                     if (!matchesGroupFilter(group, filterQuery)) continue;
                     View gCard = createRecentsGroupCard(group, cardWidth, cardHeight, filterQuery);
+                    if (recentsTargetFocusTabId != -1 && group.tabIds.contains(recentsTargetFocusTabId)) targetFocusCard = gCard;
                     tabRecentsContainer.addView(gCard);
                 }
             }
@@ -3621,14 +3841,18 @@ public class MainActivity extends AppCompatActivity {
             }
         }
 
-        // Auto-center active tab
-        if (tabRecentsScroll != null && activeCardView != null) {
-            final View targetCard = activeCardView;
+        // Center on target neighbor card (if closed a tab) or active tab
+        final View cardToCenter = (targetFocusCard != null) ? targetFocusCard : activeCardView;
+        recentsTargetFocusTabId = -1;
+        if (tabRecentsScroll != null && cardToCenter != null) {
+            final View targetCard = cardToCenter;
             tabRecentsScroll.post(() -> {
                 int targetX = targetCard.getLeft() - (screenWidth - cardWidth) / 2;
                 tabRecentsScroll.smoothScrollTo(Math.max(0, targetX), 0);
             });
         }
+
+        setupRecentsScrollSnapping();
     }
 
     private View createRecentsTabCard(TabItem tab, int cardWidth, int cardHeight, String filterQuery) {
@@ -3646,16 +3870,21 @@ public class MainActivity extends AppCompatActivity {
         GradientDrawable cardBg = new GradientDrawable();
         cardBg.setColor(isLight ? 0xFFFFFFFF : 0xFF141926);
         cardBg.setCornerRadius(dpToPx(24));
-        if (isSelected) {
-            cardBg.setStroke(dpToPx(3), isLight ? 0xFFD97706 : 0xFFFFCC00);
-        } else if (isActive) {
-            cardBg.setStroke(dpToPx(2.5f), isLight ? 0xFF0284C7 : 0xFF00E5FF);
-        } else {
-            cardBg.setStroke(dpToPx(1.2f), isLight ? 0xFFCBD5E1 : 0x2AFFFFFF);
-        }
         card.setBackground(cardBg);
         card.setElevation(isActive ? dpToPx(14) : dpToPx(6));
         card.setClipToOutline(true);
+
+        GradientDrawable borderOverlay = new GradientDrawable();
+        borderOverlay.setCornerRadius(dpToPx(24));
+        borderOverlay.setColor(Color.TRANSPARENT);
+        if (isSelected) {
+            borderOverlay.setStroke(dpToPx(4), 0xFFFFCC00);
+        } else if (isActive) {
+            borderOverlay.setStroke(dpToPx(2.5f), isLight ? 0xFF0284C7 : 0xFF00E5FF);
+        } else {
+            borderOverlay.setStroke(dpToPx(1.2f), isLight ? 0xFFCBD5E1 : 0x2AFFFFFF);
+        }
+        card.setForeground(borderOverlay);
 
         // Preview Snapshot
         Bitmap previewBmp = getOrLoadTabSnapshot(tab);
@@ -3689,6 +3918,35 @@ public class MainActivity extends AppCompatActivity {
             placeholder.addView(hostView);
 
             card.addView(placeholder);
+        }
+
+        // Vivid Yellow selection highlight tint & checkmark badge
+        if (isSelected) {
+            View goldTint = new View(this);
+            goldTint.setLayoutParams(new FrameLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.MATCH_PARENT));
+            goldTint.setBackgroundColor(0x22FFCC00);
+            card.addView(goldTint);
+
+            FrameLayout selBadge = new FrameLayout(this);
+            FrameLayout.LayoutParams sbLp = new FrameLayout.LayoutParams(dpToPx(28), dpToPx(28));
+            sbLp.gravity = Gravity.TOP | Gravity.END;
+            sbLp.setMargins(0, dpToPx(12), dpToPx(12), 0);
+            selBadge.setLayoutParams(sbLp);
+            GradientDrawable selBg = new GradientDrawable();
+            selBg.setShape(GradientDrawable.OVAL);
+            selBg.setColor(0xFFFFCC00);
+            selBadge.setBackground(selBg);
+            selBadge.setElevation(dpToPx(8));
+
+            TextView checkTv = new TextView(this);
+            checkTv.setLayoutParams(new FrameLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.MATCH_PARENT));
+            checkTv.setGravity(Gravity.CENTER);
+            checkTv.setText("✓");
+            checkTv.setTextColor(0xFF0F172A);
+            checkTv.setTextSize(TypedValue.COMPLEX_UNIT_SP, 15);
+            checkTv.setTypeface(null, android.graphics.Typeface.BOLD);
+            selBadge.addView(checkTv);
+            card.addView(selBadge);
         }
 
         // Top Floating Header Capsule
@@ -3777,7 +4035,7 @@ public class MainActivity extends AppCompatActivity {
         });
         headerRow.addView(titlesLayout);
 
-        // Close button (circle)
+        // Close button (circle) with Neighbor Tab Focus
         FrameLayout closeCircle = new FrameLayout(this);
         closeCircle.setLayoutParams(new LinearLayout.LayoutParams(dpToPx(26), dpToPx(26)));
         GradientDrawable closeGd = new GradientDrawable();
@@ -3801,6 +4059,23 @@ public class MainActivity extends AppCompatActivity {
                 .scaleY(0.7f)
                 .setDuration(220)
                 .withEndAction(() -> {
+                    int closedIdx = -1;
+                    for (int i = 0; i < tabsList.size(); i++) {
+                        if (tabsList.get(i).id == tab.id) {
+                            closedIdx = i;
+                            break;
+                        }
+                    }
+                    int nextFocusTabId = -1;
+                    if (closedIdx != -1) {
+                        if (closedIdx + 1 < tabsList.size()) {
+                            nextFocusTabId = tabsList.get(closedIdx + 1).id;
+                        } else if (closedIdx - 1 >= 0) {
+                            nextFocusTabId = tabsList.get(closedIdx - 1).id;
+                        }
+                    }
+                    recentsTargetFocusTabId = nextFocusTabId;
+
                     closeTab(tab.id);
                     selectedGridTabIds.remove(tab.id);
                     updateTabGridSelectionUi();
@@ -3858,10 +4133,10 @@ public class MainActivity extends AppCompatActivity {
             card.addView(caskBadge);
         }
 
-        // Tap to select / switch
+        // Tap to select or zoom smoothly to fullscreen
         card.setOnClickListener(v -> {
-            playUiFeedbackSound("tap");
             if (isGridSelectionMode || !selectedGridTabIds.isEmpty()) {
+                playUiFeedbackSound("tap");
                 if (selectedGridTabIds.contains(tab.id)) {
                     selectedGridTabIds.remove(tab.id);
                     if (selectedGridTabIds.isEmpty()) isGridSelectionMode = false;
@@ -3871,12 +4146,35 @@ public class MainActivity extends AppCompatActivity {
                 updateTabGridSelectionUi();
                 renderTabGridCards(tabGridSearchInput != null ? tabGridSearchInput.getText().toString() : "");
             } else {
-                switchToTab(tab.id);
-                hideTabGridView();
+                animateRecentsCardToFullscreen(card, tab);
             }
         });
 
-        // Swipe UP to dismiss gesture
+        // Tap-and-hold drag & drop + swipe UP to dismiss gesture
+        final Handler longPressHandler = new Handler(Looper.getMainLooper());
+        final boolean[] isDraggingOrLongPressed = new boolean[]{false};
+        final Runnable longPressRunnable = () -> {
+            isDraggingOrLongPressed[0] = true;
+            try { card.performHapticFeedback(HapticFeedbackConstants.LONG_PRESS); } catch (Throwable ignored) {}
+            playAssetSound("sfx/pop_button_v2.mp3");
+
+            // Buttery shrink animation before initiating drag
+            card.animate()
+                .scaleX(0.88f)
+                .scaleY(0.88f)
+                .setDuration(160)
+                .withEndAction(() -> {
+                    ClipData clipData = ClipData.newPlainText("tab_id", String.valueOf(tab.id));
+                    View.DragShadowBuilder shadow = new View.DragShadowBuilder(card);
+                    if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.N) {
+                        card.startDragAndDrop(clipData, shadow, tab, 0);
+                    } else {
+                        card.startDrag(clipData, shadow, tab, 0);
+                    }
+                    card.setAlpha(0.4f);
+                }).start();
+        };
+
         card.setOnTouchListener(new View.OnTouchListener() {
             private float startY = 0f;
             private float startX = 0f;
@@ -3889,26 +4187,37 @@ public class MainActivity extends AppCompatActivity {
                         startY = event.getRawY();
                         startX = event.getRawX();
                         isDraggingUp = false;
+                        isDraggingOrLongPressed[0] = false;
+                        longPressHandler.postDelayed(longPressRunnable, 350);
                         return false;
 
                     case MotionEvent.ACTION_MOVE:
                         float dy = event.getRawY() - startY;
                         float dx = event.getRawX() - startX;
-                        if (dy < -dpToPx(12) && Math.abs(dy) > Math.abs(dx) * 1.5f) {
-                            isDraggingUp = true;
-                            if (card.getParent() != null) card.getParent().requestDisallowInterceptTouchEvent(true);
-                            card.setTranslationY(dy);
-                            float progress = Math.min(1f, Math.abs(dy) / (float) cardHeight);
-                            card.setAlpha(Math.max(0.15f, 1f - progress * 0.8f));
-                            card.setScaleX(Math.max(0.85f, 1f - progress * 0.12f));
-                            card.setScaleY(Math.max(0.85f, 1f - progress * 0.12f));
-                            return true;
+                        if (Math.hypot(dx, dy) > dpToPx(8)) {
+                            longPressHandler.removeCallbacks(longPressRunnable);
+                        }
+                        if (!isDraggingOrLongPressed[0]) {
+                            if (dy < -dpToPx(12) && Math.abs(dy) > Math.abs(dx) * 1.4f) {
+                                isDraggingUp = true;
+                                if (card.getParent() != null) card.getParent().requestDisallowInterceptTouchEvent(true);
+                                card.setTranslationY(dy);
+                                float progress = Math.min(1f, Math.abs(dy) / (float) cardHeight);
+                                card.setAlpha(Math.max(0.15f, 1f - progress * 0.8f));
+                                card.setScaleX(Math.max(0.85f, 1f - progress * 0.12f));
+                                card.setScaleY(Math.max(0.85f, 1f - progress * 0.12f));
+                                return true;
+                            }
                         }
                         break;
 
                     case MotionEvent.ACTION_UP:
                     case MotionEvent.ACTION_CANCEL:
+                        longPressHandler.removeCallbacks(longPressRunnable);
                         if (card.getParent() != null) card.getParent().requestDisallowInterceptTouchEvent(false);
+                        if (!isDraggingOrLongPressed[0]) {
+                            card.animate().scaleX(1f).scaleY(1f).setDuration(120).start();
+                        }
                         if (isDraggingUp) {
                             float currentDy = card.getTranslationY();
                             int screenH = getResources().getDisplayMetrics().heightPixels;
@@ -3922,6 +4231,23 @@ public class MainActivity extends AppCompatActivity {
                                     .scaleY(0.7f)
                                     .setDuration(200)
                                     .withEndAction(() -> {
+                                        int closedIdx = -1;
+                                        for (int i = 0; i < tabsList.size(); i++) {
+                                            if (tabsList.get(i).id == tab.id) {
+                                                closedIdx = i;
+                                                break;
+                                            }
+                                        }
+                                        int nextFocusTabId = -1;
+                                        if (closedIdx != -1) {
+                                            if (closedIdx + 1 < tabsList.size()) {
+                                                nextFocusTabId = tabsList.get(closedIdx + 1).id;
+                                            } else if (closedIdx - 1 >= 0) {
+                                                nextFocusTabId = tabsList.get(closedIdx - 1).id;
+                                            }
+                                        }
+                                        recentsTargetFocusTabId = nextFocusTabId;
+
                                         closeTab(tab.id);
                                         selectedGridTabIds.remove(tab.id);
                                         updateTabGridSelectionUi();
@@ -3948,18 +4274,79 @@ public class MainActivity extends AppCompatActivity {
             }
         });
 
+        // Drop target for reordering tabs
+        card.setOnDragListener((v, event) -> {
+            switch (event.getAction()) {
+                case DragEvent.ACTION_DRAG_STARTED:
+                    return (event.getLocalState() instanceof TabItem);
+
+                case DragEvent.ACTION_DRAG_ENTERED:
+                    if (event.getLocalState() instanceof TabItem) {
+                        TabItem src = (TabItem) event.getLocalState();
+                        if (src.id != tab.id) {
+                            card.animate().scaleX(1.04f).scaleY(1.04f).setDuration(140).start();
+                            if (card.getForeground() instanceof GradientDrawable) {
+                                ((GradientDrawable) card.getForeground()).setStroke(dpToPx(3.5f), 0xFF00E5FF);
+                            }
+                        }
+                    }
+                    return true;
+
+                case DragEvent.ACTION_DRAG_EXITED:
+                    card.animate().scaleX(1.0f).scaleY(1.0f).setDuration(140).start();
+                    if (card.getForeground() instanceof GradientDrawable) {
+                        GradientDrawable gd = (GradientDrawable) card.getForeground();
+                        if (selectedGridTabIds.contains(tab.id)) {
+                            gd.setStroke(dpToPx(4), 0xFFFFCC00);
+                        } else if (tab.id == activeTabId) {
+                            gd.setStroke(dpToPx(2.5f), isLight ? 0xFF0284C7 : 0xFF00E5FF);
+                        } else {
+                            gd.setStroke(dpToPx(1.2f), isLight ? 0xFFCBD5E1 : 0x2AFFFFFF);
+                        }
+                    }
+                    return true;
+
+                case DragEvent.ACTION_DROP:
+                    card.animate().scaleX(1.0f).scaleY(1.0f).setDuration(120).start();
+                    if (event.getLocalState() instanceof TabItem) {
+                        TabItem src = (TabItem) event.getLocalState();
+                        if (src.id != tab.id) {
+                            int fromIdx = tabsList.indexOf(src);
+                            int toIdx = tabsList.indexOf(tab);
+                            if (fromIdx != -1 && toIdx != -1) {
+                                tabsList.remove(fromIdx);
+                                tabsList.add(toIdx, src);
+                                saveOpenTabsState();
+                                playAssetSound("sfx/pop_click.mp3");
+                                renderTabGridCards(tabGridSearchInput != null ? tabGridSearchInput.getText().toString() : "");
+                                return true;
+                            }
+                        }
+                    }
+                    return false;
+
+                case DragEvent.ACTION_DRAG_ENDED:
+                    card.setAlpha(1.0f);
+                    card.animate().scaleX(1.0f).scaleY(1.0f).setDuration(120).start();
+                    return true;
+            }
+            return false;
+        });
+
         return card;
     }
 
     private View createRecentsGroupCard(TabGroup group, int cardWidth, int cardHeight, String filterQuery) {
         boolean isLight = !isDarkTheme;
+        boolean isGroupSelected = !group.tabIds.isEmpty() && selectedGridTabIds.containsAll(group.tabIds);
         FrameLayout card = new FrameLayout(this);
         LinearLayout.LayoutParams cardLp = new LinearLayout.LayoutParams(cardWidth, cardHeight);
         cardLp.setMargins(dpToPx(10), 0, dpToPx(10), 0);
         card.setLayoutParams(cardLp);
 
-        int gCol = 0xFF00E5FF;
-        try { gCol = Color.parseColor(group.color != null ? group.color : "#00E5FF"); } catch (Exception ignored) {}
+        int parsedCol = 0xFF00E5FF;
+        try { parsedCol = Color.parseColor(group.color != null ? group.color : "#00E5FF"); } catch (Exception ignored) {}
+        final int gCol = parsedCol;
         int r = Color.red(gCol), g = Color.green(gCol), b = Color.blue(gCol);
 
         // Faded / frosted translucent glass background with group color tint
@@ -3974,6 +4361,18 @@ public class MainActivity extends AppCompatActivity {
         card.setBackground(cardBg);
         card.setElevation(dpToPx(8));
         card.setClipToOutline(true);
+
+        // High-visibility foreground border overlay (4dp yellow border when selected)
+        GradientDrawable borderOverlay = new GradientDrawable();
+        borderOverlay.setCornerRadius(dpToPx(24));
+        if (isGroupSelected) {
+            borderOverlay.setStroke(dpToPx(4), 0xFFFFCC00);
+            borderOverlay.setColor(0x22FFCC00);
+        } else {
+            borderOverlay.setStroke(dpToPx(2.5f), gCol);
+            borderOverlay.setColor(0x00000000);
+        }
+        card.setForeground(borderOverlay);
 
         // Collect all tabs in this group
         List<TabItem> groupTabs = new ArrayList<>();
@@ -4126,10 +4525,87 @@ public class MainActivity extends AppCompatActivity {
         bottomPill.addView(bottomPrompt);
         card.addView(bottomPill);
 
+        // Circular Yellow Checkmark Badge if selected
+        if (isGroupSelected) {
+            FrameLayout checkCircle = new FrameLayout(this);
+            FrameLayout.LayoutParams chkLp = new FrameLayout.LayoutParams(dpToPx(28), dpToPx(28), Gravity.TOP | Gravity.END);
+            chkLp.setMargins(0, dpToPx(16), dpToPx(16), 0);
+            checkCircle.setLayoutParams(chkLp);
+            GradientDrawable chkGd = new GradientDrawable();
+            chkGd.setShape(GradientDrawable.OVAL);
+            chkGd.setColor(0xFFFFCC00);
+            checkCircle.setBackground(chkGd);
+            checkCircle.setElevation(dpToPx(8));
+
+            TextView chkTv = new TextView(this);
+            chkTv.setLayoutParams(new FrameLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.MATCH_PARENT));
+            chkTv.setText("✓");
+            chkTv.setTextColor(0xFF000000);
+            chkTv.setTextSize(TypedValue.COMPLEX_UNIT_SP, 16);
+            chkTv.setTypeface(null, android.graphics.Typeface.BOLD);
+            chkTv.setGravity(Gravity.CENTER);
+            checkCircle.addView(chkTv);
+            card.addView(checkCircle);
+        }
+
         card.setOnClickListener(v -> {
             playUiFeedbackSound("tap");
+            if (isGridSelectionMode) {
+                if (isGroupSelected) {
+                    selectedGridTabIds.removeAll(group.tabIds);
+                } else {
+                    selectedGridTabIds.addAll(group.tabIds);
+                }
+                updateTabGridSelectionUi();
+                updateTabGridFavoriteButton();
+                renderTabGridCards(tabGridSearchInput != null ? tabGridSearchInput.getText().toString() : "");
+                return;
+            }
             currentGridGroupId = group.id;
             renderTabGridCards(tabGridSearchInput != null ? tabGridSearchInput.getText().toString() : "");
+        });
+
+        // Drop target for adding tabs directly into this group folder
+        card.setOnDragListener((v, event) -> {
+            switch (event.getAction()) {
+                case DragEvent.ACTION_DRAG_STARTED:
+                    return (event.getLocalState() instanceof TabItem);
+
+                case DragEvent.ACTION_DRAG_ENTERED:
+                    if (event.getLocalState() instanceof TabItem) {
+                        card.animate().scaleX(1.05f).scaleY(1.05f).setDuration(140).start();
+                        if (card.getForeground() instanceof GradientDrawable) {
+                            ((GradientDrawable) card.getForeground()).setStroke(dpToPx(4), 0xFFFFCC00);
+                        }
+                    }
+                    return true;
+
+                case DragEvent.ACTION_DRAG_EXITED:
+                    card.animate().scaleX(1.0f).scaleY(1.0f).setDuration(140).start();
+                    if (card.getForeground() instanceof GradientDrawable) {
+                        GradientDrawable gd = (GradientDrawable) card.getForeground();
+                        if (isGroupSelected) {
+                            gd.setStroke(dpToPx(4), 0xFFFFCC00);
+                        } else {
+                            gd.setStroke(dpToPx(2.5f), gCol);
+                        }
+                    }
+                    return true;
+
+                case DragEvent.ACTION_DROP:
+                    card.animate().scaleX(1.0f).scaleY(1.0f).setDuration(120).start();
+                    if (event.getLocalState() instanceof TabItem) {
+                        TabItem src = (TabItem) event.getLocalState();
+                        addTabToGroup(src.id, group.id);
+                        return true;
+                    }
+                    return false;
+
+                case DragEvent.ACTION_DRAG_ENDED:
+                    card.animate().scaleX(1.0f).scaleY(1.0f).setDuration(120).start();
+                    return true;
+            }
+            return false;
         });
 
         return card;
@@ -4227,6 +4703,7 @@ public class MainActivity extends AppCompatActivity {
     private View createRecentsSplitCard(TabItem leftTab, TabItem rightTab, int cardWidth, int cardHeight, String filterQuery) {
         boolean isLight = !isDarkTheme;
         boolean isActive = (leftTab.id == activeTabId || rightTab.id == activeTabId);
+        boolean isSplitSelected = selectedGridTabIds.contains(leftTab.id) || selectedGridTabIds.contains(rightTab.id);
         FrameLayout card = new FrameLayout(this);
         LinearLayout.LayoutParams cardLp = new LinearLayout.LayoutParams(cardWidth, cardHeight);
         cardLp.setMargins(dpToPx(10), 0, dpToPx(10), 0);
@@ -4239,6 +4716,21 @@ public class MainActivity extends AppCompatActivity {
         card.setBackground(cardBg);
         card.setElevation(isActive ? dpToPx(14) : dpToPx(6));
         card.setClipToOutline(true);
+
+        // High-visibility foreground border overlay (4dp yellow border when selected)
+        GradientDrawable borderOverlay = new GradientDrawable();
+        borderOverlay.setCornerRadius(dpToPx(24));
+        if (isSplitSelected) {
+            borderOverlay.setStroke(dpToPx(4), 0xFFFFCC00);
+            borderOverlay.setColor(0x22FFCC00);
+        } else if (isActive) {
+            borderOverlay.setStroke(dpToPx(2.5f), isLight ? 0xFF0284C7 : 0xFF00E5FF);
+            borderOverlay.setColor(0x00000000);
+        } else {
+            borderOverlay.setStroke(dpToPx(1.2f), isLight ? 0xFFCBD5E1 : 0x2AFFFFFF);
+            borderOverlay.setColor(0x00000000);
+        }
+        card.setForeground(borderOverlay);
 
         LinearLayout halves = new LinearLayout(this);
         halves.setLayoutParams(new FrameLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.MATCH_PARENT));
@@ -4398,6 +4890,46 @@ public class MainActivity extends AppCompatActivity {
         closeGd.setShape(GradientDrawable.OVAL);
         closeCircle.setBackground(closeGd);
 
+        // Helper to resolve neighbor card focus on split card close
+        final Runnable performSplitClose = () -> {
+            int closedIdx = -1;
+            for (int i = 0; i < tabsList.size(); i++) {
+                if (tabsList.get(i).id == leftTab.id || tabsList.get(i).id == rightTab.id) {
+                    closedIdx = i;
+                    break;
+                }
+            }
+            int nextFocusTabId = -1;
+            if (closedIdx != -1) {
+                for (int i = closedIdx + 1; i < tabsList.size(); i++) {
+                    TabItem c = tabsList.get(i);
+                    if (c.id != leftTab.id && c.id != rightTab.id) {
+                        nextFocusTabId = c.id;
+                        break;
+                    }
+                }
+                if (nextFocusTabId == -1) {
+                    for (int i = closedIdx - 1; i >= 0; i--) {
+                        TabItem c = tabsList.get(i);
+                        if (c.id != leftTab.id && c.id != rightTab.id) {
+                            nextFocusTabId = c.id;
+                            break;
+                        }
+                    }
+                }
+            }
+            recentsTargetFocusTabId = nextFocusTabId;
+
+            closeTab(leftTab.id);
+            closeTab(rightTab.id);
+            selectedGridTabIds.remove(leftTab.id);
+            selectedGridTabIds.remove(rightTab.id);
+            updateTabGridSelectionUi();
+            updateTabGridFavoriteButton();
+            updateTabGridUndoButton();
+            renderTabGridCards(tabGridSearchInput != null ? tabGridSearchInput.getText().toString() : "");
+        };
+
         ImageButton closeBtn = new ImageButton(this);
         closeBtn.setLayoutParams(new FrameLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.MATCH_PARENT));
         closeBtn.setBackgroundResource(android.R.color.transparent);
@@ -4413,16 +4945,8 @@ public class MainActivity extends AppCompatActivity {
                 .scaleX(0.7f)
                 .scaleY(0.7f)
                 .setDuration(220)
-                .withEndAction(() -> {
-                    closeTab(leftTab.id);
-                    closeTab(rightTab.id);
-                    selectedGridTabIds.remove(leftTab.id);
-                    selectedGridTabIds.remove(rightTab.id);
-                    updateTabGridSelectionUi();
-                    updateTabGridFavoriteButton();
-                    updateTabGridUndoButton();
-                    renderTabGridCards(tabGridSearchInput != null ? tabGridSearchInput.getText().toString() : "");
-                }).start();
+                .withEndAction(performSplitClose)
+                .start();
         });
         closeCircle.addView(closeBtn);
 
@@ -4434,8 +4958,44 @@ public class MainActivity extends AppCompatActivity {
 
         card.addView(headerPill);
 
+        // Circular Yellow Checkmark Badge if selected
+        if (isSplitSelected) {
+            FrameLayout checkCircle = new FrameLayout(this);
+            FrameLayout.LayoutParams chkLp = new FrameLayout.LayoutParams(dpToPx(28), dpToPx(28), Gravity.TOP | Gravity.END);
+            chkLp.setMargins(0, dpToPx(16), dpToPx(16), 0);
+            checkCircle.setLayoutParams(chkLp);
+            GradientDrawable chkGd = new GradientDrawable();
+            chkGd.setShape(GradientDrawable.OVAL);
+            chkGd.setColor(0xFFFFCC00);
+            checkCircle.setBackground(chkGd);
+            checkCircle.setElevation(dpToPx(8));
+
+            TextView chkTv = new TextView(this);
+            chkTv.setLayoutParams(new FrameLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.MATCH_PARENT));
+            chkTv.setText("✓");
+            chkTv.setTextColor(0xFF000000);
+            chkTv.setTextSize(TypedValue.COMPLEX_UNIT_SP, 16);
+            chkTv.setTypeface(null, android.graphics.Typeface.BOLD);
+            chkTv.setGravity(Gravity.CENTER);
+            checkCircle.addView(chkTv);
+            card.addView(checkCircle);
+        }
+
         card.setOnClickListener(v -> {
             playUiFeedbackSound("tap");
+            if (isGridSelectionMode) {
+                if (isSplitSelected) {
+                    selectedGridTabIds.remove(leftTab.id);
+                    selectedGridTabIds.remove(rightTab.id);
+                } else {
+                    selectedGridTabIds.add(leftTab.id);
+                    selectedGridTabIds.add(rightTab.id);
+                }
+                updateTabGridSelectionUi();
+                updateTabGridFavoriteButton();
+                renderTabGridCards(tabGridSearchInput != null ? tabGridSearchInput.getText().toString() : "");
+                return;
+            }
             activeTabId = leftTab.id;
             secondarySplitTabId = rightTab.id;
             splitModeState = 1;
@@ -4488,16 +5048,8 @@ public class MainActivity extends AppCompatActivity {
                                     .scaleX(0.7f)
                                     .scaleY(0.7f)
                                     .setDuration(200)
-                                    .withEndAction(() -> {
-                                        closeTab(leftTab.id);
-                                        closeTab(rightTab.id);
-                                        selectedGridTabIds.remove(leftTab.id);
-                                        selectedGridTabIds.remove(rightTab.id);
-                                        updateTabGridSelectionUi();
-                                        updateTabGridFavoriteButton();
-                                        updateTabGridUndoButton();
-                                        renderTabGridCards(tabGridSearchInput != null ? tabGridSearchInput.getText().toString() : "");
-                                    }).start();
+                                    .withEndAction(performSplitClose)
+                                    .start();
                             } else {
                                 card.animate()
                                     .translationY(0f)
