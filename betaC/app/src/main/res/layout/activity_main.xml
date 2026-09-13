@@ -2585,22 +2585,6 @@
         android:elevation="240dp"
         android:visibility="gone" />
 
-    <!-- 9. Caspian BetaA Video Splash Screen Overlay -->
-    <FrameLayout
-        android:id="@+id/splash_overlay"
-        android:layout_width="match_parent"
-        android:layout_height="match_parent"
-        android:background="#050811"
-        android:elevation="200dp"
-        android:visibility="visible">
-
-        <TextureView
-            android:id="@+id/splash_textureview"
-            android:layout_width="match_parent"
-            android:layout_height="match_parent"
-            android:layout_gravity="center" />
-    </FrameLayout>
-
     <!-- Caspian Orb: State 2 Floating Bottom Pill -->
     <FrameLayout
         android:id="@+id/caspian_floating_pill"
@@ -2743,5 +2727,21 @@
 
     <!-- 15. Horizon Peek Glass Modal -->
     <include layout="@layout/dialog_horizon_peek" />
+
+    <!-- 9. Caspian BetaA Video Splash Screen Overlay (Top-most z-order) -->
+    <FrameLayout
+        android:id="@+id/splash_overlay"
+        android:layout_width="match_parent"
+        android:layout_height="match_parent"
+        android:background="#050811"
+        android:elevation="1200dp"
+        android:visibility="visible">
+
+        <TextureView
+            android:id="@+id/splash_textureview"
+            android:layout_width="match_parent"
+            android:layout_height="match_parent"
+            android:layout_gravity="center" />
+    </FrameLayout>
 
 </FrameLayout>

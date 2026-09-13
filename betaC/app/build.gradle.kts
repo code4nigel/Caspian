@@ -10,8 +10,8 @@ android {
         applicationId = "com.caspian.betac"
         minSdk = 24
         targetSdk = 34
-        versionCode = 213
-        versionName = "1.3.02-BetaC"
+        versionCode = 214
+        versionName = "1.3.03-BetaC"
     }
 
     buildTypes {

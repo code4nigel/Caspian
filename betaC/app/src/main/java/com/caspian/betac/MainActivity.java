@@ -1632,6 +1632,13 @@ public class MainActivity extends AppCompatActivity {
         if (splashOverlay == null || splashTextureView == null) return;
 
         try {
+            splashOverlay.bringToFront();
+            splashOverlay.setElevation(dpToPx(1200));
+            if (floatingCaspianCard != null) floatingCaspianCard.setVisibility(View.GONE);
+            if (caspianFloatingPill != null) caspianFloatingPill.setVisibility(View.GONE);
+            if (caspianFloatingOrb != null) caspianFloatingOrb.setVisibility(View.GONE);
+            if (omniboxHeaderWrapper != null) omniboxHeaderWrapper.setVisibility(View.GONE);
+
             final Runnable dismissSplash = () -> {
                 try {
                     if (splashPlayer != null) {
@@ -1646,6 +1653,14 @@ public class MainActivity extends AppCompatActivity {
                             .setDuration(300)
                             .withEndAction(() -> {
                                 if (splashOverlay != null) splashOverlay.setVisibility(View.GONE);
+                                if (floatingCaspianCard != null && customView == null) {
+                                    floatingCaspianCard.setVisibility(View.VISIBLE);
+                                }
+                                if ("orb".equalsIgnoreCase(omniboxScrollMode)) {
+                                    transitionToOrbState(currentOrbState, false);
+                                } else {
+                                    if (omniboxHeaderWrapper != null) omniboxHeaderWrapper.setVisibility(View.VISIBLE);
+                                }
                             })
                             .start();
                 }
@@ -11840,6 +11855,14 @@ public class MainActivity extends AppCompatActivity {
     }
 
     public void showToolbar(boolean asOverlay, boolean animate) {
+        if (splashOverlay != null && splashOverlay.getVisibility() == View.VISIBLE) {
+            return;
+        }
+        if ("orb".equalsIgnoreCase(omniboxScrollMode)) {
+            if (currentOrbState != ORB_STATE_FULL_TOP) {
+                return;
+            }
+        }
         currentToolbarState = asOverlay ? TOOLBAR_STATE_OVERLAY_VISIBLE : TOOLBAR_STATE_DOCKED_TOP;
         int toolbarH = getToolbarHeight();
         boolean isBottomMode = "bottom".equalsIgnoreCase(omniboxPosition);
@@ -11851,8 +11874,16 @@ public class MainActivity extends AppCompatActivity {
     }
 
     private void applyToolbarMotion(float targetToolbarY, float targetWebViewY, boolean animate) {
+        if (splashOverlay != null && splashOverlay.getVisibility() == View.VISIBLE) {
+            if (omniboxHeaderWrapper != null) omniboxHeaderWrapper.setVisibility(View.GONE);
+            return;
+        }
         if ("orb".equalsIgnoreCase(omniboxScrollMode)) {
             targetWebViewY = 0f;
+            if (currentOrbState != ORB_STATE_FULL_TOP) {
+                if (omniboxHeaderWrapper != null) omniboxHeaderWrapper.setVisibility(View.GONE);
+                return;
+            }
         }
         final float finalTargetWebViewY = targetWebViewY;
         runOnUiThread(() -> {
@@ -16530,6 +16561,12 @@ public class MainActivity extends AppCompatActivity {
                 curTab.userExplicitFullOmnibox = false;
             }
         }
+        if (splashOverlay != null && splashOverlay.getVisibility() == View.VISIBLE) {
+            if (caspianFloatingPill != null) caspianFloatingPill.setVisibility(View.GONE);
+            if (caspianFloatingOrb != null) caspianFloatingOrb.setVisibility(View.GONE);
+            if (omniboxHeaderWrapper != null) omniboxHeaderWrapper.setVisibility(View.GONE);
+            return;
+        }
         if (tabGridOverlay != null && tabGridOverlay.getVisibility() == View.VISIBLE) {
             if (caspianFloatingPill != null) caspianFloatingPill.setVisibility(View.GONE);
             if (caspianFloatingOrb != null) caspianFloatingOrb.setVisibility(View.GONE);
@@ -18945,7 +18982,9 @@ public class MainActivity extends AppCompatActivity {
                     browserProgressBar.setProgress(15);
                     updateOmniboxState();
                     accumulatedScrollDelta = 0;
-                    if ("bottom".equalsIgnoreCase(omniboxPosition)) {
+                    if ("orb".equalsIgnoreCase(omniboxScrollMode)) {
+                        // In orb mode, do not force showToolbar or dockToolbarAtTop
+                    } else if ("bottom".equalsIgnoreCase(omniboxPosition)) {
                         showToolbar(false, false);
                     } else {
                         dockToolbarAtTop(false);
@@ -19503,6 +19542,9 @@ public class MainActivity extends AppCompatActivity {
                         .setInterpolator(new DecelerateInterpolator(2.0f))
                         .start();
             }
+            if ("orb".equalsIgnoreCase(omniboxScrollMode)) {
+                transitionToOrbState(ORB_STATE_BOTTOM_PILL, true);
+            }
         } else {
             if (tab.webView != null && tab.webView.getParent() != webViewContainer) {
                 if (tab.webView.getParent() != null) {
@@ -19653,6 +19695,12 @@ public class MainActivity extends AppCompatActivity {
                     transitionToOrbState(ORB_STATE_FULL_TOP, false);
                 } else {
                     transitionToOrbState(ORB_STATE_BOTTOM_PILL, false);
+                }
+            } else {
+                if (curSwitchedTab != null && curSwitchedTab.userExplicitFullOmnibox) {
+                    transitionToOrbState(ORB_STATE_FULL_TOP, false);
+                } else {
+                    transitionToOrbState(currentOrbState, false);
                 }
             }
         } else if (curSwitchedTab != null && (isInternalPageWithoutToolbarAutohide() || curSwitchedTab.webView == null || (curSwitchedTab.webView.getScrollY() <= 0 && isToolbarInDedicatedSection))) {
