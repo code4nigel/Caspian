@@ -7535,11 +7535,6 @@ public class MainActivity extends AppCompatActivity {
 
         omniboxToolbarsBtn.setOnClickListener(v -> {
             playUiFeedbackSound("tap");
-            if ("orb".equalsIgnoreCase(omniboxScrollMode)) {
-                v.performHapticFeedback(HapticFeedbackConstants.KEYBOARD_TAP);
-                transitionToOrbState(ORB_STATE_FLOATING_ORB, true);
-                return;
-            }
             try {
                 showQuickToolbarsPopup(v);
             } catch (Throwable t) {
@@ -7626,8 +7621,13 @@ public class MainActivity extends AppCompatActivity {
                         long duration = System.currentTimeMillis() - downTime;
 
                         if (hasMovedPastSlop) {
-                            // 1. SWIPE DOWN -> Open Tab Switcher UI
-                            if (dy > swipeThreshold && dy > Math.abs(dx) * 1.15f) {
+                            boolean isBottomOmnibox = "bottom".equalsIgnoreCase(omniboxPosition) || "orb".equalsIgnoreCase(omniboxScrollMode);
+                            boolean isTabSwitcherSwipe = isBottomOmnibox
+                                    ? (dy < -swipeThreshold && Math.abs(dy) > Math.abs(dx) * 1.15f)
+                                    : (dy > swipeThreshold && dy > Math.abs(dx) * 1.15f);
+
+                            // 1. SWIPE UP (Bottom) or SWIPE DOWN (Top) -> Open Tab Switcher UI
+                            if (isTabSwitcherSwipe) {
                                 try { v.performHapticFeedback(HapticFeedbackConstants.KEYBOARD_TAP); } catch (Throwable ignored) {}
                                 playUiFeedbackSound("tap");
                                 showTabGridView();
@@ -11751,7 +11751,13 @@ public class MainActivity extends AppCompatActivity {
 
                 updateOmniboxScrimBackground();
 
-                if (isBottom) {
+                if ("orb".equalsIgnoreCase(omniboxScrollMode)) {
+                    isToolbarInDedicatedSection = false;
+                    if (webviewsParentContainer != null) {
+                        webviewsParentContainer.setTranslationY(0f);
+                    }
+                    applyToolbarMotion(0f, 0f, false);
+                } else if (isBottom) {
                     dockToolbarAtBottom(false);
                 } else {
                     dockToolbarAtTop(false);
@@ -11776,6 +11782,11 @@ public class MainActivity extends AppCompatActivity {
 
     public void dockToolbarAtTop(boolean animate) {
         currentToolbarState = TOOLBAR_STATE_DOCKED_TOP;
+        if ("orb".equalsIgnoreCase(omniboxScrollMode)) {
+            isToolbarInDedicatedSection = false;
+            applyToolbarMotion(0f, 0f, animate);
+            return;
+        }
         isToolbarInDedicatedSection = true;
         currentDedicatedScrollOffset = 0f;
         int toolbarH = getToolbarHeight();
@@ -11784,6 +11795,11 @@ public class MainActivity extends AppCompatActivity {
 
     public void dockToolbarAtBottom(boolean animate) {
         currentToolbarState = TOOLBAR_STATE_DOCKED_BOTTOM;
+        if ("orb".equalsIgnoreCase(omniboxScrollMode)) {
+            isToolbarInDedicatedSection = false;
+            applyToolbarMotion(0f, 0f, animate);
+            return;
+        }
         isToolbarInDedicatedSection = true;
         currentDedicatedScrollOffset = 0f;
         int toolbarH = getToolbarHeight();
@@ -11813,6 +11829,10 @@ public class MainActivity extends AppCompatActivity {
     }
 
     private void applyToolbarMotion(float targetToolbarY, float targetWebViewY, boolean animate) {
+        if ("orb".equalsIgnoreCase(omniboxScrollMode)) {
+            targetWebViewY = 0f;
+        }
+        final float finalTargetWebViewY = targetWebViewY;
         runOnUiThread(() -> {
             if (omniboxHeaderWrapper == null || webviewsParentContainer == null) return;
             long duration = animate ? 220 : 0;
@@ -11838,7 +11858,7 @@ public class MainActivity extends AppCompatActivity {
 
                 webviewsParentContainer.animate().cancel();
                 webviewsParentContainer.animate()
-                        .translationY(targetWebViewY)
+                        .translationY(finalTargetWebViewY)
                         .setDuration(duration)
                         .setInterpolator(interpolator)
                         .start();
@@ -11862,7 +11882,7 @@ public class MainActivity extends AppCompatActivity {
                 } else {
                     omniboxHeaderWrapper.setVisibility(View.VISIBLE);
                 }
-                webviewsParentContainer.setTranslationY(targetWebViewY);
+                webviewsParentContainer.setTranslationY(finalTargetWebViewY);
                 if (browserProgressBar != null) {
                     browserProgressBar.setTranslationY(targetToolbarY);
                 }
@@ -16802,23 +16822,15 @@ public class MainActivity extends AppCompatActivity {
             });
         }
 
-        if (caspianPillCenter != null) {
-            caspianPillCenter.setOnClickListener(v -> {
-                playUiFeedbackSound("tap");
-                transitionToOrbState(ORB_STATE_FULL_TOP, true);
-                if (omniboxEditText != null) {
-                    omniboxEditText.requestFocus();
-                    InputMethodManager imm = (InputMethodManager) getSystemService(Context.INPUT_METHOD_SERVICE);
-                    if (imm != null) imm.showSoftInput(omniboxEditText, InputMethodManager.SHOW_IMPLICIT);
-                }
-            });
-        }
-
         if (caspianPillBtnCollapse != null) {
             caspianPillBtnCollapse.setOnClickListener(v -> {
                 playUiFeedbackSound("tap");
                 v.performHapticFeedback(HapticFeedbackConstants.KEYBOARD_TAP);
-                transitionToOrbState(ORB_STATE_FLOATING_ORB, true);
+                try {
+                    showQuickToolbarsPopup(v);
+                } catch (Throwable t) {
+                    Log.e(TAG, "Quick toolbars popup error", t);
+                }
             });
         }
 
@@ -16836,70 +16848,94 @@ public class MainActivity extends AppCompatActivity {
             });
         }
 
-        if (caspianFloatingPill != null) {
-            caspianFloatingPill.setOnTouchListener(new View.OnTouchListener() {
-                private float downX = 0f;
-                private float downY = 0f;
-                private boolean isSwiping = false;
+        View.OnTouchListener pillTouchListener = new View.OnTouchListener() {
+            private float downX = 0f;
+            private float downY = 0f;
+            private long downTime = 0L;
+            private boolean isSwiping = false;
 
-                @Override
-                public boolean onTouch(View v, MotionEvent event) {
-                    switch (event.getActionMasked()) {
-                        case MotionEvent.ACTION_DOWN:
-                            downX = event.getRawX();
-                            downY = event.getRawY();
-                            isSwiping = false;
-                            return false;
+            @Override
+            public boolean onTouch(View v, MotionEvent event) {
+                switch (event.getActionMasked()) {
+                    case MotionEvent.ACTION_DOWN:
+                        downX = event.getRawX();
+                        downY = event.getRawY();
+                        downTime = System.currentTimeMillis();
+                        isSwiping = false;
+                        return true;
 
-                        case MotionEvent.ACTION_MOVE:
-                            float mdx = event.getRawX() - downX;
-                            float mdy = event.getRawY() - downY;
-                            if (Math.abs(mdx) > dpToPx(16) || Math.abs(mdy) > dpToPx(16)) {
-                                isSwiping = true;
-                                if (Math.abs(mdx) > Math.abs(mdy)) {
+                    case MotionEvent.ACTION_MOVE:
+                        float mdx = event.getRawX() - downX;
+                        float mdy = event.getRawY() - downY;
+                        if (Math.hypot(mdx, mdy) > dpToPx(12)) {
+                            isSwiping = true;
+                            if (Math.abs(mdx) > Math.abs(mdy)) {
+                                if (caspianFloatingPill != null) {
                                     caspianFloatingPill.setTranslationX(mdx * 0.35f);
                                 }
                             }
-                            return isSwiping;
+                        }
+                        return true;
 
-                        case MotionEvent.ACTION_UP:
-                        case MotionEvent.ACTION_CANCEL:
+                    case MotionEvent.ACTION_UP:
+                    case MotionEvent.ACTION_CANCEL:
+                        if (caspianFloatingPill != null) {
                             caspianFloatingPill.animate().translationX(0f).setDuration(160).start();
-                            float udx = event.getRawX() - downX;
-                            float udy = event.getRawY() - downY;
-                            float absDx = Math.abs(udx);
-                            float absDy = Math.abs(udy);
-                            int threshold = dpToPx(30);
+                        }
+                        float udx = event.getRawX() - downX;
+                        float udy = event.getRawY() - downY;
+                        float absDx = Math.abs(udx);
+                        float absDy = Math.abs(udy);
+                        int threshold = dpToPx(24);
+                        long duration = System.currentTimeMillis() - downTime;
 
-                            if (isSwiping || absDx > threshold || absDy > threshold) {
-                                if (absDy > absDx && absDy > threshold) {
-                                    if (udy < 0) {
-                                        playUiFeedbackSound("tap");
-                                        showTabGridView();
-                                        return true;
-                                    } else {
-                                        playUiFeedbackSound("tap");
-                                        v.performHapticFeedback(HapticFeedbackConstants.KEYBOARD_TAP);
-                                        transitionToOrbState(ORB_STATE_FLOATING_ORB, true);
-                                        return true;
-                                    }
-                                } else if (absDx > absDy && absDx > threshold) {
-                                    if (udx < 0) {
-                                        v.performHapticFeedback(HapticFeedbackConstants.KEYBOARD_TAP);
-                                        switchToNextTab();
-                                        return true;
-                                    } else {
-                                        v.performHapticFeedback(HapticFeedbackConstants.KEYBOARD_TAP);
-                                        switchToPreviousTab();
-                                        return true;
-                                    }
+                        if (isSwiping || absDx > threshold || absDy > threshold) {
+                            if (absDy > absDx && absDy > threshold) {
+                                if (udy < 0) {
+                                    // Swipe UP -> Tab Switcher
+                                    try { v.performHapticFeedback(HapticFeedbackConstants.KEYBOARD_TAP); } catch (Throwable ignored) {}
+                                    playUiFeedbackSound("tap");
+                                    showTabGridView();
+                                    return true;
+                                } else {
+                                    // Swipe DOWN -> Collapse to Side Semicircle Handle
+                                    try { v.performHapticFeedback(HapticFeedbackConstants.KEYBOARD_TAP); } catch (Throwable ignored) {}
+                                    playUiFeedbackSound("tap");
+                                    transitionToOrbState(ORB_STATE_FLOATING_ORB, true);
+                                    return true;
+                                }
+                            } else if (absDx > absDy && absDx > threshold) {
+                                if (udx < 0) {
+                                    // Swipe LEFT -> Next Tab
+                                    try { v.performHapticFeedback(HapticFeedbackConstants.KEYBOARD_TAP); } catch (Throwable ignored) {}
+                                    switchToNextTab();
+                                    return true;
+                                } else {
+                                    // Swipe RIGHT -> Previous Tab
+                                    try { v.performHapticFeedback(HapticFeedbackConstants.KEYBOARD_TAP); } catch (Throwable ignored) {}
+                                    switchToPreviousTab();
+                                    return true;
                                 }
                             }
-                            break;
-                    }
-                    return false;
+                        }
+
+                        // Single tap (duration < 380ms & not swiped) -> Return to Full Omnibox
+                        if (!isSwiping && duration < 380) {
+                            playUiFeedbackSound("tap");
+                            transitionToOrbState(ORB_STATE_FULL_TOP, true);
+                            return true;
+                        }
+                        return true;
                 }
-            });
+                return false;
+            }
+        };
+
+        if (caspianFloatingPill != null) {
+            caspianFloatingPill.setOnTouchListener(pillTouchListener);
+        }
+        if (caspianPillCenter != null) {
+            caspianPillCenter.setOnTouchListener(pillTouchListener);
         }
 
         if (caspianFloatingOrb != null) {
