@@ -1747,10 +1747,14 @@ public class MainActivity extends AppCompatActivity {
                                 if (floatingCaspianCard != null && customView == null) {
                                     floatingCaspianCard.setVisibility(View.VISIBLE);
                                 }
-                                if ("orb".equalsIgnoreCase(omniboxScrollMode)) {
+                                if (isOrbOrApplePieMode()) {
                                     transitionToOrbState(currentOrbState, false);
                                 } else {
-                                    if (omniboxHeaderWrapper != null) omniboxHeaderWrapper.setVisibility(View.VISIBLE);
+                                    if (omniboxHeaderWrapper != null) {
+                                        omniboxHeaderWrapper.setVisibility(View.VISIBLE);
+                                        omniboxHeaderWrapper.setAlpha(1f);
+                                        omniboxHeaderWrapper.setTranslationY(0f);
+                                    }
                                 }
                             })
                             .start();
@@ -2084,7 +2088,7 @@ public class MainActivity extends AppCompatActivity {
             setupKeyboardInsetsListener();
 
             if (isOrbOrApplePieMode()) {
-                applyOmniboxPosition("bottom");
+                applyOmniboxPosition("top");
                 isToolbarInDedicatedSection = false;
                 if (webviewsParentContainer != null) {
                     webviewsParentContainer.setTranslationY(0f);
@@ -2092,9 +2096,24 @@ public class MainActivity extends AppCompatActivity {
                 applyCaspianPillTheme();
                 if ("applepie".equalsIgnoreCase(omniboxScrollMode)) {
                     transitionToOrbState(ORB_STATE_BOTTOM_PILL, false);
+                } else {
+                    transitionToOrbState(ORB_STATE_FULL_TOP, false);
                 }
             } else {
                 applyOmniboxPosition(omniboxPosition);
+                if (omniboxHeaderWrapper != null) {
+                    omniboxHeaderWrapper.setVisibility(View.VISIBLE);
+                    omniboxHeaderWrapper.setAlpha(1f);
+                    omniboxHeaderWrapper.setTranslationY(0f);
+                }
+                if ("separate".equalsIgnoreCase(omniboxScrollMode)) {
+                    isToolbarInDedicatedSection = true;
+                }
+                if ("bottom".equalsIgnoreCase(omniboxPosition)) {
+                    dockToolbarAtBottom(false);
+                } else {
+                    dockToolbarAtTop(false);
+                }
             }
 
             splitArenaBroadcastContainer = findViewById(R.id.split_arena_broadcast_container);
@@ -9570,6 +9589,17 @@ public class MainActivity extends AppCompatActivity {
 
     private void expandOmniboxUrl() {
         if (omniboxEditText == null) return;
+        if (omniboxHeaderWrapper != null) {
+            FrameLayout.LayoutParams lp = (FrameLayout.LayoutParams) omniboxHeaderWrapper.getLayoutParams();
+            if (lp != null && lp.gravity != Gravity.TOP) {
+                lp.gravity = Gravity.TOP;
+                omniboxHeaderWrapper.setLayoutParams(lp);
+            }
+            omniboxHeaderWrapper.setVisibility(View.VISIBLE);
+            omniboxHeaderWrapper.setAlpha(1f);
+            omniboxHeaderWrapper.setTranslationY(0f);
+            omniboxHeaderWrapper.bringToFront();
+        }
         if (!omniboxEditText.hasFocus()) {
             omniboxEditText.requestFocus();
             omniboxEditText.post(() -> {
@@ -9764,7 +9794,22 @@ public class MainActivity extends AppCompatActivity {
                 android.transition.TransitionManager.beginDelayedTransition(omniboxHeader, transition);
             }
             if (hasFocus) {
-                showToolbar(true, true);
+                if (isOrbOrApplePieMode()) {
+                    transitionToOrbState(ORB_STATE_FULL_TOP, true);
+                } else {
+                    showToolbar(true, true);
+                }
+                if (omniboxHeaderWrapper != null) {
+                    FrameLayout.LayoutParams lp = (FrameLayout.LayoutParams) omniboxHeaderWrapper.getLayoutParams();
+                    if (lp != null && lp.gravity != Gravity.TOP) {
+                        lp.gravity = Gravity.TOP;
+                        omniboxHeaderWrapper.setLayoutParams(lp);
+                    }
+                    omniboxHeaderWrapper.setVisibility(View.VISIBLE);
+                    omniboxHeaderWrapper.setAlpha(1f);
+                    omniboxHeaderWrapper.setTranslationY(0f);
+                    omniboxHeaderWrapper.bringToFront();
+                }
                 // 1. Expand Omnibox URL section across toolbar by hiding other icon buttons
                 if (omniboxBackBtn != null) omniboxBackBtn.setVisibility(View.GONE);
                 if (omniboxForwardBtn != null) omniboxForwardBtn.setVisibility(View.GONE);
@@ -13889,6 +13934,7 @@ public class MainActivity extends AppCompatActivity {
         }
         if (isOrbOrApplePieMode()) {
             if (currentOrbState != ORB_STATE_FULL_TOP) {
+                transitionToOrbState(ORB_STATE_FULL_TOP, animate);
                 return;
             }
         }
@@ -13923,12 +13969,14 @@ public class MainActivity extends AppCompatActivity {
             boolean isHiding = (currentToolbarState == TOOLBAR_STATE_FULLSCREEN_HIDDEN);
             if (!isHiding) {
                 omniboxHeaderWrapper.setVisibility(View.VISIBLE);
+                omniboxHeaderWrapper.setAlpha(1f);
             }
 
             if (animate) {
                 omniboxHeaderWrapper.animate().cancel();
                 omniboxHeaderWrapper.animate()
                         .translationY(targetToolbarY)
+                        .alpha(isHiding ? 0f : 1f)
                         .setDuration(duration)
                         .setInterpolator(interpolator)
                         .withEndAction(() -> {
@@ -13963,6 +14011,7 @@ public class MainActivity extends AppCompatActivity {
                     omniboxHeaderWrapper.setVisibility(View.GONE);
                 } else {
                     omniboxHeaderWrapper.setVisibility(View.VISIBLE);
+                    omniboxHeaderWrapper.setAlpha(1f);
                 }
                 webviewsParentContainer.setTranslationY(finalTargetWebViewY);
                 if (browserProgressBar != null) {
@@ -14327,13 +14376,14 @@ public class MainActivity extends AppCompatActivity {
                             .apply();
                 } catch (Throwable ignored) {}
             }
-            applyOmniboxPosition("bottom");
+            applyOmniboxPosition("top");
             isToolbarInDedicatedSection = false;
             if (webviewsParentContainer != null) {
                 webviewsParentContainer.setTranslationY(0f);
             }
             if (omniboxHeaderWrapper != null) {
                 omniboxHeaderWrapper.setTranslationY(0f);
+                omniboxHeaderWrapper.setAlpha(1f);
                 omniboxHeaderWrapper.setBackground(null);
             }
             applyCaspianPillTheme();
@@ -14345,18 +14395,19 @@ public class MainActivity extends AppCompatActivity {
         } else {
             hideCaspianOrbElements();
             String restorePos = preOrbOmniboxPosition != null ? preOrbOmniboxPosition :
-                    getSharedPreferences(PREFS_NAME, MODE_PRIVATE).getString("pre_orb_omnibox_position", null);
-            if (restorePos != null) {
-                applyOmniboxPosition(restorePos);
-                preOrbOmniboxPosition = null;
-                try {
-                    getSharedPreferences(PREFS_NAME, MODE_PRIVATE)
-                            .edit()
-                            .remove("pre_orb_omnibox_position")
-                            .apply();
-                } catch (Throwable ignored) {}
-            } else {
-                applyOmniboxPosition(omniboxPosition);
+                    getSharedPreferences(PREFS_NAME, MODE_PRIVATE).getString("pre_orb_omnibox_position", "top");
+            applyOmniboxPosition(restorePos);
+            preOrbOmniboxPosition = null;
+            try {
+                getSharedPreferences(PREFS_NAME, MODE_PRIVATE)
+                        .edit()
+                        .remove("pre_orb_omnibox_position")
+                        .apply();
+            } catch (Throwable ignored) {}
+            if (omniboxHeaderWrapper != null) {
+                omniboxHeaderWrapper.setVisibility(View.VISIBLE);
+                omniboxHeaderWrapper.setAlpha(1f);
+                omniboxHeaderWrapper.setTranslationY(0f);
             }
             if ("separate".equalsIgnoreCase(this.omniboxScrollMode)) {
                 isToolbarInDedicatedSection = true;
@@ -18645,8 +18696,14 @@ public class MainActivity extends AppCompatActivity {
             switch (finalState) {
                 case ORB_STATE_FULL_TOP:
                     if (omniboxHeaderWrapper != null) {
+                        FrameLayout.LayoutParams lp = (FrameLayout.LayoutParams) omniboxHeaderWrapper.getLayoutParams();
+                        if (lp != null && lp.gravity != Gravity.TOP) {
+                            lp.gravity = Gravity.TOP;
+                            omniboxHeaderWrapper.setLayoutParams(lp);
+                        }
                         omniboxHeaderWrapper.setBackground(null);
                         omniboxHeaderWrapper.setVisibility(View.VISIBLE);
+                        omniboxHeaderWrapper.bringToFront();
                         if (animate) {
                             omniboxHeaderWrapper.animate().cancel();
                             omniboxHeaderWrapper.animate()
@@ -18916,6 +18973,11 @@ public class MainActivity extends AppCompatActivity {
             if (caspianFloatingPill != null) caspianFloatingPill.setVisibility(View.GONE);
             if (caspianFloatingOrb != null) caspianFloatingOrb.setVisibility(View.GONE);
             currentOrbState = ORB_STATE_FULL_TOP;
+            if (omniboxHeaderWrapper != null) {
+                omniboxHeaderWrapper.setVisibility(View.VISIBLE);
+                omniboxHeaderWrapper.setAlpha(1f);
+                omniboxHeaderWrapper.setTranslationY(0f);
+            }
         });
     }
 
@@ -25009,6 +25071,26 @@ public class MainActivity extends AppCompatActivity {
     }
 
     public void handleYouTubeVideoEnded(Integer tabId) {
+        TabItem targetTab = (tabId != null && tabId > 0) ? getTabById(tabId) : getYouTubeTab();
+        if (targetTab == null) targetTab = getActiveOrDominantTab();
+
+        if (targetTab != null && isYouTubeTab(targetTab)) {
+            // Keep WakeLock held during background track transition!
+            manageYouTubeWakeLock(true);
+
+            // In background or screen off, Android OS timer throttling can freeze JavaScript setTimeout.
+            // Use Android Java Handler (which is never throttled) to reliably trigger next track!
+            final TabItem finalTab = targetTab;
+            new Handler(Looper.getMainLooper()).postDelayed(() -> {
+                if (finalTab != null && finalTab.webView != null) {
+                    finalTab.webView.evaluateJavascript(
+                            "(function() { try { if (window.__CaspianYouTube && typeof window.__CaspianYouTube.nextTrack === 'function') { window.__CaspianYouTube.nextTrack(); } else { var b = document.querySelector('ytmusic-player-bar .next-button, .next-button, [aria-label*=\"Next\" i], .ytp-next-button'); if (b) b.click(); } } catch(e){} })();", null
+                    );
+                }
+            }, 500);
+            return;
+        }
+
         if (tabId != null && tabId > 0) {
             TabItem tab = getTabById(tabId);
             if (tab != null) {

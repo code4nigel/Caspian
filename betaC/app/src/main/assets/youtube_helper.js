@@ -818,13 +818,6 @@
           let _lastTimeSync = 0;
           v.addEventListener('timeupdate', () => {
             const now = Date.now();
-            const isNearEnd = (v.duration > 0 && Math.abs((v.currentTime || 0) - v.duration) < 0.5);
-            if (v.ended || isNearEnd) {
-              const tabId = window.__caspian_tab_id || 0;
-              if (window.CaspianBridge && typeof window.CaspianBridge.onYouTubeVideoEnded === 'function') {
-                window.CaspianBridge.onYouTubeVideoEnded(tabId);
-              }
-            }
             if (now - _lastTimeSync < 800) return;
             _lastTimeSync = now;
             const tabId = window.__caspian_tab_id || 0;
@@ -1423,8 +1416,8 @@
           if (vidEl && !vidEl.__caspian_advance_hooked) {
             vidEl.__caspian_advance_hooked = true;
             vidEl.addEventListener('ended', function() {
-              setTimeout(function() {
-                var curV = window.__CaspianYouTube.getVideo();
+              function tryAdvance() {
+                var curV = window.__CaspianYouTube ? window.__CaspianYouTube.getVideo() : document.querySelector('video');
                 if (curV && (curV.ended || curV.paused)) {
                   var isRepOne = (window.__CaspianYouTube && window.__CaspianYouTube._lastRepMode === 2) || (curV && curV.loop);
                   if (isRepOne) {
@@ -1432,11 +1425,13 @@
                       curV.currentTime = 0;
                       curV.play().catch(function(){});
                     } catch(e){}
-                  } else {
+                  } else if (window.__CaspianYouTube && typeof window.__CaspianYouTube.nextTrack === 'function') {
                     window.__CaspianYouTube.nextTrack();
                   }
                 }
-              }, 1200);
+              }
+              tryAdvance();
+              setTimeout(tryAdvance, 350);
             }, { passive: true });
           }
         } catch(e){}

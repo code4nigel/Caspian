@@ -1,16 +1,16 @@
-# Graph Report - Chatgpt Pruner  (2026-09-13)
+# Graph Report - Chatgpt Pruner  (2026-09-14)
 
 ## Corpus Check
-- 105 files · ~533,296 words
+- 105 files · ~533,573 words
 - Verdict: corpus is large enough that graph structure adds value.
 
 ## Summary
-- 2096 nodes · 5209 edges · 134 communities (59 shown, 35 thin omitted)
+- 2096 nodes · 5212 edges · 134 communities (59 shown, 35 thin omitted)
 - Extraction: 97% EXTRACTED · 3% INFERRED · 0% AMBIGUOUS · INFERRED: 173 edges (avg confidence: 0.81)
 - Token cost: 0 input · 0 output
 
 ## Graph Freshness
-- Built from commit: `009c7105`
+- Built from commit: `135f51fc`
 - Run `git rev-parse HEAD` and compare to check if the graph is stale.
 - Run `graphify update .` after code changes (no API cost).
 
@@ -49,7 +49,7 @@
 - .onCreate
 - .switchTab
 - .switchTab
-- ChatAdapter
+- ChatGPTApiClient
 - android.webkit.WebView
 - .setupFloatingYouTubeRemote
 - content.js
@@ -65,15 +65,15 @@
 - SwipeableViewFlipper
 - .resolve
 - .dpToPx
-- .showBrowserActionGrid
+- ChatAdapter
 - speed_content.js
 - main/assets/mobile_pruner.js
-- ChatGPTApiClient
+- AudioRecord
 - WaveguardShield
 - android.view.View
 - .onCreate
 - main/assets/youtube_helper.js
-- AudioRecord
+- .setupLiquidGlassYouTubeRemote
 - 🌊 Caspian Mobile - Standalone Android Application
 - Caspian-Beta-B/assets/mobile_control.js
 - .onBackPressed
@@ -127,11 +127,11 @@
   betaC/app/src/main/java/com/caspian/betac/CaspianBridge.java → betaC/app/src/main/java/com/caspian/betac/MainActivity.java
 - `ChatAdapter` --references--> `ChatMessage`  [EXTRACTED]
   Caspian-Beta-B/app/src/main/java/com/caspian/betab/ChatAdapter.java → Caspian-Beta-B/app/src/main/java/com/caspian/betab/ChatMessage.java
-- `CaspianBridge` --references--> `MainActivity`  [EXTRACTED]
-  Caspian-Beta-B/app/src/main/java/com/caspian/betab/CaspianBridge.java → Caspian-Beta-B/app/src/main/java/com/caspian/betab/MainActivity.java
 - `MainActivity` --references--> `ChatAdapter`  [EXTRACTED]
   Caspian-Beta-B/app/src/main/java/com/caspian/betab/MainActivity.java → Caspian-Beta-B/app/src/main/java/com/caspian/betab/ChatAdapter.java
 - `MainActivity` --references--> `ChatGPTApiClient`  [EXTRACTED]
+  Caspian-Beta-B/app/src/main/java/com/caspian/betab/MainActivity.java → Caspian-Beta-B/app/src/main/java/com/caspian/betab/ChatGPTApiClient.java
+- `MainActivity` --references--> `ModelItem`  [EXTRACTED]
   Caspian-Beta-B/app/src/main/java/com/caspian/betab/MainActivity.java → Caspian-Beta-B/app/src/main/java/com/caspian/betab/ChatGPTApiClient.java
 
 ## Import Cycles
@@ -141,7 +141,7 @@
 
 ### Community 1 - "MainActivity"
 Cohesion: 0.03
-Nodes (18): android.content.res.Configuration, android.graphics.Bitmap, android.support.v4.media.session.PlaybackStateCompat, AudioRecord, MainActivity, CustomViewCallback, Handler, Intent (+10 more)
+Nodes (15): android.graphics.Bitmap, AudioRecord, MainActivity, CustomViewCallback, Handler, Intent, LruCache, MediaSessionCompat (+7 more)
 
 ### Community 2 - "browser_control.js"
 Cohesion: 0.05
@@ -239,9 +239,9 @@ Nodes (4): CaskItem, CaskManager, JSONObject, WebView
 Cohesion: 0.17
 Nodes (7): android.animation.ValueAnimator, android.view.MotionEvent, Override, RecentsHorizontalScrollView, Override, PointF, Rect
 
-### Community 35 - "ChatAdapter"
-Cohesion: 0.22
-Nodes (8): Adapter, androidx.annotation.NonNull, androidx.recyclerview.widget.RecyclerView, ChatAdapter, ChatViewHolder, Override, io.noties.markwon.Markwon, ViewHolder
+### Community 35 - "ChatGPTApiClient"
+Cohesion: 0.20
+Nodes (6): ChatGPTApiClient, Handler, ModelItem, ModelsCallback, StreamCallback, okhttp3.OkHttpClient
 
 ### Community 36 - "android.webkit.WebView"
 Cohesion: 0.16
@@ -292,12 +292,12 @@ Cohesion: 0.24
 Nodes (7): AICommandRouter, RouteResult, SearchEngine, BING, BRAVE, DUCKDUCKGO, GOOGLE
 
 ### Community 50 - ".dpToPx"
-Cohesion: 0.16
-Nodes (7): CaspianMenuItem, BookmarkItem, EditText, LinearLayout, PopupWindow, ScrollView, TextView
+Cohesion: 0.11
+Nodes (10): BookmarkItem, BookmarkManager, EditText, HorizontalScrollView, LinearLayout, PopupWindow, ScrollView, SwipeableViewFlipper (+2 more)
 
-### Community 51 - ".showBrowserActionGrid"
-Cohesion: 0.15
-Nodes (4): BookmarkManager, HorizontalScrollView, SwipeableViewFlipper, TableLayout
+### Community 51 - "ChatAdapter"
+Cohesion: 0.22
+Nodes (8): Adapter, androidx.annotation.NonNull, androidx.recyclerview.widget.RecyclerView, ChatAdapter, ChatViewHolder, Override, io.noties.markwon.Markwon, ViewHolder
 
 ### Community 54 - "speed_content.js"
 Cohesion: 0.29
@@ -306,10 +306,6 @@ Nodes (9): applySpeedToAllMedia(), attachMediaListeners(), cycleToNextSpeed(), i
 ### Community 55 - "main/assets/mobile_pruner.js"
 Cohesion: 0.35
 Nodes (9): applyPruningDirect(), clearAllPruning(), ensurePrunerStyles(), findVisibleCenterTurnIndex(), getTopLevelTurns(), initObserver(), loadState(), onScrollHandler() (+1 more)
-
-### Community 56 - "ChatGPTApiClient"
-Cohesion: 0.20
-Nodes (6): ChatGPTApiClient, Handler, ModelItem, ModelsCallback, StreamCallback, okhttp3.OkHttpClient
 
 ### Community 57 - "WaveguardShield"
 Cohesion: 0.09
@@ -330,6 +326,10 @@ Nodes (8): Build Command, 🛠️ Building From Source, 🌊 Caspian Mobile - St
 ### Community 64 - "Caspian-Beta-B/assets/mobile_control.js"
 Cohesion: 0.33
 Nodes (6): renderOpenTabs(), restoreSavedSettings(), setTheme(), syncAppVersion(), syncHostPageTheme(), updateDebugRecUI()
+
+### Community 66 - ".getTabById"
+Cohesion: 0.07
+Nodes (4): android.content.res.Configuration, CaspianMenuItem, Override, RemoteAction
 
 ### Community 68 - "publish-releases.sh"
 Cohesion: 1.00
@@ -376,24 +376,24 @@ Cohesion: 0.70
 Nodes (4): gradlew script, die(), save(), warn()
 
 ## Knowledge Gaps
-- **148 isolated node(s):** `default_popup`, `128`, `16`, `48`, `RFC-1321` (+143 more)
+- **148 isolated node(s):** `RFC-1321`, `1-Click Setup with Configuration File`, `1. RippleFrame: Full-Page Scrolling Screenshot & Annotation Studio`, `2. Real-Time AI Chat DOM Pruning`, `3. Flow Speed: Universal Media Playback Controller` (+143 more)
   These have ≤1 connection - possible missing edges or undocumented components. (Counts symbols only; 416 node(s) total have ≤1 connection when file, concept and rationale nodes are included.)
 - **35 thin communities (<3 nodes) omitted from report** — run `graphify query` to explore isolated nodes.
 
 ## Suggested Questions
 _Questions this graph is uniquely positioned to answer:_
 
-- **Why does `MainActivity` connect `MainActivity` to `android.webkit.JavascriptInterface`, `.getTabById`, `.updateOmniboxTabStrip`, `android.webkit.WebView`, `CaspianDownloadManager`, `betac/MainActivity.java`, `.updateOmniboxState`, `WhirlpoolOverlayView`, `MainActivity`, `.dpToPx`, `BookmarkManager`, `.showBrowserActionGrid`, `.switchToTab`, `android.view.View`, `android.view.MotionEvent`, `WaveguardShield`?**
-  _High betweenness centrality (0.276) - this node is a cross-community bridge._
+- **Why does `MainActivity` connect `MainActivity` to `android.webkit.JavascriptInterface`, `.getTabById`, `.updateOmniboxTabStrip`, `android.webkit.WebView`, `CaspianDownloadManager`, `betac/MainActivity.java`, `.updateOmniboxState`, `WhirlpoolOverlayView`, `MainActivity`, `.dpToPx`, `BookmarkManager`, `.switchToTab`, `android.view.View`, `android.view.MotionEvent`, `.setupLiquidGlassYouTubeRemote`, `WaveguardShield`?**
+  _High betweenness centrality (0.275) - this node is a cross-community bridge._
 - **Why does `CaspianBridge` connect `android.webkit.JavascriptInterface` to `MainActivity`, `android.webkit.WebView`, `.switchCaspianCask`, `GitHubUpdateManager`, `.getInstance`, `WaveguardShield`, `CaskManager`?**
-  _High betweenness centrality (0.100) - this node is a cross-community bridge._
+  _High betweenness centrality (0.099) - this node is a cross-community bridge._
 - **Why does `MainActivity` connect `MainActivity` to `.onCreate`, `.switchTab`, `android.webkit.WebView`, `CaspianBridge`, `.onBackPressed`, `betac/MainActivity.java`, `.setupFloatingYouTubeRemote`, `WhirlpoolOverlayView`, `android.content.Context`, `BookmarkManager`, `.getActiveTab`, `android.view.View`?**
-  _High betweenness centrality (0.059) - this node is a cross-community bridge._
-- **What connects `default_popup`, `128`, `16` to the rest of the system?**
+  _High betweenness centrality (0.055) - this node is a cross-community bridge._
+- **What connects `RFC-1321`, `1-Click Setup with Configuration File`, `1. RippleFrame: Full-Page Scrolling Screenshot & Annotation Studio` to the rest of the system?**
   _148 weakly-connected nodes found - possible documentation gaps or missing edges._
 - **Should `android.webkit.JavascriptInterface` be split into smaller, more focused modules?**
   _Cohesion score 0.028875379939209727 - nodes in this community are weakly interconnected._
 - **Should `MainActivity` be split into smaller, more focused modules?**
-  _Cohesion score 0.025210084033613446 - nodes in this community are weakly interconnected._
+  _Cohesion score 0.02932508104921898 - nodes in this community are weakly interconnected._
 - **Should `browser_control.js` be split into smaller, more focused modules?**
   _Cohesion score 0.05396825396825397 - nodes in this community are weakly interconnected._
