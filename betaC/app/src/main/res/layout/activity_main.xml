@@ -353,7 +353,7 @@
                         android:background="@drawable/bg_stitch_history_entry"
                         android:visibility="gone"
                         android:clickable="true"
-                        android:focusable="true">
+                        android:focusable="false">
 
                         <TextView
                             android:id="@+id/icon_omnibox_undo_close"
@@ -381,7 +381,7 @@
                         android:layout_marginEnd="2dp"
                         android:background="@drawable/bg_stitch_action_chip"
                         android:clickable="true"
-                        android:focusable="true">
+                        android:focusable="false">
 
                         <ImageView
                             android:id="@+id/btn_omnibox_add_icon"

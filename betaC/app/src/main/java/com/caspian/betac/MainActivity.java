@@ -9613,12 +9613,37 @@ public class MainActivity extends AppCompatActivity {
             omniboxHeaderWrapper.setTranslationY(0f);
             omniboxHeaderWrapper.bringToFront();
         }
+        if (omniboxBackBtn != null) omniboxBackBtn.setVisibility(View.GONE);
+        if (omniboxForwardBtn != null) omniboxForwardBtn.setVisibility(View.GONE);
+        if (omniboxReloadBtn != null) omniboxReloadBtn.setVisibility(View.GONE);
+        if (omniboxDividerLeft != null) omniboxDividerLeft.setVisibility(View.GONE);
+        if (omniboxDividerRight != null) omniboxDividerRight.setVisibility(View.GONE);
+        if (omniboxToolbarsBtn != null) omniboxToolbarsBtn.setVisibility(View.GONE);
+        if (omniboxSplitBtn != null) omniboxSplitBtn.setVisibility(View.GONE);
+        if (omniboxTabsBtn != null) omniboxTabsBtn.setVisibility(View.GONE);
+        if (omniboxMenuBtn != null) omniboxMenuBtn.setVisibility(View.GONE);
+        if (omniboxBtnCollapseOrb != null) omniboxBtnCollapseOrb.setVisibility(View.GONE);
+        if (omniboxCopyBtn != null) omniboxCopyBtn.setVisibility(View.VISIBLE);
+        if (omniboxPasteBtn != null) omniboxPasteBtn.setVisibility(View.VISIBLE);
+        if (omniboxClearBtn != null) omniboxClearBtn.setVisibility(View.VISIBLE);
+        updateOmniboxPasteButton();
+
+        TabItem currentTab = getActiveOrDominantTab();
+        if (currentTab != null) {
+            String fullUrl = currentTab.webView != null && currentTab.webView.getUrl() != null ? currentTab.webView.getUrl() : (currentTab.url != null ? currentTab.url : "");
+            if ("file:///android_asset/launch_hub.html".equalsIgnoreCase(fullUrl)) {
+                fullUrl = "caspian://hub";
+            }
+            if (!fullUrl.isEmpty()) {
+                omniboxEditText.setText(fullUrl);
+            }
+        }
         if (!omniboxEditText.hasFocus()) {
             omniboxEditText.requestFocus();
             omniboxEditText.post(() -> {
                 if (omniboxEditText.getText() != null) {
                     int len = omniboxEditText.getText().length();
-                    android.text.Selection.setSelection(omniboxEditText.getText(), len, 0);
+                    android.text.Selection.setSelection(omniboxEditText.getText(), 0, len);
                 }
                 omniboxEditText.scrollTo(0, 0);
                 InputMethodManager imm = (InputMethodManager) getSystemService(Context.INPUT_METHOD_SERVICE);
@@ -9629,6 +9654,11 @@ public class MainActivity extends AppCompatActivity {
                     omniboxEditText.scrollTo(0, 0);
                 }
             }, 240);
+        } else {
+            if (omniboxEditText.getText() != null) {
+                int len = omniboxEditText.getText().length();
+                android.text.Selection.setSelection(omniboxEditText.getText(), 0, len);
+            }
         }
     }
 
@@ -21984,8 +22014,12 @@ public class MainActivity extends AppCompatActivity {
         accumulatedScrollDelta = 0;
         TabItem curSwitchedTab = getTabById(tabId);
         if ("applepie".equalsIgnoreCase(omniboxScrollMode)) {
-            if (curSwitchedTab != null && curSwitchedTab.userExplicitFullOmnibox) {
+            if (currentOrbState == ORB_STATE_FULL_TOP || (curSwitchedTab != null && curSwitchedTab.userExplicitFullOmnibox)) {
+                if (curSwitchedTab != null) curSwitchedTab.userExplicitFullOmnibox = true;
                 transitionToOrbState(ORB_STATE_FULL_TOP, false);
+                if (openedUrlEditFromPill) {
+                    expandOmniboxUrl();
+                }
             } else {
                 transitionToOrbState(ORB_STATE_BOTTOM_PILL, false);
             }
@@ -22518,7 +22552,18 @@ public class MainActivity extends AppCompatActivity {
 
         if (currentTab != null) {
             String url = currentTab.url != null ? currentTab.url : "";
-            if (!omniboxEditText.hasFocus()) {
+            if (omniboxEditText.hasFocus() || openedUrlEditFromPill) {
+                String fullUrl = currentTab.webView != null && currentTab.webView.getUrl() != null ? currentTab.webView.getUrl() : (currentTab.url != null ? currentTab.url : "");
+                if ("file:///android_asset/launch_hub.html".equalsIgnoreCase(fullUrl)) {
+                    fullUrl = "caspian://hub";
+                }
+                if (!fullUrl.isEmpty()) {
+                    omniboxEditText.setText(fullUrl);
+                    try {
+                        android.text.Selection.setSelection(omniboxEditText.getText(), 0, fullUrl.length());
+                    } catch (Throwable ignored) {}
+                }
+            } else {
                 omniboxEditText.setText(cleanDisplayUrl(url));
             }
             boolean canBack = false;
@@ -25571,7 +25616,15 @@ public class MainActivity extends AppCompatActivity {
                 Rect outRect = new Rect();
                 omniboxHeaderWrapper.getGlobalVisibleRect(outRect);
                 if (outRect.contains((int) ev.getRawX(), (int) ev.getRawY())) {
-                    omniTouchStartedInHeader = true;
+                    boolean inStrip = false;
+                    if (omniboxTabStripBar != null && omniboxTabStripBar.getVisibility() == View.VISIBLE) {
+                        Rect stripRect = new Rect();
+                        omniboxTabStripBar.getGlobalVisibleRect(stripRect);
+                        inStrip = stripRect.contains((int) ev.getRawX(), (int) ev.getRawY());
+                    }
+                    if (!inStrip) {
+                        omniTouchStartedInHeader = true;
+                    }
                 }
             }
 
@@ -25598,7 +25651,19 @@ public class MainActivity extends AppCompatActivity {
                     omniboxCopyBtn.getGlobalVisibleRect(copyRect);
                     inCopy = copyRect.contains((int) ev.getRawX(), (int) ev.getRawY());
                 }
-                if (!inEdit && !inClear && !inPaste && !inCopy) {
+                boolean inHeaderWrapper = false;
+                if (omniboxHeaderWrapper != null && omniboxHeaderWrapper.getVisibility() == View.VISIBLE) {
+                    Rect wrapperRect = new Rect();
+                    omniboxHeaderWrapper.getGlobalVisibleRect(wrapperRect);
+                    inHeaderWrapper = wrapperRect.contains((int) ev.getRawX(), (int) ev.getRawY());
+                }
+                boolean inSuggestions = false;
+                if (omniboxSuggestionsContainer != null && omniboxSuggestionsContainer.getVisibility() == View.VISIBLE) {
+                    Rect sugRect = new Rect();
+                    omniboxSuggestionsContainer.getGlobalVisibleRect(sugRect);
+                    inSuggestions = sugRect.contains((int) ev.getRawX(), (int) ev.getRawY());
+                }
+                if (!inEdit && !inClear && !inPaste && !inCopy && !inHeaderWrapper && !inSuggestions) {
                     v.clearFocus();
                     hideKeyboard();
                 }

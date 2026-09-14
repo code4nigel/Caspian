@@ -19,7 +19,7 @@
         android:paddingStart="8dp"
         android:paddingEnd="3dp"
         android:clickable="true"
-        android:focusable="true">
+        android:focusable="false">
 
         <ImageView
             android:id="@+id/omnibox_split_left_icon"
@@ -47,7 +47,7 @@
             android:layout_height="20dp"
             android:background="?attr/selectableItemBackgroundBorderless"
             android:clickable="true"
-            android:focusable="true">
+            android:focusable="false">
 
             <ImageView
                 android:id="@+id/omnibox_split_left_close_icon"
@@ -76,7 +76,7 @@
         android:paddingStart="6dp"
         android:paddingEnd="3dp"
         android:clickable="true"
-        android:focusable="true">
+        android:focusable="false">
 
         <ImageView
             android:id="@+id/omnibox_split_right_icon"
@@ -104,7 +104,7 @@
             android:layout_height="20dp"
             android:background="?attr/selectableItemBackgroundBorderless"
             android:clickable="true"
-            android:focusable="true">
+            android:focusable="false">
 
             <ImageView
                 android:id="@+id/omnibox_split_right_close_icon"
