@@ -10016,6 +10016,11 @@ public class MainActivity extends AppCompatActivity {
                 if (openedUrlEditFromPill) {
                     openedUrlEditFromPill = false;
                     transitionToOrbState(ORB_STATE_BOTTOM_PILL, true);
+                } else if (isSoftKeyboardVisible && "applepie".equalsIgnoreCase(omniboxScrollMode)) {
+                    if (omniboxHeaderWrapper != null) {
+                        omniboxHeaderWrapper.animate().cancel();
+                        omniboxHeaderWrapper.setVisibility(View.GONE);
+                    }
                 }
             }
         });
@@ -18861,19 +18866,24 @@ public class MainActivity extends AppCompatActivity {
                                 dpToPx(isBottomMode ? 12 : 6)
                         );
                         omniboxHeaderWrapper.setBackground(null);
-                        omniboxHeaderWrapper.setVisibility(View.VISIBLE);
-                        omniboxHeaderWrapper.bringToFront();
-                        if (animate) {
-                            omniboxHeaderWrapper.animate().cancel();
-                            omniboxHeaderWrapper.animate()
-                                    .translationY(0f)
-                                    .alpha(1f)
-                                    .setDuration(duration)
-                                    .setInterpolator(new DecelerateInterpolator(1.8f))
-                                    .start();
+                        boolean isEditingOmnibox = (omniboxEditText != null && omniboxEditText.hasFocus()) || openedUrlEditFromPill;
+                        if (isSoftKeyboardVisible && !isEditingOmnibox && isBottomMode) {
+                            omniboxHeaderWrapper.setVisibility(View.GONE);
                         } else {
-                            omniboxHeaderWrapper.setTranslationY(0f);
-                            omniboxHeaderWrapper.setAlpha(1f);
+                            omniboxHeaderWrapper.setVisibility(View.VISIBLE);
+                            omniboxHeaderWrapper.bringToFront();
+                            if (animate) {
+                                omniboxHeaderWrapper.animate().cancel();
+                                omniboxHeaderWrapper.animate()
+                                        .translationY(0f)
+                                        .alpha(1f)
+                                        .setDuration(duration)
+                                        .setInterpolator(new DecelerateInterpolator(1.8f))
+                                        .start();
+                            } else {
+                                omniboxHeaderWrapper.setTranslationY(0f);
+                                omniboxHeaderWrapper.setAlpha(1f);
+                            }
                         }
                     }
                     if (caspianFloatingPill != null) {
@@ -18928,45 +18938,49 @@ public class MainActivity extends AppCompatActivity {
                         }
                     }
                     if (caspianFloatingPill != null) {
-                        caspianFloatingPill.setVisibility(View.VISIBLE);
-                        caspianFloatingPill.bringToFront();
-                        if (animate) {
-                            caspianFloatingPill.animate().cancel();
-                            if (comingFromOrb) {
-                                caspianFloatingPill.setTranslationY(0f);
-                                caspianFloatingPill.setTranslationX(dpToPx(120));
-                                caspianFloatingPill.setScaleX(0.35f);
-                                caspianFloatingPill.setScaleY(0.5f);
-                                caspianFloatingPill.setAlpha(0f);
-                                caspianFloatingPill.animate()
-                                        .translationX(0f)
-                                        .scaleX(1f)
-                                        .scaleY(1f)
-                                        .alpha(1f)
-                                        .setDuration(duration + 40)
-                                        .setInterpolator(springDecel)
-                                        .start();
+                        if (isSoftKeyboardVisible) {
+                            caspianFloatingPill.setVisibility(View.GONE);
+                        } else {
+                            caspianFloatingPill.setVisibility(View.VISIBLE);
+                            caspianFloatingPill.bringToFront();
+                            if (animate) {
+                                caspianFloatingPill.animate().cancel();
+                                if (comingFromOrb) {
+                                    caspianFloatingPill.setTranslationY(0f);
+                                    caspianFloatingPill.setTranslationX(dpToPx(120));
+                                    caspianFloatingPill.setScaleX(0.35f);
+                                    caspianFloatingPill.setScaleY(0.5f);
+                                    caspianFloatingPill.setAlpha(0f);
+                                    caspianFloatingPill.animate()
+                                            .translationX(0f)
+                                            .scaleX(1f)
+                                            .scaleY(1f)
+                                            .alpha(1f)
+                                            .setDuration(duration + 40)
+                                            .setInterpolator(springDecel)
+                                            .start();
+                                } else {
+                                    caspianFloatingPill.setTranslationX(0f);
+                                    caspianFloatingPill.setTranslationY(dpToPx(80));
+                                    caspianFloatingPill.setScaleX(0.85f);
+                                    caspianFloatingPill.setScaleY(0.85f);
+                                    caspianFloatingPill.setAlpha(0f);
+                                    caspianFloatingPill.animate()
+                                            .translationY(0f)
+                                            .scaleX(1f)
+                                            .scaleY(1f)
+                                            .alpha(1f)
+                                            .setDuration(duration + 40)
+                                            .setInterpolator(springDecel)
+                                            .start();
+                                }
                             } else {
                                 caspianFloatingPill.setTranslationX(0f);
-                                caspianFloatingPill.setTranslationY(dpToPx(80));
-                                caspianFloatingPill.setScaleX(0.85f);
-                                caspianFloatingPill.setScaleY(0.85f);
-                                caspianFloatingPill.setAlpha(0f);
-                                caspianFloatingPill.animate()
-                                        .translationY(0f)
-                                        .scaleX(1f)
-                                        .scaleY(1f)
-                                        .alpha(1f)
-                                        .setDuration(duration + 40)
-                                        .setInterpolator(springDecel)
-                                        .start();
+                                caspianFloatingPill.setTranslationY(0f);
+                                caspianFloatingPill.setScaleX(1f);
+                                caspianFloatingPill.setScaleY(1f);
+                                caspianFloatingPill.setAlpha(1f);
                             }
-                        } else {
-                            caspianFloatingPill.setTranslationX(0f);
-                            caspianFloatingPill.setTranslationY(0f);
-                            caspianFloatingPill.setScaleX(1f);
-                            caspianFloatingPill.setScaleY(1f);
-                            caspianFloatingPill.setAlpha(1f);
                         }
                     }
                     if (caspianFloatingOrb != null) {
@@ -19107,6 +19121,28 @@ public class MainActivity extends AppCompatActivity {
                     webviewsParentContainer.setLayoutParams(wpLp);
                 }
             }
+            boolean isEditingOmnibox = (omniboxEditText != null && omniboxEditText.hasFocus()) || openedUrlEditFromPill;
+
+            if ("applepie".equalsIgnoreCase(omniboxScrollMode)) {
+                if (currentOrbState == ORB_STATE_FULL_TOP) {
+                    if (isVisible) {
+                        if (!isEditingOmnibox && omniboxHeaderWrapper != null) {
+                            omniboxHeaderWrapper.animate().cancel();
+                            omniboxHeaderWrapper.setVisibility(View.GONE);
+                        }
+                    } else {
+                        if (splashOverlay != null && splashOverlay.getVisibility() == View.VISIBLE) return;
+                        if (tabGridOverlay != null && tabGridOverlay.getVisibility() == View.VISIBLE) return;
+                        if (omniboxHeaderWrapper != null) {
+                            omniboxHeaderWrapper.setVisibility(View.VISIBLE);
+                            omniboxHeaderWrapper.setAlpha(1f);
+                            omniboxHeaderWrapper.setTranslationY(0f);
+                            omniboxHeaderWrapper.bringToFront();
+                        }
+                    }
+                }
+            }
+
             if (currentOrbState == ORB_STATE_BOTTOM_PILL && caspianFloatingPill != null) {
                 if (isVisible) {
                     caspianFloatingPill.animate().cancel();
@@ -19124,6 +19160,7 @@ public class MainActivity extends AppCompatActivity {
                     if (splashOverlay != null && splashOverlay.getVisibility() == View.VISIBLE) return;
                     if (tabGridOverlay != null && tabGridOverlay.getVisibility() == View.VISIBLE) return;
                     caspianFloatingPill.setVisibility(View.VISIBLE);
+                    caspianFloatingPill.bringToFront();
                     caspianFloatingPill.animate().cancel();
                     caspianFloatingPill.animate()
                             .alpha(1f)
