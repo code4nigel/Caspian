@@ -7876,6 +7876,7 @@ public class MainActivity extends AppCompatActivity {
 
     public void updateYouTubeTimeLive(double currentTime, double duration) {
         if (isUserScrubbingTimeline) return;
+        boolean durationChanged = duration > 0 && (currentVideoDuration <= 0 || Math.abs(duration - currentVideoDuration) > 1.5);
         currentVideoTime = currentTime;
         currentVideoDuration = duration;
         if (ytTimelineCurrentTime != null) {
@@ -7889,15 +7890,23 @@ public class MainActivity extends AppCompatActivity {
             ytTimelineSeekbar.setProgress(progress);
         }
 
+        // When true duration of new song arrives, refresh MediaMetadata so lockscreen timeline shows actual song length
+        if (durationChanged && mediaSession != null && hasAnyYouTubeTab()) {
+            TabItem yt = getYouTubeTab();
+            boolean isPlaying = yt != null && yt.isPlayingAudio;
+            updateMediaPlaybackNotification(isPlaying);
+        }
+
         long now = android.os.SystemClock.elapsedRealtime();
-        if (duration > 5.0 && currentTime > 0 && (duration - currentTime) <= 0.7) {
+        // Authoritative auto-advance: ONLY when full song genuinely reaches completion
+        if (duration > 20.0 && currentTime > 0 && (duration - currentTime) <= 0.8) {
             if (now - lastYtAutoAdvanceTimeMs > 4000) {
                 lastYtAutoAdvanceTimeMs = now;
                 TabItem yt = getYouTubeTab();
                 handleYouTubeVideoEnded(yt != null ? yt.id : activeTabId);
             }
         }
-        if (mediaSession != null && (now - lastMediaSessionTimeUpdateMs > 8000)) {
+        if (mediaSession != null && (now - lastMediaSessionTimeUpdateMs > 3000)) {
             lastMediaSessionTimeUpdateMs = now;
             TabItem yt = getYouTubeTab();
             boolean isPlaying = yt != null && yt.isPlayingAudio;
@@ -25122,8 +25131,10 @@ public class MainActivity extends AppCompatActivity {
             }
 
             if (titleChanged) {
-                // Instantly clear old artwork so it NEVER stays stuck on previous song!
+                // Instantly clear old artwork and duration so it NEVER stays stuck on previous song!
                 currentMediaThumbBitmap = null;
+                currentVideoTime = 0;
+                currentVideoDuration = 0;
             }
 
             if (!targetThumbUrl.isEmpty()) {

@@ -9,6 +9,7 @@
   var __caspian_ytm_next_handler = null;
   var __caspian_ytm_prev_handler = null;
   var __caspian_captured_media_metadata = null;
+  var __caspian_captured_position_state = null;
   try {
     if (navigator.mediaSession && typeof navigator.mediaSession.setActionHandler === 'function') {
       var origSetActionHandler = navigator.mediaSession.setActionHandler.bind(navigator.mediaSession);
@@ -19,6 +20,21 @@
           __caspian_ytm_prev_handler = handler;
         }
         return origSetActionHandler(action, handler);
+      };
+    }
+    if (navigator.mediaSession && typeof navigator.mediaSession.setPositionState === 'function') {
+      var origSetPositionState = navigator.mediaSession.setPositionState.bind(navigator.mediaSession);
+      navigator.mediaSession.setPositionState = function (state) {
+        if (state) {
+          __caspian_captured_position_state = state;
+          if (state.duration && state.duration > 0) {
+            var tabId = window.__caspian_tab_id || 0;
+            if (window.CaspianBridge && typeof window.CaspianBridge.updateTabYouTubeTime === 'function') {
+              window.CaspianBridge.updateTabYouTubeTime(tabId, state.position || 0, state.duration);
+            }
+          }
+        }
+        try { return origSetPositionState(state); } catch(e){}
       };
     }
     if (navigator.mediaSession) {
@@ -141,6 +157,47 @@
 
       // 3. Fallback to any video or audio element on page
       return document.querySelector('video, audio');
+    },
+    getTrueDuration: function () {
+      // 1. Authoritative MediaSession position state from YouTube Music
+      if (__caspian_captured_position_state && typeof __caspian_captured_position_state.duration === 'number' && __caspian_captured_position_state.duration > 0) {
+        return __caspian_captured_position_state.duration;
+      }
+      // 2. Native YouTube player API duration
+      try {
+        var p = document.getElementById('movie_player') || document.querySelector('.html5-video-player');
+        if (p && typeof p.getDuration === 'function') {
+          var pDur = p.getDuration();
+          if (pDur && pDur > 0 && isFinite(pDur)) return pDur;
+        }
+      } catch(e){}
+      // 3. YouTube Music player bar time-info text (e.g. "1:23 / 3:47")
+      try {
+        var timeEl = document.querySelector('ytmusic-player-bar .time-info, .time-info, span.time-info');
+        if (timeEl && timeEl.textContent && timeEl.textContent.includes('/')) {
+          var totalStr = timeEl.textContent.split('/')[1].trim();
+          var timeParts = totalStr.split(':').map(Number);
+          if (timeParts.length === 2 && !isNaN(timeParts[0]) && !isNaN(timeParts[1])) {
+            return timeParts[0] * 60 + timeParts[1];
+          } else if (timeParts.length === 3) {
+            return timeParts[0] * 3600 + timeParts[1] * 60 + timeParts[2];
+          }
+        }
+      } catch(e){}
+      // 4. Fallback to HTMLMediaElement duration
+      var v = this.getVideo();
+      return (v && isFinite(v.duration) && v.duration > 0) ? v.duration : 0;
+    },
+    getTrueCurrentTime: function () {
+      try {
+        var p = document.getElementById('movie_player') || document.querySelector('.html5-video-player');
+        if (p && typeof p.getCurrentTime === 'function') {
+          var pTime = p.getCurrentTime();
+          if (pTime !== undefined && isFinite(pTime)) return pTime;
+        }
+      } catch(e){}
+      var v = this.getVideo();
+      return (v && isFinite(v.currentTime)) ? v.currentTime : 0;
     },
     notifyState: function (force) {
       try {
@@ -366,8 +423,17 @@
       var self = this;
       var triggerSync = function() {
         self._lastTitle = null;
-        setTimeout(function() { if (self.syncMediaMetadata) self.syncMediaMetadata(); }, 150);
-        setTimeout(function() { if (self.syncMediaMetadata) self.syncMediaMetadata(); }, 600);
+        __caspian_captured_position_state = null;
+        setTimeout(function() {
+          var v = self.getVideo();
+          if (v && v.paused) { try { v.play().catch(function(){}); } catch(e){} }
+          if (self.syncMediaMetadata) self.syncMediaMetadata();
+        }, 300);
+        setTimeout(function() {
+          var v = self.getVideo();
+          if (v && v.paused) { try { v.play().catch(function(){}); } catch(e){} }
+          if (self.syncMediaMetadata) self.syncMediaMetadata();
+        }, 900);
       };
       if (typeof __caspian_ytm_next_handler === 'function') {
         try {
@@ -804,9 +870,11 @@
       mediaElements.forEach(v => {
         if (v && !v.__caspian_attached) {
           v.__caspian_attached = true;
-          ['play', 'playing', 'pause', 'ended', 'waiting', 'stalled', 'volumechange', 'ratechange'].forEach(evt => {
+          ['play', 'playing', 'pause', 'ended', 'waiting', 'stalled', 'volumechange', 'ratechange', 'durationchange', 'loadedmetadata'].forEach(evt => {
             v.addEventListener(evt, () => {
-              if (evt === 'ended' || ((evt === 'waiting' || evt === 'stalled') && v.duration > 5 && (v.duration - (v.currentTime || 0) <= 0.8))) {
+              var trueDur = window.__CaspianYouTube ? window.__CaspianYouTube.getTrueDuration() : (v.duration || 0);
+              var trueCur = window.__CaspianYouTube ? window.__CaspianYouTube.getTrueCurrentTime() : (v.currentTime || 0);
+              if (evt === 'ended' || ((evt === 'waiting' || evt === 'stalled') && trueDur > 20 && (trueDur - trueCur <= 0.8))) {
                 const tabId = window.__caspian_tab_id || 0;
                 if (window.CaspianBridge && typeof window.CaspianBridge.onYouTubeVideoEnded === 'function') {
                   window.CaspianBridge.onYouTubeVideoEnded(tabId);
@@ -818,18 +886,18 @@
           let _lastTimeSync = 0;
           v.addEventListener('timeupdate', () => {
             const now = Date.now();
-            const curTime = v.currentTime || 0;
-            const dur = v.duration || 0;
+            var trueCur = window.__CaspianYouTube ? window.__CaspianYouTube.getTrueCurrentTime() : (v.currentTime || 0);
+            var trueDur = window.__CaspianYouTube ? window.__CaspianYouTube.getTrueDuration() : (v.duration || 0);
 
-            // Auto-advance detection for YouTube Music MSE where 'ended' never fires:
-            if (dur > 5 && curTime > 0) {
-              if ((dur - curTime) <= 0.6 && !v.__caspian_eof_reached) {
+            // Authoritative auto-advance detection when full song truly reaches the end:
+            if (trueDur > 20 && trueCur > 0) {
+              if ((trueDur - trueCur) <= 0.8 && !v.__caspian_eof_reached) {
                 v.__caspian_eof_reached = true;
                 const tabId = window.__caspian_tab_id || 0;
                 if (window.CaspianBridge && typeof window.CaspianBridge.onYouTubeVideoEnded === 'function') {
                   window.CaspianBridge.onYouTubeVideoEnded(tabId);
                 }
-              } else if ((dur - curTime) > 3.0) {
+              } else if ((trueDur - trueCur) > 3.0) {
                 v.__caspian_eof_reached = false;
               }
             }
@@ -838,9 +906,9 @@
             _lastTimeSync = now;
             const tabId = window.__caspian_tab_id || 0;
             if (window.CaspianBridge && typeof window.CaspianBridge.updateTabYouTubeTime === 'function') {
-              window.CaspianBridge.updateTabYouTubeTime(tabId, curTime, dur);
+              window.CaspianBridge.updateTabYouTubeTime(tabId, trueCur, trueDur);
             } else if (window.CaspianBridge && typeof window.CaspianBridge.updateYouTubeTime === 'function') {
-              window.CaspianBridge.updateYouTubeTime(curTime, dur);
+              window.CaspianBridge.updateYouTubeTime(trueCur, trueDur);
             }
           });
         }
@@ -1503,13 +1571,15 @@
           window.__CaspianYouTube.notifyState();
           try {
             var curV = window.__CaspianYouTube.getVideo();
-            if (curV && curV.duration > 5 && curV.currentTime > 0) {
-              if ((curV.duration - curV.currentTime) <= 0.6 && !curV.__caspian_worker_advance) {
+            var trueDur = window.__CaspianYouTube.getTrueDuration();
+            var trueCur = window.__CaspianYouTube.getTrueCurrentTime();
+            if (curV && trueDur > 20 && trueCur > 0) {
+              if ((trueDur - trueCur) <= 0.8 && !curV.__caspian_worker_advance) {
                 curV.__caspian_worker_advance = true;
                 if (typeof window.__CaspianYouTube.nextTrack === 'function') {
                   window.__CaspianYouTube.nextTrack();
                 }
-              } else if ((curV.duration - curV.currentTime) > 3.0) {
+              } else if ((trueDur - trueCur) > 3.0) {
                 curV.__caspian_worker_advance = false;
               }
             }
