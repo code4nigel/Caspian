@@ -10585,7 +10585,7 @@ public class MainActivity extends AppCompatActivity {
             );
             popupWindow.setBackgroundDrawable(new android.graphics.drawable.ColorDrawable(android.graphics.Color.TRANSPARENT));
             popupWindow.setElevation(28f);
-            popupWindow.setOutsideTouchable(false);
+            popupWindow.setOutsideTouchable(true);
 
             final boolean[] isWgClosing = {false};
             Runnable performWaveguardExit = () -> {
@@ -10620,10 +10620,25 @@ public class MainActivity extends AppCompatActivity {
             };
 
             popupWindow.setTouchInterceptor((v, event) -> {
-                if (event.getAction() == android.view.MotionEvent.ACTION_DOWN) {
-                    android.graphics.Rect rect = new android.graphics.Rect();
-                    popupView.getGlobalVisibleRect(rect);
-                    if (!rect.contains((int) event.getRawX(), (int) event.getRawY())) {
+                if (isWgClosing[0]) return true;
+                int action = event.getAction();
+                if (action == android.view.MotionEvent.ACTION_OUTSIDE) {
+                    performWaveguardExit.run();
+                    return true;
+                }
+                if (action == android.view.MotionEvent.ACTION_DOWN) {
+                    float x = event.getX();
+                    float y = event.getY();
+                    boolean insideWindow = (x >= 0 && x <= v.getWidth() && y >= 0 && y <= v.getHeight());
+
+                    int[] loc = new int[2];
+                    popupView.getLocationOnScreen(loc);
+                    float rx = event.getRawX();
+                    float ry = event.getRawY();
+                    boolean insideCard = (rx >= loc[0] && rx <= (loc[0] + popupView.getWidth()) &&
+                                          ry >= loc[1] && ry <= (loc[1] + popupView.getHeight()));
+
+                    if (!insideWindow && !insideCard) {
                         performWaveguardExit.run();
                         return true;
                     }
