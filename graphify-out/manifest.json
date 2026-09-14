@@ -324,9 +324,9 @@
     "semantic_hash": ""
   },
   "betaC/app/build.gradle.kts": {
-    "mtime": 1789374445.43244,
-    "seen": 1789374558.6209157,
-    "ast_hash": "83340d61ddb0138e9dc03b22df2556a9",
+    "mtime": 1789375883.4067013,
+    "seen": 1789375970.1985762,
+    "ast_hash": "3b16fde2844f0648accfdc68a0654679",
     "semantic_hash": ""
   },
   "betaC/app/src/main/assets/adblock_rules.json": {
@@ -450,9 +450,9 @@
     "semantic_hash": ""
   },
   "betaC/app/src/main/java/com/caspian/betac/MainActivity.java": {
-    "mtime": 1789374329.1841955,
-    "seen": 1789374558.6209745,
-    "ast_hash": "600a22014c5bbcc78bea299b3d84d907",
+    "mtime": 1789375812.4473314,
+    "seen": 1789375970.1986313,
+    "ast_hash": "daa54de1891e85bd01c8b64cecdd4e93",
     "semantic_hash": ""
   },
   "betaC/app/src/main/java/com/caspian/betac/SearchSuggestionService.java": {
@@ -648,9 +648,9 @@
     "semantic_hash": ""
   },
   "betaC/app/src/main/assets/browser_control.html": {
-    "mtime": 1789374445.5805643,
-    "seen": 1789374558.6210697,
-    "ast_hash": "c05e517e3f89314eda8e5a78cff7d1ca",
+    "mtime": 1789375883.5411854,
+    "seen": 1789375970.1986868,
+    "ast_hash": "a0e26557272c500026d4a35a171475cf",
     "semantic_hash": ""
   },
   "betaC/app/src/main/assets/incognito_hub.html": {

@@ -1,7 +1,7 @@
 # Graph Report - Chatgpt Pruner  (2026-09-14)
 
 ## Corpus Check
-- 105 files · ~535,786 words
+- 105 files · ~535,858 words
 - Verdict: corpus is large enough that graph structure adds value.
 
 ## Summary
@@ -10,7 +10,7 @@
 - Token cost: 0 input · 0 output
 
 ## Graph Freshness
-- Built from commit: `1f5aba5c`
+- Built from commit: `0c2f1e55`
 - Run `git rev-parse HEAD` and compare to check if the graph is stale.
 - Run `graphify update .` after code changes (no API cost).
 
@@ -388,11 +388,11 @@ Nodes (11): android.graphics.Bitmap, ClosedTabRecord, MultiTabDragState, TabGrou
 _Questions this graph is uniquely positioned to answer:_
 
 - **Why does `MainActivity` connect `MainActivity` to `android.webkit.JavascriptInterface`, `.updateOmniboxTabStrip`, `.getYouTubeTab`, `CaspianDownloadManager`, `betac/MainActivity.java`, `.getActiveOrDominantTab`, `WhirlpoolOverlayView`, `android.view.View`, `BookmarkManager`, `.applyPodCustomization`, `.updateOmniboxState`, `.getTabById`, `android.view.MotionEvent`, `android.annotation.SuppressLint`, `.transitionToOrbState`, `ChatAdapter`, `WaveguardShield`, `.setupFloatingPod`, `.dpToPx`, `android.content.Intent`, `android.webkit.WebView`?**
-  _High betweenness centrality (0.278) - this node is a cross-community bridge._
+  _High betweenness centrality (0.282) - this node is a cross-community bridge._
 - **Why does `CaspianBridge` connect `android.webkit.JavascriptInterface` to `MainActivity`, `android.webkit.WebView`, `CaspianDownloadManager`, `.getInstance`, `WaveguardShield`, `.getCasksPayloadJson`?**
-  _High betweenness centrality (0.097) - this node is a cross-community bridge._
-- **Why does `MainActivity` connect `MainActivity` to `android.annotation.SuppressLint`, `.switchTab`, `Override`, `android.content.Intent`, `CaspianDownloadManager`, `betac/MainActivity.java`, `CaspianBridge`, `android.webkit.WebView`, `android.view.View`, `.getActiveTab`, `android.content.Context`, `.updateFloatingYTRemoteVisibility`?**
-  _High betweenness centrality (0.055) - this node is a cross-community bridge._
+  _High betweenness centrality (0.101) - this node is a cross-community bridge._
+- **Why does `MainActivity` connect `MainActivity` to `.switchTab`, `.onCreate`, `.setupFloatingYouTubeRemote`, `CaspianBridge`, `android.content.Intent`, `CaspianDownloadManager`, `betac/MainActivity.java`, `android.webkit.WebView`, `android.view.View`, `.onBackPressed`, `android.content.Context`, `.getActiveTab`?**
+  _High betweenness centrality (0.074) - this node is a cross-community bridge._
 - **What connects `description`, `description`, `RFC-1321` to the rest of the system?**
   _148 weakly-connected nodes found - possible documentation gaps or missing edges._
 - **Should `android.webkit.JavascriptInterface` be split into smaller, more focused modules?**

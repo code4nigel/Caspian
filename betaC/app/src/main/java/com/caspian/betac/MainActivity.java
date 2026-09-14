@@ -3314,7 +3314,12 @@ public class MainActivity extends AppCompatActivity {
                                 floatingCaspianCard.setVisibility(View.VISIBLE);
                             }
                             if (isOrbOrApplePieMode()) {
-                                transitionToOrbState(currentOrbState, false);
+                                TabItem actTab = getActiveOrDominantTab();
+                                if ("applepie".equalsIgnoreCase(omniboxScrollMode) && (actTab == null || !actTab.userExplicitFullOmnibox)) {
+                                    transitionToOrbState(ORB_STATE_BOTTOM_PILL, false);
+                                } else {
+                                    transitionToOrbState(currentOrbState, false);
+                                }
                             }
                         }).start();
                 return;
@@ -3347,7 +3352,12 @@ public class MainActivity extends AppCompatActivity {
                             floatingCaspianCard.setVisibility(View.VISIBLE);
                         }
                         if (isOrbOrApplePieMode()) {
-                            transitionToOrbState(currentOrbState, false);
+                            TabItem actTab = getActiveOrDominantTab();
+                            if ("applepie".equalsIgnoreCase(omniboxScrollMode) && (actTab == null || !actTab.userExplicitFullOmnibox)) {
+                                transitionToOrbState(ORB_STATE_BOTTOM_PILL, false);
+                            } else {
+                                transitionToOrbState(currentOrbState, false);
+                            }
                         }
                     })
                     .start();
@@ -18919,6 +18929,7 @@ public class MainActivity extends AppCompatActivity {
                     }
                     if (caspianFloatingPill != null) {
                         caspianFloatingPill.setVisibility(View.VISIBLE);
+                        caspianFloatingPill.bringToFront();
                         if (animate) {
                             caspianFloatingPill.animate().cancel();
                             if (comingFromOrb) {
@@ -19028,20 +19039,26 @@ public class MainActivity extends AppCompatActivity {
             if (tab != null) {
                 String host = "caspian";
                 if (tab.url != null && !tab.url.isEmpty()) {
-                    try {
-                        Uri u = Uri.parse(tab.url);
-                        if (u.getHost() != null && !u.getHost().isEmpty()) {
-                            host = u.getHost().replaceFirst("^www\\.", "");
-                        } else {
+                    if (tab.url.contains("launch_hub.html") || "hub".equalsIgnoreCase(tab.service) || tab.url.startsWith("file:///android_asset/")) {
+                        host = "New Tab";
+                    } else {
+                        try {
+                            Uri u = Uri.parse(tab.url);
+                            if (u.getHost() != null && !u.getHost().isEmpty()) {
+                                host = u.getHost().replaceFirst("^www\\.", "");
+                            } else {
+                                host = tab.url;
+                            }
+                        } catch (Throwable ignored) {
                             host = tab.url;
                         }
-                    } catch (Throwable ignored) {
-                        host = tab.url;
                     }
                 }
                 if (caspianPillHost != null) caspianPillHost.setText(host);
                 if (caspianPillLock != null) {
-                    boolean isSecure = tab.url != null && tab.url.startsWith("https://");
+                    boolean isHub = tab.url != null && (tab.url.contains("launch_hub.html") || "hub".equalsIgnoreCase(tab.service) || tab.url.startsWith("file:///android_asset/"));
+                    boolean isSecure = !isHub && tab.url != null && tab.url.startsWith("https://");
+                    caspianPillLock.setVisibility(isHub ? View.GONE : View.VISIBLE);
                     caspianPillLock.setColorFilter(isSecure ? (isDarkTheme ? Color.parseColor("#38BDF8") : Color.parseColor("#0284C7")) : Color.parseColor("#94A3B8"));
                 }
             }
@@ -21378,8 +21395,8 @@ public class MainActivity extends AppCompatActivity {
                     browserProgressBar.setProgress(15);
                     updateOmniboxState();
                     accumulatedScrollDelta = 0;
-                    if ("orb".equalsIgnoreCase(omniboxScrollMode)) {
-                        // In orb mode, do not force showToolbar or dockToolbarAtTop
+                    if (isOrbOrApplePieMode()) {
+                        // In orb or applepie mode, do not force showToolbar or dockToolbarAtTop
                     } else if ("bottom".equalsIgnoreCase(omniboxPosition)) {
                         showToolbar(false, false);
                     } else {
@@ -21939,11 +21956,16 @@ public class MainActivity extends AppCompatActivity {
         CaskManager cm = new CaskManager(this);
         String caskId = (targetCaskId != null && !targetCaskId.trim().isEmpty()) ? targetCaskId : cm.getActiveCaskId();
         TabItem tab = createNewTabInstance(id, finalUrl, finalService, prompt, isIncognito, caskId);
+        tab.userExplicitFullOmnibox = false;
         if ("file:///android_asset/launch_hub.html".equals(finalUrl)) {
             tab.title = "Caspian Hub";
         }
         tabsList.add(tab);
         if (switchTo || activeTabId == -1 || getTabById(activeTabId) == null) {
+            openedUrlEditFromPill = false;
+            if ("applepie".equalsIgnoreCase(omniboxScrollMode)) {
+                currentOrbState = ORB_STATE_BOTTOM_PILL;
+            }
             switchToTab(id);
             if (tab.webView != null) {
                 tab.webView.setAlpha(0.0f);
@@ -22100,8 +22122,7 @@ public class MainActivity extends AppCompatActivity {
         accumulatedScrollDelta = 0;
         TabItem curSwitchedTab = getTabById(tabId);
         if ("applepie".equalsIgnoreCase(omniboxScrollMode)) {
-            if (currentOrbState == ORB_STATE_FULL_TOP || (curSwitchedTab != null && curSwitchedTab.userExplicitFullOmnibox)) {
-                if (curSwitchedTab != null) curSwitchedTab.userExplicitFullOmnibox = true;
+            if (curSwitchedTab != null && curSwitchedTab.userExplicitFullOmnibox) {
                 transitionToOrbState(ORB_STATE_FULL_TOP, false);
                 if (openedUrlEditFromPill) {
                     expandOmniboxUrl();
@@ -22772,6 +22793,10 @@ public class MainActivity extends AppCompatActivity {
                 if (!currentTab.userExplicitFullOmnibox && currentOrbState != ORB_STATE_FLOATING_ORB) {
                     transitionToOrbState(ORB_STATE_FLOATING_ORB, false);
                 }
+            }
+        } else if ("applepie".equalsIgnoreCase(omniboxScrollMode) && currentTab != null) {
+            if (!currentTab.userExplicitFullOmnibox && currentOrbState != ORB_STATE_BOTTOM_PILL) {
+                transitionToOrbState(ORB_STATE_BOTTOM_PILL, false);
             }
         }
         if (omniboxBtnCollapseOrb != null) {
