@@ -533,6 +533,8 @@ public class MainActivity extends AppCompatActivity {
     private String preOrbOmniboxPosition = null;
     private float orbDownX = 0f, orbDownY = 0f;
     private float orbStartX = 0f, orbStartY = 0f;
+    private float omniDownX = 0f, omniDownY = 0f;
+    private boolean omniTouchStartedInHeader = false;
     private boolean isOrbDragging = false;
     private VelocityTracker orbVelocityTracker = null;
 
@@ -2088,7 +2090,7 @@ public class MainActivity extends AppCompatActivity {
             setupKeyboardInsetsListener();
 
             if (isOrbOrApplePieMode()) {
-                applyOmniboxPosition("top");
+                applyOmniboxPosition(isApplePieMode() ? "bottom" : "top");
                 isToolbarInDedicatedSection = false;
                 if (webviewsParentContainer != null) {
                     webviewsParentContainer.setTranslationY(0f);
@@ -7128,6 +7130,9 @@ public class MainActivity extends AppCompatActivity {
                     .putFloat("pod_scale", podScale)
                     .putString("pod_start_color", podStartColor)
                     .putString("pod_end_color", podEndColor)
+                    .putString("accent_start", podStartColor)
+                    .putString("accent_end", podEndColor)
+                    .putString("accentColor", podStartColor)
                     .putFloat("pod_opacity", 1.0f)
                     .apply();
         } catch (Exception ignored) {}
@@ -9589,12 +9594,20 @@ public class MainActivity extends AppCompatActivity {
 
     private void expandOmniboxUrl() {
         if (omniboxEditText == null) return;
+        boolean isBottom = "applepie".equalsIgnoreCase(omniboxScrollMode) || "bottom".equalsIgnoreCase(omniboxPosition);
+        int targetGravity = isBottom ? Gravity.BOTTOM : Gravity.TOP;
         if (omniboxHeaderWrapper != null) {
             FrameLayout.LayoutParams lp = (FrameLayout.LayoutParams) omniboxHeaderWrapper.getLayoutParams();
-            if (lp != null && lp.gravity != Gravity.TOP) {
-                lp.gravity = Gravity.TOP;
+            if (lp != null && lp.gravity != targetGravity) {
+                lp.gravity = targetGravity;
                 omniboxHeaderWrapper.setLayoutParams(lp);
             }
+            omniboxHeaderWrapper.setPadding(
+                    dpToPx(10),
+                    dpToPx(isBottom ? 8 : 6),
+                    dpToPx(10),
+                    dpToPx(isBottom ? 12 : 6)
+            );
             omniboxHeaderWrapper.setVisibility(View.VISIBLE);
             omniboxHeaderWrapper.setAlpha(1f);
             omniboxHeaderWrapper.setTranslationY(0f);
@@ -9675,6 +9688,10 @@ public class MainActivity extends AppCompatActivity {
                             else if (isOrbOrApplePieMode() && dy > swipeThreshold && dy > Math.abs(dx) * 1.15f) {
                                 try { v.performHapticFeedback(HapticFeedbackConstants.KEYBOARD_TAP); } catch (Throwable ignored) {}
                                 playUiFeedbackSound("pop_button_v2");
+                                if (omniboxEditText != null && omniboxEditText.hasFocus()) {
+                                    hideKeyboard();
+                                    omniboxEditText.clearFocus();
+                                }
                                 if ("applepie".equalsIgnoreCase(omniboxScrollMode)) {
                                     transitionToOrbState(ORB_STATE_BOTTOM_PILL, true);
                                 } else {
@@ -9800,11 +9817,19 @@ public class MainActivity extends AppCompatActivity {
                     showToolbar(true, true);
                 }
                 if (omniboxHeaderWrapper != null) {
+                    boolean isBottom = "applepie".equalsIgnoreCase(omniboxScrollMode) || "bottom".equalsIgnoreCase(omniboxPosition);
+                    int targetGravity = isBottom ? Gravity.BOTTOM : Gravity.TOP;
                     FrameLayout.LayoutParams lp = (FrameLayout.LayoutParams) omniboxHeaderWrapper.getLayoutParams();
-                    if (lp != null && lp.gravity != Gravity.TOP) {
-                        lp.gravity = Gravity.TOP;
+                    if (lp != null && lp.gravity != targetGravity) {
+                        lp.gravity = targetGravity;
                         omniboxHeaderWrapper.setLayoutParams(lp);
                     }
+                    omniboxHeaderWrapper.setPadding(
+                            dpToPx(10),
+                            dpToPx(isBottom ? 8 : 6),
+                            dpToPx(10),
+                            dpToPx(isBottom ? 12 : 6)
+                    );
                     omniboxHeaderWrapper.setVisibility(View.VISIBLE);
                     omniboxHeaderWrapper.setAlpha(1f);
                     omniboxHeaderWrapper.setTranslationY(0f);
@@ -14376,7 +14401,7 @@ public class MainActivity extends AppCompatActivity {
                             .apply();
                 } catch (Throwable ignored) {}
             }
-            applyOmniboxPosition("top");
+            applyOmniboxPosition(isApplePieMode() ? "bottom" : "top");
             isToolbarInDedicatedSection = false;
             if (webviewsParentContainer != null) {
                 webviewsParentContainer.setTranslationY(0f);
@@ -18696,11 +18721,19 @@ public class MainActivity extends AppCompatActivity {
             switch (finalState) {
                 case ORB_STATE_FULL_TOP:
                     if (omniboxHeaderWrapper != null) {
+                        boolean isBottomMode = "applepie".equalsIgnoreCase(omniboxScrollMode) || "bottom".equalsIgnoreCase(omniboxPosition);
+                        int targetGravity = isBottomMode ? Gravity.BOTTOM : Gravity.TOP;
                         FrameLayout.LayoutParams lp = (FrameLayout.LayoutParams) omniboxHeaderWrapper.getLayoutParams();
-                        if (lp != null && lp.gravity != Gravity.TOP) {
-                            lp.gravity = Gravity.TOP;
+                        if (lp != null && lp.gravity != targetGravity) {
+                            lp.gravity = targetGravity;
                             omniboxHeaderWrapper.setLayoutParams(lp);
                         }
+                        omniboxHeaderWrapper.setPadding(
+                                dpToPx(10),
+                                dpToPx(isBottomMode ? 8 : 6),
+                                dpToPx(10),
+                                dpToPx(isBottomMode ? 12 : 6)
+                        );
                         omniboxHeaderWrapper.setBackground(null);
                         omniboxHeaderWrapper.setVisibility(View.VISIBLE);
                         omniboxHeaderWrapper.bringToFront();
@@ -18753,16 +18786,18 @@ public class MainActivity extends AppCompatActivity {
                     updateCaspianPillData();
                     boolean comingFromOrb = (caspianFloatingOrb != null && caspianFloatingOrb.getVisibility() == View.VISIBLE);
                     if (omniboxHeaderWrapper != null) {
+                        boolean isBottomMode = "applepie".equalsIgnoreCase(omniboxScrollMode) || "bottom".equalsIgnoreCase(omniboxPosition);
+                        float hideY = isBottomMode ? (float) toolbarH : (float) -toolbarH;
                         if (animate) {
                             omniboxHeaderWrapper.animate().cancel();
                             omniboxHeaderWrapper.animate()
-                                    .translationY((float) toolbarH)
+                                    .translationY(hideY)
                                     .alpha(0f)
                                     .setDuration(duration)
                                     .withEndAction(() -> omniboxHeaderWrapper.setVisibility(View.GONE))
                                     .start();
                         } else {
-                            omniboxHeaderWrapper.setTranslationY((float) toolbarH);
+                            omniboxHeaderWrapper.setTranslationY(hideY);
                             omniboxHeaderWrapper.setVisibility(View.GONE);
                         }
                     }
@@ -19204,7 +19239,8 @@ public class MainActivity extends AppCompatActivity {
                                     try { v.performHapticFeedback(HapticFeedbackConstants.KEYBOARD_TAP); } catch (Throwable ignored) {}
                                     playUiFeedbackSound("tap");
                                     if ("applepie".equalsIgnoreCase(omniboxScrollMode)) {
-                                        // In apple pie, already docked at bottom resting pill
+                                        openedUrlEditFromPill = false;
+                                        transitionToOrbState(ORB_STATE_FULL_TOP, true);
                                     } else {
                                         transitionToOrbState(ORB_STATE_FLOATING_ORB, true);
                                     }
@@ -25523,11 +25559,22 @@ public class MainActivity extends AppCompatActivity {
     }
     @Override
     public boolean dispatchTouchEvent(MotionEvent ev) {
-        if (ev.getAction() == MotionEvent.ACTION_DOWN) {
+        if (ev.getActionMasked() == MotionEvent.ACTION_DOWN) {
             TabItem curTab = getTabById(activeTabId);
             if (curTab != null && curTab.isRestoredFromSavedState) {
                 curTab.isRestoredFromSavedState = false;
             }
+            omniDownX = ev.getRawX();
+            omniDownY = ev.getRawY();
+            omniTouchStartedInHeader = false;
+            if (omniboxHeaderWrapper != null && omniboxHeaderWrapper.getVisibility() == View.VISIBLE) {
+                Rect outRect = new Rect();
+                omniboxHeaderWrapper.getGlobalVisibleRect(outRect);
+                if (outRect.contains((int) ev.getRawX(), (int) ev.getRawY())) {
+                    omniTouchStartedInHeader = true;
+                }
+            }
+
             View v = getCurrentFocus();
             if (v instanceof EditText && v == omniboxEditText) {
                 Rect outRect = new Rect();
@@ -25556,6 +25603,30 @@ public class MainActivity extends AppCompatActivity {
                     hideKeyboard();
                 }
             }
+        } else if (ev.getActionMasked() == MotionEvent.ACTION_UP || ev.getActionMasked() == MotionEvent.ACTION_CANCEL) {
+            if (omniTouchStartedInHeader && ev.getActionMasked() == MotionEvent.ACTION_UP) {
+                float dx = ev.getRawX() - omniDownX;
+                float dy = ev.getRawY() - omniDownY;
+                int swipeThreshold = dpToPx(28);
+                if (dy > swipeThreshold && dy > Math.abs(dx) * 1.15f) {
+                    if (isOrbOrApplePieMode()) {
+                        try { omniboxHeaderWrapper.performHapticFeedback(HapticFeedbackConstants.KEYBOARD_TAP); } catch (Throwable ignored) {}
+                        playUiFeedbackSound("pop_button_v2");
+                        if (omniboxEditText != null && omniboxEditText.hasFocus()) {
+                            hideKeyboard();
+                            omniboxEditText.clearFocus();
+                        }
+                        if ("applepie".equalsIgnoreCase(omniboxScrollMode)) {
+                            transitionToOrbState(ORB_STATE_BOTTOM_PILL, true);
+                        } else {
+                            transitionToOrbState(ORB_STATE_FLOATING_ORB, true);
+                        }
+                        omniTouchStartedInHeader = false;
+                        return true;
+                    }
+                }
+            }
+            omniTouchStartedInHeader = false;
         }
         return super.dispatchTouchEvent(ev);
     }

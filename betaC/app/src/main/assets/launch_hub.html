@@ -1517,17 +1517,49 @@
     // ==========================================
     function syncTheme() {
       try {
+        let prefs = {};
         if (window.CaspianBridge && typeof window.CaspianBridge.getSettings === 'function') {
-          const prefs = JSON.parse(window.CaspianBridge.getSettings());
-          const isDark = prefs.themeMode === 'dark' || prefs.theme_mode === 'dark';
-          document.documentElement.setAttribute('data-theme', isDark ? 'dark' : 'light');
+          try {
+            prefs = JSON.parse(window.CaspianBridge.getSettings()) || {};
+          } catch(e) {}
+        }
+        const isDark = prefs.themeMode === 'dark' || prefs.theme_mode === 'dark';
+        document.documentElement.setAttribute('data-theme', isDark ? 'dark' : 'light');
 
-          const start = prefs.accent_start || prefs.accentColor || '#00E5FF';
-          const end = prefs.accent_end || '#1B4264';
+        let start = prefs.pod_start_color || prefs.accent_start || prefs.accentColor || '';
+        let end = prefs.pod_end_color || prefs.accent_end || '';
+
+        if (!start && window.CaspianBridge && typeof window.CaspianBridge.getPodSettingsJson === 'function') {
+          try {
+            const raw = window.CaspianBridge.getPodSettingsJson();
+            if (raw && raw !== '{}') {
+              const parsed = JSON.parse(raw);
+              if (parsed.startColor) start = parsed.startColor;
+              if (parsed.endColor) end = parsed.endColor;
+            }
+          } catch(e) {}
+        }
+
+        if (!start) {
+          start = getStoredData('caspian_theme_start_color', '');
+          end = getStoredData('caspian_theme_end_color', '');
+        }
+
+        if (start) {
+          if (!end) end = start;
+          setStoredData('caspian_theme_start_color', start);
+          setStoredData('caspian_theme_end_color', end);
+
           document.documentElement.style.setProperty('--accent', start);
           document.documentElement.style.setProperty('--secondary', end);
           document.documentElement.style.setProperty('--accent-glow', start + '55');
           document.documentElement.style.setProperty('--accent-gradient', 'linear-gradient(135deg, ' + start + ', ' + end + ')');
+
+          const brandLogo = document.querySelector('.brand-logo');
+          if (brandLogo) {
+            brandLogo.style.background = 'linear-gradient(135deg, ' + start + ', ' + end + ')';
+            brandLogo.style.boxShadow = '0 8px 24px ' + start + '55';
+          }
         }
       } catch(e) {}
     }

@@ -324,9 +324,9 @@
     "semantic_hash": ""
   },
   "betaC/app/build.gradle.kts": {
-    "mtime": 1789358833.6487348,
-    "seen": 1789358896.237144,
-    "ast_hash": "165174f9003bf6404f2ff5670a3594ab",
+    "mtime": 1789360546.7325933,
+    "seen": 1789360611.7391517,
+    "ast_hash": "c3898216b13b8d72f761290e21133cef",
     "semantic_hash": ""
   },
   "betaC/app/src/main/assets/adblock_rules.json": {
@@ -372,9 +372,9 @@
     "semantic_hash": ""
   },
   "betaC/app/src/main/assets/youtube_helper.js": {
-    "mtime": 1789290461.8288283,
-    "seen": 1789309597.8508925,
-    "ast_hash": "f7d54f7bb5f1905c08c33d8b7263336c",
+    "mtime": 1789360193.593731,
+    "seen": 1789360537.1302922,
+    "ast_hash": "78d60e4b64e904fc9b33966a2e4c6d65",
     "semantic_hash": ""
   },
   "betaC/app/src/main/java/com/caspian/betac/AICommandRouter.java": {
@@ -432,9 +432,9 @@
     "semantic_hash": ""
   },
   "betaC/app/src/main/java/com/caspian/betac/CaspianWebView.java": {
-    "mtime": 1789227204.1059437,
-    "seen": 1789309597.850915,
-    "ast_hash": "d26944272fc1481ba9211084dc9bef0c",
+    "mtime": 1789360150.6363466,
+    "seen": 1789360537.1303086,
+    "ast_hash": "5742a3e8f3a5db03480808ba85ee0142",
     "semantic_hash": ""
   },
   "betaC/app/src/main/java/com/caspian/betac/GitHubUpdateManager.java": {
@@ -450,9 +450,9 @@
     "semantic_hash": ""
   },
   "betaC/app/src/main/java/com/caspian/betac/MainActivity.java": {
-    "mtime": 1789358705.9107509,
-    "seen": 1789358825.1247215,
-    "ast_hash": "eeef4ee02b4876a66d36391597bd5c54",
+    "mtime": 1789360434.457536,
+    "seen": 1789360537.1303132,
+    "ast_hash": "0b0ca8bba1e2331659b6c3ba578b2b42",
     "semantic_hash": ""
   },
   "betaC/app/src/main/java/com/caspian/betac/SearchSuggestionService.java": {
@@ -648,9 +648,9 @@
     "semantic_hash": ""
   },
   "betaC/app/src/main/assets/browser_control.html": {
-    "mtime": 1789358833.7750583,
-    "seen": 1789358896.2372346,
-    "ast_hash": "6ffb6df005d36df15c1e8e74a5e37648",
+    "mtime": 1789360546.8597014,
+    "seen": 1789360611.7393253,
+    "ast_hash": "52b233d0a025604c719c8c612b308c22",
     "semantic_hash": ""
   },
   "betaC/app/src/main/assets/incognito_hub.html": {
