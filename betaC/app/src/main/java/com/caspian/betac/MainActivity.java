@@ -517,8 +517,10 @@ public class MainActivity extends AppCompatActivity {
     private int currentOrbState = ORB_STATE_FULL_TOP;
     private int previousOrbStateBeforeHandle = ORB_STATE_BOTTOM_PILL;
     private FrameLayout caspianFloatingPill;
+    private ImageButton caspianPillBtnReload;
     private ImageButton caspianPillBtnNewTab;
     private ImageButton caspianPillBtnBack;
+    private boolean openedUrlEditFromPill = false;
     private LinearLayout caspianPillCenter;
     private ImageView caspianPillLock;
     private TextView caspianPillHost;
@@ -2066,6 +2068,7 @@ public class MainActivity extends AppCompatActivity {
 
             // Caspian Orb Initialization
             caspianFloatingPill = findViewById(R.id.caspian_floating_pill);
+            caspianPillBtnReload = findViewById(R.id.caspian_pill_btn_reload);
             caspianPillBtnNewTab = findViewById(R.id.caspian_pill_btn_new_tab);
             caspianPillBtnBack = findViewById(R.id.caspian_pill_btn_back);
             caspianPillCenter = findViewById(R.id.caspian_pill_center);
@@ -2143,11 +2146,11 @@ public class MainActivity extends AppCompatActivity {
             tabDockCloseIcon = findViewById(R.id.tab_dock_close_icon);
             btnTabDockMakeGroup = findViewById(R.id.btn_tab_dock_make_group);
             tabGridFabAdd = findViewById(R.id.tab_grid_fab_add);
-            tabGridDialContainer = findViewById(R.id.tab_grid_dial_container);
-            tabGridDialPlus = findViewById(R.id.tab_grid_dial_plus);
-            tabGridDialClose = findViewById(R.id.tab_grid_dial_close);
-            tabGridDialPlusIcon = findViewById(R.id.tab_grid_dial_plus_icon);
-            tabGridDialCloseIcon = findViewById(R.id.tab_grid_dial_close_icon);
+            tabGridDialContainer = null;
+            tabGridDialPlus = null;
+            tabGridDialClose = null;
+            tabGridDialPlusIcon = null;
+            tabGridDialCloseIcon = null;
             tabGridDockTabCount = findViewById(R.id.tab_grid_dock_tab_count);
             btnTabDockSelect = findViewById(R.id.btn_tab_dock_select);
 
@@ -2506,7 +2509,7 @@ public class MainActivity extends AppCompatActivity {
             });
         }
 
-        View.OnTouchListener dialGestureListener = new View.OnTouchListener() {
+        View.OnTouchListener dockSwipeListener = new View.OnTouchListener() {
             private float startY = 0f;
             private float startX = 0f;
             private boolean isDragging = false;
@@ -2525,59 +2528,99 @@ public class MainActivity extends AppCompatActivity {
                         float dx = event.getRawX() - startX;
                         if (Math.hypot(dx, dy) > dpToPx(8)) {
                             isDragging = true;
-                            if (tabGridDialContainer != null) {
-                                tabGridDialContainer.setTranslationY(dy * 0.22f);
+                            if (tabGridBottomDock != null) {
+                                tabGridBottomDock.setTranslationY(Math.max(0, dy * 0.28f));
                             }
                         }
                         return true;
 
                     case MotionEvent.ACTION_UP:
                     case MotionEvent.ACTION_CANCEL:
-                        if (tabGridDialContainer != null) {
-                            tabGridDialContainer.animate().translationY(0f).setDuration(160).start();
+                        if (tabGridBottomDock != null) {
+                            tabGridBottomDock.animate().translationY(0f).setDuration(160).start();
                         }
                         float totalDy = event.getRawY() - startY;
+                        float totalDx = event.getRawX() - startX;
                         int threshold = dpToPx(20);
 
-                        if (isDragging && Math.abs(totalDy) > threshold) {
-                            if (totalDy < 0) {
-                                // Swipe UP -> Create New Tab
-                                try { v.performHapticFeedback(HapticFeedbackConstants.KEYBOARD_TAP); } catch (Throwable ignored) {}
-                                playUiFeedbackSound("tap");
-                                addNewTab("hub", "", "file:///android_asset/launch_hub.html", false);
-                                hideTabGridView();
-                                return true;
-                            } else {
-                                // Swipe DOWN -> Exit Tab Switcher
-                                try { v.performHapticFeedback(HapticFeedbackConstants.KEYBOARD_TAP); } catch (Throwable ignored) {}
-                                playUiFeedbackSound("tap");
-                                hideTabGridView();
-                                return true;
-                            }
-                        } else {
-                            // Single tap
-                            float localY = event.getY();
-                            int h = v.getHeight();
+                        if (isDragging && totalDy > threshold && totalDy > Math.abs(totalDx)) {
                             try { v.performHapticFeedback(HapticFeedbackConstants.KEYBOARD_TAP); } catch (Throwable ignored) {}
                             playUiFeedbackSound("tap");
-                            if (v == tabGridDialContainer && localY > h * 0.68f) {
-                                hideTabGridView();
-                            } else {
+                            hideTabGridView();
+                            return true;
+                        } else if (!isDragging && Math.abs(totalDy) < threshold && Math.abs(totalDx) < threshold) {
+                            if (v == tabGridFabAdd) {
+                                try { v.performHapticFeedback(HapticFeedbackConstants.KEYBOARD_TAP); } catch (Throwable ignored) {}
+                                playUiFeedbackSound("tap");
                                 addNewTab("hub", "", "file:///android_asset/launch_hub.html", false);
                                 hideTabGridView();
+                                return true;
                             }
-                            return true;
                         }
+                        return false;
                 }
                 return false;
             }
         };
 
-        if (tabGridDialContainer != null) {
-            tabGridDialContainer.setOnTouchListener(dialGestureListener);
+        if (tabGridBottomDock != null) {
+            tabGridBottomDock.setOnTouchListener(dockSwipeListener);
         }
         if (tabGridFabAdd != null) {
-            tabGridFabAdd.setOnTouchListener(dialGestureListener);
+            tabGridFabAdd.setOnTouchListener(dockSwipeListener);
+        }
+        if (tabGridDialContainer != null) {
+            tabGridDialContainer.setOnTouchListener(dockSwipeListener);
+        }
+
+        View.OnTouchListener childSwipeInterceptor = new View.OnTouchListener() {
+            private float startY = 0f;
+            private float startX = 0f;
+            private boolean isDragging = false;
+
+            @Override
+            public boolean onTouch(View v, MotionEvent event) {
+                switch (event.getActionMasked()) {
+                    case MotionEvent.ACTION_DOWN:
+                        startY = event.getRawY();
+                        startX = event.getRawX();
+                        isDragging = false;
+                        break;
+                    case MotionEvent.ACTION_MOVE:
+                        float dy = event.getRawY() - startY;
+                        float dx = event.getRawX() - startX;
+                        if (Math.hypot(dx, dy) > dpToPx(8)) {
+                            isDragging = true;
+                            if (tabGridBottomDock != null) {
+                                tabGridBottomDock.setTranslationY(Math.max(0, dy * 0.28f));
+                            }
+                        }
+                        break;
+                    case MotionEvent.ACTION_UP:
+                    case MotionEvent.ACTION_CANCEL:
+                        if (tabGridBottomDock != null) {
+                            tabGridBottomDock.animate().translationY(0f).setDuration(160).start();
+                        }
+                        float totalDy = event.getRawY() - startY;
+                        float totalDx = event.getRawX() - startX;
+                        if (isDragging && totalDy > dpToPx(20) && totalDy > Math.abs(totalDx)) {
+                            try { v.performHapticFeedback(HapticFeedbackConstants.KEYBOARD_TAP); } catch (Throwable ignored) {}
+                            playUiFeedbackSound("tap");
+                            hideTabGridView();
+                            return true;
+                        }
+                        if (isDragging) return true;
+                        break;
+                }
+                return false;
+            }
+        };
+
+        if (btnTabDockMakeGroup != null) {
+            btnTabDockMakeGroup.setOnTouchListener(childSwipeInterceptor);
+        }
+        if (btnTabDockSelect != null) {
+            btnTabDockSelect.setOnTouchListener(childSwipeInterceptor);
         }
 
         // Bottom Dock: "Group" Button
@@ -7711,6 +7754,9 @@ public class MainActivity extends AppCompatActivity {
             if (floatingCaspianCard != null) {
                 floatingCaspianCard.setVisibility(View.VISIBLE);
             }
+            if (isOrbOrApplePieMode()) {
+                transitionToOrbState(currentOrbState, false);
+            }
             applyScreenTouchLockState(false);
             String behavior = getYtTimelineDefaultBehavior();
             boolean keepInVertical = "vertical_only".equals(behavior) || "both".equals(behavior);
@@ -9650,6 +9696,9 @@ public class MainActivity extends AppCompatActivity {
         if (omniboxHdr != null) {
             omniboxHdr.setOnTouchListener(urlGestureListener);
         }
+        if (omniboxHeaderWrapper != null) {
+            omniboxHeaderWrapper.setOnTouchListener(urlGestureListener);
+        }
     }
 
     private void setupOmniboxSwipeTabSwitcher() {
@@ -9765,8 +9814,8 @@ public class MainActivity extends AppCompatActivity {
                 }, 240);
             } else {
                 // Restore toolbar icon buttons when focus is lost
-                if (omniboxBackBtn != null) omniboxBackBtn.setVisibility(View.VISIBLE);
-                if (omniboxForwardBtn != null) omniboxForwardBtn.setVisibility(View.VISIBLE);
+                if (omniboxBackBtn != null) omniboxBackBtn.setVisibility(View.GONE);
+                if (omniboxForwardBtn != null) omniboxForwardBtn.setVisibility(View.GONE);
                 if (omniboxReloadBtn != null) omniboxReloadBtn.setVisibility(View.VISIBLE);
                 if (omniboxDividerLeft != null) omniboxDividerLeft.setVisibility(View.VISIBLE);
                 if (omniboxDividerRight != null) omniboxDividerRight.setVisibility(View.VISIBLE);
@@ -9782,6 +9831,11 @@ public class MainActivity extends AppCompatActivity {
                 if (omniboxSuggestionsContainer != null) omniboxSuggestionsContainer.setVisibility(View.GONE);
 
                 updateOmniboxState();
+
+                if (openedUrlEditFromPill) {
+                    openedUrlEditFromPill = false;
+                    transitionToOrbState(ORB_STATE_BOTTOM_PILL, true);
+                }
             }
         });
 
@@ -18547,6 +18601,9 @@ public class MainActivity extends AppCompatActivity {
 
     public void transitionToOrbState(int targetState, boolean animate) {
         if (!isOrbOrApplePieMode()) return;
+        if ("applepie".equalsIgnoreCase(omniboxScrollMode) && targetState == ORB_STATE_FLOATING_ORB) {
+            targetState = ORB_STATE_BOTTOM_PILL;
+        }
         if (targetState == ORB_STATE_FLOATING_ORB) {
             if (currentOrbState == ORB_STATE_FULL_TOP || currentOrbState == ORB_STATE_BOTTOM_PILL) {
                 previousOrbStateBeforeHandle = currentOrbState;
@@ -18561,6 +18618,12 @@ public class MainActivity extends AppCompatActivity {
                 curTab.userExplicitFullOmnibox = false;
             }
         }
+        if (customView != null) {
+            if (caspianFloatingPill != null) caspianFloatingPill.setVisibility(View.GONE);
+            if (caspianFloatingOrb != null) caspianFloatingOrb.setVisibility(View.GONE);
+            if (omniboxHeaderWrapper != null) omniboxHeaderWrapper.setVisibility(View.GONE);
+            return;
+        }
         if (splashOverlay != null && splashOverlay.getVisibility() == View.VISIBLE) {
             if (caspianFloatingPill != null) caspianFloatingPill.setVisibility(View.GONE);
             if (caspianFloatingOrb != null) caspianFloatingOrb.setVisibility(View.GONE);
@@ -18572,13 +18635,14 @@ public class MainActivity extends AppCompatActivity {
             if (caspianFloatingOrb != null) caspianFloatingOrb.setVisibility(View.GONE);
             return;
         }
+        final int finalState = targetState;
         runOnUiThread(() -> {
             applyCaspianPillTheme();
             int toolbarH = getToolbarHeight();
             long duration = animate ? 240 : 0;
             Interpolator springDecel = new OvershootInterpolator(1.15f);
 
-            switch (targetState) {
+            switch (finalState) {
                 case ORB_STATE_FULL_TOP:
                     if (omniboxHeaderWrapper != null) {
                         omniboxHeaderWrapper.setBackground(null);
@@ -18866,8 +18930,12 @@ public class MainActivity extends AppCompatActivity {
         int accentTint = isDark ? 0xFF00E5FF : 0xFF0284C7;
         int iconTint = isDark ? 0xFFCBD5E1 : 0xFF475569;
         boolean isApplePie = isApplePieMode();
+        if (caspianPillBtnReload != null) {
+            caspianPillBtnReload.setVisibility(View.VISIBLE);
+            caspianPillBtnReload.setColorFilter(iconTint);
+        }
         if (caspianPillBtnNewTab != null) {
-            caspianPillBtnNewTab.setVisibility(isApplePie ? View.VISIBLE : View.GONE);
+            caspianPillBtnNewTab.setVisibility(View.VISIBLE);
             caspianPillBtnNewTab.setColorFilter(iconTint);
         }
         if (caspianPillBtnBack != null) {
@@ -18881,8 +18949,7 @@ public class MainActivity extends AppCompatActivity {
             caspianPillBtnCollapse.setColorFilter(iconTint);
         }
         if (caspianPillLock != null) {
-            caspianPillLock.setVisibility(isApplePie ? View.GONE : View.VISIBLE);
-            caspianPillLock.setColorFilter(iconTint);
+            caspianPillLock.setVisibility(View.GONE);
         }
         if (caspianPillTabCount != null) {
             caspianPillTabCount.setTextColor(isDark ? 0xFFDFE2F0 : 0xFF0F172A);
@@ -18965,6 +19032,17 @@ public class MainActivity extends AppCompatActivity {
 
     @SuppressLint("ClickableViewAccessibility")
     private void setupCaspianOrbListeners() {
+        if (caspianPillBtnReload != null) {
+            caspianPillBtnReload.setOnClickListener(v -> {
+                playUiFeedbackSound("tap");
+                v.performHapticFeedback(HapticFeedbackConstants.KEYBOARD_TAP);
+                TabItem cur = getActiveOrDominantTab();
+                if (cur != null && cur.webView != null) {
+                    cur.webView.reload();
+                }
+            });
+        }
+
         if (caspianPillBtnNewTab != null) {
             caspianPillBtnNewTab.setOnClickListener(v -> {
                 playUiFeedbackSound("tap");
@@ -19060,10 +19138,14 @@ public class MainActivity extends AppCompatActivity {
                                     showTabGridView();
                                     return true;
                                 } else {
-                                    // Swipe DOWN -> Collapse to Side Semicircle Handle
+                                    // Swipe DOWN
                                     try { v.performHapticFeedback(HapticFeedbackConstants.KEYBOARD_TAP); } catch (Throwable ignored) {}
                                     playUiFeedbackSound("tap");
-                                    transitionToOrbState(ORB_STATE_FLOATING_ORB, true);
+                                    if ("applepie".equalsIgnoreCase(omniboxScrollMode)) {
+                                        // In apple pie, already docked at bottom resting pill
+                                    } else {
+                                        transitionToOrbState(ORB_STATE_FLOATING_ORB, true);
+                                    }
                                     return true;
                                 }
                             } else if (absDx > absDy && absDx > threshold) {
@@ -19081,10 +19163,17 @@ public class MainActivity extends AppCompatActivity {
                             }
                         }
 
-                        // Single tap (duration < 380ms & not swiped) -> Return to Full Omnibox
+                        // Single tap (duration < 380ms & not swiped) -> Open full URL mode in Apple Pie, full top in Orb
                         if (!isSwiping && duration < 380) {
                             playUiFeedbackSound("tap");
-                            transitionToOrbState(ORB_STATE_FULL_TOP, true);
+                            try { v.performHapticFeedback(HapticFeedbackConstants.KEYBOARD_TAP); } catch (Throwable ignored) {}
+                            if ("applepie".equalsIgnoreCase(omniboxScrollMode)) {
+                                openedUrlEditFromPill = true;
+                                transitionToOrbState(ORB_STATE_FULL_TOP, true);
+                                expandOmniboxUrl();
+                            } else {
+                                transitionToOrbState(ORB_STATE_FULL_TOP, true);
+                            }
                             return true;
                         }
                         return true;
@@ -21455,6 +21544,15 @@ public class MainActivity extends AppCompatActivity {
                 }
                 if (floatingCaspianCard != null) {
                     floatingCaspianCard.setVisibility(View.GONE);
+                }
+                if (caspianFloatingPill != null) {
+                    caspianFloatingPill.setVisibility(View.GONE);
+                }
+                if (caspianFloatingOrb != null) {
+                    caspianFloatingOrb.setVisibility(View.GONE);
+                }
+                if (omniboxHeaderWrapper != null) {
+                    omniboxHeaderWrapper.setVisibility(View.GONE);
                 }
                 if (ytFloatingRemoteScroll != null && ytFloatingRemoteScroll.getVisibility() == View.VISIBLE) {
                     if (ytFloatingRemoteBall != null) ytFloatingRemoteBall.setVisibility(View.GONE);
