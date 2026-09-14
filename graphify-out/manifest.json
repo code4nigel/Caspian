@@ -324,9 +324,9 @@
     "semantic_hash": ""
   },
   "betaC/app/build.gradle.kts": {
-    "mtime": 1789364352.9858742,
-    "seen": 1789364408.9691744,
-    "ast_hash": "e80b0a329b8d86e95f84b3875fa9b044",
+    "mtime": 1789367331.3904283,
+    "seen": 1789367410.6910067,
+    "ast_hash": "5ba9beebd7073e71e9ec7a9c89678979",
     "semantic_hash": ""
   },
   "betaC/app/src/main/assets/adblock_rules.json": {
@@ -648,9 +648,9 @@
     "semantic_hash": ""
   },
   "betaC/app/src/main/assets/browser_control.html": {
-    "mtime": 1789364353.12041,
-    "seen": 1789364408.969258,
-    "ast_hash": "7cf6addfa0cdc10579aa64ea7b62b348",
+    "mtime": 1789367331.5578232,
+    "seen": 1789367410.691166,
+    "ast_hash": "a40644ba8ac3002d267ba510e8e8f83d",
     "semantic_hash": ""
   },
   "betaC/app/src/main/assets/incognito_hub.html": {

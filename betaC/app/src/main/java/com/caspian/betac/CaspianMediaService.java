@@ -26,6 +26,13 @@ public class CaspianMediaService extends Service {
 
     private static boolean isServiceRunning = false;
 
+    public class LocalBinder extends android.os.Binder {
+        public CaspianMediaService getService() {
+            return CaspianMediaService.this;
+        }
+    }
+    private final IBinder localBinder = new LocalBinder();
+
     public static boolean isRunning() {
         return isServiceRunning;
     }
@@ -125,7 +132,12 @@ public class CaspianMediaService extends Service {
                         }
                         isServiceRunning = true;
                         acquireLocks();
-                    } catch (Exception ignored) {}
+                        android.util.Log.i("CaspianMediaService", "startForeground SUCCESS (type=MEDIA_PLAYBACK)");
+                    } catch (Exception e) {
+                        android.util.Log.e("CaspianMediaService", "startForeground error", e);
+                        // Even if startForeground was clamped, keep CPU/WiFi alive!
+                        acquireLocks();
+                    }
                 }
             } else if (ACTION_PAUSE_FOREGROUND.equals(action)) {
                 // Do NOT immediately release locks or detach foreground on brief pause/song transition!
@@ -189,6 +201,6 @@ public class CaspianMediaService extends Service {
 
     @Override
     public IBinder onBind(Intent intent) {
-        return null;
+        return localBinder;
     }
 }

@@ -596,6 +596,17 @@ public class MainActivity extends AppCompatActivity {
     private double currentVideoTime = 0;
     private double currentVideoDuration = 0;
     private long lastMediaSessionTimeUpdateMs = 0;
+    private long lastYtAutoAdvanceTimeMs = 0;
+    private final android.content.ServiceConnection mediaServiceConnection = new android.content.ServiceConnection() {
+        @Override
+        public void onServiceConnected(android.content.ComponentName name, android.os.IBinder service) {
+            android.util.Log.i(TAG, "CaspianMediaService bound with BIND_IMPORTANT");
+        }
+        @Override
+        public void onServiceDisconnected(android.content.ComponentName name) {
+            android.util.Log.i(TAG, "CaspianMediaService disconnected");
+        }
+    };
     private View videoTouchLockOverlay;
     private boolean isScreenTouchLocked = false;
     private PopupWindow volumePopupWindow;
@@ -7879,6 +7890,13 @@ public class MainActivity extends AppCompatActivity {
         }
 
         long now = android.os.SystemClock.elapsedRealtime();
+        if (duration > 5.0 && currentTime > 0 && (duration - currentTime) <= 0.7) {
+            if (now - lastYtAutoAdvanceTimeMs > 4000) {
+                lastYtAutoAdvanceTimeMs = now;
+                TabItem yt = getYouTubeTab();
+                handleYouTubeVideoEnded(yt != null ? yt.id : activeTabId);
+            }
+        }
         if (mediaSession != null && (now - lastMediaSessionTimeUpdateMs > 8000)) {
             lastMediaSessionTimeUpdateMs = now;
             TabItem yt = getYouTubeTab();
@@ -24966,6 +24984,13 @@ public class MainActivity extends AppCompatActivity {
                 }
             });
             mediaSession.setActive(false);
+
+            try {
+                Intent intent = new Intent(this, CaspianMediaService.class);
+                bindService(intent, mediaServiceConnection, Context.BIND_AUTO_CREATE | Context.BIND_IMPORTANT);
+            } catch (Throwable e) {
+                Log.w(TAG, "bindService to CaspianMediaService error", e);
+            }
         } catch (Exception e) {
             Log.e(TAG, "setupMediaSession error", e);
         }
@@ -25161,14 +25186,7 @@ public class MainActivity extends AppCompatActivity {
 
             // In background or screen off, Android OS timer throttling can freeze JavaScript setTimeout.
             // Use Android Java Handler (which is never throttled) to reliably trigger next track!
-            final TabItem finalTab = targetTab;
-            new Handler(Looper.getMainLooper()).postDelayed(() -> {
-                if (finalTab != null && finalTab.webView != null) {
-                    finalTab.webView.evaluateJavascript(
-                            "(function() { try { if (window.__CaspianYouTube && typeof window.__CaspianYouTube.nextTrack === 'function') { window.__CaspianYouTube.nextTrack(); } else { var b = document.querySelector('ytmusic-player-bar .next-button, .next-button, [aria-label*=\"Next\" i], .ytp-next-button'); if (b) b.click(); } } catch(e){} })();", null
-                    );
-                }
-            }, 500);
+            new Handler(Looper.getMainLooper()).postDelayed(this::nextYouTubeTrack, 300);
             return;
         }
 
@@ -25595,6 +25613,9 @@ public class MainActivity extends AppCompatActivity {
         }
         try {
             NotificationManagerCompat.from(this).cancel(NOTIFICATION_ID_LOGGER);
+        } catch (Exception ignored) {}
+        try {
+            unbindService(mediaServiceConnection);
         } catch (Exception ignored) {}
         try {
             if (youtubeWakeLock != null && youtubeWakeLock.isHeld()) {

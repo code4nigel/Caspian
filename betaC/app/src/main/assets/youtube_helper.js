@@ -804,9 +804,9 @@
       mediaElements.forEach(v => {
         if (v && !v.__caspian_attached) {
           v.__caspian_attached = true;
-          ['play', 'playing', 'pause', 'ended', 'volumechange', 'ratechange'].forEach(evt => {
+          ['play', 'playing', 'pause', 'ended', 'waiting', 'stalled', 'volumechange', 'ratechange'].forEach(evt => {
             v.addEventListener(evt, () => {
-              if (evt === 'ended') {
+              if (evt === 'ended' || ((evt === 'waiting' || evt === 'stalled') && v.duration > 5 && (v.duration - (v.currentTime || 0) <= 0.8))) {
                 const tabId = window.__caspian_tab_id || 0;
                 if (window.CaspianBridge && typeof window.CaspianBridge.onYouTubeVideoEnded === 'function') {
                   window.CaspianBridge.onYouTubeVideoEnded(tabId);
@@ -818,13 +818,29 @@
           let _lastTimeSync = 0;
           v.addEventListener('timeupdate', () => {
             const now = Date.now();
+            const curTime = v.currentTime || 0;
+            const dur = v.duration || 0;
+
+            // Auto-advance detection for YouTube Music MSE where 'ended' never fires:
+            if (dur > 5 && curTime > 0) {
+              if ((dur - curTime) <= 0.6 && !v.__caspian_eof_reached) {
+                v.__caspian_eof_reached = true;
+                const tabId = window.__caspian_tab_id || 0;
+                if (window.CaspianBridge && typeof window.CaspianBridge.onYouTubeVideoEnded === 'function') {
+                  window.CaspianBridge.onYouTubeVideoEnded(tabId);
+                }
+              } else if ((dur - curTime) > 3.0) {
+                v.__caspian_eof_reached = false;
+              }
+            }
+
             if (now - _lastTimeSync < 800) return;
             _lastTimeSync = now;
             const tabId = window.__caspian_tab_id || 0;
             if (window.CaspianBridge && typeof window.CaspianBridge.updateTabYouTubeTime === 'function') {
-              window.CaspianBridge.updateTabYouTubeTime(tabId, v.currentTime || 0, v.duration || 0);
+              window.CaspianBridge.updateTabYouTubeTime(tabId, curTime, dur);
             } else if (window.CaspianBridge && typeof window.CaspianBridge.updateYouTubeTime === 'function') {
-              window.CaspianBridge.updateYouTubeTime(v.currentTime || 0, v.duration || 0);
+              window.CaspianBridge.updateYouTubeTime(curTime, dur);
             }
           });
         }
@@ -1474,7 +1490,7 @@
         "let timer = null;\n" +
         "self.onmessage = function(e) {\n" +
         "  if (e.data === 'start' && !timer) {\n" +
-        "    timer = setInterval(function() { self.postMessage('tick'); }, 2500);\n" +
+        "    timer = setInterval(function() { self.postMessage('tick'); }, 1500);\n" +
         "  } else if (e.data === 'stop' && timer) {\n" +
         "    clearInterval(timer); timer = null;\n" +
         "  }\n" +
@@ -1485,6 +1501,19 @@
       worker.onmessage = function() {
         if (window.__CaspianYouTube) {
           window.__CaspianYouTube.notifyState();
+          try {
+            var curV = window.__CaspianYouTube.getVideo();
+            if (curV && curV.duration > 5 && curV.currentTime > 0) {
+              if ((curV.duration - curV.currentTime) <= 0.6 && !curV.__caspian_worker_advance) {
+                curV.__caspian_worker_advance = true;
+                if (typeof window.__CaspianYouTube.nextTrack === 'function') {
+                  window.__CaspianYouTube.nextTrack();
+                }
+              } else if ((curV.duration - curV.currentTime) > 3.0) {
+                curV.__caspian_worker_advance = false;
+              }
+            }
+          } catch(e){}
         }
       };
       worker.postMessage('start');
