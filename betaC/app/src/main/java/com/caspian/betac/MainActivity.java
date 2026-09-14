@@ -7557,6 +7557,8 @@ public class MainActivity extends AppCompatActivity {
 
     public void previousYouTubeTrack() {
         currentMediaThumbUrl = "";
+        currentVideoDuration = 0;
+        currentVideoTime = 0;
         mediaArtworkToken++;
         TabItem currentTab = getYouTubeTab();
         if (currentTab != null && currentTab.webView != null) {
@@ -7570,6 +7572,8 @@ public class MainActivity extends AppCompatActivity {
 
     public void nextYouTubeTrack() {
         currentMediaThumbUrl = "";
+        currentVideoDuration = 0;
+        currentVideoTime = 0;
         mediaArtworkToken++;
         TabItem currentTab = getYouTubeTab();
         if (currentTab != null && currentTab.webView != null) {
@@ -7581,6 +7585,16 @@ public class MainActivity extends AppCompatActivity {
         }
     }
 
+    public void replayYouTubeTrack() {
+        TabItem currentTab = getYouTubeTab();
+        if (currentTab != null && currentTab.webView != null) {
+            currentTab.webView.evaluateJavascript(
+                    "if (window.__CaspianYouTube && typeof window.__CaspianYouTube.replayTrack === 'function') window.__CaspianYouTube.replayTrack(); " +
+                    "else { var v = document.querySelector('video'); if (v) { v.currentTime = 0; v.play(); } }", null
+            );
+        }
+    }
+
     public void toggleYouTubeRepeat() {
         TabItem currentTab = getYouTubeTab();
         if (currentTab != null && currentTab.webView != null) {
@@ -7588,24 +7602,37 @@ public class MainActivity extends AppCompatActivity {
                     "if (window.__CaspianYouTube) window.__CaspianYouTube.toggleRepeat(); " +
                     "else { var b = document.querySelector('ytmusic-player-bar .repeat, [aria-label*=\"repeat\" i], [aria-label*=\"Repeat\" i]'); if (b) b.click(); }", null
             );
-        }
-        if (currentMediaRepeatMode == PlaybackStateCompat.REPEAT_MODE_NONE) {
-            currentMediaRepeatMode = PlaybackStateCompat.REPEAT_MODE_ALL;
-        } else if (currentMediaRepeatMode == PlaybackStateCompat.REPEAT_MODE_ALL) {
-            currentMediaRepeatMode = PlaybackStateCompat.REPEAT_MODE_ONE;
         } else {
-            currentMediaRepeatMode = PlaybackStateCompat.REPEAT_MODE_NONE;
-        }
-        if (mediaSession != null) {
-            mediaSession.setRepeatMode(currentMediaRepeatMode);
+            if (currentMediaRepeatMode == PlaybackStateCompat.REPEAT_MODE_NONE) {
+                currentMediaRepeatMode = PlaybackStateCompat.REPEAT_MODE_ALL;
+            } else if (currentMediaRepeatMode == PlaybackStateCompat.REPEAT_MODE_ALL) {
+                currentMediaRepeatMode = PlaybackStateCompat.REPEAT_MODE_ONE;
+            } else {
+                currentMediaRepeatMode = PlaybackStateCompat.REPEAT_MODE_NONE;
+            }
+            if (mediaSession != null) {
+                mediaSession.setRepeatMode(currentMediaRepeatMode);
+                TabItem yt = getYouTubeTab();
+                boolean isPlaying = yt != null && yt.isPlayingAudio;
+                long posMs = (long)(currentVideoTime * 1000);
+                mediaSession.setPlaybackState(buildPlaybackState(isPlaying, posMs, isPlaying ? ytCurrentSpeed : 0.0f));
+            }
             TabItem yt = getYouTubeTab();
             boolean isPlaying = yt != null && yt.isPlayingAudio;
-            long posMs = (long)(currentVideoTime * 1000);
-            mediaSession.setPlaybackState(buildPlaybackState(isPlaying, posMs, isPlaying ? ytCurrentSpeed : 0.0f));
+            updateMediaPlaybackNotification(isPlaying);
         }
-        TabItem yt = getYouTubeTab();
-        boolean isPlaying = yt != null && yt.isPlayingAudio;
-        updateMediaPlaybackNotification(isPlaying);
+    }
+
+    public void setYouTubeRepeatMode(int repeatMode) {
+        TabItem currentTab = getYouTubeTab();
+        if (currentTab != null && currentTab.webView != null) {
+            int target = (repeatMode == PlaybackStateCompat.REPEAT_MODE_ONE) ? 2 : ((repeatMode == PlaybackStateCompat.REPEAT_MODE_ALL) ? 1 : 0);
+            currentTab.webView.evaluateJavascript(
+                    "if (window.__CaspianYouTube && typeof window.__CaspianYouTube.setRepeatMode === 'function') window.__CaspianYouTube.setRepeatMode(" + target + ");", null
+            );
+        } else {
+            updateMediaPlaybackModes(repeatMode == PlaybackStateCompat.REPEAT_MODE_ONE ? 2 : (repeatMode == PlaybackStateCompat.REPEAT_MODE_ALL ? 1 : 0), currentMediaShuffleMode == PlaybackStateCompat.SHUFFLE_MODE_ALL);
+        }
     }
 
     public void toggleYouTubeShuffle() {
@@ -7615,20 +7642,33 @@ public class MainActivity extends AppCompatActivity {
                     "if (window.__CaspianYouTube) window.__CaspianYouTube.toggleShuffle(); " +
                     "else { var b = document.querySelector('ytmusic-player-bar .shuffle, [aria-label*=\"shuffle\" i], [aria-label*=\"Shuffle\" i]'); if (b) b.click(); }", null
             );
-        }
-        currentMediaShuffleMode = (currentMediaShuffleMode == PlaybackStateCompat.SHUFFLE_MODE_NONE)
-                ? PlaybackStateCompat.SHUFFLE_MODE_ALL
-                : PlaybackStateCompat.SHUFFLE_MODE_NONE;
-        if (mediaSession != null) {
-            mediaSession.setShuffleMode(currentMediaShuffleMode);
+        } else {
+            currentMediaShuffleMode = (currentMediaShuffleMode == PlaybackStateCompat.SHUFFLE_MODE_NONE)
+                    ? PlaybackStateCompat.SHUFFLE_MODE_ALL
+                    : PlaybackStateCompat.SHUFFLE_MODE_NONE;
+            if (mediaSession != null) {
+                mediaSession.setShuffleMode(currentMediaShuffleMode);
+                TabItem yt = getYouTubeTab();
+                boolean isPlaying = yt != null && yt.isPlayingAudio;
+                long posMs = (long)(currentVideoTime * 1000);
+                mediaSession.setPlaybackState(buildPlaybackState(isPlaying, posMs, isPlaying ? ytCurrentSpeed : 0.0f));
+            }
             TabItem yt = getYouTubeTab();
             boolean isPlaying = yt != null && yt.isPlayingAudio;
-            long posMs = (long)(currentVideoTime * 1000);
-            mediaSession.setPlaybackState(buildPlaybackState(isPlaying, posMs, isPlaying ? ytCurrentSpeed : 0.0f));
+            updateMediaPlaybackNotification(isPlaying);
         }
-        TabItem yt = getYouTubeTab();
-        boolean isPlaying = yt != null && yt.isPlayingAudio;
-        updateMediaPlaybackNotification(isPlaying);
+    }
+
+    public void setYouTubeShuffleMode(int shuffleMode) {
+        TabItem currentTab = getYouTubeTab();
+        boolean targetOn = (shuffleMode == PlaybackStateCompat.SHUFFLE_MODE_ALL);
+        if (currentTab != null && currentTab.webView != null) {
+            currentTab.webView.evaluateJavascript(
+                    "if (window.__CaspianYouTube && typeof window.__CaspianYouTube.setShuffleMode === 'function') window.__CaspianYouTube.setShuffleMode(" + targetOn + ");", null
+            );
+        } else {
+            updateMediaPlaybackModes(currentMediaRepeatMode == PlaybackStateCompat.REPEAT_MODE_ONE ? 2 : (currentMediaRepeatMode == PlaybackStateCompat.REPEAT_MODE_ALL ? 1 : 0), targetOn);
+        }
     }
 
     public void updateMediaPlaybackModes(int repeatMode, boolean shuffleOn) {
@@ -7902,8 +7942,12 @@ public class MainActivity extends AppCompatActivity {
         if (duration > 20.0 && currentTime > 0 && (duration - currentTime) <= 0.8) {
             if (now - lastYtAutoAdvanceTimeMs > 4000) {
                 lastYtAutoAdvanceTimeMs = now;
-                TabItem yt = getYouTubeTab();
-                handleYouTubeVideoEnded(yt != null ? yt.id : activeTabId);
+                if (currentMediaRepeatMode == PlaybackStateCompat.REPEAT_MODE_ONE) {
+                    replayYouTubeTrack();
+                } else {
+                    TabItem yt = getYouTubeTab();
+                    handleYouTubeVideoEnded(yt != null ? yt.id : activeTabId);
+                }
             }
         }
         if (mediaSession != null && (now - lastMediaSessionTimeUpdateMs > 3000)) {
@@ -24970,12 +25014,12 @@ public class MainActivity extends AppCompatActivity {
 
                 @Override
                 public void onSetRepeatMode(int repeatMode) {
-                    toggleYouTubeRepeat();
+                    setYouTubeRepeatMode(repeatMode);
                 }
 
                 @Override
                 public void onSetShuffleMode(int shuffleMode) {
-                    toggleYouTubeShuffle();
+                    setYouTubeShuffleMode(shuffleMode);
                 }
 
                 @Override
@@ -25194,6 +25238,11 @@ public class MainActivity extends AppCompatActivity {
         if (targetTab != null && isYouTubeTab(targetTab)) {
             // Keep WakeLock held during background track transition!
             manageYouTubeWakeLock(true);
+
+            if (currentMediaRepeatMode == PlaybackStateCompat.REPEAT_MODE_ONE) {
+                new Handler(Looper.getMainLooper()).postDelayed(this::replayYouTubeTrack, 200);
+                return;
+            }
 
             // In background or screen off, Android OS timer throttling can freeze JavaScript setTimeout.
             // Use Android Java Handler (which is never throttled) to reliably trigger next track!
