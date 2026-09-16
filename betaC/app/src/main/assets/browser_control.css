@@ -1,4 +1,22 @@
 :root {
+  --caspian-void: #070A10;
+  --caspian-glass-low: rgba(18, 24, 38, 0.65);
+  --caspian-glass-high: rgba(26, 36, 56, 0.85);
+  --caspian-glass: rgba(18, 24, 38, 0.72);
+  --caspian-specular-top: rgba(255, 255, 255, 0.22);
+  --caspian-border: 1px solid rgba(255, 255, 255, 0.08);
+  --caspian-border-top: 1px solid rgba(255, 255, 255, 0.22);
+  --caspian-cyan: #22D3EE;
+  --caspian-violet: #A855F7;
+  --caspian-emerald: #10B981;
+  --caspian-coral: #FB7185;
+  --caspian-blur: blur(28px) saturate(190%);
+  --caspian-shadow: 0 16px 40px -8px rgba(0, 0, 0, 0.65), inset 0 1px 0 0 rgba(255, 255, 255, 0.15);
+  --caspian-spring: cubic-bezier(0.16, 1, 0.3, 1);
+  --radius-pill: 9999px;
+  --radius-squircle: 20px;
+  --radius-sheet: 32px;
+
   --accent: #A2A9A9;
   --secondary: #1B4264;
   --accent-glow: rgba(162, 169, 169, 0.35);
@@ -50,16 +68,30 @@
 }
 
 [data-theme="light"], .light {
-  --sheet-bg: #ffffff;
-  --card-bg: #ffffff;
-  --bg-card: #ffffff;
-  --bg-deep: #f8fafc;
-  --border-glass: rgba(0, 0, 0, 0.08);
-  --text-main: #0f172a !important;
-  --text-muted: #64748b !important;
-  --text-sub: #64748b !important;
-  --input-bg: rgba(0, 0, 0, 0.04);
-  --shadow-glass: 0 12px 32px rgba(0, 0, 0, 0.08);
+  --caspian-void: #F8FAFC;
+  --caspian-glass-low: rgba(241, 245, 249, 0.82);
+  --caspian-glass-high: rgba(255, 255, 255, 0.88);
+  --caspian-glass: rgba(255, 255, 255, 0.82);
+  --caspian-specular-top: rgba(255, 255, 255, 0.95);
+  --caspian-border: 1px solid rgba(15, 23, 42, 0.08);
+  --caspian-border-top: 1px solid rgba(255, 255, 255, 0.95);
+  --caspian-cyan: #0284C7;
+  --caspian-violet: #7C3AED;
+  --caspian-emerald: #059669;
+  --caspian-coral: #E11D48;
+  --caspian-blur: blur(28px) saturate(190%);
+  --caspian-shadow: 0 16px 40px -8px rgba(15, 23, 42, 0.10), inset 0 1px 0 0 rgba(255, 255, 255, 0.9);
+
+  --sheet-bg: #FFFFFF;
+  --card-bg: rgba(255, 255, 255, 0.88);
+  --bg-card: #FFFFFF;
+  --bg-deep: #F1F5F9;
+  --border-glass: rgba(15, 23, 42, 0.08);
+  --text-main: #0F172A !important;
+  --text-muted: #64748B !important;
+  --text-sub: #64748B !important;
+  --input-bg: rgba(15, 23, 42, 0.04);
+  --shadow-glass: 0 14px 36px rgba(15, 23, 42, 0.08);
 }
 
 .cask-item-row {
@@ -67,18 +99,27 @@
   align-items: center;
   justify-content: space-between;
   padding: 10px 12px;
-  border-radius: 14px;
-  background: var(--bg-deep);
-  border: 1.5px solid var(--border-glass);
+  border-radius: 16px;
+  background: var(--input-bg);
+  border: 1px solid var(--border-glass);
+  border-top: 1px solid var(--caspian-specular-top);
   cursor: pointer;
-  transition: all 0.2s ease;
+  transition: transform 0.15s var(--caspian-spring), border-color 0.2s ease, background 0.2s ease;
+  backdrop-filter: blur(12px);
 }
 .cask-item-row:active {
-  transform: scale(0.98);
+  transform: scale(0.97);
 }
 .cask-item-row.active {
-  border-color: var(--accent, #00E5FF);
-  background: var(--accent-glow, rgba(0, 229, 255, 0.08));
+  border-color: var(--caspian-cyan);
+  background: rgba(34, 211, 238, 0.08);
+  box-shadow: 0 0 14px rgba(34, 211, 238, 0.15);
+}
+[data-theme="light"] .cask-item-row.active,
+.light .cask-item-row.active {
+  border-color: #0284C7;
+  background: rgba(2, 132, 199, 0.08);
+  box-shadow: 0 0 14px rgba(2, 132, 199, 0.12);
 }
 
 /* Glassmorphism Toggle Disabled State */
@@ -302,21 +343,23 @@ body {
 
 .caspian-bottom-sheet {
   position: fixed;
-  bottom: 0;
-  left: 0;
-  width: 100vw;
-  height: 88vh;
-  max-height: 92vh;
+  bottom: 20px;
+  left: 14px;
+  right: 14px;
+  width: calc(100vw - 28px);
+  max-width: 440px;
+  margin: 0 auto;
+  height: auto;
+  max-height: 86vh;
   z-index: 999999;
-  background: var(--sheet-bg);
-  backdrop-filter: blur(16px);
-  -webkit-backdrop-filter: blur(16px);
-  border-top-left-radius: 28px;
-  border-top-right-radius: 28px;
-  border: 1px solid var(--border-glass);
-  border-bottom: none;
-  box-shadow: var(--shadow-glass);
-  padding: 10px 14px 22px 14px;
+  background: var(--caspian-glass-high);
+  backdrop-filter: var(--caspian-blur);
+  -webkit-backdrop-filter: var(--caspian-blur);
+  border-radius: var(--radius-sheet);
+  border: var(--caspian-border);
+  border-top: var(--caspian-border-top);
+  box-shadow: 0 24px 60px rgba(0, 0, 0, 0.75), inset 0 1px 0 0 rgba(255, 255, 255, 0.18);
+  padding: 12px 14px 24px 14px;
   transform: translate3d(0, 0, 0) !important;
   contain: paint layout;
   will-change: transform, opacity;
@@ -324,6 +367,10 @@ body {
   visibility: visible !important;
   opacity: 1 !important;
   overflow-y: auto;
+  scrollbar-width: none;
+}
+.caspian-bottom-sheet::-webkit-scrollbar {
+  display: none;
 }
 
 /* GPU Hardware Layers for 120Hz/60Hz Butter-Smooth Sheet Drag & Sub-Tab Transitions */
@@ -333,10 +380,10 @@ body {
   will-change: transform;
 }
 
-/* Drag Handle */
+/* Top Specular Drag Handle */
 .sheet-drag-area {
   width: 100%;
-  padding: 6px 0 10px 0;
+  padding: 4px 0 10px 0;
   display: flex;
   align-items: center;
   justify-content: center;
@@ -345,12 +392,137 @@ body {
 }
 
 .sheet-drag-handle {
-  width: 48px;
+  width: 36px;
   height: 5px;
-  background: var(--text-muted);
-  opacity: 0.55;
+  background: rgba(255, 255, 255, 0.28);
+  border-top: 1px solid rgba(255, 255, 255, 0.45);
   border-radius: 10px;
   pointer-events: none;
+  box-shadow: 0 1px 4px rgba(0, 0, 0, 0.25);
+}
+
+/* 4-Column Quick Toggles Island Grid */
+.quick-toggles-island-grid {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 8px;
+  margin: 4px 0 10px 0;
+  width: 100%;
+  box-sizing: border-box;
+}
+
+.quick-toggle-pod {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 5px;
+  padding: 10px 4px 8px 4px;
+  border-radius: 16px;
+  background: rgba(255, 255, 255, 0.05);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-top: 1px solid rgba(255, 255, 255, 0.18);
+  color: var(--text-main);
+  cursor: pointer;
+  transition: transform 0.12s var(--caspian-spring), background 0.15s ease, border-color 0.15s ease;
+  backdrop-filter: blur(12px);
+}
+
+.quick-toggle-pod:active {
+  transform: scale(0.93);
+  background: rgba(255, 255, 255, 0.1);
+  border-color: var(--caspian-cyan);
+}
+
+.pod-icon-wrap {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--text-main);
+}
+
+.pod-label {
+  font-size: 10px;
+  font-weight: 700;
+  color: var(--text-main);
+  letter-spacing: 0.02em;
+}
+
+.pod-dot {
+  width: 4px;
+  height: 4px;
+  border-radius: 2px;
+  background: var(--text-muted);
+  opacity: 0.4;
+}
+
+.pod-dot.active {
+  background: var(--caspian-cyan);
+  opacity: 1;
+  box-shadow: 0 0 6px var(--accent-glow);
+}
+
+/* Cask Switcher Capsule Bar */
+.island-cask-bar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 8px 12px;
+  margin-bottom: 10px;
+  border-radius: var(--radius-squircle);
+  background: rgba(255, 255, 255, 0.04);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-top: 1px solid rgba(255, 255, 255, 0.18);
+  cursor: pointer;
+  transition: transform 0.12s var(--caspian-spring), border-color 0.15s ease;
+}
+
+.island-cask-bar:active {
+  transform: scale(0.98);
+  border-color: var(--caspian-cyan);
+}
+
+.cask-bar-left {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.cask-bar-icon {
+  width: 28px;
+  height: 28px;
+  border-radius: 8px;
+  background: rgba(34, 211, 238, 0.12);
+  border: 1px solid rgba(34, 211, 238, 0.25);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 14px;
+}
+
+.cask-bar-info {
+  display: flex;
+  flex-direction: column;
+}
+
+.cask-bar-name {
+  font-size: 12px;
+  font-weight: 700;
+  color: var(--text-main);
+}
+
+.cask-bar-meta {
+  font-size: 10px;
+  color: var(--text-muted);
+}
+
+.cask-bar-action {
+  font-size: 11px;
+  font-weight: 600;
+  color: var(--caspian-cyan);
+  display: flex;
+  align-items: center;
+  gap: 4px;
 }
 
 .sheet-header {
@@ -539,12 +711,36 @@ body {
 }
 
 .m3-card {
-  background: var(--card-bg);
-  border: 1px solid var(--border-glass);
-  border-radius: 20px;
-  padding: 14px 16px;
+  background: rgba(255, 255, 255, 0.05);
+  border: 1px solid var(--border-glass, rgba(255, 255, 255, 0.08));
+  border-top: 1.5px solid rgba(255, 255, 255, 0.18);
+  border-radius: 22px;
+  padding: 16px 16px;
   margin-bottom: 12px;
-  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.1);
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.22), inset 0 1px 0 rgba(255, 255, 255, 0.08);
+  backdrop-filter: blur(16px);
+  -webkit-backdrop-filter: blur(16px);
+  transition: transform 0.15s var(--caspian-spring), border-color 0.15s ease, box-shadow 0.15s ease;
+}
+
+[data-theme="light"] .m3-card {
+  background: rgba(255, 255, 255, 0.90) !important;
+  border: 1px solid rgba(15, 23, 42, 0.08) !important;
+  border-top: 1.5px solid rgba(255, 255, 255, 0.95) !important;
+  box-shadow: 0 6px 20px rgba(15, 23, 42, 0.06), inset 0 1px 0 rgba(255, 255, 255, 0.8) !important;
+}
+
+.engine-card {
+  background: rgba(255, 255, 255, 0.05);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-top: 1.5px solid rgba(255, 255, 255, 0.18);
+  border-radius: 22px;
+}
+
+[data-theme="light"] .engine-card {
+  background: rgba(255, 255, 255, 0.92) !important;
+  border: 1px solid rgba(15, 23, 42, 0.08) !important;
+  border-top: 1.5px solid rgba(255, 255, 255, 0.95) !important;
 }
 
 .m3-card-row {
@@ -1227,11 +1423,14 @@ select option {
 }
 
 .modal-box {
-  background: var(--card-bg);
-  border: 1px solid var(--border-glass);
+  background: var(--caspian-glass-high);
+  backdrop-filter: var(--caspian-blur);
+  -webkit-backdrop-filter: var(--caspian-blur);
+  border: var(--caspian-border);
+  border-top: var(--caspian-border-top);
   border-radius: 24px;
   padding: 24px;
-  box-shadow: var(--shadow-glass);
+  box-shadow: var(--caspian-shadow);
   width: 85%;
   max-width: 320px;
   transform: scale(0.95);
@@ -1497,11 +1696,14 @@ select option {
 .modal-card {
   width: 100%;
   max-width: 340px;
-  background: var(--card-bg);
-  border: 1px solid var(--border-glass);
-  border-radius: 20px;
+  background: var(--caspian-glass-high);
+  backdrop-filter: var(--caspian-blur);
+  -webkit-backdrop-filter: var(--caspian-blur);
+  border: var(--caspian-border);
+  border-top: var(--caspian-border-top);
+  border-radius: 24px;
   padding: 18px;
-  box-shadow: 0 16px 40px rgba(0,0,0,0.5);
+  box-shadow: var(--caspian-shadow);
 }
 
 .modal-header {
@@ -2053,6 +2255,114 @@ body.downloads-standalone-mode #caspian-downloads-modal {
   cursor: pointer !important;
   touch-action: manipulation !important;
   -webkit-tap-highlight-color: rgba(0, 229, 255, 0.2) !important;
+}
+
+/* ==========================================================================
+   LIQUID ISLAND CASPIAN CASKS SWITCHER & CREATOR MODAL
+   ========================================================================== */
+
+#control-casks-modal {
+  backdrop-filter: blur(24px) saturate(180%) !important;
+  -webkit-backdrop-filter: blur(24px) saturate(180%) !important;
+}
+
+.cask-modal-box {
+  background: var(--caspian-glass-high, rgba(22, 30, 49, 0.90)) !important;
+  border: 1px solid var(--border-glass, rgba(255, 255, 255, 0.12)) !important;
+  border-top: 1.5px solid var(--border-top-specular, rgba(255, 255, 255, 0.28)) !important;
+  border-radius: 26px !important;
+  box-shadow: 0 24px 60px rgba(0, 0, 0, 0.45), 0 0 0 1px rgba(255, 255, 255, 0.05) !important;
+  backdrop-filter: blur(20px) !important;
+  -webkit-backdrop-filter: blur(20px) !important;
+}
+
+[data-theme="light"] .cask-modal-box,
+.light .cask-modal-box {
+  background: rgba(255, 255, 255, 0.95) !important;
+  border: 1px solid rgba(15, 23, 42, 0.08) !important;
+  border-top: 1.5px solid rgba(255, 255, 255, 0.9) !important;
+  box-shadow: 0 24px 60px rgba(15, 23, 42, 0.12), 0 4px 16px rgba(15, 23, 42, 0.06) !important;
+}
+
+.cask-item-row {
+  display: flex !important;
+  align-items: center !important;
+  justify-content: space-between !important;
+  padding: 12px 14px !important;
+  border-radius: 16px !important;
+  background: var(--caspian-glass-mid, rgba(255, 255, 255, 0.04)) !important;
+  border: 1px solid var(--border-glass, rgba(255, 255, 255, 0.08)) !important;
+  border-top: 1px solid var(--border-top-specular, rgba(255, 255, 255, 0.15)) !important;
+  box-shadow: 0 4px 14px rgba(0, 0, 0, 0.12) !important;
+  transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1) !important;
+  cursor: pointer !important;
+}
+
+.cask-item-row:hover,
+.cask-item-row:active {
+  transform: translateY(-1px) scale(1.01) !important;
+  box-shadow: 0 6px 20px rgba(0, 0, 0, 0.18) !important;
+}
+
+.cask-item-row.active {
+  border-color: var(--caspian-cyan, #00E5FF) !important;
+  background: linear-gradient(135deg, rgba(34, 211, 238, 0.14), rgba(167, 139, 250, 0.08)) !important;
+  box-shadow: 0 0 20px rgba(34, 211, 238, 0.22) !important;
+}
+
+[data-theme="light"] .cask-item-row,
+.light .cask-item-row {
+  background: #FFFFFF !important;
+  border: 1px solid #E2E8F0 !important;
+  border-top: 1px solid #FFFFFF !important;
+  box-shadow: 0 2px 8px rgba(15, 23, 42, 0.05) !important;
+}
+
+[data-theme="light"] .cask-item-row.active,
+.light .cask-item-row.active {
+  border-color: #0284C7 !important;
+  background: linear-gradient(135deg, rgba(2, 132, 199, 0.08), rgba(124, 58, 237, 0.05)) !important;
+  box-shadow: 0 0 16px rgba(2, 132, 199, 0.16) !important;
+}
+
+#btn-control-new-cask {
+  border-radius: 14px !important;
+  background: var(--caspian-glass-low, rgba(255, 255, 255, 0.05)) !important;
+  border: 1px solid var(--border-glass, rgba(255, 255, 255, 0.10)) !important;
+  transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1) !important;
+}
+
+#btn-control-new-cask:active {
+  transform: scale(0.98) !important;
+}
+
+[data-theme="light"] #btn-control-new-cask,
+.light #btn-control-new-cask {
+  background: #F1F5F9 !important;
+  border: 1px solid #CBD5E1 !important;
+  color: #0284C7 !important;
+}
+
+[data-theme="light"] #control-new-cask-name,
+.light #control-new-cask-name,
+[data-theme="light"] #control-cask-preset-trigger,
+.light #control-cask-preset-trigger {
+  background: #F8FAFC !important;
+  border: 1px solid #CBD5E1 !important;
+  color: #0F172A !important;
+}
+
+[data-theme="light"] #control-cask-emoji-btn,
+.light #control-cask-emoji-btn {
+  background: #F1F5F9 !important;
+  border: 1.5px solid #CBD5E1 !important;
+}
+
+[data-theme="light"] #control-cask-preset-menu,
+.light #control-cask-preset-menu {
+  background: #FFFFFF !important;
+  border: 1px solid #E2E8F0 !important;
+  box-shadow: 0 12px 32px rgba(15, 23, 42, 0.12) !important;
 }
 
 

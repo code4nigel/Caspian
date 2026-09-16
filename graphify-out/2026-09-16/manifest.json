@@ -336,9 +336,9 @@
     "semantic_hash": ""
   },
   "betaC/app/src/main/assets/browser_control.js": {
-    "mtime": 1789399262.3016489,
-    "seen": 1789399399.4181504,
-    "ast_hash": "caef4311f1624410ad0a51dad8f9a479",
+    "mtime": 1789478466.174879,
+    "seen": 1789479073.602182,
+    "ast_hash": "a1c4eb21a5989c736832bbaf4a0f7b58",
     "semantic_hash": ""
   },
   "betaC/app/src/main/assets/chatgpt_network_interceptor.js": {
@@ -408,9 +408,9 @@
     "semantic_hash": ""
   },
   "betaC/app/src/main/java/com/caspian/betac/CaspianBridge.java": {
-    "mtime": 1789398992.5597303,
-    "seen": 1789399399.4181743,
-    "ast_hash": "e535c7fd49d83d2b83105c7d4ab3c6c9",
+    "mtime": 1789478635.0912733,
+    "seen": 1789479073.602203,
+    "ast_hash": "33afa1850670c6ef677b8f1a48ab6d2e",
     "semantic_hash": ""
   },
   "betaC/app/src/main/java/com/caspian/betac/CaspianDownloadManager.java": {
@@ -450,9 +450,9 @@
     "semantic_hash": ""
   },
   "betaC/app/src/main/java/com/caspian/betac/MainActivity.java": {
-    "mtime": 1789399878.4727025,
-    "seen": 1789399994.1552975,
-    "ast_hash": "edc1b13af1db9e1ec7591cd575086833",
+    "mtime": 1789478583.0245128,
+    "seen": 1789479073.6022131,
+    "ast_hash": "3dcfada4a60047d844f2b2b8d6cdddcf",
     "semantic_hash": ""
   },
   "betaC/app/src/main/java/com/caspian/betac/SearchSuggestionService.java": {
@@ -648,9 +648,9 @@
     "semantic_hash": ""
   },
   "betaC/app/src/main/assets/browser_control.html": {
-    "mtime": 1789399289.890027,
-    "seen": 1789399399.4182522,
-    "ast_hash": "5e2760244334f537f7797117922207d2",
+    "mtime": 1789478813.812391,
+    "seen": 1789479073.6022675,
+    "ast_hash": "2c180100a3f742828ed48904be9d6261",
     "semantic_hash": ""
   },
   "betaC/app/src/main/assets/incognito_hub.html": {
@@ -660,9 +660,9 @@
     "semantic_hash": ""
   },
   "betaC/app/src/main/assets/launch_hub.html": {
-    "mtime": 1789398365.5723708,
-    "seen": 1789398557.5795987,
-    "ast_hash": "6afacd462ee78e0455701d60aa5e0da8",
+    "mtime": 1789478744.5771146,
+    "seen": 1789479073.6022704,
+    "ast_hash": "49f2d9e47d10de09c71e094b2a17236b",
     "semantic_hash": ""
   },
   "betaC/app/src/main/assets/pdf_viewer.html": {

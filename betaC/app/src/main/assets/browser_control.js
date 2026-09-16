@@ -2460,6 +2460,66 @@
   if (themeBtnDark) themeBtnDark.addEventListener('click', () => { playSFX('tm_header'); setTheme('dark'); });
   if (themeBtnLight) themeBtnLight.addEventListener('click', () => { playSFX('tm_header'); setTheme('light'); });
 
+  // Liquid Island: Quick Action Pods Event Listeners
+  const podDesktop = document.getElementById('pod-desktop-mode');
+  const podDotDesktop = document.getElementById('pod-dot-desktop');
+  if (podDesktop) {
+    let isDesktopOn = false;
+    podDesktop.addEventListener('click', () => {
+      try { playSFX('tb_clicks'); } catch (e) { }
+      isDesktopOn = !isDesktopOn;
+      if (podDotDesktop) podDotDesktop.classList.toggle('active', isDesktopOn);
+      if (window.CaspianBridge && typeof window.CaspianBridge.toggleDesktopMode === 'function') {
+        window.CaspianBridge.toggleDesktopMode(-1);
+      }
+    });
+  }
+
+  const podUpdate = document.getElementById('pod-update-check');
+  if (podUpdate) {
+    podUpdate.addEventListener('click', () => {
+      try { playSFX('tb_clicks'); } catch (e) { }
+      if (window.CaspianBridge && typeof window.CaspianBridge.openUpdateMenu === 'function') {
+        window.CaspianBridge.openUpdateMenu();
+      } else if (window.CaspianBridge && typeof window.CaspianBridge.checkAppUpdate === 'function') {
+        window.CaspianBridge.checkAppUpdate();
+      }
+    });
+  }
+
+  const podTheme = document.getElementById('pod-theme-mode');
+  if (podTheme) {
+    podTheme.addEventListener('click', () => {
+      if (themeToggleBtn) {
+        themeToggleBtn.click();
+      } else {
+        setTheme(activeTheme === 'light' ? 'dark' : 'light');
+      }
+    });
+  }
+
+  const podShield = document.getElementById('pod-waveguard-shield');
+  const podDotShield = document.getElementById('pod-dot-shield');
+  if (podShield) {
+    podShield.addEventListener('click', () => {
+      try { playSFX('tb_clicks'); } catch (e) { }
+      if (window.CaspianBridge && typeof window.CaspianBridge.toggleWaveguard === 'function') {
+        window.CaspianBridge.toggleWaveguard();
+      } else {
+        const current = localStorage.getItem('adblock_enabled') !== 'false';
+        const next = !current;
+        localStorage.setItem('adblock_enabled', next ? 'true' : 'false');
+        if (podDotShield) podDotShield.classList.toggle('active', next);
+        if (window.CaspianBridge && typeof window.CaspianBridge.saveSetting === 'function') {
+          window.CaspianBridge.saveSetting('waveguard_enabled', next ? 'true' : 'false');
+        }
+      }
+      setTimeout(() => {
+        if (typeof window.syncWaveguardUI === 'function') window.syncWaveguardUI();
+      }, 120);
+    });
+  }
+
   // Omnibox Placement & Menu Style Customization
   const omniboxPosTop = document.getElementById('omnibox-pos-top');
   const omniboxPosBottom = document.getElementById('omnibox-pos-bottom');
@@ -6282,6 +6342,8 @@
       const headerIconEl = document.getElementById('header-cask-icon');
       const headerPillEl = document.getElementById('header-cask-pill');
       const caskSubEl = document.getElementById('cask-active-sub');
+      const islandIconEl = document.getElementById('island-cask-icon');
+      const islandNameEl = document.getElementById('island-cask-name');
 
       const icon = controlCasksData.activeCaskIcon || '🌊';
       const name = controlCasksData.activeCaskName || 'Caspian Cask';
@@ -6289,6 +6351,8 @@
       if (headerIconEl) headerIconEl.textContent = icon;
       if (headerPillEl) headerPillEl.title = `Active: ${icon} ${name} - Tap to switch`;
       if (caskSubEl) caskSubEl.textContent = `Active: ${icon} ${name} • Isolated login sessions.`;
+      if (islandIconEl) islandIconEl.textContent = icon;
+      if (islandNameEl) islandNameEl.textContent = name;
     }
 
     function openControlCasksModal() {
@@ -6442,7 +6506,7 @@
 
     // Modal & Card Event Listeners with Dynamic Delegation
     document.addEventListener('click', (e) => {
-      if (e.target.closest('#header-cask-pill')) {
+      if (e.target.closest('#header-cask-pill') || e.target.closest('#island-cask-bar')) {
         e.stopPropagation();
         openControlCasksModal();
         return;

@@ -4,8 +4,8 @@
     android:layout_width="340dp"
     android:layout_height="wrap_content"
     android:layout_margin="10dp"
-    app:cardBackgroundColor="#0B121D"
-    app:cardCornerRadius="22dp"
+    app:cardBackgroundColor="#00000000"
+    app:cardCornerRadius="24dp"
     app:cardElevation="24dp"
     app:cardMaxElevation="28dp"
     app:cardPreventCornerOverlap="true">

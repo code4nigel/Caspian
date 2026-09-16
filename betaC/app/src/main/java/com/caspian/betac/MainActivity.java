@@ -172,6 +172,9 @@ public class MainActivity extends AppCompatActivity {
     private static final String TAG = "CaspianFlow";
     private static final String PREFS_NAME = "CaspianFlowPrefs";
 
+    // Liquid Island (HyperGlass) Design Overhaul Feature Flag
+    public static final boolean FEATURE_LIQUID_ISLAND_V2 = true;
+
     public static class TabItem {
         public int id;
         public String title;
@@ -3991,7 +3994,11 @@ public class MainActivity extends AppCompatActivity {
         card.setLayoutParams(cardLp);
 
         GradientDrawable cardBg = new GradientDrawable();
-        cardBg.setColor(isLight ? 0xFFFFFFFF : 0xFF141926);
+        if (FEATURE_LIQUID_ISLAND_V2) {
+            cardBg.setColor(isLight ? 0xF5FFFFFF : 0xE6141926);
+        } else {
+            cardBg.setColor(isLight ? 0xFFFFFFFF : 0xFF141926);
+        }
         cardBg.setCornerRadius(dpToPx(24));
         card.setBackground(cardBg);
         card.setElevation(isActive ? dpToPx(14) : dpToPx(6));
@@ -4001,11 +4008,11 @@ public class MainActivity extends AppCompatActivity {
         borderOverlay.setCornerRadius(dpToPx(24));
         borderOverlay.setColor(Color.TRANSPARENT);
         if (isSelected) {
-            borderOverlay.setStroke(dpToPx(4), 0xFFFFCC00);
+            borderOverlay.setStroke(dpToPx(4), isLight ? 0xFFD97706 : 0xFFFFCC00);
         } else if (isActive) {
-            borderOverlay.setStroke(dpToPx(2.5f), isLight ? 0xFF0284C7 : 0xFF00E5FF);
+            borderOverlay.setStroke(dpToPx(2.5f), isLight ? 0xFF0284C7 : (FEATURE_LIQUID_ISLAND_V2 ? 0xFF22D3EE : 0xFF00E5FF));
         } else {
-            borderOverlay.setStroke(dpToPx(1.2f), isLight ? 0xFFCBD5E1 : 0x2AFFFFFF);
+            borderOverlay.setStroke(dpToPx(1.2f), isLight ? 0x1A0F172A : 0x2AFFFFFF);
         }
         card.setForeground(borderOverlay);
 
@@ -4079,9 +4086,9 @@ public class MainActivity extends AppCompatActivity {
         headerPill.setLayoutParams(hpLp);
 
         GradientDrawable hpGd = new GradientDrawable();
-        hpGd.setColor(isLight ? 0xEEFFFFFF : 0xE60F131D);
+        hpGd.setColor(isLight ? 0xF5FFFFFF : 0xE60F131D);
         hpGd.setCornerRadius(dpToPx(24));
-        hpGd.setStroke(dpToPx(1), isLight ? 0xFFCBD5E1 : 0x2EFFFFFF);
+        hpGd.setStroke(dpToPx(1), isLight ? 0x1A0F172A : 0x2EFFFFFF);
         headerPill.setBackground(hpGd);
         headerPill.setElevation(dpToPx(6));
 
@@ -6084,9 +6091,9 @@ public class MainActivity extends AppCompatActivity {
         card.setOrientation(LinearLayout.VERTICAL);
         card.setPadding(dpToPx(20), dpToPx(18), dpToPx(20), dpToPx(20));
         GradientDrawable cardBg = new GradientDrawable();
-        cardBg.setColor(isLight ? 0xFFFFFFFF : 0xFF161E31);
-        cardBg.setCornerRadius(dpToPx(24));
-        cardBg.setStroke(dpToPx(1.2f), isLight ? 0xFFCBD5E1 : 0x2AFFFFFF);
+        cardBg.setColor(isLight ? 0xF5FFFFFF : 0xE6161E31);
+        cardBg.setCornerRadius(dpToPx(26));
+        cardBg.setStroke(dpToPx(1.2f), isLight ? 0x1A0F172A : 0x2AFFFFFF);
         card.setBackground(cardBg);
         rootScroll.addView(card);
 
@@ -6437,14 +6444,26 @@ public class MainActivity extends AppCompatActivity {
         card.setLayoutParams(lp);
 
         GradientDrawable gd = new GradientDrawable();
-        gd.setColor(isLight ? 0xFFFFFFFF : 0xFF181B25);
-        gd.setCornerRadius(dpToPx(18));
-        if (isSelected) {
-            gd.setStroke(dpToPx(3), isLight ? 0xFFD97706 : 0xFFFFCC00);
-        } else if (isActive) {
-            gd.setStroke(dpToPx(2), isLight ? 0xFF0284C7 : 0xFF00E5FF);
+        if (FEATURE_LIQUID_ISLAND_V2) {
+            gd.setColor(isLight ? 0xFFFFFFFF : 0xE61A2234);
+            gd.setCornerRadius(dpToPx(20));
+            if (isSelected) {
+                gd.setStroke(dpToPx(3), isLight ? 0xFFD97706 : 0xFFFB7185);
+            } else if (isActive) {
+                gd.setStroke(dpToPx(2), isLight ? 0xFF0284C7 : 0xFF22D3EE);
+            } else {
+                gd.setStroke(dpToPx(1), isLight ? 0xFFE2E8F0 : 0x1FFFFFFF);
+            }
         } else {
-            gd.setStroke(dpToPx(1), isLight ? 0xFFE2E8F0 : 0x22FFFFFF);
+            gd.setColor(isLight ? 0xFFFFFFFF : 0xFF181B25);
+            gd.setCornerRadius(dpToPx(18));
+            if (isSelected) {
+                gd.setStroke(dpToPx(3), isLight ? 0xFFD97706 : 0xFFFFCC00);
+            } else if (isActive) {
+                gd.setStroke(dpToPx(2), isLight ? 0xFF0284C7 : 0xFF00E5FF);
+            } else {
+                gd.setStroke(dpToPx(1), isLight ? 0xFFE2E8F0 : 0x22FFFFFF);
+            }
         }
         card.setBackground(gd);
         card.setPadding(dpToPx(10), dpToPx(10), dpToPx(10), dpToPx(10));
@@ -10583,7 +10602,11 @@ public class MainActivity extends AppCompatActivity {
         }
     }
 
-    private void showWaveguardFlyout(View anchor) {
+    public void showWaveguardFlyout() {
+        showWaveguardFlyout(null);
+    }
+
+    public void showWaveguardFlyout(View anchor) {
         if (waveguardShield == null) return;
         try {
             LayoutInflater inflater = LayoutInflater.from(this);
@@ -22669,6 +22692,21 @@ public class MainActivity extends AppCompatActivity {
         return waveguardShield;
     }
 
+    public void toggleWaveguardShield() {
+        if (waveguardShield != null) {
+            boolean nextState = !waveguardShield.isGlobalEnabled();
+            waveguardShield.setGlobalEnabled(nextState);
+            updateOmniboxState();
+            syncWaveguardToControlWeb();
+            playUiFeedbackSound("tap");
+            Toast.makeText(this, nextState ? "🛡️ Waveguard Shields ON" : "🛡️ Waveguard Shields OFF", Toast.LENGTH_SHORT).show();
+            TabItem cur = getActiveOrDominantTab();
+            if (cur != null && cur.webView != null) {
+                cur.webView.reload();
+            }
+        }
+    }
+
     private TabItem getTabById(int tabId) {
         for (TabItem item : tabsList) {
             if (item.id == tabId) return item;
@@ -22841,9 +22879,9 @@ public class MainActivity extends AppCompatActivity {
         }
 
         if (omniboxShieldIcon != null) {
-            omniboxShieldIcon.setColorFilter(themeAccent);
             boolean active = waveguardShield != null && waveguardShield.isGlobalEnabled();
             TabItem current = getActiveOrDominantTab();
+            int blockedOnTab = 0;
             if (current != null && current.url != null && waveguardShield != null) {
                 try {
                     String h = Uri.parse(current.url).getHost();
@@ -22851,8 +22889,28 @@ public class MainActivity extends AppCompatActivity {
                         active = false;
                     }
                 } catch (Exception ignored) {}
+                blockedOnTab = waveguardShield.getBlockedCountForTab(current.id);
             }
-            omniboxShieldIcon.setAlpha(active ? 1.0f : 0.35f);
+            if (FEATURE_LIQUID_ISLAND_V2) {
+                int emerald = 0xFF10B981;
+                int muted = 0xFF64748B;
+                omniboxShieldIcon.setColorFilter(active ? emerald : muted);
+                omniboxShieldIcon.setAlpha(active ? 1.0f : 0.45f);
+                if (omniboxShieldBtn != null) {
+                    if (active && blockedOnTab > 0) {
+                        android.graphics.drawable.GradientDrawable ring = new android.graphics.drawable.GradientDrawable();
+                        ring.setShape(android.graphics.drawable.GradientDrawable.OVAL);
+                        ring.setColor(0x1810B981);
+                        ring.setStroke(dpToPx(1), 0x8010B981);
+                        omniboxShieldBtn.setBackground(ring);
+                    } else {
+                        omniboxShieldBtn.setBackground(null);
+                    }
+                }
+            } else {
+                omniboxShieldIcon.setColorFilter(themeAccent);
+                omniboxShieldIcon.setAlpha(active ? 1.0f : 0.35f);
+            }
         }
 
         if (omniboxVoiceBtn != null) {
@@ -23118,8 +23176,13 @@ public class MainActivity extends AppCompatActivity {
                         // Compound outer capsule background
                         GradientDrawable compoundBg = new GradientDrawable();
                         compoundBg.setCornerRadius(dpToPx(17));
-                        compoundBg.setColor(isDarkTheme ? 0xFF0F1420 : 0xFFE2E8F0);
-                        compoundBg.setStroke(dpToPx(2), isDarkTheme ? 0xFF00E5FF : 0xFF0284C7);
+                        if (FEATURE_LIQUID_ISLAND_V2) {
+                            compoundBg.setColor(isDarkTheme ? 0xE61A2234 : 0xFFE2E8F0);
+                            compoundBg.setStroke(dpToPx(1.5f), isDarkTheme ? 0xFF22D3EE : 0xFF0284C7);
+                        } else {
+                            compoundBg.setColor(isDarkTheme ? 0xFF0F1420 : 0xFFE2E8F0);
+                            compoundBg.setStroke(dpToPx(2), isDarkTheme ? 0xFF00E5FF : 0xFF0284C7);
+                        }
                         splitRoot.setBackground(compoundBg);
 
                         if (divider != null) {
@@ -23240,18 +23303,28 @@ public class MainActivity extends AppCompatActivity {
                     bg.setCornerRadius(dpToPx(17));
                     if (isDarkTheme) {
                         if (isActive) {
-                            bg.setColor(0xFF1E2838);
-                            bg.setStroke(dpToPx(1), 0xFF00E5FF);
+                            if (FEATURE_LIQUID_ISLAND_V2) {
+                                bg.setColor(0xE61A2234);
+                                bg.setStroke(dpToPx(1.5f), 0xFF22D3EE);
+                            } else {
+                                bg.setColor(0xFF1E2838);
+                                bg.setStroke(dpToPx(1), 0xFF00E5FF);
+                            }
                             activeTabView = tabView;
                         } else {
-                            bg.setColor(0xFF0F1420);
-                            bg.setStroke(dpToPx(1), 0xFF1E2533);
+                            if (FEATURE_LIQUID_ISLAND_V2) {
+                                bg.setColor(0x18FFFFFF);
+                                bg.setStroke(dpToPx(1), 0x1AFFFFFF);
+                            } else {
+                                bg.setColor(0xFF0F1420);
+                                bg.setStroke(dpToPx(1), 0xFF1E2533);
+                            }
                         }
                     } else {
                         // Light Theme
                         if (isActive) {
                             bg.setColor(0xFFFFFFFF);
-                            bg.setStroke(dpToPx(1), 0xFF0284C7);
+                            bg.setStroke(dpToPx(1.5f), 0xFF0284C7);
                             activeTabView = tabView;
                         } else {
                             bg.setColor(0xFFE8EDF5);

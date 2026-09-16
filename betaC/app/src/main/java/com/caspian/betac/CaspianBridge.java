@@ -133,6 +133,35 @@ public class CaspianBridge {
     }
 
     @JavascriptInterface
+    public void toggleWaveguard() {
+        if (activity != null) {
+            activity.runOnUiThread(activity::toggleWaveguardShield);
+        }
+    }
+
+    @JavascriptInterface
+    public void openUpdateMenu() {
+        if (activity != null) {
+            activity.runOnUiThread(activity::openCaspianUpdateMenu);
+        }
+    }
+
+    @JavascriptInterface
+    public void checkAppUpdate() {
+        openUpdateMenu();
+    }
+
+    @JavascriptInterface
+    public void showWaveguardFlyout() {
+        if (activity != null) {
+            activity.runOnUiThread(() -> {
+                activity.hideControlSheet();
+                activity.showWaveguardFlyout();
+            });
+        }
+    }
+
+    @JavascriptInterface
     public void updateWaveguardLists() {
         if (activity != null) {
             WaveguardShield shield = activity.getWaveguardShield();
@@ -316,6 +345,16 @@ public class CaspianBridge {
         if (activity != null) {
             activity.runOnUiThread(() -> activity.navigateUrl(url));
         }
+    }
+
+    @JavascriptInterface
+    public int getWaveguardTotalBlocked() {
+        if (activity != null && activity.getWaveguardShield() != null) {
+            try {
+                return activity.getWaveguardShield().getBlockedCount();
+            } catch (Throwable ignored) {}
+        }
+        return 0;
     }
 
     @JavascriptInterface
