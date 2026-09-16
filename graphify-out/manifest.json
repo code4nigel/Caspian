@@ -324,9 +324,9 @@
     "semantic_hash": ""
   },
   "betaC/app/build.gradle.kts": {
-    "mtime": 1789383198.9309988,
-    "seen": 1789383297.329799,
-    "ast_hash": "efce658e998a91dc0c5091a2b2ea9992",
+    "mtime": 1789386074.1354108,
+    "seen": 1789386157.9300165,
+    "ast_hash": "1620214b034f63b9e434b173fe7745f4",
     "semantic_hash": ""
   },
   "betaC/app/src/main/assets/adblock_rules.json": {
@@ -336,9 +336,9 @@
     "semantic_hash": ""
   },
   "betaC/app/src/main/assets/browser_control.js": {
-    "mtime": 1789309189.520118,
-    "seen": 1789309597.850872,
-    "ast_hash": "42a888401acdf23eabfc66324e027609",
+    "mtime": 1789478466.174879,
+    "seen": 1789479073.602182,
+    "ast_hash": "a1c4eb21a5989c736832bbaf4a0f7b58",
     "semantic_hash": ""
   },
   "betaC/app/src/main/assets/chatgpt_network_interceptor.js": {
@@ -408,9 +408,9 @@
     "semantic_hash": ""
   },
   "betaC/app/src/main/java/com/caspian/betac/CaspianBridge.java": {
-    "mtime": 1789317841.8394897,
-    "seen": 1789318060.147837,
-    "ast_hash": "c93b847f14b61e065dab94f2c0621db1",
+    "mtime": 1789478635.0912733,
+    "seen": 1789479073.602203,
+    "ast_hash": "33afa1850670c6ef677b8f1a48ab6d2e",
     "semantic_hash": ""
   },
   "betaC/app/src/main/java/com/caspian/betac/CaspianDownloadManager.java": {
@@ -450,9 +450,9 @@
     "semantic_hash": ""
   },
   "betaC/app/src/main/java/com/caspian/betac/MainActivity.java": {
-    "mtime": 1789383136.7684789,
-    "seen": 1789383297.329865,
-    "ast_hash": "063d1e8484e6cf0c7b5277291c839d53",
+    "mtime": 1789478583.0245128,
+    "seen": 1789479073.6022131,
+    "ast_hash": "3dcfada4a60047d844f2b2b8d6cdddcf",
     "semantic_hash": ""
   },
   "betaC/app/src/main/java/com/caspian/betac/SearchSuggestionService.java": {
@@ -480,9 +480,9 @@
     "semantic_hash": ""
   },
   "betaC/app/src/main/java/com/caspian/betac/WaveguardShield.java": {
-    "mtime": 1789298460.8169568,
-    "seen": 1789309597.850933,
-    "ast_hash": "f548b6c192954da59c5b55ab39274834",
+    "mtime": 1789530062.4024205,
+    "seen": 1789530588.5587218,
+    "ast_hash": "f7b548fbf306c053e5a341d246beeb7a",
     "semantic_hash": ""
   },
   "betaC/app/src/main/java/com/caspian/betac/WhirlpoolOverlayView.java": {
@@ -648,9 +648,9 @@
     "semantic_hash": ""
   },
   "betaC/app/src/main/assets/browser_control.html": {
-    "mtime": 1789383199.047589,
-    "seen": 1789383297.329963,
-    "ast_hash": "3f3fc9637997568a01040e2fec1f9119",
+    "mtime": 1789531917.6986074,
+    "seen": 1789532046.9472604,
+    "ast_hash": "2c180100a3f742828ed48904be9d6261",
     "semantic_hash": ""
   },
   "betaC/app/src/main/assets/incognito_hub.html": {
@@ -660,9 +660,9 @@
     "semantic_hash": ""
   },
   "betaC/app/src/main/assets/launch_hub.html": {
-    "mtime": 1789364123.2882726,
-    "seen": 1789364344.7106874,
-    "ast_hash": "ad89662abdf28282402daa2c04d4b8a1",
+    "mtime": 1789531910.1708522,
+    "seen": 1789532046.947269,
+    "ast_hash": "66aef4c65116590640b6e94b48735237",
     "semantic_hash": ""
   },
   "betaC/app/src/main/assets/pdf_viewer.html": {

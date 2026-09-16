@@ -539,9 +539,12 @@ public class WaveguardShield {
     }
 
     private void recordBlock(int tabId) {
-        totalBlockedCount.incrementAndGet();
+        int count = totalBlockedCount.incrementAndGet();
         if (tabId >= 0) {
             tabBlockedCounts.computeIfAbsent(tabId, k -> new AtomicInteger(0)).incrementAndGet();
+        }
+        if (prefs != null) {
+            prefs.edit().putInt(KEY_TOTAL_BLOCKED, count).apply();
         }
     }
 

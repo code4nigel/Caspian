@@ -1,7 +1,7 @@
-# Graph Report - Chatgpt Pruner  (2026-09-16)
+# Graph Report - Chatgpt Pruner  (2026-09-15)
 
 ## Corpus Check
-- 105 files · ~535,296 words
+- 105 files · ~534,410 words
 - Verdict: corpus is large enough that graph structure adds value.
 
 ## Summary
