@@ -2432,6 +2432,72 @@ body.downloads-standalone-mode #caspian-downloads-modal {
   box-shadow: 0 12px 32px rgba(15, 23, 42, 0.12) !important;
 }
 
+/* Export Dropdown Menu Overlay */
+.export-menu-overlay {
+  display: none;
+  position: absolute;
+  top: calc(100% + 6px);
+  left: 0;
+  min-width: 175px;
+  background: var(--card-bg, rgba(26, 32, 44, 0.95));
+  backdrop-filter: blur(20px);
+  -webkit-backdrop-filter: blur(20px);
+  border: 1px solid var(--border-glass, rgba(255, 255, 255, 0.12));
+  border-radius: 14px;
+  padding: 6px;
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.5);
+  z-index: 1000;
+  flex-direction: column;
+  gap: 3px;
+}
+
+.export-menu-overlay.show,
+.export-menu-overlay.active {
+  display: flex !important;
+}
+
+.export-opt-btn {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  width: 100%;
+  padding: 8px 12px;
+  background: transparent;
+  border: none;
+  border-radius: 9px;
+  color: var(--text-main, #f8fafc);
+  font-size: 11.5px;
+  font-weight: 500;
+  cursor: pointer;
+  text-align: left;
+  transition: background 0.15s ease;
+}
+
+.export-opt-btn:active,
+.export-opt-btn:hover {
+  background: rgba(255, 255, 255, 0.1);
+}
+
+[data-theme="light"] .export-menu-overlay,
+.light .export-menu-overlay {
+  background: #FFFFFF !important;
+  border: 1px solid #CBD5E1 !important;
+  box-shadow: 0 12px 32px rgba(15, 23, 42, 0.15) !important;
+}
+
+[data-theme="light"] .export-opt-btn,
+.light .export-opt-btn {
+  color: #0F172A !important;
+}
+
+[data-theme="light"] .export-opt-btn:active,
+[data-theme="light"] .export-opt-btn:hover,
+.light .export-opt-btn:active,
+.light .export-opt-btn:hover {
+  background: #F1F5F9 !important;
+}
+
+
 
 
 

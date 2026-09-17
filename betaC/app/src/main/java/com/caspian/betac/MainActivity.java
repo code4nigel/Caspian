@@ -828,8 +828,8 @@ public class MainActivity extends AppCompatActivity {
         try {
             String defaultUa = WebSettings.getDefaultUserAgent(this);
             if (defaultUa != null && !defaultUa.trim().isEmpty()) {
-                // Strip "Version/4.0 " and "; wv" which identify embedded WebViews and trigger Cloudflare Turnstile bot blocking
-                MOBILE_UA = defaultUa.replace("Version/4.0 ", "").replace("; wv", "").trim();
+                // Strip "Version/X.X " and "; wv" which identify embedded WebViews and trigger Cloudflare Turnstile bot blocking
+                MOBILE_UA = defaultUa.replaceAll("(?i)Version/\\d+\\.\\d+\\s*", "").replaceAll("(?i);\\s*wv", "").trim();
                 return MOBILE_UA;
             }
         } catch (Throwable ignored) {}
@@ -10165,22 +10165,81 @@ public class MainActivity extends AppCompatActivity {
     }
 
     private void showOmniboxFinder() {
-        if (omniboxUrlContainer != null && omniboxFinderContainer != null) {
-            omniboxUrlContainer.setVisibility(View.GONE);
-            omniboxFinderContainer.setVisibility(View.VISIBLE);
+        if (omniboxFinderContainer == null) return;
+
+        // 1. If in pill or orb mode (e.g. Apple Pie), expand to full omnibox
+        boolean isBottom = "applepie".equalsIgnoreCase(omniboxScrollMode) || "bottom".equalsIgnoreCase(omniboxPosition);
+        if (currentOrbState != ORB_STATE_FULL_TOP) {
+            transitionToOrbState(ORB_STATE_FULL_TOP, false);
+        }
+        if (omniboxHeaderWrapper != null) {
+            FrameLayout.LayoutParams lp = (FrameLayout.LayoutParams) omniboxHeaderWrapper.getLayoutParams();
+            int targetGravity = isBottom ? Gravity.BOTTOM : Gravity.TOP;
+            if (lp != null && lp.gravity != targetGravity) {
+                lp.gravity = targetGravity;
+                omniboxHeaderWrapper.setLayoutParams(lp);
+            }
+            omniboxHeaderWrapper.setPadding(
+                    dpToPx(10),
+                    dpToPx(isBottom ? 8 : 6),
+                    dpToPx(10),
+                    dpToPx(isBottom ? 12 : 6)
+            );
+            omniboxHeaderWrapper.setVisibility(View.VISIBLE);
+            omniboxHeaderWrapper.setAlpha(1f);
+            omniboxHeaderWrapper.setTranslationY(0f);
+            omniboxHeaderWrapper.bringToFront();
+        }
+
+        // 2. Hide surrounding navigation buttons so the finder expands completely like expanded URL
+        if (omniboxBackBtn != null) omniboxBackBtn.setVisibility(View.GONE);
+        if (omniboxForwardBtn != null) omniboxForwardBtn.setVisibility(View.GONE);
+        if (omniboxReloadBtn != null) omniboxReloadBtn.setVisibility(View.GONE);
+        if (omniboxDividerLeft != null) omniboxDividerLeft.setVisibility(View.GONE);
+        if (omniboxDividerRight != null) omniboxDividerRight.setVisibility(View.GONE);
+        if (omniboxToolbarsBtn != null) omniboxToolbarsBtn.setVisibility(View.GONE);
+        if (omniboxSplitBtn != null) omniboxSplitBtn.setVisibility(View.GONE);
+        if (omniboxTabsBtn != null) omniboxTabsBtn.setVisibility(View.GONE);
+        if (omniboxMenuBtn != null) omniboxMenuBtn.setVisibility(View.GONE);
+        if (omniboxBtnCollapseOrb != null) omniboxBtnCollapseOrb.setVisibility(View.GONE);
+        if (omniboxCopyBtn != null) omniboxCopyBtn.setVisibility(View.GONE);
+        if (omniboxPasteBtn != null) omniboxPasteBtn.setVisibility(View.GONE);
+        if (omniboxClearBtn != null) omniboxClearBtn.setVisibility(View.GONE);
+
+        // 3. Switch URL container to Finder container
+        if (omniboxUrlContainer != null) omniboxUrlContainer.setVisibility(View.GONE);
+        omniboxFinderContainer.setVisibility(View.VISIBLE);
+
+        // 4. Focus input and open soft keyboard
+        if (omniboxFinderInput != null) {
             omniboxFinderInput.requestFocus();
-            InputMethodManager imm = (InputMethodManager) getSystemService(Context.INPUT_METHOD_SERVICE);
-            if (imm != null) imm.showSoftInput(omniboxFinderInput, InputMethodManager.SHOW_IMPLICIT);
+            omniboxFinderInput.postDelayed(() -> {
+                if (omniboxFinderInput != null) {
+                    omniboxFinderInput.requestFocus();
+                    InputMethodManager imm = (InputMethodManager) getSystemService(Context.INPUT_METHOD_SERVICE);
+                    if (imm != null) {
+                        imm.showSoftInput(omniboxFinderInput, InputMethodManager.SHOW_IMPLICIT);
+                    }
+                }
+            }, 120);
         }
     }
 
     private void hideOmniboxFinder() {
-        if (omniboxUrlContainer != null && omniboxFinderContainer != null) {
+        if (omniboxFinderContainer != null) {
             omniboxFinderContainer.setVisibility(View.GONE);
+        }
+        if (omniboxUrlContainer != null) {
             omniboxUrlContainer.setVisibility(View.VISIBLE);
-            TabItem currentTab = getActiveOrDominantTab();
-            if (currentTab != null && currentTab.webView != null) currentTab.webView.clearMatches();
-            hideKeyboard();
+        }
+        TabItem currentTab = getActiveOrDominantTab();
+        if (currentTab != null && currentTab.webView != null) {
+            currentTab.webView.clearMatches();
+        }
+        hideKeyboard();
+        updateOmniboxState();
+        if ("applepie".equalsIgnoreCase(omniboxScrollMode)) {
+            transitionToOrbState(ORB_STATE_BOTTOM_PILL, true);
         }
     }
 
@@ -12128,7 +12187,7 @@ public class MainActivity extends AppCompatActivity {
         if (tilePrint != null) {
             tilePrint.setOnClickListener(v -> dismissWithAction.accept(() -> {
                 playUiFeedbackSound("tap");
-                showPrintAndExportDialog(currentTab);
+                showPrintAndExportDialog(getActiveOrDominantTab());
             }));
         }
         View tileShield = tileMap.get("shield");
@@ -20987,6 +21046,24 @@ public class MainActivity extends AppCompatActivity {
                 "    } catch(e) {}\n" +
                 "  }\n" +
                 "\n" +
+                "  if (turns.length === 0) {\n" +
+                "    try {\n" +
+                "      var docTitle = document.title || 'Web Document';\n" +
+                "      var articleEl = document.querySelector('article, main, [role=\"main\"], #content, .content, body');\n" +
+                "      var pageText = (articleEl ? (articleEl.innerText || articleEl.textContent) : (document.body ? (document.body.innerText || document.body.textContent) : '')).trim();\n" +
+                "      if (pageText && pageText.length > 0) {\n" +
+                "        turns.push({\n" +
+                "          index: 1,\n" +
+                "          author: 'assistant',\n" +
+                "          role: docTitle,\n" +
+                "          text: pageText,\n" +
+                "          html: parseMarkdownAndLaTeX(pageText),\n" +
+                "          service: 'web'\n" +
+                "        });\n" +
+                "      }\n" +
+                "    } catch(e) {}\n" +
+                "  }\n" +
+                "\n" +
                 "  if (window.CaspianBridge && typeof window.CaspianBridge.onConversationExtracted === 'function') {\n" +
                 "    window.CaspianBridge.onConversationExtracted(JSON.stringify(turns), '" + exportFmt + "');\n" +
                 "  }\n" +
@@ -20998,19 +21075,23 @@ public class MainActivity extends AppCompatActivity {
     public void handleExtractedConversation(String jsonStr, String exportFmt) {
         try {
             if (jsonStr == null || jsonStr.equals("null") || jsonStr.equals("[]")) {
-                Toast.makeText(this, "No chat turns found to export!", Toast.LENGTH_SHORT).show();
+                Toast.makeText(this, "No content found to export!", Toast.LENGTH_SHORT).show();
                 return;
             }
 
             JSONArray turnsArray = new JSONArray(jsonStr);
             if (turnsArray.length() == 0) {
-                Toast.makeText(this, "No chat turns found to export!", Toast.LENGTH_SHORT).show();
+                Toast.makeText(this, "No content found to export!", Toast.LENGTH_SHORT).show();
                 return;
             }
 
             hideControlSheet();
 
-            String title = "AI Conversation";
+            String title = "Caspian Document";
+            TabItem curTab = getActiveOrDominantTab();
+            if (curTab != null && curTab.title != null && !curTab.title.trim().isEmpty() && !curTab.title.equalsIgnoreCase("New Tab")) {
+                title = curTab.title.trim();
+            }
             String dateStr = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss", Locale.getDefault()).format(new Date());
             String safeTitle = title.replaceAll("[^a-zA-Z0-9_-]", "_");
 
@@ -21643,7 +21724,12 @@ public class MainActivity extends AppCompatActivity {
                     if (pageHost != null) {
                         String ph = pageHost.toLowerCase(java.util.Locale.ROOT);
                         if (ph.equals("instagram.com") || ph.endsWith(".instagram.com")
-                                || ph.equals("facebook.com") || ph.endsWith(".facebook.com")) {
+                                || ph.equals("facebook.com") || ph.endsWith(".facebook.com")
+                                || ph.equals("chatgpt.com") || ph.endsWith(".chatgpt.com")
+                                || ph.equals("openai.com") || ph.endsWith(".openai.com")
+                                || ph.equals("oaistatic.com") || ph.endsWith(".oaistatic.com")
+                                || ph.equals("oaiusercontent.com") || ph.endsWith(".oaiusercontent.com")
+                                || ph.equals("cloudflare.com") || ph.endsWith(".cloudflare.com")) {
                             return super.shouldInterceptRequest(view, request);
                         }
                     }
@@ -25285,6 +25371,10 @@ public class MainActivity extends AppCompatActivity {
 
     @Override
     public void onBackPressed() {
+        if (omniboxFinderContainer != null && omniboxFinderContainer.getVisibility() == View.VISIBLE) {
+            hideOmniboxFinder();
+            return;
+        }
         if (isHorizonPeekOpen) {
             closeHorizonPeek(true);
             return;

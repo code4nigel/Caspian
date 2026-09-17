@@ -583,6 +583,18 @@ public class CaspianBridge {
     }
 
     @JavascriptInterface
+    public void exportCurrentDocument(String format) {
+        exportCurrentTab(format);
+    }
+
+    @JavascriptInterface
+    public void showExportOptions() {
+        if (activity != null) {
+            activity.runOnUiThread(() -> activity.showPrintAndExportDialog(activity.getActiveOrDominantTab()));
+        }
+    }
+
+    @JavascriptInterface
     public void onConversationExtracted(String jsonStr, String fmt) {
         if (activity != null) {
             activity.runOnUiThread(() -> activity.handleExtractedConversation(jsonStr, fmt));
