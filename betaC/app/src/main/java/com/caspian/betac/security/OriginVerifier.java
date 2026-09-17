@@ -16,14 +16,60 @@ public class OriginVerifier {
     public static final String INCOGNITO_HUB_URL = "file:///android_asset/incognito_hub.html";
     public static final String CONTROL_SHEET_URL = "file:///android_asset/browser_control.html";
 
+    public static final java.util.Set<String> ALLOWED_BUNDLED_DOCUMENTS = java.util.Collections.unmodifiableSet(
+            new java.util.HashSet<>(java.util.Arrays.asList(
+                    LAUNCH_HUB_URL,
+                    INCOGNITO_HUB_URL,
+                    PDF_VIEWER_URL,
+                    CONTROL_SHEET_URL
+            ))
+    );
+
+    public static final java.util.Set<String> ALLOWED_HUB_DOCUMENTS = java.util.Collections.unmodifiableSet(
+            new java.util.HashSet<>(java.util.Arrays.asList(
+                    LAUNCH_HUB_URL,
+                    INCOGNITO_HUB_URL
+            ))
+    );
+
     /**
-     * Checks if the URL points directly to an internal bundled Android asset.
+     * Checks if the URL points directly to an internal bundled Android asset document
+     * via strict URI parsing, path normalization, and an explicit document allowlist.
      */
     public static boolean isLocalAsset(String url) {
-        if (url == null) return false;
-        if (!url.startsWith(LOCAL_ASSET_PREFIX)) return false;
-        if (url.contains("..")) return false;
-        return true;
+        if (url == null || url.trim().isEmpty()) return false;
+        try {
+            if (url.contains("..") || url.contains("\0")) return false;
+            URI uri = URI.create(url);
+            if (!"file".equalsIgnoreCase(uri.getScheme())) return false;
+            URI normalized = uri.normalize();
+            String path = normalized.getPath();
+            if (path == null || !path.startsWith("/android_asset/")) return false;
+            if (path.contains("..") || path.contains("\0")) return false;
+            String normalizedUrl = "file://" + path;
+            return ALLOWED_BUNDLED_DOCUMENTS.contains(normalizedUrl);
+        } catch (Exception e) {
+            return false;
+        }
+    }
+
+    /**
+     * Specifically checks whether a URL exactly equals one of the permitted local Launch Hub documents.
+     */
+    public static boolean isPermittedHubDocument(String url) {
+        if (url == null || url.trim().isEmpty()) return false;
+        try {
+            if (url.contains("..") || url.contains("\0")) return false;
+            URI uri = URI.create(url);
+            if (!"file".equalsIgnoreCase(uri.getScheme())) return false;
+            URI normalized = uri.normalize();
+            String path = normalized.getPath();
+            if (path == null) return false;
+            String normalizedUrl = "file://" + path;
+            return ALLOWED_HUB_DOCUMENTS.contains(normalizedUrl);
+        } catch (Exception e) {
+            return false;
+        }
     }
 
     /**

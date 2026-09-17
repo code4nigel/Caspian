@@ -1349,9 +1349,6 @@ public class MainActivity extends AppCompatActivity {
             tabRuntimes.put(id, gptTab);
             tabsList.add(gptTab);
 
-            secondarySplitTabId = gptTab.id;
-            splitModeState = 1;
-            splitRatio = 0.5f;
             tabController.enterSplitMode(activeTabId, gptTab.id, 1, 0.5f);
             applySplitViewLayout();
             saveOpenTabsState();
@@ -1585,9 +1582,6 @@ public class MainActivity extends AppCompatActivity {
         tabRuntimes.put(id, gptTab);
         tabsList.add(gptTab);
 
-        secondarySplitTabId = gptTab.id;
-        splitModeState = 1;
-        splitRatio = 0.5f;
         tabController.enterSplitMode(activeTabId, gptTab.id, 1, 0.5f);
         applySplitViewLayout();
         saveOpenTabsState();
@@ -1766,8 +1760,7 @@ public class MainActivity extends AppCompatActivity {
                 splitRatio = tabController.getSplitRatio();
                 applySplitViewLayout();
             } else {
-                splitModeState = 0;
-                secondarySplitTabId = -1;
+                tabController.exitSplitMode();
                 switchToTab(activeTabId);
             }
             updateOmniboxState();
@@ -17235,22 +17228,24 @@ public class MainActivity extends AppCompatActivity {
 
     public void cycleSplitViewMode() {
         int prevMode = splitModeState;
-        splitModeState = (splitModeState + 1) % 3;
-        if (splitModeState != 0) {
+        int nextMode = (splitModeState + 1) % 3;
+        if (nextMode != 0) {
+            int secondId = -1;
             if (tabsList.size() < 2) {
                 com.caspian.betac.tabs.TabState secondState = tabController.addTab("Gemini", "https://gemini.google.com/app", "gemini", false, null, false);
                 TabItem secondTab = createNewTabInstance(secondState.id, "https://gemini.google.com/app", "gemini", null, false, null, secondState);
                 tabRuntimes.put(secondState.id, secondTab);
                 tabsList.add(secondTab);
-                secondarySplitTabId = secondTab.id;
+                secondId = secondTab.id;
             } else {
                 for (TabItem tab : tabsList) {
                     if (tab.id != activeTabId) {
-                        secondarySplitTabId = tab.id;
+                        secondId = tab.id;
                         break;
                     }
                 }
             }
+            tabController.enterSplitMode(activeTabId, secondId, nextMode, splitRatio);
             if (prevMode != 0 && splitViewContainer != null && splitViewContainer.getVisibility() == View.VISIBLE) {
                 animateSplitOrientationTransition(splitModeState);
             } else {
@@ -17258,6 +17253,7 @@ public class MainActivity extends AppCompatActivity {
             }
             Toast.makeText(this, splitModeState == 1 ? "🔀 Horizontal Split Active" : "🔀 Vertical Split Active", Toast.LENGTH_SHORT).show();
         } else {
+            tabController.exitSplitMode();
             exitSplitView();
         }
     }
@@ -18493,8 +18489,7 @@ public class MainActivity extends AppCompatActivity {
             rightTab.splitOrientation = 0;
             rightTab.splitName = "";
         }
-        splitModeState = 0;
-        secondarySplitTabId = -1;
+        tabController.exitSplitMode();
         if (splitArenaBroadcastContainer != null) splitArenaBroadcastContainer.setVisibility(View.GONE);
         if (splitLeftContainer != null) {
             splitLeftContainer.removeAllViews();
@@ -18794,8 +18789,6 @@ public class MainActivity extends AppCompatActivity {
             setupTabClientsAndListeners(newTab, peekWv);
             tabRuntimes.put(newId, newTab);
             tabsList.add(newTab);
-            secondarySplitTabId = newId;
-            splitModeState = 1;
             tabController.enterSplitMode(activeTabId, newId, 1, 0.5f);
             applySplitViewLayout();
             updateOmniboxState();
@@ -18809,8 +18802,6 @@ public class MainActivity extends AppCompatActivity {
             TabItem newTab = createNewTabInstance(newId, url, "web", null, false, null, tabState);
             tabRuntimes.put(newId, newTab);
             tabsList.add(newTab);
-            secondarySplitTabId = newId;
-            splitModeState = 1; // Horizontal Split
             tabController.enterSplitMode(activeTabId, newId, 1, 0.5f);
             applySplitViewLayout();
             updateOmniboxState();
@@ -21402,7 +21393,7 @@ public class MainActivity extends AppCompatActivity {
                 androidx.webkit.WebViewCompat.addWebMessageListener(
                         webView,
                         "CaspianHubChannel",
-                        java.util.Collections.singleton("*"),
+                        com.caspian.betac.security.TrustedHubMessageHandler.ALLOWED_ORIGIN_RULES,
                         new com.caspian.betac.security.TrustedHubMessageHandler(new com.caspian.betac.security.TrustedHubMessageHandler.HubActionCallback() {
                             @Override
                             public void onOpenUrl(String hubUrl) {

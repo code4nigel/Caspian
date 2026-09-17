@@ -14,11 +14,27 @@ public class OriginVerifierTest {
         assertTrue(OriginVerifier.isLocalAsset("file:///android_asset/launch_hub.html"));
         assertTrue(OriginVerifier.isLocalAsset("file:///android_asset/browser_control.html"));
         assertTrue(OriginVerifier.isLocalAsset("file:///android_asset/pdf_viewer.html"));
+        assertTrue(OriginVerifier.isLocalAsset("file:///android_asset/incognito_hub.html"));
 
+        assertFalse(OriginVerifier.isLocalAsset("file:///android_asset/../sdcard/evil.html"));
+        assertFalse(OriginVerifier.isLocalAsset("file:///android_asset/unknown_document.html"));
         assertFalse(OriginVerifier.isLocalAsset("https://google.com"));
         assertFalse(OriginVerifier.isLocalAsset("http://evil.com/fake/file:///android_asset/"));
         assertFalse(OriginVerifier.isLocalAsset(null));
         assertFalse(OriginVerifier.isLocalAsset(""));
+    }
+
+    @Test
+    public void testIsPermittedHubDocument() {
+        assertTrue(OriginVerifier.isPermittedHubDocument("file:///android_asset/launch_hub.html"));
+        assertTrue(OriginVerifier.isPermittedHubDocument("file:///android_asset/incognito_hub.html"));
+
+        assertFalse(OriginVerifier.isPermittedHubDocument("file:///android_asset/pdf_viewer.html"));
+        assertFalse(OriginVerifier.isPermittedHubDocument("file:///android_asset/browser_control.html"));
+        assertFalse(OriginVerifier.isPermittedHubDocument("file:///android_asset/../sdcard/evil.html"));
+        assertFalse(OriginVerifier.isPermittedHubDocument("https://chatgpt.com"));
+        assertFalse(OriginVerifier.isPermittedHubDocument(null));
+        assertFalse(OriginVerifier.isPermittedHubDocument(""));
     }
 
     @Test
