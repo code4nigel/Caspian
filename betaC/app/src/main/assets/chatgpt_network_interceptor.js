@@ -63,7 +63,7 @@
         return response;
       } catch (err) {
         console.warn('Caspian Network Interceptor fallback:', err);
-        return originalFetch.apply(this, args);
+        return response;
       }
     }
 

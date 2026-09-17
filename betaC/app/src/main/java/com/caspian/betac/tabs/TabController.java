@@ -224,22 +224,43 @@ public class TabController {
         tabs.remove(index);
 
         // Adjust split state if this tab was participating in split
+        int newActiveId = activeTabId;
         if (secondarySplitTabId == tabId) {
+            secondarySplitTabId = -1;
+            splitModeState = 0;
+        } else if (activeTabId == tabId && secondarySplitTabId != -1) {
+            newActiveId = secondarySplitTabId;
             secondarySplitTabId = -1;
             splitModeState = 0;
         }
 
-        int newActiveId = activeTabId;
+        for (TabState t : tabs) {
+            if (t.splitPartnerId == tabId) {
+                t.splitPartnerId = -1;
+                t.splitRole = "";
+                t.splitOrientation = 0;
+                t.splitName = "";
+            }
+        }
+
+        // Invariant: Clean up group memberships
+        for (TabGroupState g : tabGroups) {
+            g.tabIds.remove((Integer) tabId);
+        }
+        tabGroups.removeIf(g -> g.tabIds.isEmpty());
+
         if (activeTabId == tabId) {
-            if (!tabs.isEmpty()) {
-                // Pick adjacent tab
-                int newIndex = Math.min(index, tabs.size() - 1);
-                newActiveId = tabs.get(newIndex).id;
-            } else {
-                // Last tab was closed: spawn fresh hub
-                TabState defaultHub = new TabState(generateNextId(), "Caspian Hub", TabStateRepository.DEFAULT_HUB_URL, "hub", false);
-                tabs.add(defaultHub);
-                newActiveId = defaultHub.id;
+            if (newActiveId == tabId) {
+                if (!tabs.isEmpty()) {
+                    // Pick adjacent tab
+                    int newIndex = Math.min(index, tabs.size() - 1);
+                    newActiveId = tabs.get(newIndex).id;
+                } else {
+                    // Last tab was closed: spawn fresh hub
+                    TabState defaultHub = new TabState(generateNextId(), "Caspian Hub", TabStateRepository.DEFAULT_HUB_URL, "hub", false);
+                    tabs.add(defaultHub);
+                    newActiveId = defaultHub.id;
+                }
             }
             activeTabId = newActiveId;
         }
@@ -249,6 +270,25 @@ public class TabController {
             eventListener.onTabsUpdated();
         }
         return true;
+    }
+
+    public boolean reorderTabs(int fromPosition, int toPosition) {
+        if (fromPosition < 0 || fromPosition >= tabs.size() || toPosition < 0 || toPosition >= tabs.size()) {
+            return false;
+        }
+        TabState item = tabs.remove(fromPosition);
+        tabs.add(toPosition, item);
+        if (eventListener != null) {
+            eventListener.onTabsUpdated();
+        }
+        return true;
+    }
+
+    public int getTabPosition(int tabId) {
+        for (int i = 0; i < tabs.size(); i++) {
+            if (tabs.get(i).id == tabId) return i;
+        }
+        return -1;
     }
 
     public boolean hasClosedTabsToUndo() {
@@ -314,14 +354,6 @@ public class TabController {
         return batch;
     }
 
-    public void reorderTabs(int fromIndex, int toIndex) {
-        if (fromIndex < 0 || fromIndex >= tabs.size() || toIndex < 0 || toIndex >= tabs.size()) return;
-        TabState moved = tabs.remove(fromIndex);
-        tabs.add(toIndex, moved);
-        if (eventListener != null) {
-            eventListener.onTabsUpdated();
-        }
-    }
 
     public void closeAllTabs() {
         List<TabState> batch = new ArrayList<>();

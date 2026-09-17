@@ -413,6 +413,10 @@ public class WaveguardShield {
                "  if (window.__caspianShieldInjected) return;\n" +
                "  window.__caspianShieldInjected = true;\n" +
                "  try {\n" +
+               "    var h = (window.location && window.location.hostname) ? window.location.hostname : '';\n" +
+               "    if (h.indexOf('cloudflare.com') !== -1 || h.indexOf('chatgpt.com') !== -1 || h.indexOf('openai.com') !== -1) return;\n" +
+               "  } catch(e) {}\n" +
+               "  try {\n" +
                "    // 1. WebRTC IP Leak Defense: sanitize SDP candidate strings to protect internal/cellular IPs\n" +
                "    if (window.RTCPeerConnection && window.RTCPeerConnection.prototype) {\n" +
                "      var origSetRemote = window.RTCPeerConnection.prototype.setRemoteDescription;\n" +

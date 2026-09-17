@@ -282,10 +282,15 @@ public class MainActivity extends AppCompatActivity {
     }
 
     private final List<TabItem> tabsList = new ArrayList<>();
+    private final Map<Integer, TabItem> tabRuntimes = new java.util.concurrent.ConcurrentHashMap<>();
     private final com.caspian.betac.tabs.TabController tabController = new com.caspian.betac.tabs.TabController();
 
     public com.caspian.betac.tabs.TabController getTabController() {
         return tabController;
+    }
+
+    public Map<Integer, TabItem> getTabRuntimes() {
+        return tabRuntimes;
     }
 
     private final List<TabGroup> tabGroupsList = new ArrayList<>();
@@ -817,13 +822,14 @@ public class MainActivity extends AppCompatActivity {
     private static String MOBILE_UA = null;
 
     private String getDynamicMobileUserAgent() {
-        if (MOBILE_UA != null && !MOBILE_UA.isEmpty() && !MOBILE_UA.contains("Android 10; K")) {
+        if (MOBILE_UA != null && !MOBILE_UA.isEmpty()) {
             return MOBILE_UA;
         }
         try {
             String defaultUa = WebSettings.getDefaultUserAgent(this);
             if (defaultUa != null && !defaultUa.trim().isEmpty()) {
-                MOBILE_UA = defaultUa;
+                // Strip "Version/4.0 " which identifies embedded WebViews and triggers Cloudflare Turnstile bot blocking
+                MOBILE_UA = defaultUa.replace("Version/4.0 ", "").trim();
                 return MOBILE_UA;
             }
         } catch (Throwable ignored) {}
@@ -1237,15 +1243,17 @@ public class MainActivity extends AppCompatActivity {
     }
 
     public void openCachedPdfInNewTab(String absolutePath, String displayName) {
-        int id = nextTabId++;
         String encodedPath = Uri.encode(absolutePath);
         String encodedTitle = Uri.encode(displayName);
         String viewerUrl = "file:///android_asset/pdf_viewer.html?file=" + encodedPath + "&title=" + encodedTitle;
 
         CaskManager cm = new CaskManager(this);
         String caskId = cm.getActiveCaskId();
-        TabItem tab = createNewTabInstance(id, viewerUrl, "pdf", null, false, caskId);
+        com.caspian.betac.tabs.TabState pdfState = tabController.addTab(displayName, viewerUrl, "pdf", false, caskId, true);
+        int id = pdfState.id;
+        TabItem tab = createNewTabInstance(id, viewerUrl, "pdf", null, false, caskId, pdfState);
         tab.title = displayName;
+        tabRuntimes.put(id, tab);
         tabsList.add(tab);
         switchToTab(id);
         saveOpenTabsState();
@@ -1257,14 +1265,17 @@ public class MainActivity extends AppCompatActivity {
 
         if ("split".equalsIgnoreCase(targetService)) {
             // Open Split Arena: Active PDF on the Left, ChatGPT on the Right
-            int id = nextTabId++;
-            TabItem gptTab = createNewTabInstance(id, "https://chatgpt.com", "chatgpt", prompt, false);
+            com.caspian.betac.tabs.TabState gptState = tabController.addTab("ChatGPT", "https://chatgpt.com", "chatgpt", false, null, false);
+            int id = gptState.id;
+            TabItem gptTab = createNewTabInstance(id, "https://chatgpt.com", "chatgpt", prompt, false, null, gptState);
             gptTab.title = "ChatGPT";
+            tabRuntimes.put(id, gptTab);
             tabsList.add(gptTab);
 
             secondarySplitTabId = gptTab.id;
             splitModeState = 1;
             splitRatio = 0.5f;
+            tabController.enterSplitMode(activeTabId, gptTab.id, 1, 0.5f);
             applySplitViewLayout();
             saveOpenTabsState();
             Toast.makeText(this, "Split Screen Study Active!", Toast.LENGTH_SHORT).show();
@@ -1490,14 +1501,17 @@ public class MainActivity extends AppCompatActivity {
         if (bitmap != null) {
             copyImageToClipboard(bitmap);
         }
-        int id = nextTabId++;
-        TabItem gptTab = createNewTabInstance(id, "https://chatgpt.com", "chatgpt", "", false);
+        com.caspian.betac.tabs.TabState gptState = tabController.addTab("ChatGPT", "https://chatgpt.com", "chatgpt", false, null, false);
+        int id = gptState.id;
+        TabItem gptTab = createNewTabInstance(id, "https://chatgpt.com", "chatgpt", "", false, null, gptState);
         gptTab.title = "ChatGPT";
+        tabRuntimes.put(id, gptTab);
         tabsList.add(gptTab);
 
         secondarySplitTabId = gptTab.id;
         splitModeState = 1;
         splitRatio = 0.5f;
+        tabController.enterSplitMode(activeTabId, gptTab.id, 1, 0.5f);
         applySplitViewLayout();
         saveOpenTabsState();
         Toast.makeText(this, "Image copied to clipboard! Split Screen Active.", Toast.LENGTH_SHORT).show();
@@ -1657,10 +1671,12 @@ public class MainActivity extends AppCompatActivity {
         List<com.caspian.betac.tabs.TabState> states = tabController.getTabs();
         if (states != null && !states.isEmpty()) {
             tabsList.clear();
+            tabRuntimes.clear();
             for (com.caspian.betac.tabs.TabState s : states) {
                 TabItem item = createNewTabInstance(s.id, s.url, s.service, null, s.isIncognito, s.caskId, s);
                 item.isRestoredFromSavedState = true;
                 item.syncFromState();
+                tabRuntimes.put(s.id, item);
                 tabsList.add(item);
             }
             nextTabId = tabController.getNextTabId();
@@ -1682,9 +1698,12 @@ public class MainActivity extends AppCompatActivity {
         }
 
         // Fallback default: Open Caspian Hub Tab
+        tabsList.clear();
+        tabRuntimes.clear();
         com.caspian.betac.tabs.TabState initial = tabController.addTab("Caspian Hub", "file:///android_asset/launch_hub.html", "hub", false, null);
         TabItem initialTab = createNewTabInstance(initial.id, initial.url, initial.service, null, initial.isIncognito, null, initial);
         initialTab.title = "Caspian Hub";
+        tabRuntimes.put(initial.id, initialTab);
         tabsList.add(initialTab);
         activeTabId = initial.id;
         switchToTab(initial.id);
@@ -14646,20 +14665,25 @@ public class MainActivity extends AppCompatActivity {
 
     public void launchDualAIAsk() {
         playUiFeedbackSound("tap");
-        int gptId = nextTabId++;
-        TabItem gptTab = createNewTabInstance(gptId, "https://chatgpt.com", "chatgpt", null, false);
+        com.caspian.betac.tabs.TabState gptState = tabController.addTab("ChatGPT", "https://chatgpt.com", "chatgpt", false, null, true);
+        int gptId = gptState.id;
+        TabItem gptTab = createNewTabInstance(gptId, "https://chatgpt.com", "chatgpt", null, false, null, gptState);
         gptTab.title = "ChatGPT";
+        tabRuntimes.put(gptId, gptTab);
         tabsList.add(gptTab);
 
-        int geminiId = nextTabId++;
-        TabItem geminiTab = createNewTabInstance(geminiId, "https://gemini.google.com/app", "gemini", null, false);
+        com.caspian.betac.tabs.TabState geminiState = tabController.addTab("Gemini", "https://gemini.google.com/app", "gemini", false, null, false);
+        int geminiId = geminiState.id;
+        TabItem geminiTab = createNewTabInstance(geminiId, "https://gemini.google.com/app", "gemini", null, false, null, geminiState);
         geminiTab.title = "Gemini";
+        tabRuntimes.put(geminiId, geminiTab);
         tabsList.add(geminiTab);
 
         activeTabId = gptTab.id;
         secondarySplitTabId = geminiTab.id;
         splitModeState = 1;
         splitRatio = 0.5f;
+        tabController.enterSplitMode(gptTab.id, geminiTab.id, 1, 0.5f);
         applySplitViewLayout();
         updateOmniboxState();
         updateOmniboxTabStrip();
@@ -17004,11 +17028,7 @@ public class MainActivity extends AppCompatActivity {
     }
 
     public void addNewIncognitoTab() {
-        int newId = nextTabId++;
-        TabItem incognitoTab = createNewTabInstance(newId, "file:///android_asset/incognito_hub.html", "web", null, true);
-        incognitoTab.title = "Private Tab";
-        tabsList.add(incognitoTab);
-        switchToTab(newId);
+        addNewTab("web", null, "file:///android_asset/incognito_hub.html", true);
         Toast.makeText(this, "🕶️ Private Tab Opened (No Cookies / History)", Toast.LENGTH_SHORT).show();
     }
 
@@ -17151,7 +17171,9 @@ public class MainActivity extends AppCompatActivity {
         splitModeState = (splitModeState + 1) % 3;
         if (splitModeState != 0) {
             if (tabsList.size() < 2) {
-                TabItem secondTab = createNewTabInstance(nextTabId++, "https://gemini.google.com/app", "gemini", null, false);
+                com.caspian.betac.tabs.TabState secondState = tabController.addTab("Gemini", "https://gemini.google.com/app", "gemini", false, null, false);
+                TabItem secondTab = createNewTabInstance(secondState.id, "https://gemini.google.com/app", "gemini", null, false, null, secondState);
+                tabRuntimes.put(secondState.id, secondTab);
                 tabsList.add(secondTab);
                 secondarySplitTabId = secondTab.id;
             } else {
@@ -17614,18 +17636,20 @@ public class MainActivity extends AppCompatActivity {
             }
 
             if (gptTab == null) {
-                int id = nextTabId++;
-                gptTab = createNewTabInstance(id, "https://chatgpt.com", "chatgpt", prompt, false);
+                com.caspian.betac.tabs.TabState gptState = tabController.addTab("ChatGPT", "https://chatgpt.com", "chatgpt", false, null, false);
+                gptTab = createNewTabInstance(gptState.id, "https://chatgpt.com", "chatgpt", prompt, false, null, gptState);
                 gptTab.title = "ChatGPT";
+                tabRuntimes.put(gptState.id, gptTab);
                 tabsList.add(gptTab);
             } else {
                 gptTab.pendingPrompt = prompt;
             }
 
             if (geminiTab == null) {
-                int id = nextTabId++;
-                geminiTab = createNewTabInstance(id, "https://gemini.google.com/app", "gemini", prompt, false);
+                com.caspian.betac.tabs.TabState geminiState = tabController.addTab("Gemini", "https://gemini.google.com/app", "gemini", false, null, false);
+                geminiTab = createNewTabInstance(geminiState.id, "https://gemini.google.com/app", "gemini", prompt, false, null, geminiState);
                 geminiTab.title = "Gemini";
+                tabRuntimes.put(geminiState.id, geminiTab);
                 tabsList.add(geminiTab);
             } else {
                 geminiTab.pendingPrompt = prompt;
@@ -18617,12 +18641,13 @@ public class MainActivity extends AppCompatActivity {
             horizonPeekWebView = null; // Detached so cleanup won't destroy it!
             closeHorizonPeek(false);
 
-            int newId = nextTabId++;
             String peekTitle = (horizonPeekTitle != null && horizonPeekTitle.getText() != null)
                     ? horizonPeekTitle.getText().toString() : "Horizon Peek";
-            TabItem tab = new TabItem(newId, peekTitle, url, "web", peekWv, false);
             CaskManager cm = new CaskManager(this);
             String activeCask = cm.getActiveCaskId();
+            com.caspian.betac.tabs.TabState tabState = tabController.addTab(peekTitle, url, "web", false, activeCask, true);
+            int newId = tabState.id;
+            TabItem tab = new TabItem(newId, peekTitle, url, "web", peekWv, false, tabState);
             CaskManager.CaskItem cask = cm.getCaskById(activeCask);
             if (cask != null) {
                 tab.caskId = cask.id;
@@ -18631,6 +18656,7 @@ public class MainActivity extends AppCompatActivity {
                 tab.caskColor = cask.color;
             }
             setupTabClientsAndListeners(tab, peekWv);
+            tabRuntimes.put(newId, tab);
             tabsList.add(tab);
             activeTabId = newId;
 
@@ -18650,13 +18676,7 @@ public class MainActivity extends AppCompatActivity {
             Toast.makeText(this, "Adopted preview as active tab", Toast.LENGTH_SHORT).show();
         } else {
             closeHorizonPeek(false);
-            int newId = nextTabId++;
-            TabItem tab = createNewTabInstance(newId, url, "web", null, false);
-            tabsList.add(tab);
-            activeTabId = newId;
-            switchToTab(newId, true);
-            saveOpenTabsState();
-            updateOmniboxTabStrip();
+            addNewTab("web", null, url, false);
             Toast.makeText(this, "Promoted to new tab", Toast.LENGTH_SHORT).show();
         }
     }
@@ -18665,12 +18685,7 @@ public class MainActivity extends AppCompatActivity {
         if (currentHorizonPeekUrl == null) return;
         String url = currentHorizonPeekUrl;
 
-        int newId = nextTabId++;
-        TabItem bgTab = createNewTabInstance(newId, url, "web", null, false);
-        tabsList.add(bgTab);
-        saveOpenTabsState();
-        updateOmniboxTabStrip();
-        updateOmniboxState();
+        addNewTab("web", null, url, false, null, false);
 
         // Animate peek sheet scaling down toward omnibox tab counter
         if (horizonPeekSheet != null && horizonPeekRoot != null) {
@@ -18709,14 +18724,17 @@ public class MainActivity extends AppCompatActivity {
             horizonPeekWebView = null;
             closeHorizonPeek(false);
 
-            int newId = nextTabId++;
             String peekTitle = (horizonPeekTitle != null && horizonPeekTitle.getText() != null)
                     ? horizonPeekTitle.getText().toString() : "Horizon Peek";
-            TabItem newTab = new TabItem(newId, peekTitle, url, "web", peekWv, false);
+            com.caspian.betac.tabs.TabState tabState = tabController.addTab(peekTitle, url, "web", false, null, false);
+            int newId = tabState.id;
+            TabItem newTab = new TabItem(newId, peekTitle, url, "web", peekWv, false, tabState);
             setupTabClientsAndListeners(newTab, peekWv);
+            tabRuntimes.put(newId, newTab);
             tabsList.add(newTab);
             secondarySplitTabId = newId;
             splitModeState = 1;
+            tabController.enterSplitMode(activeTabId, newId, 1, 0.5f);
             applySplitViewLayout();
             updateOmniboxState();
             saveOpenTabsState();
@@ -18724,11 +18742,14 @@ public class MainActivity extends AppCompatActivity {
             Toast.makeText(this, "Opened in Split Screen", Toast.LENGTH_SHORT).show();
         } else {
             closeHorizonPeek(false);
-            int newId = nextTabId++;
-            TabItem newTab = createNewTabInstance(newId, url, "web", null, false);
+            com.caspian.betac.tabs.TabState tabState = tabController.addTab("New Tab", url, "web", false, null, false);
+            int newId = tabState.id;
+            TabItem newTab = createNewTabInstance(newId, url, "web", null, false, null, tabState);
+            tabRuntimes.put(newId, newTab);
             tabsList.add(newTab);
             secondarySplitTabId = newId;
             splitModeState = 1; // Horizontal Split
+            tabController.enterSplitMode(activeTabId, newId, 1, 0.5f);
             applySplitViewLayout();
             updateOmniboxState();
             saveOpenTabsState();
@@ -21217,7 +21238,7 @@ public class MainActivity extends AppCompatActivity {
             settings.setCacheMode(WebSettings.LOAD_DEFAULT);
             CaskManager.applyProfileToWebView(webView, finalCaskId);
             CookieManager.getInstance().setAcceptCookie(true);
-            CookieManager.getInstance().setAcceptThirdPartyCookies(webView, false);
+            CookieManager.getInstance().setAcceptThirdPartyCookies(webView, true);
         } else {
             settings.setCacheMode(WebSettings.LOAD_NO_CACHE);
             CookieManager.getInstance().setAcceptThirdPartyCookies(webView, false);
@@ -21514,14 +21535,6 @@ public class MainActivity extends AppCompatActivity {
 
             @Override
             public void onPageStarted(WebView view, String pageUrl, Bitmap favicon) {
-                // Security Boundary: Only local assets and trusted media retain CaspianBridge
-                if (com.caspian.betac.security.OriginVerifier.isLocalAsset(pageUrl) || 
-                    com.caspian.betac.security.OriginVerifier.isTrustedMediaHost(pageUrl)) {
-                    view.addJavascriptInterface(new CaspianBridge(MainActivity.this, id), "CaspianBridge");
-                } else {
-                    view.removeJavascriptInterface("CaspianBridge");
-                }
-
                 if (pageUrl != null && pageUrl.contains("lastfm-callback")) {
                     try {
                         Uri uri = Uri.parse(pageUrl);
@@ -21566,10 +21579,6 @@ public class MainActivity extends AppCompatActivity {
                     } else {
                         dockToolbarAtTop(false);
                     }
-                }
-                if (pageUrl != null && pageUrl.contains("chatgpt.com")) {
-                    String interceptorJs = readAssetScript("chatgpt_network_interceptor.js");
-                    if (!interceptorJs.isEmpty()) view.evaluateJavascript(interceptorJs, null);
                 }
             }
 
@@ -22823,8 +22832,13 @@ public class MainActivity extends AppCompatActivity {
     }
 
     public TabItem getTabById(int tabId) {
+        TabItem runtime = tabRuntimes.get(tabId);
+        if (runtime != null) return runtime;
         for (TabItem item : tabsList) {
-            if (item.id == tabId) return item;
+            if (item != null && item.id == tabId) {
+                tabRuntimes.put(tabId, item);
+                return item;
+            }
         }
         return null;
     }
@@ -23811,8 +23825,9 @@ public class MainActivity extends AppCompatActivity {
         newTabRow.setOnClickListener(v -> {
             dialog.dismiss();
             playUiFeedbackSound("tap");
-            int id = nextTabId++;
-            TabItem secondTab = createNewTabInstance(id, "https://google.com", "google", null, false);
+            com.caspian.betac.tabs.TabState secondState = tabController.addTab("Google", "https://google.com", "google", false, null, false);
+            TabItem secondTab = createNewTabInstance(secondState.id, "https://google.com", "google", null, false, null, secondState);
+            tabRuntimes.put(secondState.id, secondTab);
             tabsList.add(secondTab);
             enterSplitMode(primaryTab.id, secondTab.id);
         });
