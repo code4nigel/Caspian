@@ -20602,7 +20602,7 @@ public class MainActivity extends AppCompatActivity {
             method = isTemp ? prefs.getString("export_gemini_temp", "sweeper") : prefs.getString("export_gemini_normal", "sweeper");
         }
 
-        String extractorJs = "(async function() {\n" +
+        String extractorJs = "(function() {\n" +
                 "  var turns = [];\n" +
                 "  var seen = new Set();\n" +
                 "  var chosenMethod = " + JSONObject.quote(method) + ";\n" +
@@ -20756,33 +20756,33 @@ public class MainActivity extends AppCompatActivity {
                 "    }\n" +
                 "  }\n" +
                 "\n" +
-                "  async function imgToBase64(imgEl) {\n" +
-                "    return new Promise((resolve) => {\n" +
-                "      try {\n" +
-                "        if (!imgEl.src) return resolve(null);\n" +
-                "        if (imgEl.src.startsWith('data:')) return resolve(imgEl.src);\n" +
-                "        var canvas = document.createElement('canvas');\n" +
-                "        canvas.width = imgEl.naturalWidth || imgEl.width || 300;\n" +
-                "        canvas.height = imgEl.naturalHeight || imgEl.height || 300;\n" +
-                "        var ctx = canvas.getContext('2d');\n" +
-                "        ctx.drawImage(imgEl, 0, 0);\n" +
-                "        resolve(canvas.toDataURL('image/png'));\n" +
-                "      } catch(e) { resolve(null); }\n" +
-                "    });\n" +
+                "  function imgToBase64(imgEl) {\n" +
+                "    try {\n" +
+                "      if (!imgEl || !imgEl.src) return null;\n" +
+                "      if (imgEl.src.startsWith('data:')) return imgEl.src;\n" +
+                "      var canvas = document.createElement('canvas');\n" +
+                "      canvas.width = imgEl.naturalWidth || imgEl.width || 300;\n" +
+                "      canvas.height = imgEl.naturalHeight || imgEl.height || 300;\n" +
+                "      var ctx = canvas.getContext('2d');\n" +
+                "      ctx.drawImage(imgEl, 0, 0);\n" +
+                "      return canvas.toDataURL('image/png');\n" +
+                "    } catch(e) { return null; }\n" +
                 "  }\n" +
                 "\n" +
-                "  async function getTurnImages(turnIdx) {\n" +
-                "    var selector = activeService === 'gemini' ? '.query-content, .user-query, div.query-text, .model-response, .model-reply, .reply-text-container' : '[data-testid^=\"conversation-turn-\"], div.w-full.text-token-text-primary';\n" +
-                "    var rows = Array.from(document.querySelectorAll(selector));\n" +
-                "    if (rows[turnIdx]) {\n" +
-                "      var imgs = Array.from(rows[turnIdx].querySelectorAll('img')).filter(img => img.src && !img.src.includes('avatar') && !img.src.includes('profile') && img.width > 24);\n" +
-                "      var base64s = [];\n" +
-                "      for (var img of imgs) {\n" +
-                "        var b64 = await imgToBase64(img);\n" +
-                "        if (b64) base64s.push(b64);\n" +
+                "  function getTurnImages(turnIdx) {\n" +
+                "    try {\n" +
+                "      var selector = activeService === 'gemini' ? '.query-content, .user-query, div.query-text, .model-response, .model-reply, .reply-text-container' : '[data-testid^=\"conversation-turn-\"], div.w-full.text-token-text-primary';\n" +
+                "      var rows = Array.from(document.querySelectorAll(selector));\n" +
+                "      if (rows[turnIdx]) {\n" +
+                "        var imgs = Array.from(rows[turnIdx].querySelectorAll('img')).filter(img => img.src && !img.src.includes('avatar') && !img.src.includes('profile') && img.width > 24);\n" +
+                "        var base64s = [];\n" +
+                "        for (var idx = 0; idx < imgs.length; idx++) {\n" +
+                "          var b64 = imgToBase64(imgs[idx]);\n" +
+                "          if (b64) base64s.push(b64);\n" +
+                "        }\n" +
+                "        return base64s;\n" +
                 "      }\n" +
-                "      return base64s;\n" +
-                "    }\n" +
+                "    } catch(e) {}\n" +
                 "    return [];\n" +
                 "  }\n" +
                 "\n" +
@@ -20885,7 +20885,7 @@ public class MainActivity extends AppCompatActivity {
                 "            if (!seen.has(activeNodes[k].text)) {\n" +
                 "              seen.add(activeNodes[k].text);\n" +
                 "              var parsedHtml = parseMarkdownAndLaTeX(activeNodes[k].text);\n" +
-                "              var localImgs = await getTurnImages(turns.length);\n" +
+                "              var localImgs = getTurnImages(turns.length);\n" +
                 "              localImgs.forEach(function(b64) {\n" +
                 "                parsedHtml += '<div style=\"margin-top:12px; text-align:center;\"><img src=\"' + b64 + '\" style=\"max-width:100%; border-radius:8px; box-shadow:0 4px 12px rgba(0,0,0,0.1);\" /></div>';\n" +
                 "              });\n" +
@@ -20934,7 +20934,7 @@ public class MainActivity extends AppCompatActivity {
                 "            if (text && !seen.has(text)) {\n" +
                 "              seen.add(text);\n" +
                 "              var parsedHtml = parseMarkdownAndLaTeX(text);\n" +
-                "              var localImgs = await getTurnImages(turns.length);\n" +
+                "              var localImgs = getTurnImages(turns.length);\n" +
                 "              localImgs.forEach(b64 => {\n" +
                 "                parsedHtml += '<div style=\"margin-top:12px; text-align:center;\"><img src=\"' + b64 + '\" style=\"max-width:100%; border-radius:8px; box-shadow:0 4px 12px rgba(0,0,0,0.1);\" /></div>';\n" +
                 "              });\n" +
@@ -20995,7 +20995,7 @@ public class MainActivity extends AppCompatActivity {
                 "                parsedHtml = parseMarkdownAndLaTeX(text);\n" +
                 "              }\n" +
                 "            }\n" +
-                "            var localImgs = await getTurnImages(turns.length);\n" +
+                "            var localImgs = getTurnImages(turns.length);\n" +
                 "            localImgs.forEach(b64 => {\n" +
                 "              parsedHtml += '<div style=\"margin-top:12px; text-align:center;\"><img src=\"' + b64 + '\" style=\"max-width:100%; border-radius:8px; box-shadow:0 4px 12px rgba(0,0,0,0.1);\" /></div>';\n" +
                 "            });\n" +
@@ -21028,7 +21028,7 @@ public class MainActivity extends AppCompatActivity {
                 "          if (text && !seen.has(text)) {\n" +
                 "            seen.add(text);\n" +
                 "            var parsedHtml = parseMarkdownAndLaTeX(text);\n" +
-                "            var localImgs = await getTurnImages(turns.length);\n" +
+                "            var localImgs = getTurnImages(turns.length);\n" +
                 "            localImgs.forEach(b64 => {\n" +
                 "              parsedHtml += '<div style=\"margin-top:12px; text-align:center;\"><img src=\"' + b64 + '\" style=\"max-width:100%; border-radius:8px; box-shadow:0 4px 12px rgba(0,0,0,0.1);\" /></div>';\n" +
                 "            });\n" +
@@ -21064,12 +21064,25 @@ public class MainActivity extends AppCompatActivity {
                 "    } catch(e) {}\n" +
                 "  }\n" +
                 "\n" +
+                "  var jsonPayload = JSON.stringify(turns);\n" +
                 "  if (window.CaspianBridge && typeof window.CaspianBridge.onConversationExtracted === 'function') {\n" +
-                "    window.CaspianBridge.onConversationExtracted(JSON.stringify(turns), '" + exportFmt + "');\n" +
+                "    window.CaspianBridge.onConversationExtracted(jsonPayload, '" + exportFmt + "');\n" +
                 "  }\n" +
+                "  return jsonPayload;\n" +
                 "})();";
 
-        mainWebView.evaluateJavascript(extractorJs, null);
+        mainWebView.evaluateJavascript(extractorJs, result -> {
+            if (result != null && !result.equals("null") && !result.equals("\"\"") && !result.equals("[]")) {
+                try {
+                    String unescaped = result;
+                    if (unescaped.startsWith("\"") && unescaped.endsWith("\"")) {
+                        unescaped = new org.json.JSONTokener(unescaped).nextValue().toString();
+                    }
+                    final String finalJson = unescaped;
+                    runOnUiThread(() -> handleExtractedConversation(finalJson, exportFmt));
+                } catch (Throwable ignored) {}
+            }
+        });
     }
 
     public void handleExtractedConversation(String jsonStr, String exportFmt) {
@@ -21547,6 +21560,7 @@ public class MainActivity extends AppCompatActivity {
         } catch (Throwable t) {
             Log.e(TAG, "Error registering CaspianHubChannel WebMessageListener: ", t);
         }
+
         applyWebViewTheme(webView, isDarkTheme);
 
         webView.setOnScrollChangeListener((v, scrollX, scrollY, oldScrollX, oldScrollY) -> {
@@ -21631,11 +21645,16 @@ public class MainActivity extends AppCompatActivity {
                 if (handleExternalUriSchemes(view, targetUrl)) {
                     return true;
                 }
-                if (targetUrl.startsWith("http://") || targetUrl.startsWith("https://")) {
+                if (targetUrl.startsWith("http://") || targetUrl.startsWith("https://") || targetUrl.contains("chatgpt.com")) {
+                    if (!targetUrl.startsWith("http://") && !targetUrl.startsWith("https://")) {
+                        targetUrl = "https://" + targetUrl;
+                    }
                     String curUrl = view.getUrl();
                     if (curUrl != null && curUrl.contains("launch_hub.html")) {
                         tabItem.service = AICommandRouter.detectServiceFromUrl(targetUrl);
-                        return false;
+                        final String destUrl = targetUrl;
+                        runOnUiThread(() -> navigateUrl(destUrl));
+                        return true;
                     }
                 }
                 if (targetUrl.contains("lastfm-callback")) {
@@ -21669,11 +21688,16 @@ public class MainActivity extends AppCompatActivity {
             @Override
             public boolean shouldOverrideUrlLoading(WebView view, String url) {
                 if (handleExternalUriSchemes(view, url)) return true;
-                if (url != null && (url.startsWith("http://") || url.startsWith("https://"))) {
+                if (url != null && (url.startsWith("http://") || url.startsWith("https://") || url.contains("chatgpt.com"))) {
+                    if (!url.startsWith("http://") && !url.startsWith("https://")) {
+                        url = "https://" + url;
+                    }
                     String curUrl = view.getUrl();
                     if (curUrl != null && curUrl.contains("launch_hub.html")) {
                         tabItem.service = AICommandRouter.detectServiceFromUrl(url);
-                        return false;
+                        final String destUrl = url;
+                        runOnUiThread(() -> navigateUrl(destUrl));
+                        return true;
                     }
                 }
                 return super.shouldOverrideUrlLoading(view, url);

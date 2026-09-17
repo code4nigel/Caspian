@@ -408,9 +408,9 @@
     "semantic_hash": ""
   },
   "betaC/app/src/main/java/com/caspian/betac/CaspianBridge.java": {
-    "mtime": 1789636806.4293215,
-    "seen": 1789637084.1059904,
-    "ast_hash": "42d800874402288c60a47be881b42fe8",
+    "mtime": 1789662702.0069706,
+    "seen": 1789663287.2039416,
+    "ast_hash": "6d845ff06e26b9873a20eb666b80b789",
     "semantic_hash": ""
   },
   "betaC/app/src/main/java/com/caspian/betac/CaspianDownloadManager.java": {
@@ -450,9 +450,9 @@
     "semantic_hash": ""
   },
   "betaC/app/src/main/java/com/caspian/betac/MainActivity.java": {
-    "mtime": 1789647211.0806744,
-    "seen": 1789647364.8740234,
-    "ast_hash": "b53a8adc41bbbba9017641ae602ac06e",
+    "mtime": 1789663036.111887,
+    "seen": 1789663287.2039685,
+    "ast_hash": "768bbae8ce46224b30e3a29d161aa281",
     "semantic_hash": ""
   },
   "betaC/app/src/main/java/com/caspian/betac/SearchSuggestionService.java": {

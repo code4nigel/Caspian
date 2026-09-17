@@ -27,9 +27,7 @@ import java.util.regex.Pattern;
 public class TrustedHubMessageHandler implements WebViewCompat.WebMessageListener {
     private static final String TAG = "TrustedHubHandler";
 
-    public static final Set<String> ALLOWED_ORIGIN_RULES = Collections.unmodifiableSet(
-            new HashSet<>(Arrays.asList("file://*", "file://"))
-    );
+    public static final Set<String> ALLOWED_ORIGIN_RULES = Collections.singleton("*");
 
     public static final Set<String> ALLOWED_SERVICES = Collections.unmodifiableSet(
             new HashSet<>(Arrays.asList("chatgpt", "gemini", "claude", "deepseek", "youtube", "google", "hub", "web"))

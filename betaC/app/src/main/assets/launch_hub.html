@@ -2469,17 +2469,22 @@
       playTapSFX();
       triggerHaptic(35);
 
+      let targetUrl = item.url || '';
+      if (!targetUrl.startsWith('http://') && !targetUrl.startsWith('https://')) {
+        targetUrl = 'https://' + targetUrl;
+      }
+
       cardEl.classList.add('launching');
       setTimeout(() => {
-        if (postHubMessage({ action: 'openUrl', url: item.url })) {
+        if (postHubMessage({ action: 'openUrl', url: targetUrl })) {
           return;
         }
         if (item.service && window.CaspianBridge && typeof window.CaspianBridge.switchService === 'function') {
           window.CaspianBridge.switchService(item.service);
         } else if (window.CaspianBridge && typeof window.CaspianBridge.openUrl === 'function') {
-          window.CaspianBridge.openUrl(item.url);
+          window.CaspianBridge.openUrl(targetUrl);
         } else {
-          window.location.href = item.url;
+          window.location.href = targetUrl;
         }
       }, 100);
     }
