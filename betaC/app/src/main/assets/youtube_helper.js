@@ -5,6 +5,19 @@
   if (window.__CASPIAN_YT_DEFUSER_INITIALIZED__) return;
   window.__CASPIAN_YT_DEFUSER_INITIALIZED__ = true;
 
+  // -------------------------------------------------------------
+  // Origin-scoped AndroidX WebMessage transport helper
+  // -------------------------------------------------------------
+  function postCaspianMediaMessage(msgObj) {
+    try {
+      if (window.CaspianMediaChannel && typeof window.CaspianMediaChannel.postMessage === 'function') {
+        window.CaspianMediaChannel.postMessage(JSON.stringify(msgObj));
+        return true;
+      }
+    } catch (e) {}
+    return false;
+  }
+
   // Intercept and preserve native MediaSession action handlers & metadata from YouTube Music
   var __caspian_ytm_next_handler = null;
   var __caspian_ytm_prev_handler = null;
@@ -29,8 +42,10 @@
           __caspian_captured_position_state = state;
           if (state.duration && state.duration > 0) {
             var tabId = window.__caspian_tab_id || 0;
-            if (window.CaspianBridge && typeof window.CaspianBridge.updateTabYouTubeTime === 'function') {
-              window.CaspianBridge.updateTabYouTubeTime(tabId, state.position || 0, state.duration);
+            if (!postCaspianMediaMessage({ action: 'updateTime', currentTime: state.position || 0, duration: state.duration })) {
+              if (window.CaspianBridge && typeof window.CaspianBridge.updateTabYouTubeTime === 'function') {
+                window.CaspianBridge.updateTabYouTubeTime(tabId, state.position || 0, state.duration);
+              }
             }
           }
         }
@@ -67,8 +82,10 @@
               art = art.replace(/=w\d+-h\d+[^&?]*/, '=w800-h800-l90-rj').replace(/=s\d+[^&?]*/, '=s800');
             }
             if (t && t !== 'YouTube Music' && t !== 'YouTube') {
-              if (window.CaspianBridge && typeof window.CaspianBridge.updateTabMediaMetadataExtended === 'function') {
-                window.CaspianBridge.updateTabMediaMetadataExtended(tabId, t, a, art);
+              if (!postCaspianMediaMessage({ action: 'updateMetadata', title: t, artist: a, thumbnailUrl: art })) {
+                if (window.CaspianBridge && typeof window.CaspianBridge.updateTabMediaMetadataExtended === 'function') {
+                  window.CaspianBridge.updateTabMediaMetadataExtended(tabId, t, a, art);
+                }
               }
             }
           }
@@ -209,11 +226,13 @@
           if (force || this._lastPlaying !== isPlaying || this._lastMuted !== isMuted) {
             this._lastPlaying = isPlaying;
             this._lastMuted = isMuted;
-            if (window.CaspianBridge) {
-              if (typeof window.CaspianBridge.updateTabYouTubeState === 'function') {
-                window.CaspianBridge.updateTabYouTubeState(tabId, isPlaying, isMuted);
-              } else if (typeof window.CaspianBridge.updateYouTubeState === 'function') {
-                window.CaspianBridge.updateYouTubeState(isPlaying, isMuted);
+            if (!postCaspianMediaMessage({ action: 'updateState', isPlaying: isPlaying, isMuted: isMuted })) {
+              if (window.CaspianBridge) {
+                if (typeof window.CaspianBridge.updateTabYouTubeState === 'function') {
+                  window.CaspianBridge.updateTabYouTubeState(tabId, isPlaying, isMuted);
+                } else if (typeof window.CaspianBridge.updateYouTubeState === 'function') {
+                  window.CaspianBridge.updateYouTubeState(isPlaying, isMuted);
+                }
               }
             }
           }
@@ -587,13 +606,15 @@
           this._lastTitle = title;
           this._lastArtist = artist;
           this._lastThumb = thumbUrl;
-          if (window.CaspianBridge) {
-            if (typeof window.CaspianBridge.updateTabMediaMetadataExtended === 'function') {
-              window.CaspianBridge.updateTabMediaMetadataExtended(tabId, title, artist, thumbUrl);
-            } else if (typeof window.CaspianBridge.updateTabMediaMetadata === 'function') {
-              window.CaspianBridge.updateTabMediaMetadata(tabId, title, thumbUrl);
-            } else if (typeof window.CaspianBridge.updateMediaMetadata === 'function') {
-              window.CaspianBridge.updateMediaMetadata(title, thumbUrl);
+          if (!postCaspianMediaMessage({ action: 'updateMetadata', title: title, artist: artist, thumbnailUrl: thumbUrl })) {
+            if (window.CaspianBridge) {
+              if (typeof window.CaspianBridge.updateTabMediaMetadataExtended === 'function') {
+                window.CaspianBridge.updateTabMediaMetadataExtended(tabId, title, artist, thumbUrl);
+              } else if (typeof window.CaspianBridge.updateTabMediaMetadata === 'function') {
+                window.CaspianBridge.updateTabMediaMetadata(tabId, title, thumbUrl);
+              } else if (typeof window.CaspianBridge.updateMediaMetadata === 'function') {
+                window.CaspianBridge.updateMediaMetadata(title, thumbUrl);
+              }
             }
           }
         }
@@ -656,8 +677,10 @@
           this._lastRepMode = repMode;
           this._lastShufOn = shufOn;
           const tabId = window.__caspian_tab_id || 0;
-          if (window.CaspianBridge && typeof window.CaspianBridge.updateTabMediaPlaybackModes === 'function') {
-            window.CaspianBridge.updateTabMediaPlaybackModes(tabId, repMode, shufOn);
+          if (!postCaspianMediaMessage({ action: 'updatePlaybackModes', repeatMode: repMode, shuffleOn: shufOn })) {
+            if (window.CaspianBridge && typeof window.CaspianBridge.updateTabMediaPlaybackModes === 'function') {
+              window.CaspianBridge.updateTabMediaPlaybackModes(tabId, repMode, shufOn);
+            }
           }
         }
         var v = this.getVideo();
@@ -1016,8 +1039,10 @@
                   return;
                 }
                 const tabId = window.__caspian_tab_id || 0;
-                if (window.CaspianBridge && typeof window.CaspianBridge.onYouTubeVideoEnded === 'function') {
-                  window.CaspianBridge.onYouTubeVideoEnded(tabId);
+                if (!postCaspianMediaMessage({ action: 'videoEnded' })) {
+                  if (window.CaspianBridge && typeof window.CaspianBridge.onYouTubeVideoEnded === 'function') {
+                    window.CaspianBridge.onYouTubeVideoEnded(tabId);
+                  }
                 }
               }
               if (window.__CaspianYouTube) window.__CaspianYouTube.notifyState();
@@ -1056,10 +1081,12 @@
             if (now - _lastTimeSync < 800) return;
             _lastTimeSync = now;
             const tabId = window.__caspian_tab_id || 0;
-            if (window.CaspianBridge && typeof window.CaspianBridge.updateTabYouTubeTime === 'function') {
-              window.CaspianBridge.updateTabYouTubeTime(tabId, trueCur, trueDur);
-            } else if (window.CaspianBridge && typeof window.CaspianBridge.updateYouTubeTime === 'function') {
-              window.CaspianBridge.updateYouTubeTime(trueCur, trueDur);
+            if (!postCaspianMediaMessage({ action: 'updateTime', currentTime: trueCur, duration: trueDur })) {
+              if (window.CaspianBridge && typeof window.CaspianBridge.updateTabYouTubeTime === 'function') {
+                window.CaspianBridge.updateTabYouTubeTime(tabId, trueCur, trueDur);
+              } else if (window.CaspianBridge && typeof window.CaspianBridge.updateYouTubeTime === 'function') {
+                window.CaspianBridge.updateYouTubeTime(trueCur, trueDur);
+              }
             }
           });
         }
@@ -1109,11 +1136,17 @@
           );
           if (settingsBtn) {
             const isFs = !!(document.fullscreenElement || document.webkitFullscreenElement);
-            if (isFs && window.CaspianBridge && typeof window.CaspianBridge.showYouTubeSettingsMenu === 'function') {
-              e.preventDefault();
-              e.stopPropagation();
-              window.CaspianBridge.showYouTubeSettingsMenu();
-              return;
+            if (isFs) {
+              if (postCaspianMediaMessage({ action: 'showSettingsMenu' })) {
+                e.preventDefault();
+                e.stopPropagation();
+                return;
+              } else if (window.CaspianBridge && typeof window.CaspianBridge.showYouTubeSettingsMenu === 'function') {
+                e.preventDefault();
+                e.stopPropagation();
+                window.CaspianBridge.showYouTubeSettingsMenu();
+                return;
+              }
             }
           }
         }
@@ -1815,7 +1848,11 @@
       });
 
       try {
-        window.CaspianBridge.onScrobbyPlayerState(payload);
+        if (!postCaspianMediaMessage({ action: 'scrobbyState', stateJson: payload })) {
+          if (window.CaspianBridge && typeof window.CaspianBridge.onScrobbyPlayerState === 'function') {
+            window.CaspianBridge.onScrobbyPlayerState(payload);
+          }
+        }
       } catch(e){}
     }
 

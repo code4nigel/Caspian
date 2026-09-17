@@ -21143,9 +21143,9 @@ public class MainActivity extends AppCompatActivity {
         settings.setJavaScriptEnabled(true);
         settings.setDomStorageEnabled(!isIncognito);
         settings.setDatabaseEnabled(!isIncognito);
-        settings.setAllowFileAccess(true);
-        settings.setAllowContentAccess(true);
-        settings.setMixedContentMode(WebSettings.MIXED_CONTENT_COMPATIBILITY_MODE);
+        settings.setAllowFileAccess(false);
+        settings.setAllowContentAccess(false);
+        settings.setMixedContentMode(WebSettings.MIXED_CONTENT_NEVER_ALLOW);
         settings.setUseWideViewPort(true);
         settings.setLoadWithOverviewMode(true);
         settings.setSupportZoom(true);
@@ -21205,9 +21205,54 @@ public class MainActivity extends AppCompatActivity {
     @SuppressLint("SetJavaScriptEnabled")
     private void setupTabClientsAndListeners(final TabItem tabItem, final CaspianWebView webView) {
         final int id = tabItem.id;
-        if (com.caspian.betac.security.OriginVerifier.isLocalAsset(tabItem.url) || 
-            com.caspian.betac.security.OriginVerifier.isTrustedMediaHost(tabItem.url)) {
-            webView.addJavascriptInterface(new CaspianBridge(this, id), "CaspianBridge");
+        // Zero addJavascriptInterface exposure on general tab WebViews.
+        // Origin-scoped AndroidX WebMessageListener handles media controls safely.
+        try {
+            if (androidx.webkit.WebViewFeature.isFeatureSupported(androidx.webkit.WebViewFeature.WEB_MESSAGE_LISTENER)) {
+                androidx.webkit.WebViewCompat.addWebMessageListener(
+                        webView,
+                        "CaspianMediaChannel",
+                        com.caspian.betac.security.TrustedMediaMessageHandler.ALLOWED_ORIGIN_RULES,
+                        new com.caspian.betac.security.TrustedMediaMessageHandler(id, new com.caspian.betac.security.TrustedMediaMessageHandler.MediaMessageCallback() {
+                            @Override
+                            public void onTimeUpdate(int tabId, double currentTime, double duration) {
+                                runOnUiThread(() -> updateYouTubeTimeLive(tabId, currentTime, duration));
+                            }
+
+                            @Override
+                            public void onStateUpdate(int tabId, boolean isPlaying, boolean isMuted) {
+                                runOnUiThread(() -> updateYouTubeLiveState(isPlaying, isMuted, tabId));
+                            }
+
+                            @Override
+                            public void onMetadataUpdate(int tabId, String title, String artist, String thumbnailUrl) {
+                                runOnUiThread(() -> updateMediaMetadata(tabId, title, artist, thumbnailUrl));
+                            }
+
+                            @Override
+                            public void onPlaybackModesUpdate(int tabId, int repeatMode, boolean shuffleOn) {
+                                runOnUiThread(() -> updateMediaPlaybackModes(repeatMode, shuffleOn));
+                            }
+
+                            @Override
+                            public void onVideoEnded(int tabId) {
+                                runOnUiThread(() -> handleYouTubeVideoEnded(tabId));
+                            }
+
+                            @Override
+                            public void onShowSettingsMenu(int tabId) {
+                                runOnUiThread(MainActivity.this::showYouTubeSettingsMenu);
+                            }
+
+                            @Override
+                            public void onScrobbyPlayerState(int tabId, String stateJson) {
+                                runOnUiThread(() -> handleScrobbyPlayerState(stateJson));
+                            }
+                        })
+                );
+            }
+        } catch (Throwable t) {
+            Log.e(TAG, "Error registering CaspianMediaChannel WebMessageListener: ", t);
         }
         applyWebViewTheme(webView, isDarkTheme);
 
@@ -24659,6 +24704,19 @@ public class MainActivity extends AppCompatActivity {
             controlWebView.setVerticalScrollBarEnabled(false);
             controlWebView.setHorizontalScrollBarEnabled(false);
             settings.setCacheMode(WebSettings.LOAD_DEFAULT);
+            controlWebView.setWebViewClient(new WebViewClient() {
+                @Override
+                public boolean shouldOverrideUrlLoading(WebView view, android.webkit.WebResourceRequest request) {
+                    if (request != null && request.getUrl() != null) {
+                        String targetUrl = request.getUrl().toString();
+                        if (!com.caspian.betac.security.OriginVerifier.isLocalAsset(targetUrl)) {
+                            Log.w(TAG, "BLOCKED controlWebView navigation attempt to non-asset URL: " + targetUrl);
+                            return true;
+                        }
+                    }
+                    return false;
+                }
+            });
             controlWebView.addJavascriptInterface(new CaspianBridge(this), "CaspianBridge");
             controlWebView.loadUrl("file:///android_asset/browser_control.html");
 

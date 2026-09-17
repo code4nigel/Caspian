@@ -13,3 +13,5 @@ captures/
 local.properties
 seabed/
 .agents/
+**/.gradle-user/
+.gradle-user/
