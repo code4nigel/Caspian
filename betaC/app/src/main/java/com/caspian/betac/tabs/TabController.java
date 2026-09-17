@@ -1,5 +1,7 @@
 package com.caspian.betac.tabs;
 
+import android.content.SharedPreferences;
+
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.Iterator;
@@ -18,8 +20,25 @@ public class TabController {
         void onTabsUpdated();
     }
 
+    public static class TabGroupState {
+        public String id;
+        public String title;
+        public String color;
+        public String icon;
+        public boolean isFavorite = false;
+        public final List<Integer> tabIds = new ArrayList<>();
+
+        public TabGroupState(String id, String title, String color, String icon) {
+            this.id = id;
+            this.title = title;
+            this.color = color != null ? color : "#ef4444";
+            this.icon = icon != null ? icon : "📁";
+        }
+    }
+
     private final List<TabState> tabs = new ArrayList<>();
     private final List<List<TabState>> closedTabBatches = new ArrayList<>();
+    private final List<TabGroupState> tabGroups = new ArrayList<>();
     private int activeTabId = -1;
     private int secondarySplitTabId = -1;
     private int splitModeState = 0;
@@ -56,6 +75,10 @@ public class TabController {
 
     public float getSplitRatio() {
         return splitRatio;
+    }
+
+    public void setSplitRatio(float ratio) {
+        this.splitRatio = Math.max(0.1f, Math.min(0.9f, ratio));
     }
 
     public int getNextTabId() {
@@ -100,18 +123,63 @@ public class TabController {
         }
     }
 
+    public void loadSession(SharedPreferences prefs) {
+        TabStateRepository.SessionSnapshot snapshot = TabStateRepository.restoreSession(prefs);
+        loadSession(snapshot);
+    }
+
+    public void saveSession(SharedPreferences prefs) {
+        TabStateRepository.saveSession(prefs, tabs, activeTabId, secondarySplitTabId, splitModeState, splitRatio, nextTabId);
+    }
+
+    public void syncFromTabStates(List<TabState> updatedTabs, int activeId, int secondarySplitId, int splitState, float ratio) {
+        tabs.clear();
+        if (updatedTabs != null) {
+            tabs.addAll(updatedTabs);
+        }
+        this.activeTabId = activeId;
+        this.secondarySplitTabId = secondarySplitId;
+        this.splitModeState = splitState;
+        this.splitRatio = ratio;
+        for (TabState tab : tabs) {
+            if (tab.id >= nextTabId) {
+                nextTabId = tab.id + 1;
+            }
+        }
+    }
+
     public TabState addTab(String title, String url, String service, boolean isIncognito, String caskId) {
+        return addTab(title, url, service, isIncognito, caskId, true);
+    }
+
+    public TabState addTab(String title, String url, String service, boolean isIncognito, String caskId, boolean switchTo) {
         int id = generateNextId();
         TabState tab = new TabState(id, title, url, service, isIncognito);
         if (caskId != null) {
             tab.caskId = caskId;
         }
         tabs.add(tab);
-        switchToTab(id);
+        if (switchTo || activeTabId == -1) {
+            switchToTab(id);
+        }
         if (eventListener != null) {
             eventListener.onTabAdded(tab);
         }
         return tab;
+    }
+
+    public void addTab(TabState tab, boolean switchTo) {
+        if (tab == null) return;
+        if (tab.id >= nextTabId) {
+            nextTabId = tab.id + 1;
+        }
+        tabs.add(tab);
+        if (switchTo || activeTabId == -1) {
+            switchToTab(tab.id);
+        }
+        if (eventListener != null) {
+            eventListener.onTabAdded(tab);
+        }
     }
 
     public boolean switchToTab(int tabId) {
@@ -128,6 +196,10 @@ public class TabController {
     }
 
     public boolean closeTab(int tabId) {
+        return closeTab(tabId, true);
+    }
+
+    public boolean closeTab(int tabId, boolean recordHistory) {
         int index = -1;
         TabState tabToClose = null;
         for (int i = 0; i < tabs.size(); i++) {
@@ -140,10 +212,13 @@ public class TabController {
         if (tabToClose == null) return false;
 
         // Push to undo batch if not incognito
-        if (!tabToClose.isIncognito) {
+        if (recordHistory && !tabToClose.isIncognito) {
             List<TabState> singleBatch = new ArrayList<>();
             singleBatch.add(tabToClose);
             closedTabBatches.add(singleBatch);
+            if (closedTabBatches.size() > 30) {
+                closedTabBatches.remove(0);
+            }
         }
 
         tabs.remove(index);
@@ -174,6 +249,14 @@ public class TabController {
             eventListener.onTabsUpdated();
         }
         return true;
+    }
+
+    public boolean hasClosedTabsToUndo() {
+        return !closedTabBatches.isEmpty();
+    }
+
+    public void clearUndoHistory() {
+        closedTabBatches.clear();
     }
 
     public void closeMultipleTabs(List<Integer> tabIds) {
@@ -261,5 +344,110 @@ public class TabController {
         if (eventListener != null) {
             eventListener.onTabsUpdated();
         }
+    }
+
+    public boolean enterSplitMode(int primaryTabId, int secondaryTabId, int orientation, float ratio) {
+        TabState primary = getTabById(primaryTabId);
+        TabState secondary = getTabById(secondaryTabId);
+        if (primary == null || secondary == null || primaryTabId == secondaryTabId) return false;
+
+        this.activeTabId = primaryTabId;
+        this.secondarySplitTabId = secondaryTabId;
+        this.splitModeState = (orientation == 1) ? 1 : 2;
+        this.splitRatio = ratio;
+
+        primary.splitPartnerId = secondaryTabId;
+        primary.splitRole = "primary";
+        primary.splitOrientation = orientation;
+
+        secondary.splitPartnerId = primaryTabId;
+        secondary.splitRole = "secondary";
+        secondary.splitOrientation = orientation;
+
+        if (eventListener != null) {
+            eventListener.onTabsUpdated();
+        }
+        return true;
+    }
+
+    public void exitSplitMode() {
+        if (splitModeState == 0 && secondarySplitTabId == -1) return;
+        if (secondarySplitTabId != -1) {
+            TabState sec = getTabById(secondarySplitTabId);
+            if (sec != null) {
+                sec.splitPartnerId = -1;
+                sec.splitRole = "";
+            }
+        }
+        TabState prim = getActiveTab();
+        if (prim != null) {
+            prim.splitPartnerId = -1;
+            prim.splitRole = "";
+        }
+        this.secondarySplitTabId = -1;
+        this.splitModeState = 0;
+        if (eventListener != null) {
+            eventListener.onTabsUpdated();
+        }
+    }
+
+    public void setTabFavorite(int tabId, boolean isFav) {
+        TabState tab = getTabById(tabId);
+        if (tab != null) {
+            tab.isFavorite = isFav;
+            if (eventListener != null) eventListener.onTabsUpdated();
+        }
+    }
+
+    public void setTabMuted(int tabId, boolean isMuted) {
+        TabState tab = getTabById(tabId);
+        if (tab != null) {
+            tab.isMuted = isMuted;
+            if (eventListener != null) eventListener.onTabsUpdated();
+        }
+    }
+
+    public void setTabDesktop(int tabId, boolean isDesktop) {
+        TabState tab = getTabById(tabId);
+        if (tab != null) {
+            tab.isDesktop = isDesktop;
+            if (eventListener != null) eventListener.onTabsUpdated();
+        }
+    }
+
+    public void updateTabDetails(int tabId, String title, String url, String nickname) {
+        TabState tab = getTabById(tabId);
+        if (tab != null) {
+            if (title != null) tab.title = title;
+            if (url != null && !url.isEmpty()) tab.url = url;
+            if (nickname != null) tab.nickname = nickname;
+            if (eventListener != null) eventListener.onTabsUpdated();
+        }
+    }
+
+    public void updateTabMetadata(int tabId, String nickname, String caskId) {
+        TabState tab = getTabById(tabId);
+        if (tab != null) {
+            if (nickname != null) tab.nickname = nickname;
+            if (caskId != null && !caskId.isEmpty()) tab.caskId = caskId;
+            if (eventListener != null) eventListener.onTabsUpdated();
+        }
+    }
+
+    public List<TabGroupState> getTabGroups() {
+        return Collections.unmodifiableList(tabGroups);
+    }
+
+    public void addTabGroup(TabGroupState group) {
+        if (group != null && !tabGroups.contains(group)) {
+            tabGroups.add(group);
+            if (eventListener != null) eventListener.onTabsUpdated();
+        }
+    }
+
+    public void removeTabGroup(String groupId) {
+        if (groupId == null) return;
+        tabGroups.removeIf(g -> groupId.equals(g.id));
+        if (eventListener != null) eventListener.onTabsUpdated();
     }
 }

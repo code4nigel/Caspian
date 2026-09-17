@@ -100,4 +100,74 @@ public class TabControllerTest {
         assertEquals(tabA.id, controller.getTabs().get(1).id);
         assertEquals(tabB.id, controller.getTabs().get(2).id);
     }
+
+    @Test
+    public void testSplitModeManagement() {
+        TabState tab1 = controller.getActiveTab();
+        TabState tab2 = controller.addTab("Tab 2", "https://tab2.com", "web", false, null);
+
+        // Enter split mode
+        boolean entered = controller.enterSplitMode(tab1.id, tab2.id, 1, 0.4f);
+        assertTrue(entered);
+        assertEquals(1, controller.getSplitModeState());
+        assertEquals(tab1.id, controller.getActiveTabId());
+        assertEquals(tab2.id, controller.getSecondarySplitTabId());
+        assertEquals(0.4f, controller.getSplitRatio(), 0.001f);
+
+        // Modify split ratio
+        controller.setSplitRatio(0.6f);
+        assertEquals(0.6f, controller.getSplitRatio(), 0.001f);
+
+        // Closing secondary tab exits split mode
+        controller.closeTab(tab2.id);
+        assertEquals(0, controller.getSplitModeState());
+        assertEquals(-1, controller.getSecondarySplitTabId());
+
+        // Re-enter and exit split mode explicitly
+        TabState tab3 = controller.addTab("Tab 3", "https://tab3.com", "web", false, null);
+        controller.enterSplitMode(tab1.id, tab3.id, 2, 0.5f);
+        assertEquals(2, controller.getSplitModeState());
+        controller.exitSplitMode();
+        assertEquals(0, controller.getSplitModeState());
+        assertEquals(-1, controller.getSecondarySplitTabId());
+    }
+
+    @Test
+    public void testTabPropertyMutations() {
+        TabState tab = controller.getActiveTab();
+        assertFalse(tab.isFavorite);
+        assertFalse(tab.isMuted);
+        assertFalse(tab.isDesktop);
+
+        controller.setTabFavorite(tab.id, true);
+        assertTrue(controller.getActiveTab().isFavorite);
+
+        controller.setTabMuted(tab.id, true);
+        assertTrue(controller.getActiveTab().isMuted);
+
+        controller.setTabDesktop(tab.id, true);
+        assertTrue(controller.getActiveTab().isDesktop);
+
+        controller.updateTabDetails(tab.id, "Updated Title", "https://updated.com", "Updated Nick");
+        assertEquals("Updated Title", controller.getActiveTab().title);
+        assertEquals("https://updated.com", controller.getActiveTab().url);
+        assertEquals("Updated Nick", controller.getActiveTab().nickname);
+    }
+
+    @Test
+    public void testTabGroupManagement() {
+        TabState tab1 = controller.getActiveTab();
+        TabState tab2 = controller.addTab("Tab 2", "https://tab2.com", "web", false, null);
+
+        TabController.TabGroupState group = new TabController.TabGroupState("grp1", "Work", "#ff0000", "💼");
+        group.tabIds.add(tab1.id);
+        group.tabIds.add(tab2.id);
+
+        controller.addTabGroup(group);
+        assertEquals(1, controller.getTabGroups().size());
+        assertEquals("Work", controller.getTabGroups().get(0).title);
+
+        controller.removeTabGroup("grp1");
+        assertEquals(0, controller.getTabGroups().size());
+    }
 }

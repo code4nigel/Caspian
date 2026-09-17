@@ -450,9 +450,9 @@
     "semantic_hash": ""
   },
   "betaC/app/src/main/java/com/caspian/betac/MainActivity.java": {
-    "mtime": 1789638377.5852115,
-    "seen": 1789638596.7697985,
-    "ast_hash": "55b88c428e966f9e9eb1071de7da3f75",
+    "mtime": 1789639443.4000936,
+    "seen": 1789639562.3777046,
+    "ast_hash": "daddab50ffc1525d630a62b88c1d1e7d",
     "semantic_hash": ""
   },
   "betaC/app/src/main/java/com/caspian/betac/SearchSuggestionService.java": {
@@ -1662,9 +1662,9 @@
     "semantic_hash": ""
   },
   "betaC/app/src/main/java/com/caspian/betac/tabs/TabController.java": {
-    "mtime": 1789636606.18631,
-    "seen": 1789637084.1060364,
-    "ast_hash": "72fb16710a112307d591fe52d69bdddd",
+    "mtime": 1789639303.722668,
+    "seen": 1789639562.3777242,
+    "ast_hash": "6698f4a7c35c7e812ccba57ef0d43d25",
     "semantic_hash": ""
   },
   "betaC/app/src/main/java/com/caspian/betac/tabs/TabState.java": {
@@ -1692,9 +1692,9 @@
     "semantic_hash": ""
   },
   "betaC/app/src/test/java/com/caspian/betac/tabs/TabControllerTest.java": {
-    "mtime": 1789636614.6884336,
-    "seen": 1789637084.1060514,
-    "ast_hash": "de2ab6423b126af5f9374f4d57242a96",
+    "mtime": 1789638988.882599,
+    "seen": 1789639562.3777373,
+    "ast_hash": "c963f0b1e4569768aea3fdd051c82718",
     "semantic_hash": ""
   },
   "betaC/app/src/test/java/com/caspian/betac/tabs/TabStateRepositoryTest.java": {

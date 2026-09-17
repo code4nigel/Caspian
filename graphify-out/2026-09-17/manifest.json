@@ -324,9 +324,9 @@
     "semantic_hash": ""
   },
   "betaC/app/build.gradle.kts": {
-    "mtime": 1789636676.3261504,
-    "seen": 1789637084.1059492,
-    "ast_hash": "72f47accf24c6d96be465069bdbadc89",
+    "mtime": 1789638494.129067,
+    "seen": 1789638596.769765,
+    "ast_hash": "b45a134719a3a79c5e2c6c7c9b06b0c9",
     "semantic_hash": ""
   },
   "betaC/app/src/main/assets/adblock_rules.json": {
@@ -372,9 +372,9 @@
     "semantic_hash": ""
   },
   "betaC/app/src/main/assets/youtube_helper.js": {
-    "mtime": 1789374273.8165429,
-    "seen": 1789374558.6209407,
-    "ast_hash": "ad013f951209c52daa0886d865c4133e",
+    "mtime": 1789638195.2912674,
+    "seen": 1789638596.7697792,
+    "ast_hash": "1813c271481df417a622bd20e3255b4e",
     "semantic_hash": ""
   },
   "betaC/app/src/main/java/com/caspian/betac/AICommandRouter.java": {
@@ -450,9 +450,9 @@
     "semantic_hash": ""
   },
   "betaC/app/src/main/java/com/caspian/betac/MainActivity.java": {
-    "mtime": 1789636935.7450237,
-    "seen": 1789637084.1060088,
-    "ast_hash": "767568f18fbb9962308196f5fcf4bb69",
+    "mtime": 1789638377.5852115,
+    "seen": 1789638596.7697985,
+    "ast_hash": "55b88c428e966f9e9eb1071de7da3f75",
     "semantic_hash": ""
   },
   "betaC/app/src/main/java/com/caspian/betac/SearchSuggestionService.java": {
@@ -648,9 +648,9 @@
     "semantic_hash": ""
   },
   "betaC/app/src/main/assets/browser_control.html": {
-    "mtime": 1789635430.5618494,
-    "seen": 1789637084.1061254,
-    "ast_hash": "33ececa162625892c899e30715c9fc91",
+    "mtime": 1789638494.259138,
+    "seen": 1789638596.7698808,
+    "ast_hash": "3c4bfbc297a6a00d9f62e1e6fdf97a9a",
     "semantic_hash": ""
   },
   "betaC/app/src/main/assets/incognito_hub.html": {
@@ -1701,6 +1701,24 @@
     "mtime": 1789636595.2842536,
     "seen": 1789637084.1060534,
     "ast_hash": "a73c6ff9fc8799144d162a09935063bd",
+    "semantic_hash": ""
+  },
+  "betaC/app/src/main/java/com/caspian/betac/security/TrustedMediaMessageHandler.java": {
+    "mtime": 1789638118.0713203,
+    "seen": 1789638596.7698147,
+    "ast_hash": "199f38ee964fc58b7f524c4bf49b584d",
+    "semantic_hash": ""
+  },
+  "betaC/app/src/test/java/com/caspian/betac/security/TrustedMediaMessageHandlerTest.java": {
+    "mtime": 1789638127.5174708,
+    "seen": 1789638596.7698274,
+    "ast_hash": "b06af86ba690230373e99e1837eb3c41",
+    "semantic_hash": ""
+  },
+  "betaC/app/src/test/java/com/caspian/betac/security/WebViewSecurityPolicyTest.java": {
+    "mtime": 1789638134.794032,
+    "seen": 1789638596.7698286,
+    "ast_hash": "d6648be1a8ca5c9a901c46ef5c875e72",
     "semantic_hash": ""
   }
 }

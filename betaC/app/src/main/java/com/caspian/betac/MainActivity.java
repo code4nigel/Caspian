@@ -205,14 +205,63 @@ public class MainActivity extends AppCompatActivity {
         public String splitName = "";
         public boolean isRestoredFromSavedState = false;
         public boolean userExplicitFullOmnibox = false;
+        public com.caspian.betac.tabs.TabState state;
 
         public TabItem(int id, String title, String url, String service, WebView webView, boolean isIncognito) {
+            this(id, title, url, service, webView, isIncognito, null);
+        }
+
+        public TabItem(int id, String title, String url, String service, WebView webView, boolean isIncognito, com.caspian.betac.tabs.TabState state) {
             this.id = id;
             this.title = title;
             this.url = url;
             this.service = service;
             this.webView = webView;
             this.isIncognito = isIncognito;
+            this.state = state != null ? state : new com.caspian.betac.tabs.TabState(id, title, url, service, isIncognito);
+            syncFromState();
+        }
+
+        public void syncToState() {
+            if (state == null) state = new com.caspian.betac.tabs.TabState(id, title, url, service, isIncognito);
+            state.id = id;
+            state.title = title;
+            state.nickname = nickname;
+            state.url = url;
+            state.service = service;
+            state.isDesktop = isDesktop;
+            state.isIncognito = isIncognito;
+            state.isMuted = isMuted;
+            state.isFavorite = isFavorite;
+            state.splitPartnerId = splitPartnerId;
+            state.splitRole = splitRole != null ? splitRole : "";
+            state.splitOrientation = splitOrientation;
+            state.splitName = splitName != null ? splitName : "";
+            state.caskId = caskId != null ? caskId : CaskManager.DEFAULT_CASK_ID;
+            state.caskName = caskName != null ? caskName : "Caspian Cask";
+            state.caskIcon = caskIcon != null ? caskIcon : "🌊";
+            state.caskColor = caskColor != null ? caskColor : "#1B4264";
+        }
+
+        public void syncFromState() {
+            if (state == null) return;
+            this.id = state.id;
+            if (state.title != null) this.title = state.title;
+            if (state.nickname != null) this.nickname = state.nickname;
+            if (state.url != null) this.url = state.url;
+            if (state.service != null) this.service = state.service;
+            this.isDesktop = state.isDesktop;
+            this.isIncognito = state.isIncognito;
+            this.isMuted = state.isMuted;
+            this.isFavorite = state.isFavorite;
+            this.splitPartnerId = state.splitPartnerId;
+            this.splitRole = state.splitRole;
+            this.splitOrientation = state.splitOrientation;
+            this.splitName = state.splitName;
+            this.caskId = state.caskId;
+            this.caskName = state.caskName;
+            this.caskIcon = state.caskIcon;
+            this.caskColor = state.caskColor;
         }
     }
 
@@ -233,6 +282,12 @@ public class MainActivity extends AppCompatActivity {
     }
 
     private final List<TabItem> tabsList = new ArrayList<>();
+    private final com.caspian.betac.tabs.TabController tabController = new com.caspian.betac.tabs.TabController();
+
+    public com.caspian.betac.tabs.TabController getTabController() {
+        return tabController;
+    }
+
     private final List<TabGroup> tabGroupsList = new ArrayList<>();
     private final Set<String> collapsedStripGroupIds = new HashSet<>();
     private final Set<Integer> selectedGridTabIds = new HashSet<>();
@@ -851,6 +906,28 @@ public class MainActivity extends AppCompatActivity {
         } catch (Throwable ignored) {}
 
         try {
+            tabController.setEventListener(new com.caspian.betac.tabs.TabController.TabEventListener() {
+                @Override
+                public void onTabAdded(com.caspian.betac.tabs.TabState tab) {}
+
+                @Override
+                public void onTabSwitched(int oldTabId, int newTabId) {
+                    activeTabId = newTabId;
+                }
+
+                @Override
+                public void onTabClosed(int closedTabId, int newActiveTabId) {
+                    activeTabId = newActiveTabId;
+                }
+
+                @Override
+                public void onTabsUpdated() {
+                    activeTabId = tabController.getActiveTabId();
+                    secondarySplitTabId = tabController.getSecondarySplitTabId();
+                    splitModeState = tabController.getSplitModeState();
+                    splitRatio = tabController.getSplitRatio();
+                }
+            });
             restoreOpenTabsState();
         } catch (Throwable t) {
             Log.e(TAG, "restoreOpenTabsState error: ", t);
@@ -1562,30 +1639,12 @@ public class MainActivity extends AppCompatActivity {
             List<com.caspian.betac.tabs.TabState> states = new ArrayList<>();
             for (TabItem tab : tabsList) {
                 if (tab == null || tab.isIncognito) continue;
-                com.caspian.betac.tabs.TabState s = new com.caspian.betac.tabs.TabState();
-                s.id = tab.id;
-                s.title = tab.title;
-                s.nickname = tab.nickname;
-                s.url = tab.url;
-                s.service = tab.service;
-                s.isDesktop = tab.isDesktop;
-                s.isIncognito = false;
-                s.isMuted = tab.isMuted;
-                s.isFavorite = tab.isFavorite;
-                s.splitPartnerId = tab.splitPartnerId;
-                s.splitRole = tab.splitRole != null ? tab.splitRole : "";
-                s.splitOrientation = tab.splitOrientation;
-                s.splitName = tab.splitName != null ? tab.splitName : "";
-                s.caskId = tab.caskId != null ? tab.caskId : CaskManager.DEFAULT_CASK_ID;
-                s.caskName = tab.caskName != null ? tab.caskName : "Caspian Cask";
-                s.caskIcon = tab.caskIcon != null ? tab.caskIcon : "🌊";
-                s.caskColor = tab.caskColor != null ? tab.caskColor : "#1B4264";
-                states.add(s);
+                tab.syncToState();
+                states.add(tab.state);
             }
+            tabController.syncFromTabStates(states, activeTabId, secondarySplitTabId, splitModeState, splitRatio);
             SharedPreferences prefs = getSharedPreferences(PREFS_NAME, MODE_PRIVATE);
-            com.caspian.betac.tabs.TabStateRepository.saveSession(
-                    prefs, states, activeTabId, secondarySplitTabId, splitModeState, splitRatio, nextTabId
-            );
+            tabController.saveSession(prefs);
         } catch (Exception e) {
             Log.e(TAG, "saveOpenTabsState error: " + e.getMessage());
         }
@@ -1593,37 +1652,25 @@ public class MainActivity extends AppCompatActivity {
 
     public void restoreOpenTabsState() {
         SharedPreferences prefs = getSharedPreferences(PREFS_NAME, MODE_PRIVATE);
-        com.caspian.betac.tabs.TabStateRepository.SessionSnapshot snapshot = 
-                com.caspian.betac.tabs.TabStateRepository.restoreSession(prefs);
+        tabController.loadSession(prefs);
 
-        if (snapshot != null && !snapshot.tabs.isEmpty()) {
+        List<com.caspian.betac.tabs.TabState> states = tabController.getTabs();
+        if (states != null && !states.isEmpty()) {
             tabsList.clear();
-            for (com.caspian.betac.tabs.TabState s : snapshot.tabs) {
-                TabItem item = createNewTabInstance(s.id, s.url, s.service, null, s.isIncognito, s.caskId);
+            for (com.caspian.betac.tabs.TabState s : states) {
+                TabItem item = createNewTabInstance(s.id, s.url, s.service, null, s.isIncognito, s.caskId, s);
                 item.isRestoredFromSavedState = true;
-                item.title = s.title;
-                item.nickname = s.nickname;
-                item.isDesktop = s.isDesktop;
-                item.isMuted = s.isMuted;
-                item.isFavorite = s.isFavorite;
-                item.splitPartnerId = s.splitPartnerId;
-                item.splitRole = s.splitRole;
-                item.splitOrientation = s.splitOrientation;
-                item.splitName = s.splitName;
-                item.caskId = s.caskId;
-                item.caskName = s.caskName;
-                item.caskIcon = s.caskIcon;
-                item.caskColor = s.caskColor;
+                item.syncFromState();
                 tabsList.add(item);
             }
-            nextTabId = snapshot.nextTabId;
-            activeTabId = snapshot.activeTabId;
+            nextTabId = tabController.getNextTabId();
+            activeTabId = tabController.getActiveTabId();
 
-            if (snapshot.splitModeState > 0 && snapshot.secondarySplitId != -1 && 
-                getTabById(snapshot.secondarySplitId) != null && snapshot.secondarySplitId != activeTabId) {
-                secondarySplitTabId = snapshot.secondarySplitId;
-                splitModeState = snapshot.splitModeState;
-                splitRatio = snapshot.splitRatio;
+            if (tabController.getSplitModeState() > 0 && tabController.getSecondarySplitTabId() != -1 && 
+                getTabById(tabController.getSecondarySplitTabId()) != null && tabController.getSecondarySplitTabId() != activeTabId) {
+                secondarySplitTabId = tabController.getSecondarySplitTabId();
+                splitModeState = tabController.getSplitModeState();
+                splitRatio = tabController.getSplitRatio();
                 applySplitViewLayout();
             } else {
                 splitModeState = 0;
@@ -1635,11 +1682,12 @@ public class MainActivity extends AppCompatActivity {
         }
 
         // Fallback default: Open Caspian Hub Tab
-        TabItem initialTab = createNewTabInstance(1, "file:///android_asset/launch_hub.html", "hub", null, false);
+        com.caspian.betac.tabs.TabState initial = tabController.addTab("Caspian Hub", "file:///android_asset/launch_hub.html", "hub", false, null);
+        TabItem initialTab = createNewTabInstance(initial.id, initial.url, initial.service, null, initial.isIncognito, null, initial);
         initialTab.title = "Caspian Hub";
         tabsList.add(initialTab);
-        activeTabId = 1;
-        switchToTab(1);
+        activeTabId = initial.id;
+        switchToTab(initial.id);
         updateOmniboxState();
     }
 
@@ -17183,6 +17231,7 @@ public class MainActivity extends AppCompatActivity {
         }
 
         if (leftTab != null && rightTab != null) {
+            tabController.enterSplitMode(leftTab.id, rightTab.id, splitModeState, splitRatio);
             leftTab.splitPartnerId = rightTab.id;
             leftTab.splitRole = "primary";
             leftTab.splitOrientation = splitModeState;
@@ -21127,11 +21176,15 @@ public class MainActivity extends AppCompatActivity {
     }
 
     private TabItem createNewTabInstance(int id, String url, String service, String promptPayload, boolean isIncognito) {
-        return createNewTabInstance(id, url, service, promptPayload, isIncognito, null);
+        return createNewTabInstance(id, url, service, promptPayload, isIncognito, null, null);
+    }
+
+    private TabItem createNewTabInstance(int id, String url, String service, String promptPayload, boolean isIncognito, String targetCaskId) {
+        return createNewTabInstance(id, url, service, promptPayload, isIncognito, targetCaskId, null);
     }
 
     @SuppressLint("SetJavaScriptEnabled")
-    private TabItem createNewTabInstance(int id, String url, String service, String promptPayload, boolean isIncognito, String targetCaskId) {
+    private TabItem createNewTabInstance(int id, String url, String service, String promptPayload, boolean isIncognito, String targetCaskId, com.caspian.betac.tabs.TabState tabState) {
         CaskManager cm = new CaskManager(this);
         String finalCaskId = (targetCaskId != null && !targetCaskId.trim().isEmpty()) ? targetCaskId : cm.getActiveCaskId();
         CaskManager.CaskItem cask = cm.getCaskById(finalCaskId);
@@ -21188,7 +21241,7 @@ public class MainActivity extends AppCompatActivity {
             }
         }
 
-        TabItem tabItem = new TabItem(id, "New Tab", url, service, webView, isIncognito);
+        TabItem tabItem = new TabItem(id, "New Tab", url, service, webView, isIncognito, tabState);
         tabItem.pendingPrompt = promptPayload;
         tabItem.caskId = finalCaskId;
         if (cask != null) {
@@ -22060,16 +22113,22 @@ public class MainActivity extends AppCompatActivity {
     }
 
     public void addNewTab(String service, String prompt, String url, boolean isIncognito, String targetCaskId, boolean switchTo) {
-        int id = nextTabId++;
         String finalUrl = (url != null && !url.trim().isEmpty()) ? url : "file:///android_asset/launch_hub.html";
         String finalService = (service != null && !service.trim().isEmpty()) ? service : ("file:///android_asset/launch_hub.html".equals(finalUrl) ? "hub" : "web");
+        String initialTitle = "file:///android_asset/launch_hub.html".equals(finalUrl) ? "Caspian Hub" : "New Tab";
         
         CaskManager cm = new CaskManager(this);
         String caskId = (targetCaskId != null && !targetCaskId.trim().isEmpty()) ? targetCaskId : cm.getActiveCaskId();
-        TabItem tab = createNewTabInstance(id, finalUrl, finalService, prompt, isIncognito, caskId);
+
+        com.caspian.betac.tabs.TabState tabState = tabController.addTab(initialTitle, finalUrl, finalService, isIncognito, caskId, switchTo);
+        int id = tabState.id;
+        nextTabId = tabController.getNextTabId();
+
+        TabItem tab = createNewTabInstance(id, finalUrl, finalService, prompt, isIncognito, caskId, tabState);
         tab.userExplicitFullOmnibox = false;
         if ("file:///android_asset/launch_hub.html".equals(finalUrl)) {
             tab.title = "Caspian Hub";
+            tabState.title = "Caspian Hub";
         }
         tabsList.add(tab);
         if (switchTo || activeTabId == -1 || getTabById(activeTabId) == null) {
@@ -22172,6 +22231,7 @@ public class MainActivity extends AppCompatActivity {
     }
 
     public void switchToTab(int tabId, boolean closeSheet) {
+        tabController.switchToTab(tabId);
         if (customView != null && tabId != activeTabId) {
             exitFullscreenCustomView();
         }
@@ -22370,6 +22430,8 @@ public class MainActivity extends AppCompatActivity {
             tabGroupsList.removeIf(g -> g.tabIds.isEmpty());
             saveTabGroups();
 
+            tabController.closeTab(tabId, recordHistory);
+
             if (activeTabId == tabId) {
                 if (!tabsList.isEmpty()) {
                     activeTabId = tabsList.get(tabsList.size() - 1).id;
@@ -22484,6 +22546,7 @@ public class MainActivity extends AppCompatActivity {
         TabItem tab = getTabById(tabId);
         if (tab != null) {
             tab.isFavorite = !tab.isFavorite;
+            tabController.setTabFavorite(tabId, tab.isFavorite);
             Toast.makeText(this, tab.isFavorite ? "⭐ Tab Favorited" : "★ Tab Unfavorited", Toast.LENGTH_SHORT).show();
             saveOpenTabsState();
         }
@@ -22493,6 +22556,7 @@ public class MainActivity extends AppCompatActivity {
         TabItem tab = getTabById(tabId);
         if (tab != null) {
             tab.isMuted = !tab.isMuted;
+            tabController.setTabMuted(tabId, tab.isMuted);
             if (tab.webView != null) {
                 tab.webView.evaluateJavascript("(function(){ var vs = document.querySelectorAll('video, audio'); vs.forEach(function(v){ v.muted = " + tab.isMuted + "; }); })();", null);
             }
