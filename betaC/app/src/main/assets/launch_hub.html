@@ -2476,13 +2476,17 @@
 
       cardEl.classList.add('launching');
       setTimeout(() => {
+        try { cardEl.classList.remove('launching'); } catch(e) {}
+      }, 1500);
+
+      setTimeout(() => {
         if (postHubMessage({ action: 'openUrl', url: targetUrl })) {
           return;
         }
-        if (item.service && window.CaspianBridge && typeof window.CaspianBridge.switchService === 'function') {
-          window.CaspianBridge.switchService(item.service);
-        } else if (window.CaspianBridge && typeof window.CaspianBridge.openUrl === 'function') {
+        if (window.CaspianBridge && typeof window.CaspianBridge.openUrl === 'function') {
           window.CaspianBridge.openUrl(targetUrl);
+        } else if (item.service && window.CaspianBridge && typeof window.CaspianBridge.switchService === 'function') {
+          window.CaspianBridge.switchService(item.service);
         } else {
           window.location.href = targetUrl;
         }

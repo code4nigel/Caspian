@@ -211,4 +211,30 @@ public class TrustedHubMessageHandlerTest {
         assertTrue("Message is processed, but payload action rejected", handled);
         assertEquals("HTTP URL must be rejected", "", lastUrl.get());
     }
+
+    @Test
+    public void testAddNewTabValidHttps() {
+        String msg = "{\"action\":\"addNewTab\",\"service\":\"chatgpt\",\"url\":\"https://chatgpt.com/\"}";
+        boolean handled = handler.handleMessage("file:///android_asset/launch_hub.html", msg, "file://", true);
+        assertTrue("Valid addNewTab HTTPS must be accepted", handled);
+        assertEquals("https://chatgpt.com/", lastUrl.get());
+        assertEquals("chatgpt", lastService.get());
+    }
+
+    @Test
+    public void testAddNewTabHubDocument() {
+        String msg = "{\"action\":\"addNewTab\",\"service\":\"hub\",\"url\":\"file:///android_asset/launch_hub.html\"}";
+        boolean handled = handler.handleMessage("file:///android_asset/launch_hub.html", msg, "file://", true);
+        assertTrue("Valid addNewTab Hub document must be accepted", handled);
+        assertEquals("file:///android_asset/launch_hub.html", lastUrl.get());
+        assertEquals("hub", lastService.get());
+    }
+
+    @Test
+    public void testAddNewTabInsecureRejected() {
+        String msg = "{\"action\":\"addNewTab\",\"service\":\"web\",\"url\":\"http://insecure.com/\"}";
+        boolean handled = handler.handleMessage("file:///android_asset/launch_hub.html", msg, "file://", true);
+        assertTrue("Message is processed, but payload rejected", handled);
+        assertEquals("", lastUrl.get());
+    }
 }

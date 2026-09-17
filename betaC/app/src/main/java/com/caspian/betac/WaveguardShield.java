@@ -198,7 +198,7 @@ public class WaveguardShield {
             js.append("  if (window.__caspian_waveguard_active) return;\n");
             js.append("  try {\n");
             js.append("    var curH = (window.location && window.location.hostname) ? window.location.hostname.toLowerCase() : '';\n");
-            js.append("    if (curH.indexOf('instagram.com') !== -1 || curH.indexOf('facebook.com') !== -1 || curH.indexOf('chatgpt.com') !== -1 || curH.indexOf('openai.com') !== -1 || curH.indexOf('cloudflare.com') !== -1) {\n");
+            js.append("    if (!curH || curH.indexOf('instagram.com') !== -1 || curH.indexOf('facebook.com') !== -1 || curH.indexOf('chatgpt.com') !== -1 || curH.indexOf('openai.com') !== -1 || curH.indexOf('cloudflare.com') !== -1 || curH.indexOf('gemini.google.com') !== -1 || curH.indexOf('google.com') !== -1) {\n");
             js.append("      return;\n");
             js.append("    }\n");
             js.append("  } catch(e) {}\n");
@@ -219,7 +219,7 @@ public class WaveguardShield {
                 js.append("      if (!n || n.nodeType !== 1) return;\n");
                 js.append("      try {\n");
                 js.append("        var curH = (window.location && window.location.hostname) ? window.location.hostname.toLowerCase() : '';\n");
-                js.append("        if (curH.indexOf('instagram.com') !== -1 || curH.indexOf('facebook.com') !== -1 || curH.indexOf('reddit.com') !== -1 || curH.indexOf('youtube.com') !== -1 || curH.indexOf('chatgpt.com') !== -1 || curH.indexOf('openai.com') !== -1 || curH.indexOf('cloudflare.com') !== -1) return;\n");
+                js.append("        if (!curH || curH.indexOf('instagram.com') !== -1 || curH.indexOf('facebook.com') !== -1 || curH.indexOf('reddit.com') !== -1 || curH.indexOf('youtube.com') !== -1 || curH.indexOf('chatgpt.com') !== -1 || curH.indexOf('openai.com') !== -1 || curH.indexOf('cloudflare.com') !== -1 || curH.indexOf('gemini.google.com') !== -1 || curH.indexOf('google.com') !== -1) return;\n");
                 js.append("        if (n.classList && n.classList.contains('aderasr-test-adsbox')) return;\n");
                 js.append("        if (n.matches && n.matches(sel)) { n.remove(); return; }\n");
                 js.append("        var m = n.querySelectorAll(sel);\n");
@@ -385,7 +385,11 @@ public class WaveguardShield {
                 || "openai.com".equals(h) || h.endsWith(".openai.com")
                 || "oaistatic.com".equals(h) || h.endsWith(".oaistatic.com")
                 || "oaiusercontent.com".equals(h) || h.endsWith(".oaiusercontent.com")
-                || "cloudflare.com".equals(h) || h.endsWith(".cloudflare.com")) {
+                || "cloudflare.com".equals(h) || h.endsWith(".cloudflare.com")
+                || "gemini.google.com".equals(h) || h.endsWith(".gemini.google.com")
+                || "bard.google.com".equals(h) || h.endsWith(".bard.google.com")
+                || "googleusercontent.com".equals(h) || h.endsWith(".googleusercontent.com")
+                || "gstatic.com".equals(h) || h.endsWith(".gstatic.com")) {
             return true;
         }
         return "youtube.com".equals(h) || "m.youtube.com".equals(h) || h.endsWith(".youtube.com")
@@ -421,7 +425,7 @@ public class WaveguardShield {
                "  window.__caspianShieldInjected = true;\n" +
                "  try {\n" +
                "    var h = (window.location && window.location.hostname) ? window.location.hostname.toLowerCase() : '';\n" +
-               "    if (h.indexOf('cloudflare.com') !== -1 || h.indexOf('chatgpt.com') !== -1 || h.indexOf('openai.com') !== -1 || h.indexOf('oaistatic.com') !== -1 || h.indexOf('oaiusercontent.com') !== -1) return;\n" +
+               "    if (!h || h.indexOf('cloudflare.com') !== -1 || h.indexOf('chatgpt.com') !== -1 || h.indexOf('openai.com') !== -1 || h.indexOf('oaistatic.com') !== -1 || h.indexOf('oaiusercontent.com') !== -1 || h.indexOf('gemini.google.com') !== -1 || h.indexOf('google.com') !== -1) return;\n" +
                "  } catch(e) {}\n" +
                "  try {\n" +
                "    // 1. WebRTC IP Leak Defense: sanitize SDP candidate strings to protect internal/cellular IPs\n" +

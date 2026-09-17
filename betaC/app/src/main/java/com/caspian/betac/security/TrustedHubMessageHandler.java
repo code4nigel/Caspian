@@ -199,7 +199,7 @@ public class TrustedHubMessageHandler implements WebViewCompat.WebMessageListene
             switch (action) {
                 case "openUrl": {
                     String url = json.optString("url", "").trim();
-                    if (isValidHttpsUrl(url)) {
+                    if (isValidHttpsUrl(url) || OriginVerifier.isPermittedHubDocument(url)) {
                         callback.onOpenUrl(url);
                     } else {
                         Log.w(TAG, "openUrl rejected non-HTTPS or invalid URL: " + url);
@@ -222,7 +222,7 @@ public class TrustedHubMessageHandler implements WebViewCompat.WebMessageListene
                         Log.w(TAG, "addNewTab rejected unknown service: " + service);
                         break;
                     }
-                    if (!url.isEmpty() && !isValidHttpsUrl(url)) {
+                    if (!url.isEmpty() && !isValidHttpsUrl(url) && !OriginVerifier.isPermittedHubDocument(url)) {
                         Log.w(TAG, "addNewTab rejected non-HTTPS or invalid URL: " + url);
                         break;
                     }

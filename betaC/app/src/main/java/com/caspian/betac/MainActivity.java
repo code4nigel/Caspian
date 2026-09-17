@@ -21652,9 +21652,13 @@ public class MainActivity extends AppCompatActivity {
                     String curUrl = view.getUrl();
                     if (curUrl != null && curUrl.contains("launch_hub.html")) {
                         tabItem.service = AICommandRouter.detectServiceFromUrl(targetUrl);
-                        final String destUrl = targetUrl;
-                        runOnUiThread(() -> navigateUrl(destUrl));
-                        return true;
+                        tabItem.url = targetUrl;
+                        if (tabItem.state != null) {
+                            tabItem.state.url = targetUrl;
+                            tabItem.state.service = tabItem.service;
+                        }
+                        tabController.updateTabDetails(tabItem.id, tabItem.title, targetUrl, null);
+                        return false;
                     }
                 }
                 if (targetUrl.contains("lastfm-callback")) {
@@ -21695,9 +21699,13 @@ public class MainActivity extends AppCompatActivity {
                     String curUrl = view.getUrl();
                     if (curUrl != null && curUrl.contains("launch_hub.html")) {
                         tabItem.service = AICommandRouter.detectServiceFromUrl(url);
-                        final String destUrl = url;
-                        runOnUiThread(() -> navigateUrl(destUrl));
-                        return true;
+                        tabItem.url = url;
+                        if (tabItem.state != null) {
+                            tabItem.state.url = url;
+                            tabItem.state.service = tabItem.service;
+                        }
+                        tabController.updateTabDetails(tabItem.id, tabItem.title, url, null);
+                        return false;
                     }
                 }
                 return super.shouldOverrideUrlLoading(view, url);
@@ -21753,7 +21761,12 @@ public class MainActivity extends AppCompatActivity {
                                 || ph.equals("openai.com") || ph.endsWith(".openai.com")
                                 || ph.equals("oaistatic.com") || ph.endsWith(".oaistatic.com")
                                 || ph.equals("oaiusercontent.com") || ph.endsWith(".oaiusercontent.com")
-                                || ph.equals("cloudflare.com") || ph.endsWith(".cloudflare.com")) {
+                                || ph.equals("cloudflare.com") || ph.endsWith(".cloudflare.com")
+                                || ph.equals("gemini.google.com") || ph.endsWith(".gemini.google.com")
+                                || ph.equals("bard.google.com") || ph.endsWith(".bard.google.com")
+                                || ph.equals("google.com") || ph.endsWith(".google.com")
+                                || ph.equals("gstatic.com") || ph.endsWith(".gstatic.com")
+                                || ph.equals("googleusercontent.com") || ph.endsWith(".googleusercontent.com")) {
                             return super.shouldInterceptRequest(view, request);
                         }
                     }
