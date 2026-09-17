@@ -18,6 +18,7 @@ public class TabController {
         void onTabSwitched(int oldTabId, int newTabId);
         void onTabClosed(int closedTabId, int newActiveTabId);
         void onTabsUpdated();
+        void onSplitModeChanged(int splitModeState, int secondaryTabId, float splitRatio);
     }
 
     public static class TabGroupState {
@@ -228,10 +229,12 @@ public class TabController {
         if (secondarySplitTabId == tabId) {
             secondarySplitTabId = -1;
             splitModeState = 0;
+            if (eventListener != null) eventListener.onSplitModeChanged(0, -1, splitRatio);
         } else if (activeTabId == tabId && secondarySplitTabId != -1) {
             newActiveId = secondarySplitTabId;
             secondarySplitTabId = -1;
             splitModeState = 0;
+            if (eventListener != null) eventListener.onSplitModeChanged(0, -1, splitRatio);
         }
 
         for (TabState t : tabs) {
@@ -397,6 +400,7 @@ public class TabController {
         secondary.splitOrientation = orientation;
 
         if (eventListener != null) {
+            eventListener.onSplitModeChanged(splitModeState, secondarySplitTabId, splitRatio);
             eventListener.onTabsUpdated();
         }
         return true;
@@ -419,6 +423,7 @@ public class TabController {
         this.secondarySplitTabId = -1;
         this.splitModeState = 0;
         if (eventListener != null) {
+            eventListener.onSplitModeChanged(0, -1, splitRatio);
             eventListener.onTabsUpdated();
         }
     }
@@ -481,5 +486,36 @@ public class TabController {
         if (groupId == null) return;
         tabGroups.removeIf(g -> groupId.equals(g.id));
         if (eventListener != null) eventListener.onTabsUpdated();
+    }
+
+    /**
+     * Validates that runtime invariants are preserved:
+     * 1. Every activeTabId matches an existing tab.
+     * 2. When split mode is active, secondarySplitTabId is valid and not equal to activeTabId.
+     * 3. No group references non-existent tab IDs.
+     * 4. Tab IDs are unique.
+     */
+    public boolean validateInvariants() {
+        if (tabs.isEmpty()) {
+            return activeTabId == -1;
+        }
+        if (getTabById(activeTabId) == null) {
+            return false;
+        }
+        if (splitModeState > 0) {
+            if (secondarySplitTabId == -1 || secondarySplitTabId == activeTabId || getTabById(secondarySplitTabId) == null) {
+                return false;
+            }
+        }
+        for (TabGroupState group : tabGroups) {
+            for (Integer id : group.tabIds) {
+                if (getTabById(id) == null) return false;
+            }
+        }
+        java.util.Set<Integer> seen = new java.util.HashSet<>();
+        for (TabState tab : tabs) {
+            if (!seen.add(tab.id)) return false;
+        }
+        return true;
     }
 }

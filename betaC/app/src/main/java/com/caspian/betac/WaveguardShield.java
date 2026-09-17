@@ -198,7 +198,7 @@ public class WaveguardShield {
             js.append("  if (window.__caspian_waveguard_active) return;\n");
             js.append("  try {\n");
             js.append("    var curH = (window.location && window.location.hostname) ? window.location.hostname.toLowerCase() : '';\n");
-            js.append("    if (curH.indexOf('instagram.com') !== -1 || curH.indexOf('facebook.com') !== -1) {\n");
+            js.append("    if (curH.indexOf('instagram.com') !== -1 || curH.indexOf('facebook.com') !== -1 || curH.indexOf('chatgpt.com') !== -1 || curH.indexOf('openai.com') !== -1 || curH.indexOf('cloudflare.com') !== -1) {\n");
             js.append("      return;\n");
             js.append("    }\n");
             js.append("  } catch(e) {}\n");
@@ -219,7 +219,7 @@ public class WaveguardShield {
                 js.append("      if (!n || n.nodeType !== 1) return;\n");
                 js.append("      try {\n");
                 js.append("        var curH = (window.location && window.location.hostname) ? window.location.hostname.toLowerCase() : '';\n");
-                js.append("        if (curH.indexOf('instagram.com') !== -1 || curH.indexOf('facebook.com') !== -1 || curH.indexOf('reddit.com') !== -1 || curH.indexOf('youtube.com') !== -1) return;\n");
+                js.append("        if (curH.indexOf('instagram.com') !== -1 || curH.indexOf('facebook.com') !== -1 || curH.indexOf('reddit.com') !== -1 || curH.indexOf('youtube.com') !== -1 || curH.indexOf('chatgpt.com') !== -1 || curH.indexOf('openai.com') !== -1 || curH.indexOf('cloudflare.com') !== -1) return;\n");
                 js.append("        if (n.classList && n.classList.contains('aderasr-test-adsbox')) return;\n");
                 js.append("        if (n.matches && n.matches(sel)) { n.remove(); return; }\n");
                 js.append("        var m = n.querySelectorAll(sel);\n");
@@ -381,6 +381,13 @@ public class WaveguardShield {
                 || "fbcdn.net".equals(h) || h.endsWith(".fbcdn.net")) {
             return true;
         }
+        if ("chatgpt.com".equals(h) || h.endsWith(".chatgpt.com")
+                || "openai.com".equals(h) || h.endsWith(".openai.com")
+                || "oaistatic.com".equals(h) || h.endsWith(".oaistatic.com")
+                || "oaiusercontent.com".equals(h) || h.endsWith(".oaiusercontent.com")
+                || "cloudflare.com".equals(h) || h.endsWith(".cloudflare.com")) {
+            return true;
+        }
         return "youtube.com".equals(h) || "m.youtube.com".equals(h) || h.endsWith(".youtube.com")
                 || "facebook.com".equals(h) || "m.facebook.com".equals(h) || h.endsWith(".facebook.com")
                 || "linkedin.com".equals(h) || h.endsWith(".linkedin.com")
@@ -413,8 +420,8 @@ public class WaveguardShield {
                "  if (window.__caspianShieldInjected) return;\n" +
                "  window.__caspianShieldInjected = true;\n" +
                "  try {\n" +
-               "    var h = (window.location && window.location.hostname) ? window.location.hostname : '';\n" +
-               "    if (h.indexOf('cloudflare.com') !== -1 || h.indexOf('chatgpt.com') !== -1 || h.indexOf('openai.com') !== -1) return;\n" +
+               "    var h = (window.location && window.location.hostname) ? window.location.hostname.toLowerCase() : '';\n" +
+               "    if (h.indexOf('cloudflare.com') !== -1 || h.indexOf('chatgpt.com') !== -1 || h.indexOf('openai.com') !== -1 || h.indexOf('oaistatic.com') !== -1 || h.indexOf('oaiusercontent.com') !== -1) return;\n" +
                "  } catch(e) {}\n" +
                "  try {\n" +
                "    // 1. WebRTC IP Leak Defense: sanitize SDP candidate strings to protect internal/cellular IPs\n" +

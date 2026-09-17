@@ -324,9 +324,9 @@
     "semantic_hash": ""
   },
   "betaC/app/build.gradle.kts": {
-    "mtime": 1789639574.3312106,
-    "seen": 1789639639.923895,
-    "ast_hash": "c34306cffca9d111e73081066006aa9f",
+    "mtime": 1789641870.1037695,
+    "seen": 1789641927.8609717,
+    "ast_hash": "8ccc69785ca45c7c1873bb285ba8c9bf",
     "semantic_hash": ""
   },
   "betaC/app/src/main/assets/adblock_rules.json": {
@@ -342,9 +342,9 @@
     "semantic_hash": ""
   },
   "betaC/app/src/main/assets/chatgpt_network_interceptor.js": {
-    "mtime": 1788495149.0519037,
-    "seen": 1789062562.2365,
-    "ast_hash": "1a1aaac60d5498874391200d565db916",
+    "mtime": 1789641348.8351755,
+    "seen": 1789641856.4118721,
+    "ast_hash": "5d4dd5908e871783955f3cc027036158",
     "semantic_hash": ""
   },
   "betaC/app/src/main/assets/mobile_pruner.js": {
@@ -450,9 +450,9 @@
     "semantic_hash": ""
   },
   "betaC/app/src/main/java/com/caspian/betac/MainActivity.java": {
-    "mtime": 1789639443.4000936,
-    "seen": 1789639562.3777046,
-    "ast_hash": "daddab50ffc1525d630a62b88c1d1e7d",
+    "mtime": 1789641705.541759,
+    "seen": 1789641856.4119294,
+    "ast_hash": "aef402dbb4ce84cbddb6e9399ceca114",
     "semantic_hash": ""
   },
   "betaC/app/src/main/java/com/caspian/betac/SearchSuggestionService.java": {
@@ -480,9 +480,9 @@
     "semantic_hash": ""
   },
   "betaC/app/src/main/java/com/caspian/betac/WaveguardShield.java": {
-    "mtime": 1789536411.8181517,
-    "seen": 1789536500.999463,
-    "ast_hash": "17485ee11b2809c8b20223717f74ca77",
+    "mtime": 1789641336.685649,
+    "seen": 1789641856.411948,
+    "ast_hash": "6f01f80d2521eaa11e4c0333829223dc",
     "semantic_hash": ""
   },
   "betaC/app/src/main/java/com/caspian/betac/WhirlpoolOverlayView.java": {
@@ -648,9 +648,9 @@
     "semantic_hash": ""
   },
   "betaC/app/src/main/assets/browser_control.html": {
-    "mtime": 1789639574.446746,
-    "seen": 1789639639.924185,
-    "ast_hash": "bb51a47c54efa6100344485c6a6fd2ce",
+    "mtime": 1789641870.219949,
+    "seen": 1789641927.86121,
+    "ast_hash": "d4630893705f55a97b1494c5c47593a6",
     "semantic_hash": ""
   },
   "betaC/app/src/main/assets/incognito_hub.html": {
@@ -1662,9 +1662,9 @@
     "semantic_hash": ""
   },
   "betaC/app/src/main/java/com/caspian/betac/tabs/TabController.java": {
-    "mtime": 1789639303.722668,
-    "seen": 1789639562.3777242,
-    "ast_hash": "6698f4a7c35c7e812ccba57ef0d43d25",
+    "mtime": 1789641700.0001652,
+    "seen": 1789641856.411964,
+    "ast_hash": "4c773b49c1b0144cc0c90937ff08836e",
     "semantic_hash": ""
   },
   "betaC/app/src/main/java/com/caspian/betac/tabs/TabState.java": {
@@ -1716,9 +1716,9 @@
     "semantic_hash": ""
   },
   "betaC/app/src/test/java/com/caspian/betac/security/WebViewSecurityPolicyTest.java": {
-    "mtime": 1789638134.794032,
-    "seen": 1789638596.7698286,
-    "ast_hash": "d6648be1a8ca5c9a901c46ef5c875e72",
+    "mtime": 1789641365.0672536,
+    "seen": 1789641856.411986,
+    "ast_hash": "4a76c18a44849bf0d88ebeeee715efae",
     "semantic_hash": ""
   }
 }

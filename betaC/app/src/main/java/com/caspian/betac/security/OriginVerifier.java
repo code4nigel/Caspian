@@ -21,7 +21,9 @@ public class OriginVerifier {
      */
     public static boolean isLocalAsset(String url) {
         if (url == null) return false;
-        return url.startsWith(LOCAL_ASSET_PREFIX);
+        if (!url.startsWith(LOCAL_ASSET_PREFIX)) return false;
+        if (url.contains("..")) return false;
+        return true;
     }
 
     /**

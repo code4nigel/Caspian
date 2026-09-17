@@ -170,4 +170,54 @@ public class TabControllerTest {
         controller.removeTabGroup("grp1");
         assertEquals(0, controller.getTabGroups().size());
     }
+
+    @Test
+    public void testValidateInvariantsHoldUnderMutations() {
+        controller.validateInvariants();
+
+        TabState tabA = controller.getActiveTab();
+        TabState tabB = controller.addTab("Tab B", "https://b.com", "web", false, null);
+        controller.validateInvariants();
+
+        controller.enterSplitMode(tabA.id, tabB.id, 1, 0.5f);
+        controller.validateInvariants();
+
+        controller.exitSplitMode();
+        controller.validateInvariants();
+
+        controller.closeTab(tabB.id);
+        controller.validateInvariants();
+    }
+
+    @Test
+    public void testOnSplitModeChangedListenerFired() {
+        TabState tabA = controller.getActiveTab();
+        TabState tabB = controller.addTab("Tab B", "https://b.com", "web", false, null);
+
+        final int[] lastSplitState = {-1};
+        final int[] lastSecondaryId = {-99};
+        final float[] lastRatio = {0f};
+
+        controller.setEventListener(new TabController.TabEventListener() {
+            @Override public void onTabAdded(TabState tab) {}
+            @Override public void onTabSwitched(int oldTabId, int newTabId) {}
+            @Override public void onTabClosed(int closedTabId, int newActiveTabId) {}
+            @Override public void onTabsUpdated() {}
+            @Override public void onSplitModeChanged(int splitState, int secondaryId, float ratio) {
+                lastSplitState[0] = splitState;
+                lastSecondaryId[0] = secondaryId;
+                lastRatio[0] = ratio;
+            }
+        });
+
+        controller.enterSplitMode(tabA.id, tabB.id, 2, 0.6f);
+        assertEquals(2, lastSplitState[0]);
+        assertEquals(tabB.id, lastSecondaryId[0]);
+        assertEquals(0.6f, lastRatio[0], 0.001f);
+
+        controller.exitSplitMode();
+        assertEquals(0, lastSplitState[0]);
+        assertEquals(-1, lastSecondaryId[0]);
+    }
 }
+

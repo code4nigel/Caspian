@@ -828,13 +828,67 @@ public class MainActivity extends AppCompatActivity {
         try {
             String defaultUa = WebSettings.getDefaultUserAgent(this);
             if (defaultUa != null && !defaultUa.trim().isEmpty()) {
-                // Strip "Version/4.0 " which identifies embedded WebViews and triggers Cloudflare Turnstile bot blocking
-                MOBILE_UA = defaultUa.replace("Version/4.0 ", "").trim();
+                // Strip "Version/4.0 " and "; wv" which identify embedded WebViews and trigger Cloudflare Turnstile bot blocking
+                MOBILE_UA = defaultUa.replace("Version/4.0 ", "").replace("; wv", "").trim();
                 return MOBILE_UA;
             }
         } catch (Throwable ignored) {}
         MOBILE_UA = "Mozilla/5.0 (Linux; Android " + Build.VERSION.RELEASE + "; " + Build.MODEL + ") AppleWebKit/537.36 (KHTML, like Gecko) Chrome/128.0.0.0 Mobile Safari/537.36";
         return MOBILE_UA;
+    }
+
+    public void syncTabsListWithController() {
+        List<com.caspian.betac.tabs.TabState> controllerStates = tabController.getTabs();
+        Set<Integer> validIds = new HashSet<>();
+        for (com.caspian.betac.tabs.TabState state : controllerStates) {
+            validIds.add(state.id);
+            TabItem runtime = tabRuntimes.get(state.id);
+            if (runtime == null) {
+                runtime = createNewTabInstance(state.id, state.url, state.service, null, state.isIncognito, state.caskId, state);
+                tabRuntimes.put(state.id, runtime);
+            } else {
+                runtime.state = state;
+                runtime.syncFromState();
+            }
+        }
+        // Dispose any runtimes that are no longer in controller
+        java.util.Iterator<Map.Entry<Integer, TabItem>> it = tabRuntimes.entrySet().iterator();
+        while (it.hasNext()) {
+            Map.Entry<Integer, TabItem> entry = it.next();
+            if (!validIds.contains(entry.getKey())) {
+                TabItem dead = entry.getValue();
+                if (dead != null && dead.webView != null) {
+                    if (dead.webView.getParent() != null) {
+                        ((ViewGroup) dead.webView.getParent()).removeView(dead.webView);
+                    }
+                    dead.webView.destroy();
+                }
+                it.remove();
+            }
+        }
+        // Rebuild ordered tabsList strictly from controller order
+        tabsList.clear();
+        for (com.caspian.betac.tabs.TabState state : controllerStates) {
+            TabItem item = tabRuntimes.get(state.id);
+            if (item != null) {
+                tabsList.add(item);
+            }
+        }
+    }
+
+    public void assertTabInvariants() {
+        if (0 == (getApplicationInfo().flags & android.content.pm.ApplicationInfo.FLAG_DEBUGGABLE)) return;
+        boolean ok = tabController.validateInvariants();
+        if (!ok) {
+            Log.w(TAG, "TabController invariants validation warning");
+        }
+        List<com.caspian.betac.tabs.TabState> states = tabController.getTabs();
+        for (int i = 0; i < states.size(); i++) {
+            com.caspian.betac.tabs.TabState state = states.get(i);
+            if (!tabRuntimes.containsKey(state.id)) {
+                Log.w(TAG, "Runtime missing for tab " + state.id);
+            }
+        }
     }
 
     @Override
@@ -914,16 +968,29 @@ public class MainActivity extends AppCompatActivity {
         try {
             tabController.setEventListener(new com.caspian.betac.tabs.TabController.TabEventListener() {
                 @Override
-                public void onTabAdded(com.caspian.betac.tabs.TabState tab) {}
+                public void onTabAdded(com.caspian.betac.tabs.TabState tab) {
+                    if (!tabRuntimes.containsKey(tab.id)) {
+                        TabItem runtime = createNewTabInstance(tab.id, tab.url, tab.service, null, tab.isIncognito, tab.caskId, tab);
+                        tabRuntimes.put(tab.id, runtime);
+                    }
+                }
 
                 @Override
                 public void onTabSwitched(int oldTabId, int newTabId) {
                     activeTabId = newTabId;
+                    runOnUiThread(() -> updateOmniboxState());
                 }
 
                 @Override
                 public void onTabClosed(int closedTabId, int newActiveTabId) {
                     activeTabId = newActiveTabId;
+                    TabItem removed = tabRuntimes.remove(closedTabId);
+                    if (removed != null && removed.webView != null) {
+                        if (removed.webView.getParent() != null) {
+                            ((ViewGroup) removed.webView.getParent()).removeView(removed.webView);
+                        }
+                        removed.webView.destroy();
+                    }
                 }
 
                 @Override
@@ -932,6 +999,16 @@ public class MainActivity extends AppCompatActivity {
                     secondarySplitTabId = tabController.getSecondarySplitTabId();
                     splitModeState = tabController.getSplitModeState();
                     splitRatio = tabController.getSplitRatio();
+                    syncTabsListWithController();
+                    assertTabInvariants();
+                }
+
+                @Override
+                public void onSplitModeChanged(int splitState, int secondaryId, float ratio) {
+                    splitModeState = splitState;
+                    secondarySplitTabId = secondaryId;
+                    splitRatio = ratio;
+                    activeTabId = tabController.getActiveTabId();
                 }
             });
             restoreOpenTabsState();
@@ -1705,7 +1782,7 @@ public class MainActivity extends AppCompatActivity {
         initialTab.title = "Caspian Hub";
         tabRuntimes.put(initial.id, initialTab);
         tabsList.add(initialTab);
-        activeTabId = initial.id;
+        tabController.switchToTab(initial.id);
         switchToTab(initial.id);
         updateOmniboxState();
     }
@@ -2736,13 +2813,11 @@ public class MainActivity extends AppCompatActivity {
                 playUiFeedbackSound("tap");
                 if (selectedGridTabIds.size() == 2) {
                     List<Integer> ids = new ArrayList<>(selectedGridTabIds);
-                    activeTabId = ids.get(0);
-                    secondarySplitTabId = ids.get(1);
                     selectedGridTabIds.clear();
                     isGridSelectionMode = false;
                     updateTabGridSelectionUi();
                     hideTabGridView();
-                    splitModeState = 1;
+                    tabController.enterSplitMode(ids.get(0), ids.get(1), 1, 0.5f);
                     applySplitViewLayout();
                     Toast.makeText(this, "Split Screen Activated", Toast.LENGTH_SHORT).show();
                 }
@@ -5162,9 +5237,7 @@ public class MainActivity extends AppCompatActivity {
                 renderTabGridCards(tabGridSearchInput != null ? tabGridSearchInput.getText().toString() : "");
                 return;
             }
-            activeTabId = leftTab.id;
-            secondarySplitTabId = rightTab.id;
-            splitModeState = 1;
+            tabController.enterSplitMode(leftTab.id, rightTab.id, 1, 0.5f);
             applySplitViewLayout();
             hideTabGridView();
         });
@@ -6085,9 +6158,7 @@ public class MainActivity extends AppCompatActivity {
                 updateTabGridSelectionUi();
                 renderTabGridCards(tabGridSearchInput != null ? tabGridSearchInput.getText().toString() : "");
             } else {
-                activeTabId = leftTab.id;
-                secondarySplitTabId = rightTab.id;
-                splitModeState = leftTab.splitOrientation > 0 ? leftTab.splitOrientation : 1;
+                tabController.enterSplitMode(leftTab.id, rightTab.id, leftTab.splitOrientation > 0 ? leftTab.splitOrientation : 1, 0.5f);
                 applySplitViewLayout();
                 hideTabGridView();
             }
@@ -14679,10 +14750,6 @@ public class MainActivity extends AppCompatActivity {
         tabRuntimes.put(geminiId, geminiTab);
         tabsList.add(geminiTab);
 
-        activeTabId = gptTab.id;
-        secondarySplitTabId = geminiTab.id;
-        splitModeState = 1;
-        splitRatio = 0.5f;
         tabController.enterSplitMode(gptTab.id, geminiTab.id, 1, 0.5f);
         applySplitViewLayout();
         updateOmniboxState();
@@ -17655,10 +17722,7 @@ public class MainActivity extends AppCompatActivity {
                 geminiTab.pendingPrompt = prompt;
             }
 
-            activeTabId = gptTab.id;
-            secondarySplitTabId = geminiTab.id;
-            splitModeState = 1;
-            splitRatio = 0.5f;
+            tabController.enterSplitMode(gptTab.id, geminiTab.id, 1, 0.5f);
             applySplitViewLayout();
             Toast.makeText(this, "⚡ Dual AI Ask: ChatGPT & Gemini Ready!", Toast.LENGTH_SHORT).show();
         }
@@ -18226,9 +18290,9 @@ public class MainActivity extends AppCompatActivity {
                         }
                     }
                     if (isLeftPane) {
-                        activeTabId = selectedId;
+                        tabController.enterSplitMode(selectedId, secondarySplitTabId, splitModeState, splitRatio);
                     } else {
-                        secondarySplitTabId = selectedId;
+                        tabController.enterSplitMode(activeTabId, selectedId, splitModeState, splitRatio);
                     }
                     applySplitViewLayout();
                     saveOpenTabsState();
@@ -18289,9 +18353,7 @@ public class MainActivity extends AppCompatActivity {
     }
 
     private void swapSplitTabs() {
-        int temp = activeTabId;
-        activeTabId = secondarySplitTabId;
-        secondarySplitTabId = temp;
+        tabController.enterSplitMode(secondarySplitTabId, activeTabId, splitModeState, 1.0f - splitRatio);
         applySplitViewLayout();
         Toast.makeText(this, "Tabs Swapped", Toast.LENGTH_SHORT).show();
     }
@@ -18308,8 +18370,9 @@ public class MainActivity extends AppCompatActivity {
 
     private void closeSplitPane(boolean isLeftPane) {
         if (isLeftPane && secondarySplitTabId != -1) {
-            activeTabId = secondarySplitTabId;
+            tabController.switchToTab(secondarySplitTabId);
         }
+        tabController.exitSplitMode();
         exitSplitView();
     }
 
@@ -18358,9 +18421,8 @@ public class MainActivity extends AppCompatActivity {
 
         if (splitModeState > 0 && (activeTabId == tabId || secondarySplitTabId == tabId ||
                 (partner != null && (activeTabId == partner.id || secondarySplitTabId == partner.id)))) {
-            splitModeState = 0;
-            secondarySplitTabId = -1;
-            activeTabId = tabId;
+            tabController.exitSplitMode();
+            tabController.switchToTab(tabId);
             switchToTab(tabId, false);
         }
         saveOpenTabsState();
@@ -18658,7 +18720,7 @@ public class MainActivity extends AppCompatActivity {
             setupTabClientsAndListeners(tab, peekWv);
             tabRuntimes.put(newId, tab);
             tabsList.add(tab);
-            activeTabId = newId;
+            tabController.switchToTab(newId);
 
             if (webViewContainer != null) {
                 if (peekWv.getParent() != null) {
@@ -21234,6 +21296,12 @@ public class MainActivity extends AppCompatActivity {
             }
         } catch (Throwable ignored) {}
 
+        try {
+            if (WebViewFeature.isFeatureSupported(WebViewFeature.REQUESTED_WITH_HEADER_ALLOW_LIST)) {
+                WebSettingsCompat.setRequestedWithHeaderOriginAllowList(settings, java.util.Collections.emptySet());
+            }
+        } catch (Throwable ignored) {}
+
         if (!isIncognito) {
             settings.setCacheMode(WebSettings.LOAD_DEFAULT);
             CaskManager.applyProfileToWebView(webView, finalCaskId);
@@ -21328,6 +21396,76 @@ public class MainActivity extends AppCompatActivity {
         } catch (Throwable t) {
             Log.e(TAG, "Error registering CaspianMediaChannel WebMessageListener: ", t);
         }
+
+        try {
+            if (androidx.webkit.WebViewFeature.isFeatureSupported(androidx.webkit.WebViewFeature.WEB_MESSAGE_LISTENER)) {
+                androidx.webkit.WebViewCompat.addWebMessageListener(
+                        webView,
+                        "CaspianHubChannel",
+                        java.util.Collections.singleton("*"),
+                        new com.caspian.betac.security.TrustedHubMessageHandler(new com.caspian.betac.security.TrustedHubMessageHandler.HubActionCallback() {
+                            @Override
+                            public void onOpenUrl(String hubUrl) {
+                                runOnUiThread(() -> {
+                                    if (hubUrl != null && !hubUrl.isEmpty()) {
+                                        navigateUrl(hubUrl);
+                                    }
+                                });
+                            }
+
+                            @Override
+                            public void onSwitchService(String service) {
+                                runOnUiThread(() -> {
+                                    if (service != null && !service.isEmpty()) {
+                                        switchActiveTabService(service);
+                                    }
+                                });
+                            }
+
+                            @Override
+                            public void onAddNewTab(String service, String hubUrl) {
+                                runOnUiThread(() -> {
+                                    addNewTab(service, "", hubUrl, false);
+                                });
+                            }
+
+                            @Override
+                            public void onPlayAssetSound(String sound) {
+                                runOnUiThread(() -> playAssetSound(sound));
+                            }
+
+                            @Override
+                            public void onShowToast(String message) {
+                                runOnUiThread(() -> Toast.makeText(MainActivity.this, message, Toast.LENGTH_SHORT).show());
+                            }
+
+                            @Override
+                            public void onShowKeyboard() {
+                                runOnUiThread(MainActivity.this::showSoftKeyboardForCurrentTab);
+                            }
+
+                            @Override
+                            public void onSaveWallpaper(String wallpaper) {
+                                runOnUiThread(() -> {
+                                    SharedPreferences.Editor editor = getSharedPreferences(PREFS_NAME, MODE_PRIVATE).edit();
+                                    editor.putString("hub_custom_wallpaper", wallpaper);
+                                    editor.apply();
+                                });
+                            }
+
+                            @Override
+                            public void onSwitchCask(String caskId) {
+                                runOnUiThread(() -> {
+                                    CaskManager cm = new CaskManager(MainActivity.this);
+                                    cm.switchCask(caskId, () -> changeTabCask(tabItem.id, caskId));
+                                });
+                            }
+                        })
+                );
+            }
+        } catch (Throwable t) {
+            Log.e(TAG, "Error registering CaspianHubChannel WebMessageListener: ", t);
+        }
         applyWebViewTheme(webView, isDarkTheme);
 
         webView.setOnScrollChangeListener((v, scrollX, scrollY, oldScrollX, oldScrollY) -> {
@@ -21412,6 +21550,13 @@ public class MainActivity extends AppCompatActivity {
                 if (handleExternalUriSchemes(view, targetUrl)) {
                     return true;
                 }
+                if (targetUrl.startsWith("http://") || targetUrl.startsWith("https://")) {
+                    String curUrl = view.getUrl();
+                    if (curUrl != null && curUrl.contains("launch_hub.html")) {
+                        navigateUrl(targetUrl);
+                        return true;
+                    }
+                }
                 if (targetUrl.contains("lastfm-callback")) {
                     try {
                         Uri uri = Uri.parse(targetUrl);
@@ -21443,6 +21588,13 @@ public class MainActivity extends AppCompatActivity {
             @Override
             public boolean shouldOverrideUrlLoading(WebView view, String url) {
                 if (handleExternalUriSchemes(view, url)) return true;
+                if (url != null && (url.startsWith("http://") || url.startsWith("https://"))) {
+                    String curUrl = view.getUrl();
+                    if (curUrl != null && curUrl.contains("launch_hub.html")) {
+                        navigateUrl(url);
+                        return true;
+                    }
+                }
                 return super.shouldOverrideUrlLoading(view, url);
             }
 
@@ -22256,18 +22408,14 @@ public class MainActivity extends AppCompatActivity {
 
         if (tab.splitPartnerId != -1 && getTabById(tab.splitPartnerId) != null) {
             TabItem partner = getTabById(tab.splitPartnerId);
-            if ("secondary".equals(tab.splitRole)) {
-                activeTabId = partner.id;
-                secondarySplitTabId = tab.id;
-            } else {
-                activeTabId = tab.id;
-                secondarySplitTabId = partner.id;
-            }
-            splitModeState = tab.splitOrientation > 0 ? tab.splitOrientation : 1;
+            int primary = "secondary".equals(tab.splitRole) ? partner.id : tab.id;
+            int secondary = "secondary".equals(tab.splitRole) ? tab.id : partner.id;
+            int orientation = tab.splitOrientation > 0 ? tab.splitOrientation : 1;
+            tabController.enterSplitMode(primary, secondary, orientation, 0.5f);
             applySplitViewLayout();
         } else {
-            splitModeState = 0;
-            activeTabId = tabId;
+            tabController.exitSplitMode();
+            tabController.switchToTab(tabId);
 
             if (splitViewContainer != null) splitViewContainer.setVisibility(View.GONE);
             if (splitLeftContainer != null) splitLeftContainer.removeAllViews();
@@ -22424,11 +22572,7 @@ public class MainActivity extends AppCompatActivity {
                     partner.splitName = "";
                 }
                 if (splitModeState > 0 && (activeTabId == tabId || secondarySplitTabId == tabId)) {
-                    splitModeState = 0;
-                    secondarySplitTabId = -1;
-                    if (partner != null) {
-                        activeTabId = partner.id;
-                    }
+                    tabController.exitSplitMode();
                 }
             }
             tabsList.remove(toRemove);
@@ -22441,11 +22585,8 @@ public class MainActivity extends AppCompatActivity {
 
             tabController.closeTab(tabId, recordHistory);
 
-            if (activeTabId == tabId) {
-                if (!tabsList.isEmpty()) {
-                    activeTabId = tabsList.get(tabsList.size() - 1).id;
-                    switchToTab(activeTabId, !isSheetOpen);
-                }
+            if (activeTabId != -1 && getTabById(activeTabId) != null) {
+                switchToTab(activeTabId, !isSheetOpen);
             }
         }
         if (!hasAnyYouTubeTab()) {
@@ -22706,7 +22847,7 @@ public class MainActivity extends AppCompatActivity {
             addNewTab("hub", null);
         } else {
             if (getTabById(activeTabId) == null) {
-                activeTabId = tabsList.get(0).id;
+                tabController.switchToTab(tabsList.get(0).id);
             }
             switchToTab(activeTabId, !isSheetOpen);
         }
@@ -23743,10 +23884,7 @@ public class MainActivity extends AppCompatActivity {
     }
 
     public void enterSplitMode(int tabId1, int tabId2) {
-        activeTabId = tabId1;
-        secondarySplitTabId = tabId2;
-        splitModeState = 1; // Horizontal Split
-        splitRatio = 0.5f;
+        tabController.enterSplitMode(tabId1, tabId2, 1, 0.5f);
         applySplitViewLayout();
         updateOmniboxState();
         updateOmniboxTabStrip();

@@ -1593,9 +1593,23 @@
       }
     });
 
+    // 2.5 Hub WebMessage Channel Helper
+    function postHubMessage(msgObj) {
+      try {
+        if (window.CaspianHubChannel && typeof window.CaspianHubChannel.postMessage === 'function') {
+          window.CaspianHubChannel.postMessage(JSON.stringify(msgObj));
+          return true;
+        }
+      } catch (e) {
+        console.warn('postHubMessage error:', e);
+      }
+      return false;
+    }
+
     // 3. SFX & Haptics
     function playTapSFX() {
       try {
+        if (postHubMessage({ action: 'playAssetSound', sound: 'tap_button.mp3' })) return;
         if (window.CaspianBridge && typeof window.CaspianBridge.playAssetSound === 'function') {
           window.CaspianBridge.playAssetSound('tap_button.mp3');
         }
@@ -1610,6 +1624,7 @@
 
     function showToast(msg) {
       try {
+        if (postHubMessage({ action: 'showToast', message: msg })) return;
         if (window.CaspianBridge && typeof window.CaspianBridge.showToast === 'function') {
           window.CaspianBridge.showToast(msg);
         }
@@ -2456,6 +2471,9 @@
 
       cardEl.classList.add('launching');
       setTimeout(() => {
+        if (postHubMessage({ action: 'openUrl', url: item.url })) {
+          return;
+        }
         if (item.service && window.CaspianBridge && typeof window.CaspianBridge.switchService === 'function') {
           window.CaspianBridge.switchService(item.service);
         } else if (window.CaspianBridge && typeof window.CaspianBridge.openUrl === 'function') {
@@ -2623,6 +2641,9 @@
         targetUrl = 'https://www.google.com/search?q=' + encodeURIComponent(query);
       }
 
+      if (postHubMessage({ action: 'openUrl', url: targetUrl })) {
+        return;
+      }
       if (window.CaspianBridge && typeof window.CaspianBridge.openUrl === 'function') {
         window.CaspianBridge.openUrl(targetUrl);
       } else {
@@ -2635,6 +2656,7 @@
       const input = document.getElementById('google-search-input');
       if (input) {
         input.focus();
+        postHubMessage({ action: 'showKeyboard' });
         if (window.CaspianBridge && typeof window.CaspianBridge.showKeyboard === 'function') {
           window.CaspianBridge.showKeyboard();
         }
@@ -2644,6 +2666,14 @@
     function launchAiPlatform(service) {
       playTapSFX();
       triggerHaptic(30);
+      let targetUrl = 'https://chatgpt.com/';
+      if (service === 'gemini') targetUrl = 'https://gemini.google.com/app';
+      else if (service === 'claude') targetUrl = 'https://claude.ai/new';
+      else if (service === 'deepseek') targetUrl = 'https://chat.deepseek.com';
+
+      if (postHubMessage({ action: 'addNewTab', service: service, url: targetUrl })) {
+        return;
+      }
       if (window.CaspianBridge && typeof window.CaspianBridge.addNewTab === 'function') {
         window.CaspianBridge.addNewTab(service, '');
       } else if (service === 'chatgpt') {
@@ -2804,6 +2834,7 @@
     function selectCask(caskId) {
       playTapSFX();
       triggerHaptic(25);
+      postHubMessage({ action: 'switchCaspianCask', caskId: caskId });
       if (window.CaspianBridge) {
         if (typeof window.CaspianBridge.switchCaspianCask === 'function') {
           window.CaspianBridge.switchCaspianCask(caskId);

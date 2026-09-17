@@ -659,8 +659,8 @@
           tabs = JSON.parse(jsonStr);
         }
       }
-    } catch (e) { }
     cachedOpenTabs = tabs;
+    window.cachedOpenTabs = tabs;
 
     if (countBadge) {
       countBadge.textContent = tabs.length === 1 ? '1 Tab' : `${tabs.length} Tabs`;
@@ -6704,7 +6704,8 @@
 // Live Favicon Receiver from Native Android WebChromeClient
 window.onTabFaviconReceived = function (tabId, faviconB64) {
   if (!tabId || !faviconB64) return;
-  const tab = (cachedOpenTabs || []).find(t => t.id === tabId);
+  const tabList = (typeof cachedOpenTabs !== 'undefined' && cachedOpenTabs) ? cachedOpenTabs : (window.cachedOpenTabs || []);
+  const tab = tabList.find(t => t.id === tabId);
   if (tab) {
     tab.faviconB64 = faviconB64;
     const card = document.querySelector(`.chrome-tab-card[data-tabid="${tabId}"]`);
