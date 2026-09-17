@@ -3,7 +3,7 @@
     android:id="@+id/history_root"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
-    android:background="#0A0E17"
+    android:background="@color/caspian_void"
     android:orientation="vertical">
 
     <!-- Top Sticky Header Section -->
@@ -12,7 +12,7 @@
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
         android:orientation="vertical"
-        android:background="#0A0E17"
+        android:background="@color/caspian_void"
         android:paddingBottom="8dp">
 
         <!-- Header Carousel Bar: Bookmarks | History (Count) | Settings -->

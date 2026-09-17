@@ -4037,9 +4037,13 @@
 
   // Export Dropdown Trigger
   if (exportDropdownTrigger && exportMenu) {
+    const parentCard = exportDropdownTrigger.closest('.engine-card, .m3-card') || document.getElementById('card-temp-saver');
     exportDropdownTrigger.addEventListener('click', (e) => {
       e.stopPropagation();
-      exportMenu.classList.toggle('active');
+      const isActive = exportMenu.classList.toggle('active');
+      if (parentCard) {
+        parentCard.classList.toggle('dropdown-open', isActive);
+      }
     });
 
     // Close when clicking outside of the trigger and menu
@@ -4047,6 +4051,7 @@
       if (exportMenu.classList.contains('active')) {
         if (!exportMenu.contains(e.target) && e.target !== exportDropdownTrigger && !exportDropdownTrigger.contains(e.target)) {
           exportMenu.classList.remove('active');
+          if (parentCard) parentCard.classList.remove('dropdown-open');
         }
       }
     });
@@ -4056,7 +4061,11 @@
   document.querySelectorAll('.export-opt-btn').forEach(btn => {
     btn.addEventListener('click', () => {
       const fmt = btn.dataset.fmt;
-      if (exportMenu) exportMenu.classList.remove('active');
+      if (exportMenu) {
+        exportMenu.classList.remove('active');
+        const parentCard = exportMenu.closest('.engine-card, .m3-card') || document.getElementById('card-temp-saver');
+        if (parentCard) parentCard.classList.remove('dropdown-open');
+      }
 
       if (fmt === 'nativepdf' || fmt === 'styledpdf') {
         const progressOverlay = document.getElementById('pdf-progress-overlay');

@@ -1,0 +1,29 @@
+<?xml version="1.0" encoding="utf-8"?>
+<layer-list xmlns:android="http://schemas.android.com/apk/res/android">
+    <!-- Ambient Shadow -->
+    <item>
+        <shape android:shape="rectangle">
+            <corners android:radius="18dp" />
+            <solid android:color="#26000000" />
+        </shape>
+    </item>
+    <!-- Base Frosted Glass Fill -->
+    <item android:top="1dp">
+        <shape android:shape="rectangle">
+            <corners android:radius="18dp" />
+            <solid android:color="@color/caspian_glass_high" />
+            <stroke android:width="1dp" android:color="#22FFFFFF" />
+        </shape>
+    </item>
+    <!-- Top Specular Highlight -->
+    <item android:bottom="42dp" android:left="12dp" android:right="12dp">
+        <shape android:shape="rectangle">
+            <corners android:radius="18dp" />
+            <gradient
+                android:angle="0"
+                android:startColor="#00FFFFFF"
+                android:centerColor="@color/caspian_specular_top"
+                android:endColor="#00FFFFFF" />
+        </shape>
+    </item>
+</layer-list>

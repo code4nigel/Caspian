@@ -2299,7 +2299,9 @@
           if (Array.isArray(parsed) && parsed.length > 0) return parsed;
         } catch (e) {}
       }
-      return JSON.parse(JSON.stringify(DEFAULT_SHORTCUTS));
+      const defs = JSON.parse(JSON.stringify(DEFAULT_SHORTCUTS));
+      setStoredData('caspian_hub_shortcuts', JSON.stringify(defs));
+      return defs;
     }
 
     let currentShortcuts = loadShortcuts();

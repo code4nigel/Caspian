@@ -25,6 +25,8 @@ import android.content.Context;
 import android.content.Intent;
 import android.content.SharedPreferences;
 import android.content.pm.PackageManager;
+import android.content.pm.ResolveInfo;
+import android.content.ActivityNotFoundException;
 import android.content.res.AssetFileDescriptor;
 import android.graphics.Bitmap;
 import android.graphics.BitmapFactory;
@@ -14666,10 +14668,10 @@ public class MainActivity extends AppCompatActivity {
         builder.setView(dialogView);
         AlertDialog dialog = builder.create();
         if (dialog.getWindow() != null) {
-            dialog.getWindow().setBackgroundDrawable(new ColorDrawable(isDarkTheme ? 0xFF0A0E17 : 0xFFF8FAFC));
+            dialog.getWindow().setBackgroundDrawable(new ColorDrawable(isDarkTheme ? 0xFF070A10 : 0xFFF8FAFC));
             dialog.getWindow().setWindowAnimations(0);
         }
-        dialogView.setBackgroundColor(isDarkTheme ? 0xFF0A0E17 : 0xFFF8FAFC);
+        dialogView.setBackgroundColor(isDarkTheme ? 0xFF070A10 : 0xFFF8FAFC);
 
         // Single iOS Slide Entrance Transition
         if (enterDirection > 0) {
@@ -14725,95 +14727,102 @@ public class MainActivity extends AppCompatActivity {
         TextView textDockImport = dialogView.findViewById(R.id.text_dock_import);
         ImageView iconDockExport = dialogView.findViewById(R.id.icon_dock_export);
         ImageView iconDockImport = dialogView.findViewById(R.id.icon_dock_import);
+        TextView iconDockPlus = dialogView.findViewById(R.id.icon_dock_plus);
 
-        // Apply Theme Backgrounds and Colors
-        if (bookmarksRoot != null) bookmarksRoot.setBackgroundColor(isDarkTheme ? 0xFF0A0E17 : 0xFFF8FAFC);
-        if (headerBar != null) headerBar.setBackgroundColor(isDarkTheme ? 0xFF0A0E17 : 0xFFF8FAFC);
+        // Apply Theme Backgrounds and Colors (Liquid Island Tokens)
+        if (bookmarksRoot != null) bookmarksRoot.setBackgroundColor(isDarkTheme ? 0xFF070A10 : 0xFFF8FAFC);
+        if (headerBar != null) headerBar.setBackgroundColor(isDarkTheme ? 0xFF070A10 : 0xFFF8FAFC);
         if (btnBack != null) btnBack.setColorFilter(isDarkTheme ? 0xFFBAC9CC : 0xFF334155);
 
-        // Match Top Header Styling with History Dialog
+        // Header Capsule: Liquid Glass squircle with Cyan glow
         if (capsuleCenter != null) {
             GradientDrawable capBg = new GradientDrawable();
             capBg.setCornerRadius(dpToPx(16));
-            capBg.setColor(isDarkTheme ? 0xFF1E2838 : 0xFFF1F5F9);
-            capBg.setStroke(dpToPx(1), isDarkTheme ? 0xFF00E5FF : 0xFFCBD5E1);
+            capBg.setColor(isDarkTheme ? 0xD0121826 : 0xE6FFFFFF);
+            capBg.setStroke(dpToPx(1), isDarkTheme ? 0xFF22D3EE : 0xFF0284C7);
             capsuleCenter.setBackground(capBg);
         }
         if (textBookmarksHeader != null) textBookmarksHeader.setTextColor(isDarkTheme ? 0xFFFFFFFF : 0xFF0284C7);
-        if (iconBookmarksHeader != null) iconBookmarksHeader.setColorFilter(isDarkTheme ? 0xFF00E5FF : 0xFF0284C7);
+        if (iconBookmarksHeader != null) iconBookmarksHeader.setColorFilter(isDarkTheme ? 0xFF22D3EE : 0xFF0284C7);
 
         if (badgeHeaderCount != null) {
             GradientDrawable bBg = new GradientDrawable();
             bBg.setCornerRadius(dpToPx(10));
-            bBg.setColor(isDarkTheme ? 0xFF161B22 : 0xFFE2E8F0);
-            bBg.setStroke(dpToPx(1), isDarkTheme ? 0xFF21262D : 0xFFCBD5E1);
+            bBg.setColor(isDarkTheme ? 0x3322D3EE : 0x180284C7);
+            bBg.setStroke(dpToPx(1), isDarkTheme ? 0x5522D3EE : 0x300284C7);
             badgeHeaderCount.setBackground(bBg);
-            badgeHeaderCount.setTextColor(isDarkTheme ? 0xFFCBD5E1 : 0xFF0F172A);
+            badgeHeaderCount.setTextColor(isDarkTheme ? 0xFF22D3EE : 0xFF0284C7);
         }
 
         if (btnGotoHistory != null) btnGotoHistory.setTextColor(isDarkTheme ? 0xFF64748B : 0xFF475569);
         if (btnGotoSettings != null) btnGotoSettings.setTextColor(isDarkTheme ? 0xFF64748B : 0xFF475569);
 
-        if (textVaultTitle != null) textVaultTitle.setTextColor(isDarkTheme ? 0xFFDFE2F0 : 0xFF0F172A);
+        if (textVaultTitle != null) textVaultTitle.setTextColor(isDarkTheme ? 0xFFF8FAFC : 0xFF0F172A);
         if (badgeVaultSaved != null) {
             GradientDrawable vBg = new GradientDrawable();
             vBg.setCornerRadius(dpToPx(8));
-            vBg.setColor(isDarkTheme ? 0xFF142232 : 0xFFE0F2FE);
+            vBg.setColor(isDarkTheme ? 0x2822D3EE : 0x180284C7);
+            vBg.setStroke(dpToPx(1), isDarkTheme ? 0x4422D3EE : 0x300284C7);
             badgeVaultSaved.setBackground(vBg);
-            badgeVaultSaved.setTextColor(isDarkTheme ? 0xFF00E5FF : 0xFF0284C7);
+            badgeVaultSaved.setTextColor(isDarkTheme ? 0xFF22D3EE : 0xFF0284C7);
         }
 
         if (btnBatchToggle != null) {
             GradientDrawable btBg = new GradientDrawable();
             btBg.setCornerRadius(dpToPx(12));
-            btBg.setColor(isDarkTheme ? 0xFF161B24 : 0xFFFFFFFF);
-            btBg.setStroke(dpToPx(1), isDarkTheme ? 0xFF232B3E : 0xFFCBD5E1);
+            btBg.setColor(isDarkTheme ? 0x20FFFFFF : 0x0C0F172A);
+            btBg.setStroke(dpToPx(1), isDarkTheme ? 0x28FFFFFF : 0x140F172A);
             btnBatchToggle.setBackground(btBg);
-            btnBatchToggle.setTextColor(isDarkTheme ? 0xFFBAC9CC : 0xFF334155);
+            btnBatchToggle.setTextColor(isDarkTheme ? 0xFFE2E8F0 : 0xFF334155);
         }
 
-
-
+        // Search Bar: Frosted Glass Capsule with Specular Border
         if (searchBar != null) {
             GradientDrawable sbBg = new GradientDrawable();
-            sbBg.setCornerRadius(dpToPx(14));
-            sbBg.setColor(isDarkTheme ? 0xFF141926 : 0xFFFFFFFF);
-            sbBg.setStroke(dpToPx(1), isDarkTheme ? 0xFF1F293D : 0xFFE2E8F0);
+            sbBg.setCornerRadius(dpToPx(16));
+            sbBg.setColor(isDarkTheme ? 0xD0121826 : 0xF0FFFFFF);
+            sbBg.setStroke(dpToPx(1), isDarkTheme ? 0x22FFFFFF : 0x140F172A);
             searchBar.setBackground(sbBg);
         }
-        if (iconSearch != null) iconSearch.setColorFilter(isDarkTheme ? 0xFF849396 : 0xFF94A3B8);
+        if (iconSearch != null) iconSearch.setColorFilter(isDarkTheme ? 0xFF94A3B8 : 0xFF64748B);
         if (searchInput != null) {
-            searchInput.setTextColor(isDarkTheme ? 0xFFDFE2F0 : 0xFF0F172A);
+            searchInput.setTextColor(isDarkTheme ? 0xFFF8FAFC : 0xFF0F172A);
             searchInput.setHintTextColor(isDarkTheme ? 0xFF64748B : 0xFF94A3B8);
         }
 
         if (btnSort != null) {
             GradientDrawable sBg = new GradientDrawable();
-            sBg.setCornerRadius(dpToPx(8));
-            sBg.setColor(isDarkTheme ? 0xFF1E2838 : 0xFFF1F5F9);
+            sBg.setCornerRadius(dpToPx(10));
+            sBg.setColor(isDarkTheme ? 0x20FFFFFF : 0x0C0F172A);
+            sBg.setStroke(dpToPx(1), isDarkTheme ? 0x28FFFFFF : 0x140F172A);
             btnSort.setBackground(sBg);
         }
-        if (textSortLabel != null) textSortLabel.setTextColor(isDarkTheme ? 0xFF00E5FF : 0xFF0284C7);
+        if (textSortLabel != null) textSortLabel.setTextColor(isDarkTheme ? 0xFF22D3EE : 0xFF0284C7);
 
-        // Bottom Dock Styling
+        // Bottom Dock: HyperGlass Pill with Floating Cyan Glow FAB
         if (bottomDock != null) {
             GradientDrawable dockBg = new GradientDrawable();
             dockBg.setCornerRadius(dpToPx(26));
-            dockBg.setColor(isDarkTheme ? 0xFF141926 : 0xFFFFFFFF);
-            dockBg.setStroke(dpToPx(1), isDarkTheme ? 0xFF232B3E : 0xFFE2E8F0);
+            dockBg.setColor(isDarkTheme ? 0xEE121826 : 0xF5FFFFFF);
+            dockBg.setStroke(dpToPx(1), isDarkTheme ? 0x33FFFFFF : 0x1E0F172A);
             bottomDock.setBackground(dockBg);
-            bottomDock.setElevation(dpToPx(16));
+            bottomDock.setElevation(dpToPx(24));
         }
-        if (textDockExport != null) textDockExport.setTextColor(isDarkTheme ? 0xFFDFE2F0 : 0xFF0F172A);
-        if (textDockImport != null) textDockImport.setTextColor(isDarkTheme ? 0xFFDFE2F0 : 0xFF0F172A);
-        if (iconDockExport != null) iconDockExport.setColorFilter(isDarkTheme ? 0xFF00E5FF : 0xFF0284C7);
-        if (iconDockImport != null) iconDockImport.setColorFilter(isDarkTheme ? 0xFF00E5FF : 0xFF0284C7);
+        if (textDockExport != null) textDockExport.setTextColor(isDarkTheme ? 0xFFF8FAFC : 0xFF0F172A);
+        if (textDockImport != null) textDockImport.setTextColor(isDarkTheme ? 0xFFF8FAFC : 0xFF0F172A);
+        if (iconDockExport != null) iconDockExport.setColorFilter(isDarkTheme ? 0xFF22D3EE : 0xFF0284C7);
+        if (iconDockImport != null) iconDockImport.setColorFilter(isDarkTheme ? 0xFF22D3EE : 0xFF0284C7);
 
         if (btnDockAdd != null) {
-            GradientDrawable plusBg = new GradientDrawable();
+            GradientDrawable plusBg = new GradientDrawable(
+                GradientDrawable.Orientation.TL_BR,
+                new int[]{0xFF22D3EE, 0xFF06B6D4}
+            );
             plusBg.setShape(GradientDrawable.OVAL);
-            plusBg.setColor(0xFF00E5FF);
             btnDockAdd.setBackground(plusBg);
+        }
+        if (iconDockPlus != null) {
+            iconDockPlus.setTextColor(0xFF070A10);
         }
 
         // State variables
@@ -14837,21 +14846,21 @@ public class MainActivity extends AppCompatActivity {
             boolean isAllAct = "all".equalsIgnoreCase(activeCategory[0]);
             GradientDrawable allBg = new GradientDrawable();
             allBg.setCornerRadius(dpToPx(14));
-            allBg.setColor(isAllAct ? (isDarkTheme ? 0xFF00E5FF : 0xFF0F172A) : (isDarkTheme ? 0xFF161B24 : 0xFFFFFFFF));
-            if (!isAllAct) allBg.setStroke(dpToPx(1), isDarkTheme ? 0xFF232B3E : 0xFFE2E8F0);
+            allBg.setColor(isAllAct ? (isDarkTheme ? 0xFF22D3EE : 0xFF0284C7) : (isDarkTheme ? 0x1CFFFFFF : 0x0C0F172A));
+            if (!isAllAct) allBg.setStroke(dpToPx(1), isDarkTheme ? 0x24FFFFFF : 0x140F172A);
             if (chipAll != null) {
                 chipAll.setBackground(allBg);
-                chipAll.setTextColor(isAllAct ? (isDarkTheme ? 0xFF000000 : 0xFFFFFFFF) : (isDarkTheme ? 0xFFCBD5E1 : 0xFF475569));
+                chipAll.setTextColor(isAllAct ? (isDarkTheme ? 0xFF070A10 : 0xFFFFFFFF) : (isDarkTheme ? 0xFF94A3B8 : 0xFF64748B));
             }
 
             boolean isFavAct = "favorites".equalsIgnoreCase(activeCategory[0]);
             GradientDrawable favBg = new GradientDrawable();
             favBg.setCornerRadius(dpToPx(14));
-            favBg.setColor(isFavAct ? (isDarkTheme ? 0xFF00E5FF : 0xFF0F172A) : (isDarkTheme ? 0xFF161B24 : 0xFFFFFFFF));
-            if (!isFavAct) favBg.setStroke(dpToPx(1), isDarkTheme ? 0xFF232B3E : 0xFFE2E8F0);
+            favBg.setColor(isFavAct ? (isDarkTheme ? 0xFF22D3EE : 0xFF0284C7) : (isDarkTheme ? 0x1CFFFFFF : 0x0C0F172A));
+            if (!isFavAct) favBg.setStroke(dpToPx(1), isDarkTheme ? 0x24FFFFFF : 0x140F172A);
             if (chipFav != null) {
                 chipFav.setBackground(favBg);
-                chipFav.setTextColor(isFavAct ? (isDarkTheme ? 0xFF000000 : 0xFFFFFFFF) : (isDarkTheme ? 0xFFCBD5E1 : 0xFF475569));
+                chipFav.setTextColor(isFavAct ? (isDarkTheme ? 0xFF070A10 : 0xFFFFFFFF) : (isDarkTheme ? 0xFF94A3B8 : 0xFF64748B));
             }
 
             // Dynamic Custom Groups Chips
@@ -14877,10 +14886,10 @@ public class MainActivity extends AppCompatActivity {
                 boolean isAct = folder.equalsIgnoreCase(activeCategory[0]);
                 GradientDrawable cBg = new GradientDrawable();
                 cBg.setCornerRadius(dpToPx(14));
-                cBg.setColor(isAct ? (isDarkTheme ? 0xFF00E5FF : 0xFF0F172A) : (isDarkTheme ? 0xFF161B24 : 0xFFFFFFFF));
-                if (!isAct) cBg.setStroke(dpToPx(1), isDarkTheme ? 0xFF232B3E : 0xFFE2E8F0);
+                cBg.setColor(isAct ? (isDarkTheme ? 0xFF22D3EE : 0xFF0284C7) : (isDarkTheme ? 0x1CFFFFFF : 0x0C0F172A));
+                if (!isAct) cBg.setStroke(dpToPx(1), isDarkTheme ? 0x24FFFFFF : 0x140F172A);
                 chip.setBackground(cBg);
-                chip.setTextColor(isAct ? (isDarkTheme ? 0xFF000000 : 0xFFFFFFFF) : (isDarkTheme ? 0xFFCBD5E1 : 0xFF475569));
+                chip.setTextColor(isAct ? (isDarkTheme ? 0xFF070A10 : 0xFFFFFFFF) : (isDarkTheme ? 0xFF94A3B8 : 0xFF64748B));
 
                 chip.setOnClickListener(v -> {
                     playUiFeedbackSound("tap");
@@ -15012,12 +15021,12 @@ public class MainActivity extends AppCompatActivity {
                 ImageButton starBtn = card.findViewById(R.id.bookmark_item_star);
                 ImageButton moreBtn = card.findViewById(R.id.bookmark_item_more);
 
-                // Card Background
+                // Card Background (Liquid Island Glass)
                 if (itemRoot != null) {
                     GradientDrawable cBg = new GradientDrawable();
                     cBg.setCornerRadius(dpToPx(18));
-                    cBg.setColor(isDarkTheme ? 0xFF141926 : 0xFFFFFFFF);
-                    cBg.setStroke(dpToPx(1), isDarkTheme ? 0xFF1F293D : 0xFFE2E8F0);
+                    cBg.setColor(isDarkTheme ? 0xD0121826 : 0xF2FFFFFF);
+                    cBg.setStroke(dpToPx(1), isDarkTheme ? 0x22FFFFFF : 0x120F172A);
                     itemRoot.setBackground(cBg);
                 }
 
@@ -15038,7 +15047,7 @@ public class MainActivity extends AppCompatActivity {
                 // Title & Tag
                 if (titleView != null) {
                     titleView.setText(item.title);
-                    titleView.setTextColor(isDarkTheme ? 0xFFF1F5F9 : 0xFF0F172A);
+                    titleView.setTextColor(isDarkTheme ? 0xFFF8FAFC : 0xFF0F172A);
                 }
                 if (tagView != null) {
                     if (item.folder != null && !item.folder.isEmpty() && !"Default".equalsIgnoreCase(item.folder)) {
@@ -15048,9 +15057,10 @@ public class MainActivity extends AppCompatActivity {
                         tagView.setText(tagShort.toUpperCase());
                         GradientDrawable tBg = new GradientDrawable();
                         tBg.setCornerRadius(dpToPx(6));
-                        tBg.setColor(isDarkTheme ? 0xFF1E2838 : 0xFFE0F2FE);
+                        tBg.setColor(isDarkTheme ? 0x2822D3EE : 0x180284C7);
+                        tBg.setStroke(dpToPx(1), isDarkTheme ? 0x4422D3EE : 0x300284C7);
                         tagView.setBackground(tBg);
-                        tagView.setTextColor(isDarkTheme ? 0xFF00E5FF : 0xFF0284C7);
+                        tagView.setTextColor(isDarkTheme ? 0xFF22D3EE : 0xFF0284C7);
                     } else {
                         tagView.setVisibility(View.GONE);
                     }
@@ -16072,10 +16082,10 @@ public class MainActivity extends AppCompatActivity {
         builder.setView(dialogView);
         AlertDialog dialog = builder.create();
         if (dialog.getWindow() != null) {
-            dialog.getWindow().setBackgroundDrawable(new ColorDrawable(isDarkTheme ? 0xFF0A0E17 : 0xFFF8FAFC));
+            dialog.getWindow().setBackgroundDrawable(new ColorDrawable(isDarkTheme ? 0xFF070A10 : 0xFFF8FAFC));
             dialog.getWindow().setWindowAnimations(0);
         }
-        dialogView.setBackgroundColor(isDarkTheme ? 0xFF0A0E17 : 0xFFF8FAFC);
+        dialogView.setBackgroundColor(isDarkTheme ? 0xFF070A10 : 0xFFF8FAFC);
 
         // Single iOS Slide Entrance Transition
         if (enterDirection > 0) {
@@ -16104,19 +16114,19 @@ public class MainActivity extends AppCompatActivity {
         ImageView closeBtn = dialogView.findViewById(R.id.history_close_btn);
 
         if (historyRoot != null) {
-            historyRoot.setBackgroundColor(isDarkTheme ? 0xFF0A0E17 : 0xFFF8FAFC);
+            historyRoot.setBackgroundColor(isDarkTheme ? 0xFF070A10 : 0xFFF8FAFC);
         }
         if (historyHeaderSection != null) {
             GradientDrawable hSecBg = new GradientDrawable();
-            hSecBg.setColor(isDarkTheme ? 0xFF0A0E17 : 0xFFFFFFFF);
-            hSecBg.setStroke(dpToPx(1), isDarkTheme ? 0xFF1E2433 : 0xFFE2E8F0);
+            hSecBg.setColor(isDarkTheme ? 0xFF070A10 : 0xFFFFFFFF);
+            hSecBg.setStroke(dpToPx(1), isDarkTheme ? 0x1FFFFFFF : 0x120F172A);
             historyHeaderSection.setBackground(hSecBg);
         }
         if (historyTabCapsule != null) {
             GradientDrawable capBg = new GradientDrawable();
             capBg.setCornerRadius(dpToPx(16));
-            capBg.setColor(isDarkTheme ? 0xFF1E2838 : 0xFFF1F5F9);
-            capBg.setStroke(dpToPx(1), isDarkTheme ? 0xFF00E5FF : 0xFFCBD5E1);
+            capBg.setColor(isDarkTheme ? 0xD0121826 : 0xE6FFFFFF);
+            capBg.setStroke(dpToPx(1), isDarkTheme ? 0xFF22D3EE : 0xFF0284C7);
             historyTabCapsule.setBackground(capBg);
         }
         if (historyTabCapsuleText != null) {
@@ -16125,10 +16135,10 @@ public class MainActivity extends AppCompatActivity {
         if (badgeCount != null) {
             GradientDrawable bcBg = new GradientDrawable();
             bcBg.setCornerRadius(dpToPx(10));
-            bcBg.setColor(isDarkTheme ? 0xFF161B22 : 0xFFE2E8F0);
-            bcBg.setStroke(dpToPx(1), isDarkTheme ? 0xFF21262D : 0xFFCBD5E1);
+            bcBg.setColor(isDarkTheme ? 0x3322D3EE : 0x180284C7);
+            bcBg.setStroke(dpToPx(1), isDarkTheme ? 0x5522D3EE : 0x300284C7);
             badgeCount.setBackground(bcBg);
-            badgeCount.setTextColor(isDarkTheme ? 0xFFCBD5E1 : 0xFF0F172A);
+            badgeCount.setTextColor(isDarkTheme ? 0xFF22D3EE : 0xFF0284C7);
         }
         if (tabBookmarks != null) {
             tabBookmarks.setTextColor(isDarkTheme ? 0xFF64748B : 0xFF475569);
@@ -16139,42 +16149,42 @@ public class MainActivity extends AppCompatActivity {
 
         if (historySearchCapsule != null) {
             GradientDrawable sBg = new GradientDrawable();
-            sBg.setCornerRadius(dpToPx(14));
-            sBg.setColor(isDarkTheme ? 0xFF0E131E : 0xFFFFFFFF);
-            sBg.setStroke(dpToPx(1), isDarkTheme ? 0xFF1E2537 : 0xFFCBD5E1);
+            sBg.setCornerRadius(dpToPx(16));
+            sBg.setColor(isDarkTheme ? 0xD0121826 : 0xF0FFFFFF);
+            sBg.setStroke(dpToPx(1), isDarkTheme ? 0x22FFFFFF : 0x140F172A);
             historySearchCapsule.setBackground(sBg);
         }
         if (historySearchIcon != null) {
-            historySearchIcon.setColorFilter(isDarkTheme ? 0xFF64748B : 0xFF64748B);
+            historySearchIcon.setColorFilter(isDarkTheme ? 0xFF94A3B8 : 0xFF64748B);
         }
         if (historySearchDivider != null) {
-            historySearchDivider.setBackgroundColor(isDarkTheme ? 0xFF1E2433 : 0xFFE2E8F0);
+            historySearchDivider.setBackgroundColor(isDarkTheme ? 0x24FFFFFF : 0x140F172A);
         }
         if (searchInput != null) {
-            searchInput.setTextColor(isDarkTheme ? 0xFFFFFFFF : 0xFF0F172A);
+            searchInput.setTextColor(isDarkTheme ? 0xFFF8FAFC : 0xFF0F172A);
             searchInput.setHintTextColor(isDarkTheme ? 0xFF64748B : 0xFF94A3B8);
         }
         if (btnSelect != null) {
             GradientDrawable selBg = new GradientDrawable();
             selBg.setCornerRadius(dpToPx(8));
-            selBg.setColor(isDarkTheme ? 0xFF162235 : 0xFFE0F2FE);
-            selBg.setStroke(dpToPx(1), isDarkTheme ? 0xFF00E5FF : 0xFFBAE6FD);
+            selBg.setColor(isDarkTheme ? 0x2822D3EE : 0x180284C7);
+            selBg.setStroke(dpToPx(1), isDarkTheme ? 0x4422D3EE : 0x300284C7);
             btnSelect.setBackground(selBg);
-            btnSelect.setTextColor(isDarkTheme ? 0xFF00E5FF : 0xFF0284C7);
+            btnSelect.setTextColor(isDarkTheme ? 0xFF22D3EE : 0xFF0284C7);
         }
         if (btnOptions != null) {
             GradientDrawable optBg = new GradientDrawable();
             optBg.setCornerRadius(dpToPx(8));
-            optBg.setColor(isDarkTheme ? 0xFF161B22 : 0xFFF1F5F9);
-            optBg.setStroke(dpToPx(1), isDarkTheme ? 0xFF21262D : 0xFFE2E8F0);
+            optBg.setColor(isDarkTheme ? 0x1CFFFFFF : 0x0C0F172A);
+            optBg.setStroke(dpToPx(1), isDarkTheme ? 0x24FFFFFF : 0x140F172A);
             btnOptions.setBackground(optBg);
             btnOptions.setColorFilter(isDarkTheme ? 0xFF94A3B8 : 0xFF475569);
         }
         if (closeBtn != null) {
             GradientDrawable clsBg = new GradientDrawable();
             clsBg.setCornerRadius(dpToPx(8));
-            clsBg.setColor(isDarkTheme ? 0xFF161B22 : 0xFFF1F5F9);
-            clsBg.setStroke(dpToPx(1), isDarkTheme ? 0xFF21262D : 0xFFE2E8F0);
+            clsBg.setColor(isDarkTheme ? 0x1CFFFFFF : 0x0C0F172A);
+            clsBg.setStroke(dpToPx(1), isDarkTheme ? 0x24FFFFFF : 0x140F172A);
             closeBtn.setBackground(clsBg);
             closeBtn.setColorFilter(isDarkTheme ? 0xFF94A3B8 : 0xFF475569);
         }
@@ -16189,7 +16199,7 @@ public class MainActivity extends AppCompatActivity {
 
         View historyBottomToolbar = dialogView.findViewById(R.id.history_bottom_toolbar);
         if (historyBottomToolbar != null) {
-            historyBottomToolbar.setBackgroundColor(isDarkTheme ? 0xFF0A0E17 : 0xFFF8FAFC);
+            historyBottomToolbar.setBackgroundColor(isDarkTheme ? 0xFF070A10 : 0xFFF8FAFC);
         }
         View historyBottomBarCard = dialogView.findViewById(R.id.history_bottom_bar_card);
         View bottomNormalBar = dialogView.findViewById(R.id.bottom_normal_bar);
@@ -16215,9 +16225,9 @@ public class MainActivity extends AppCompatActivity {
 
         if (historyBottomBarCard != null) {
             GradientDrawable bcBg = new GradientDrawable();
-            bcBg.setCornerRadius(dpToPx(16));
-            bcBg.setColor(isDarkTheme ? 0xFF0D1117 : 0xFFFFFFFF);
-            bcBg.setStroke(dpToPx(1), isDarkTheme ? 0xFF1E2433 : 0xFFE2E8F0);
+            bcBg.setCornerRadius(dpToPx(18));
+            bcBg.setColor(isDarkTheme ? 0xEE121826 : 0xF5FFFFFF);
+            bcBg.setStroke(dpToPx(1), isDarkTheme ? 0x33FFFFFF : 0x1E0F172A);
             historyBottomBarCard.setBackground(bcBg);
         }
         if (bottomNormalBar != null) {
@@ -16229,39 +16239,39 @@ public class MainActivity extends AppCompatActivity {
         if (pillTimeRangeDropdown != null) {
             GradientDrawable pillBg = new GradientDrawable();
             pillBg.setCornerRadius(dpToPx(12));
-            pillBg.setColor(isDarkTheme ? 0xFF161B22 : 0xFFF1F5F9);
-            pillBg.setStroke(dpToPx(1), isDarkTheme ? 0xFF21262D : 0xFFCBD5E1);
+            pillBg.setColor(isDarkTheme ? 0x20FFFFFF : 0x0C0F172A);
+            pillBg.setStroke(dpToPx(1), isDarkTheme ? 0x26FFFFFF : 0x140F172A);
             pillTimeRangeDropdown.setBackground(pillBg);
         }
         if (iconTimeRangeClock != null) iconTimeRangeClock.setColorFilter(isDarkTheme ? 0xFF94A3B8 : 0xFF64748B);
         if (labelTimeRange != null) labelTimeRange.setTextColor(isDarkTheme ? 0xFF94A3B8 : 0xFF64748B);
         if (iconTimeRangeChevron != null) iconTimeRangeChevron.setColorFilter(isDarkTheme ? 0xFF94A3B8 : 0xFF64748B);
-        if (textSelectedTimeRange != null) textSelectedTimeRange.setTextColor(isDarkTheme ? 0xFFE2E8F0 : 0xFF0F172A);
+        if (textSelectedTimeRange != null) textSelectedTimeRange.setTextColor(isDarkTheme ? 0xFFF8FAFC : 0xFF0F172A);
 
         if (btnClearCookies != null) {
             GradientDrawable cBg = new GradientDrawable();
             cBg.setCornerRadius(dpToPx(10));
-            cBg.setColor(isDarkTheme ? 0xFF161B22 : 0xFFF8FAFC);
-            cBg.setStroke(dpToPx(1), isDarkTheme ? 0xFF21262D : 0xFFE2E8F0);
+            cBg.setColor(isDarkTheme ? 0x20FFFFFF : 0x0C0F172A);
+            cBg.setStroke(dpToPx(1), isDarkTheme ? 0x26FFFFFF : 0x140F172A);
             btnClearCookies.setBackground(cBg);
         }
         if (iconClearCookies != null) iconClearCookies.setColorFilter(isDarkTheme ? 0xFF94A3B8 : 0xFF0284C7);
-        if (textClearCookies != null) textClearCookies.setTextColor(isDarkTheme ? 0xFFCBD5E1 : 0xFF0F172A);
+        if (textClearCookies != null) textClearCookies.setTextColor(isDarkTheme ? 0xFFF8FAFC : 0xFF0F172A);
 
         if (btnClearData != null) {
             GradientDrawable dBg = new GradientDrawable();
             dBg.setCornerRadius(dpToPx(10));
-            dBg.setColor(isDarkTheme ? 0xFF0B293B : 0xFFE0F2FE);
-            dBg.setStroke(dpToPx(1), isDarkTheme ? 0xFF00E5FF : 0xFF38BDF8);
+            dBg.setColor(isDarkTheme ? 0x2822D3EE : 0x180284C7);
+            dBg.setStroke(dpToPx(1), isDarkTheme ? 0x4422D3EE : 0x300284C7);
             btnClearData.setBackground(dBg);
         }
-        if (iconClearData != null) iconClearData.setColorFilter(isDarkTheme ? 0xFF00E5FF : 0xFF0284C7);
-        if (textClearData != null) textClearData.setTextColor(isDarkTheme ? 0xFFFFFFFF : 0xFF0369A1);
+        if (iconClearData != null) iconClearData.setColorFilter(isDarkTheme ? 0xFF22D3EE : 0xFF0284C7);
+        if (textClearData != null) textClearData.setTextColor(isDarkTheme ? 0xFF22D3EE : 0xFF0284C7);
 
         if (btnClearBoth != null) {
             GradientDrawable bBg = new GradientDrawable();
             bBg.setCornerRadius(dpToPx(10));
-            bBg.setColor(isDarkTheme ? 0xFF261217 : 0xFFFEF2F2);
+            bBg.setColor(isDarkTheme ? 0x261217 : 0xFFFEF2F2);
             bBg.setStroke(dpToPx(1), isDarkTheme ? 0xFF4D1720 : 0xFFFECACA);
             btnClearBoth.setBackground(bBg);
         }
@@ -16292,13 +16302,13 @@ public class MainActivity extends AppCompatActivity {
                 GradientDrawable cBg = new GradientDrawable();
                 cBg.setCornerRadius(dpToPx(14));
                 if (act) {
-                    cBg.setColor(isDarkTheme ? 0xFF00E5FF : 0xFF0284C7);
-                    cBg.setStroke(dpToPx(1), isDarkTheme ? 0xFF00E5FF : 0xFF0284C7);
-                    cp.setTextColor(isDarkTheme ? 0xFF0A0E17 : 0xFFFFFFFF);
+                    cBg.setColor(isDarkTheme ? 0xFF22D3EE : 0xFF0284C7);
+                    cBg.setStroke(dpToPx(1), isDarkTheme ? 0xFF22D3EE : 0xFF0284C7);
+                    cp.setTextColor(isDarkTheme ? 0xFF070A10 : 0xFFFFFFFF);
                 } else {
-                    cBg.setColor(isDarkTheme ? 0xFF121620 : 0xFFFFFFFF);
-                    cBg.setStroke(dpToPx(1), isDarkTheme ? 0xFF1E2537 : 0xFFCBD5E1);
-                    cp.setTextColor(isDarkTheme ? 0xFF94A3B8 : 0xFF475569);
+                    cBg.setColor(isDarkTheme ? 0x1CFFFFFF : 0x0C0F172A);
+                    cBg.setStroke(dpToPx(1), isDarkTheme ? 0x24FFFFFF : 0x140F172A);
+                    cp.setTextColor(isDarkTheme ? 0xFF94A3B8 : 0xFF64748B);
                 }
                 cp.setBackground(cBg);
             }
@@ -16402,9 +16412,9 @@ public class MainActivity extends AppCompatActivity {
                         card.setPadding(dpToPx(12), dpToPx(10), dpToPx(10), dpToPx(10));
 
                         GradientDrawable cardBg = new GradientDrawable();
-                        cardBg.setCornerRadius(dpToPx(14));
-                        cardBg.setColor(isDarkTheme ? 0xFF121620 : 0xFFFFFFFF);
-                        cardBg.setStroke(dpToPx(1), isDarkTheme ? 0xFF1E2433 : 0xFFE2E8F0);
+                        cardBg.setCornerRadius(dpToPx(18));
+                        cardBg.setColor(isDarkTheme ? 0xD0121826 : 0xF2FFFFFF);
+                        cardBg.setStroke(dpToPx(1), isDarkTheme ? 0x22FFFFFF : 0x120F172A);
                         card.setBackground(cardBg);
 
                         LinearLayout.LayoutParams cardLp = new LinearLayout.LayoutParams(
@@ -16417,7 +16427,7 @@ public class MainActivity extends AppCompatActivity {
                             TextView checkIcon = new TextView(this);
                             boolean isChecked = selectedIds.contains(entry.id);
                             checkIcon.setText(isChecked ? "✓" : "○");
-                            checkIcon.setTextColor(isChecked ? 0xFF00E5FF : 0xFF64748B);
+                            checkIcon.setTextColor(isChecked ? 0xFF22D3EE : 0xFF64748B);
                             checkIcon.setTextSize(TypedValue.COMPLEX_UNIT_SP, 14f);
                             checkIcon.setTypeface(null, Typeface.BOLD);
                             checkIcon.setPadding(0, 0, dpToPx(10), 0);
@@ -16431,9 +16441,9 @@ public class MainActivity extends AppCompatActivity {
                         iconBox.setLayoutParams(ibLp);
 
                         GradientDrawable ibGd = new GradientDrawable();
-                        ibGd.setColor(isDarkTheme ? 0xFF0D1117 : 0xFFF1F5F9);
-                        ibGd.setCornerRadius(dpToPx(8));
-                        ibGd.setStroke(dpToPx(1), isDarkTheme ? 0xFF1E2433 : 0xFFE2E8F0);
+                        ibGd.setColor(isDarkTheme ? 0x1AFFFFFF : 0x0A0F172A);
+                        ibGd.setCornerRadius(dpToPx(10));
+                        ibGd.setStroke(dpToPx(1), isDarkTheme ? 0x24FFFFFF : 0x100F172A);
                         iconBox.setBackground(ibGd);
 
                         ImageView iv = new ImageView(this);
@@ -16457,7 +16467,7 @@ public class MainActivity extends AppCompatActivity {
 
                         TextView titleTv = new TextView(this);
                         titleTv.setText(entry.title != null && !entry.title.isEmpty() ? entry.title : entry.url);
-                        titleTv.setTextColor(isDarkTheme ? 0xFFF1F5F9 : 0xFF0F172A);
+                        titleTv.setTextColor(isDarkTheme ? 0xFFF8FAFC : 0xFF0F172A);
                         titleTv.setTextSize(TypedValue.COMPLEX_UNIT_SP, 12.5f);
                         titleTv.setTypeface(null, Typeface.BOLD);
                         titleTv.setSingleLine(true);
@@ -18506,7 +18516,15 @@ public class MainActivity extends AppCompatActivity {
         horizonPeekWebView.setWebViewClient(new WebViewClient() {
             @Override
             public boolean shouldOverrideUrlLoading(WebView view, WebResourceRequest request) {
+                String targetUrl = (request != null && request.getUrl() != null) ? request.getUrl().toString() : null;
+                if (targetUrl != null && handleExternalUriSchemes(view, targetUrl)) return true;
                 return false; // Stay inside preview
+            }
+
+            @Override
+            public boolean shouldOverrideUrlLoading(WebView view, String url) {
+                if (url != null && handleExternalUriSchemes(view, url)) return true;
+                return false;
             }
         });
 
@@ -21300,8 +21318,12 @@ public class MainActivity extends AppCompatActivity {
         webView.setWebViewClient(new WebViewClient() {
             @Override
             public boolean shouldOverrideUrlLoading(WebView view, WebResourceRequest request) {
-                String targetUrl = request.getUrl().toString();
-                if (targetUrl != null && targetUrl.contains("lastfm-callback")) {
+                String targetUrl = (request != null && request.getUrl() != null) ? request.getUrl().toString() : null;
+                if (targetUrl == null) return false;
+                if (handleExternalUriSchemes(view, targetUrl)) {
+                    return true;
+                }
+                if (targetUrl.contains("lastfm-callback")) {
                     try {
                         Uri uri = Uri.parse(targetUrl);
                         String token = uri.getQueryParameter("token");
@@ -21327,6 +21349,12 @@ public class MainActivity extends AppCompatActivity {
                     }
                 }
                 return super.shouldOverrideUrlLoading(view, request);
+            }
+
+            @Override
+            public boolean shouldOverrideUrlLoading(WebView view, String url) {
+                if (handleExternalUriSchemes(view, url)) return true;
+                return super.shouldOverrideUrlLoading(view, url);
             }
 
             @Override
@@ -24460,6 +24488,7 @@ public class MainActivity extends AppCompatActivity {
                             float cx = view.getX() + (view.getWidth() / 2f);
                             float cy = view.getY() + (view.getHeight() / 2f);
                             cabRadialMenu = new CabRadialMenuView(MainActivity.this);
+                            cabRadialMenu.setShortcuts(loadRadialShortcuts());
                             cabRadialMenu.showAt(cx, cy, rootContainer);
                         }
                     };
@@ -24508,11 +24537,46 @@ public class MainActivity extends AppCompatActivity {
                         cabRadialMenu.finishGesture(new CabRadialMenuView.OnRadialActionSelectedListener() {
                             @Override
                             public void onActionSelected(int action) {
-                                if (action == CabRadialMenuView.ACTION_WHIRLPOOL) {
+                                if (action == CabRadialMenuView.ACTION_BACK) {
+                                    TabItem tab = getTabById(activeTabId);
+                                    if (tab != null && tab.webView != null && tab.webView.canGoBack()) {
+                                        tab.webView.goBack();
+                                    } else {
+                                        Toast.makeText(MainActivity.this, "No previous page", Toast.LENGTH_SHORT).show();
+                                    }
+                                } else if (action == CabRadialMenuView.ACTION_FORWARD) {
+                                    TabItem tab = getTabById(activeTabId);
+                                    if (tab != null && tab.webView != null && tab.webView.canGoForward()) {
+                                        tab.webView.goForward();
+                                    } else {
+                                        Toast.makeText(MainActivity.this, "No forward page", Toast.LENGTH_SHORT).show();
+                                    }
+                                } else if (action == CabRadialMenuView.ACTION_WHIRLPOOL) {
                                     startCaspianWhirlpool();
                                 } else if (action == CabRadialMenuView.ACTION_DRIFT) {
                                     isUniversalVoiceActive = true;
                                     startSpeechToText();
+                                } else if (action == CabRadialMenuView.ACTION_NEW_TAB) {
+                                    addNewTab("hub", null);
+                                } else if (action == CabRadialMenuView.ACTION_CLOSE_TAB) {
+                                    closeTab(activeTabId);
+                                } else if (action == CabRadialMenuView.ACTION_SEARCH) {
+                                    focusOmniboxSearch();
+                                } else if (action == CabRadialMenuView.ACTION_RELOAD) {
+                                    TabItem tab = getTabById(activeTabId);
+                                    if (tab != null && tab.webView != null) tab.webView.reload();
+                                } else if (action == CabRadialMenuView.ACTION_TABS_OVERVIEW) {
+                                    openControlSheet();
+                                    evaluateJavascriptInControlSheet("if (typeof window.switchTab === 'function') window.switchTab('tabs');");
+                                } else if (action == CabRadialMenuView.ACTION_CONFIGURE_ORBIT) {
+                                    showConfigureDialOrbitDialog();
+                                }
+                            }
+
+                            @Override
+                            public void onShortcutSelected(String title, String url) {
+                                if (url != null && !url.trim().isEmpty()) {
+                                    addNewTab("web", null, url, false);
                                 }
                             }
 
@@ -25944,6 +26008,422 @@ public class MainActivity extends AppCompatActivity {
             }
         } catch (Exception e) {
             Log.e(TAG, "openExternalUrl error: " + e.getMessage());
+        }
+    }
+
+    public boolean handleExternalUriSchemes(WebView view, String url) {
+        if (url == null || url.trim().isEmpty()) return false;
+        String trimmed = url.trim();
+
+        // Standard web schemes are processed internally by WebView
+        if (trimmed.startsWith("http://") || trimmed.startsWith("https://") 
+                || trimmed.startsWith("file://") || trimmed.startsWith("data:") 
+                || trimmed.startsWith("blob:") || trimmed.startsWith("about:") 
+                || trimmed.startsWith("javascript:")) {
+            return false;
+        }
+
+        try {
+            if (trimmed.startsWith("intent://")) {
+                Intent intent = Intent.parseUri(trimmed, Intent.URI_INTENT_SCHEME);
+                if (intent != null) {
+                    PackageManager pm = getPackageManager();
+                    ResolveInfo info = pm.resolveActivity(intent, PackageManager.MATCH_DEFAULT_ONLY);
+                    if (info != null) {
+                        try {
+                            intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
+                            startActivity(intent);
+                            return true;
+                        } catch (Exception e) {
+                            Log.w(TAG, "Failed to startActivity for intent: " + e.getMessage());
+                        }
+                    }
+
+                    // Fallback 1: Browser fallback URL
+                    String fallbackUrl = intent.getStringExtra("browser_fallback_url");
+                    if (fallbackUrl != null && !fallbackUrl.isEmpty() 
+                            && (fallbackUrl.startsWith("http://") || fallbackUrl.startsWith("https://"))) {
+                        if (view != null) view.loadUrl(fallbackUrl);
+                        return true;
+                    }
+
+                    // Fallback 2: Google Play Store
+                    String pkgName = intent.getPackage();
+                    if (pkgName != null && !pkgName.isEmpty()) {
+                        try {
+                            Intent marketIntent = new Intent(Intent.ACTION_VIEW, Uri.parse("market://details?id=" + pkgName));
+                            marketIntent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
+                            startActivity(marketIntent);
+                            return true;
+                        } catch (ActivityNotFoundException anfe) {
+                            if (view != null) view.loadUrl("https://play.google.com/store/apps/details?id=" + pkgName);
+                            return true;
+                        }
+                    }
+                }
+                return true; // Stop webview from crashing with ERR_UNKNOWN_URL_SCHEME
+            }
+
+            if (trimmed.startsWith("market://")) {
+                try {
+                    Intent marketIntent = new Intent(Intent.ACTION_VIEW, Uri.parse(trimmed));
+                    marketIntent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
+                    startActivity(marketIntent);
+                    return true;
+                } catch (ActivityNotFoundException anfe) {
+                    Uri marketUri = Uri.parse(trimmed);
+                    String id = marketUri.getQueryParameter("id");
+                    if (id != null && view != null) {
+                        view.loadUrl("https://play.google.com/store/apps/details?id=" + id);
+                    }
+                    return true;
+                }
+            }
+
+            // Custom app schemes (vnd.youtube:, whatsapp:, tel:, mailto:, sms:, geo:, upi:, etc.)
+            Intent customIntent = new Intent(Intent.ACTION_VIEW, Uri.parse(trimmed));
+            customIntent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
+            if (getPackageManager().resolveActivity(customIntent, 0) != null) {
+                try {
+                    startActivity(customIntent);
+                    return true;
+                } catch (Exception e) {
+                    Log.w(TAG, "Failed to launch custom scheme intent: " + e.getMessage());
+                }
+            } else {
+                Toast.makeText(this, "No app available to handle this link", Toast.LENGTH_SHORT).show();
+            }
+            return true;
+        } catch (Exception e) {
+            Log.e(TAG, "handleExternalUriSchemes error: " + e.getMessage(), e);
+            return true;
+        }
+    }
+
+    private List<CabRadialMenuView.ShortcutItem> loadRadialShortcuts() {
+        List<CabRadialMenuView.ShortcutItem> list = new ArrayList<>();
+        try {
+            SharedPreferences prefs = getSharedPreferences("caspian_hub_prefs", Context.MODE_PRIVATE);
+            String raw = prefs.getString("caspian_hub_shortcuts", null);
+            int maxPlanets = prefs.getInt("caspian_radial_max_shortcuts", 6);
+            if (raw != null && !raw.trim().isEmpty()) {
+                org.json.JSONArray arr = new org.json.JSONArray(raw);
+                for (int i = 0; i < arr.length() && list.size() < maxPlanets; i++) {
+                    org.json.JSONObject obj = arr.getJSONObject(i);
+                    String title = obj.optString("title", "Shortcut");
+                    String url = obj.optString("url", "");
+                    String icon = obj.optString("icon", "🌐");
+                    if (!url.isEmpty()) {
+                        list.add(new CabRadialMenuView.ShortcutItem(title, url, icon));
+                    }
+                }
+            }
+        } catch (Exception ignored) {}
+
+        if (list.isEmpty()) {
+            list.add(new CabRadialMenuView.ShortcutItem("ChatGPT", "https://chatgpt.com/", "🤖"));
+            list.add(new CabRadialMenuView.ShortcutItem("Google Gemini", "https://gemini.google.com/", "✨"));
+            list.add(new CabRadialMenuView.ShortcutItem("YouTube", "https://youtube.com/", "🎬"));
+            list.add(new CabRadialMenuView.ShortcutItem("Reddit", "https://reddit.com/", "🌐"));
+            list.add(new CabRadialMenuView.ShortcutItem("Google", "https://www.google.com/", "G"));
+        }
+
+        // Add Tabs Overview planet
+        list.add(new CabRadialMenuView.ShortcutItem("Tabs", tabsList.size()));
+
+        // Add Configure Orbit planet
+        list.add(CabRadialMenuView.ShortcutItem.createConfigureOrbitItem());
+
+        return list;
+    }
+
+    public void showConfigureDialOrbitDialog() {
+        try {
+            SharedPreferences prefs = getSharedPreferences("caspian_hub_prefs", Context.MODE_PRIVATE);
+            String raw = prefs.getString("caspian_hub_shortcuts", null);
+            final List<org.json.JSONObject> shortcuts = new ArrayList<>();
+            if (raw != null && !raw.trim().isEmpty()) {
+                try {
+                    org.json.JSONArray arr = new org.json.JSONArray(raw);
+                    for (int i = 0; i < arr.length(); i++) {
+                        shortcuts.add(arr.getJSONObject(i));
+                    }
+                } catch (Exception ignored) {}
+            }
+            if (shortcuts.isEmpty()) {
+                shortcuts.add(new org.json.JSONObject("{\"id\":\"sc_chatgpt\",\"title\":\"ChatGPT\",\"url\":\"https://chatgpt.com/\",\"icon\":\"🤖\"}"));
+                shortcuts.add(new org.json.JSONObject("{\"id\":\"sc_gemini\",\"title\":\"Google Gemini\",\"url\":\"https://gemini.google.com/\",\"icon\":\"✨\"}"));
+                shortcuts.add(new org.json.JSONObject("{\"id\":\"sc_youtube\",\"title\":\"YouTube\",\"url\":\"https://youtube.com/\",\"icon\":\"🎬\"}"));
+                shortcuts.add(new org.json.JSONObject("{\"id\":\"sc_reddit\",\"title\":\"Reddit\",\"url\":\"https://reddit.com/\",\"icon\":\"🌐\"}"));
+                shortcuts.add(new org.json.JSONObject("{\"id\":\"sc_google\",\"title\":\"Google\",\"url\":\"https://www.google.com/\",\"icon\":\"G\"}"));
+            }
+
+            final int[] maxPlanets = { prefs.getInt("caspian_radial_max_shortcuts", 6) };
+
+            android.app.AlertDialog.Builder builder = new android.app.AlertDialog.Builder(this);
+            android.widget.ScrollView scrollView = new android.widget.ScrollView(this);
+            android.widget.LinearLayout root = new android.widget.LinearLayout(this);
+            root.setOrientation(android.widget.LinearLayout.VERTICAL);
+            int pad = (int) (16 * getResources().getDisplayMetrics().density);
+            root.setPadding(pad, pad, pad, pad);
+            root.setBackgroundColor(Color.parseColor("#070A10"));
+
+            // Header
+            android.widget.TextView titleView = new android.widget.TextView(this);
+            titleView.setText("🪐 Celestial Orbit Shortcuts");
+            titleView.setTextColor(Color.WHITE);
+            titleView.setTextSize(18f);
+            titleView.setTypeface(Typeface.DEFAULT_BOLD);
+            root.addView(titleView);
+
+            android.widget.TextView subtitleView = new android.widget.TextView(this);
+            subtitleView.setText("Manage planets orbiting your Caspian Action Button");
+            subtitleView.setTextColor(Color.parseColor("#94A3B8"));
+            subtitleView.setTextSize(12f);
+            subtitleView.setPadding(0, (int)(4 * getResources().getDisplayMetrics().density), 0, (int)(12 * getResources().getDisplayMetrics().density));
+            root.addView(subtitleView);
+
+            // Max Planets Count selector row
+            android.widget.LinearLayout countRow = new android.widget.LinearLayout(this);
+            countRow.setOrientation(android.widget.LinearLayout.HORIZONTAL);
+            countRow.setGravity(android.view.Gravity.CENTER_VERTICAL);
+            android.widget.TextView countLabel = new android.widget.TextView(this);
+            countLabel.setText("Visible Planets: ");
+            countLabel.setTextColor(Color.parseColor("#E0F2FE"));
+            countLabel.setTextSize(13f);
+            countRow.addView(countLabel);
+
+            final android.widget.TextView countVal = new android.widget.TextView(this);
+            countVal.setText(String.valueOf(maxPlanets[0]));
+            countVal.setTextColor(Color.parseColor("#22D3EE"));
+            countVal.setTextSize(15f);
+            countVal.setTypeface(Typeface.DEFAULT_BOLD);
+            countVal.setPadding((int)(8 * getResources().getDisplayMetrics().density), 0, (int)(16 * getResources().getDisplayMetrics().density), 0);
+            countRow.addView(countVal);
+
+            android.widget.Button btnMinus = new android.widget.Button(this);
+            btnMinus.setText("－");
+            btnMinus.setTextColor(Color.WHITE);
+            btnMinus.setBackgroundColor(Color.parseColor("#1E293B"));
+            btnMinus.setOnClickListener(v -> {
+                if (maxPlanets[0] > 3) {
+                    maxPlanets[0]--;
+                    countVal.setText(String.valueOf(maxPlanets[0]));
+                }
+            });
+            countRow.addView(btnMinus);
+
+            android.widget.Button btnPlus = new android.widget.Button(this);
+            btnPlus.setText("＋");
+            btnPlus.setTextColor(Color.WHITE);
+            btnPlus.setBackgroundColor(Color.parseColor("#1E293B"));
+            btnPlus.setOnClickListener(v -> {
+                if (maxPlanets[0] < 8) {
+                    maxPlanets[0]++;
+                    countVal.setText(String.valueOf(maxPlanets[0]));
+                }
+            });
+            countRow.addView(btnPlus);
+            root.addView(countRow);
+
+            // Shortcuts container
+            final android.widget.LinearLayout listContainer = new android.widget.LinearLayout(this);
+            listContainer.setOrientation(android.widget.LinearLayout.VERTICAL);
+            listContainer.setPadding(0, (int)(12 * getResources().getDisplayMetrics().density), 0, (int)(12 * getResources().getDisplayMetrics().density));
+            root.addView(listContainer);
+
+            final Runnable refreshList = new Runnable() {
+                @Override
+                public void run() {
+                    listContainer.removeAllViews();
+                    float d = getResources().getDisplayMetrics().density;
+                    for (int i = 0; i < shortcuts.size(); i++) {
+                        final int idx = i;
+                        org.json.JSONObject sc = shortcuts.get(i);
+                        String t = sc.optString("title", "Shortcut");
+                        String u = sc.optString("url", "");
+                        String ico = sc.optString("icon", "🌐");
+
+                        android.widget.LinearLayout row = new android.widget.LinearLayout(MainActivity.this);
+                        row.setOrientation(android.widget.LinearLayout.HORIZONTAL);
+                        row.setGravity(android.view.Gravity.CENTER_VERTICAL);
+                        row.setPadding((int)(8*d), (int)(6*d), (int)(8*d), (int)(6*d));
+                        android.graphics.drawable.GradientDrawable rowBg = new android.graphics.drawable.GradientDrawable();
+                        rowBg.setColor(Color.parseColor("#121826"));
+                        rowBg.setCornerRadius(10 * d);
+                        rowBg.setStroke((int)(1*d), Color.parseColor("#1E293B"));
+                        row.setBackground(rowBg);
+
+                        android.widget.LinearLayout.LayoutParams rLp = new android.widget.LinearLayout.LayoutParams(
+                                ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT);
+                        rLp.setMargins(0, 0, 0, (int)(6*d));
+                        row.setLayoutParams(rLp);
+
+                        // Icon
+                        android.widget.TextView iconV = new android.widget.TextView(MainActivity.this);
+                        iconV.setText(ico.length() <= 4 && !ico.startsWith("http") ? ico : (t.length() > 0 ? t.substring(0, 1) : "🌐"));
+                        iconV.setTextSize(16f);
+                        iconV.setPadding(0, 0, (int)(8*d), 0);
+                        row.addView(iconV);
+
+                        // Title + URL
+                        android.widget.LinearLayout textCol = new android.widget.LinearLayout(MainActivity.this);
+                        textCol.setOrientation(android.widget.LinearLayout.VERTICAL);
+                        android.widget.LinearLayout.LayoutParams textLp = new android.widget.LinearLayout.LayoutParams(
+                                0, ViewGroup.LayoutParams.WRAP_CONTENT, 1.0f);
+                        textCol.setLayoutParams(textLp);
+
+                        android.widget.TextView titleT = new android.widget.TextView(MainActivity.this);
+                        titleT.setText(t);
+                        titleT.setTextColor(Color.WHITE);
+                        titleT.setTextSize(13f);
+                        titleT.setTypeface(Typeface.DEFAULT_BOLD);
+                        textCol.addView(titleT);
+
+                        android.widget.TextView urlT = new android.widget.TextView(MainActivity.this);
+                        urlT.setText(u);
+                        urlT.setTextColor(Color.parseColor("#64748B"));
+                        urlT.setTextSize(10f);
+                        textCol.addView(urlT);
+                        row.addView(textCol);
+
+                        // Up
+                        if (idx > 0) {
+                            android.widget.TextView upBtn = new android.widget.TextView(MainActivity.this);
+                            upBtn.setText("▲");
+                            upBtn.setTextColor(Color.parseColor("#22D3EE"));
+                            upBtn.setTextSize(14f);
+                            upBtn.setPadding((int)(6*d), (int)(4*d), (int)(6*d), (int)(4*d));
+                            upBtn.setOnClickListener(v -> {
+                                org.json.JSONObject temp = shortcuts.get(idx);
+                                shortcuts.set(idx, shortcuts.get(idx - 1));
+                                shortcuts.set(idx - 1, temp);
+                                run();
+                            });
+                            row.addView(upBtn);
+                        }
+
+                        // Down
+                        if (idx < shortcuts.size() - 1) {
+                            android.widget.TextView downBtn = new android.widget.TextView(MainActivity.this);
+                            downBtn.setText("▼");
+                            downBtn.setTextColor(Color.parseColor("#22D3EE"));
+                            downBtn.setTextSize(14f);
+                            downBtn.setPadding((int)(6*d), (int)(4*d), (int)(6*d), (int)(4*d));
+                            downBtn.setOnClickListener(v -> {
+                                org.json.JSONObject temp = shortcuts.get(idx);
+                                shortcuts.set(idx, shortcuts.get(idx + 1));
+                                shortcuts.set(idx + 1, temp);
+                                run();
+                            });
+                            row.addView(downBtn);
+                        }
+
+                        // Delete
+                        android.widget.TextView delBtn = new android.widget.TextView(MainActivity.this);
+                        delBtn.setText("✕");
+                        delBtn.setTextColor(Color.parseColor("#EF4444"));
+                        delBtn.setTextSize(14f);
+                        delBtn.setPadding((int)(8*d), (int)(4*d), (int)(4*d), (int)(4*d));
+                        delBtn.setOnClickListener(v -> {
+                            shortcuts.remove(idx);
+                            run();
+                        });
+                        row.addView(delBtn);
+
+                        listContainer.addView(row);
+                    }
+                }
+            };
+            refreshList.run();
+
+            // Add new shortcut button
+            android.widget.Button btnAdd = new android.widget.Button(this);
+            btnAdd.setText("＋ Add Planet Shortcut");
+            btnAdd.setTextColor(Color.parseColor("#22D3EE"));
+            btnAdd.setBackgroundColor(Color.parseColor("#0F172A"));
+            btnAdd.setOnClickListener(v -> {
+                android.app.AlertDialog.Builder addB = new android.app.AlertDialog.Builder(MainActivity.this);
+                addB.setTitle("Add Planet Shortcut");
+                android.widget.LinearLayout addLayout = new android.widget.LinearLayout(MainActivity.this);
+                addLayout.setOrientation(android.widget.LinearLayout.VERTICAL);
+                int p2 = (int)(12 * getResources().getDisplayMetrics().density);
+                addLayout.setPadding(p2, p2, p2, p2);
+
+                final android.widget.EditText nameIn = new android.widget.EditText(MainActivity.this);
+                nameIn.setHint("Title (e.g. GitHub)");
+                addLayout.addView(nameIn);
+
+                final android.widget.EditText urlIn = new android.widget.EditText(MainActivity.this);
+                urlIn.setHint("URL (e.g. https://github.com)");
+                addLayout.addView(urlIn);
+
+                final android.widget.EditText iconIn = new android.widget.EditText(MainActivity.this);
+                iconIn.setHint("Emoji Icon (e.g. 🐙)");
+                addLayout.addView(iconIn);
+
+                addB.setView(addLayout);
+                addB.setPositiveButton("Add", (dInterface, which) -> {
+                    String name = nameIn.getText().toString().trim();
+                    String url = urlIn.getText().toString().trim();
+                    String icon = iconIn.getText().toString().trim();
+                    if (!url.isEmpty()) {
+                        if (!url.startsWith("http://") && !url.startsWith("https://")) url = "https://" + url;
+                        if (name.isEmpty()) name = url.replace("https://", "").replace("http://", "").split("/")[0];
+                        if (icon.isEmpty()) icon = "🌐";
+                        try {
+                            org.json.JSONObject no = new org.json.JSONObject();
+                            no.put("id", "sc_" + System.currentTimeMillis());
+                            no.put("title", name);
+                            no.put("url", url);
+                            no.put("icon", icon);
+                            shortcuts.add(no);
+                            refreshList.run();
+                        } catch (Exception ignored) {}
+                    }
+                });
+                addB.setNegativeButton("Cancel", null);
+                addB.show();
+            });
+            root.addView(btnAdd);
+
+            scrollView.addView(root);
+            builder.setView(scrollView);
+            builder.setPositiveButton("Save & Apply ✨", (dInterface, which) -> {
+                try {
+                    org.json.JSONArray newArr = new org.json.JSONArray();
+                    for (org.json.JSONObject o : shortcuts) newArr.put(o);
+                    String jsonStr = newArr.toString();
+                    prefs.edit()
+                            .putString("caspian_hub_shortcuts", jsonStr)
+                            .putInt("caspian_radial_max_shortcuts", maxPlanets[0])
+                            .apply();
+
+                    // Sync active hub tabs if open
+                    for (TabItem tab : tabsList) {
+                        if (tab != null && tab.webView != null && ("hub".equals(tab.service) || (tab.url != null && tab.url.contains("launch_hub.html")))) {
+                            tab.webView.evaluateJavascript("if (typeof loadShortcuts === 'function') { currentShortcuts = loadShortcuts(); renderShortcutsCarousel(); }", null);
+                        }
+                    }
+                    Toast.makeText(MainActivity.this, "Celestial Orbit updated ✨", Toast.LENGTH_SHORT).show();
+                } catch (Exception ignored) {}
+            });
+            builder.setNegativeButton("Cancel", null);
+            builder.show();
+        } catch (Exception e) {
+            Log.e(TAG, "showConfigureDialOrbitDialog error: " + e.getMessage(), e);
+        }
+    }
+
+    public void focusOmniboxSearch() {
+        if (omniboxEditText != null) {
+            omniboxEditText.requestFocus();
+            if (omniboxEditText.getText() != null) {
+                int len = omniboxEditText.getText().length();
+                android.text.Selection.setSelection(omniboxEditText.getText(), len, 0);
+            }
+            InputMethodManager imm = (InputMethodManager) getSystemService(Context.INPUT_METHOD_SERVICE);
+            if (imm != null) imm.showSoftInput(omniboxEditText, InputMethodManager.SHOW_IMPLICIT);
         }
     }
 }
