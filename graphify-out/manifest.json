@@ -324,9 +324,9 @@
     "semantic_hash": ""
   },
   "betaC/app/build.gradle.kts": {
-    "mtime": 1789644549.2177596,
-    "seen": 1789644600.6032073,
-    "ast_hash": "b100a4c1ac474a99cf78b6f2d5114835",
+    "mtime": 1789645572.6169746,
+    "seen": 1789645648.6760366,
+    "ast_hash": "26573f43f8eae2269414b3abb559dfa2",
     "semantic_hash": ""
   },
   "betaC/app/src/main/assets/adblock_rules.json": {
@@ -450,9 +450,9 @@
     "semantic_hash": ""
   },
   "betaC/app/src/main/java/com/caspian/betac/MainActivity.java": {
-    "mtime": 1789644979.6022706,
-    "seen": 1789645557.387958,
-    "ast_hash": "bb66706c11371286b1835d6aeb141a9b",
+    "mtime": 1789647211.0806744,
+    "seen": 1789647364.8740234,
+    "ast_hash": "b53a8adc41bbbba9017641ae602ac06e",
     "semantic_hash": ""
   },
   "betaC/app/src/main/java/com/caspian/betac/SearchSuggestionService.java": {
@@ -648,9 +648,9 @@
     "semantic_hash": ""
   },
   "betaC/app/src/main/assets/browser_control.html": {
-    "mtime": 1789644549.3334174,
-    "seen": 1789644600.6034276,
-    "ast_hash": "c168c11cdc382b56fef2041978229c17",
+    "mtime": 1789645572.7500255,
+    "seen": 1789645648.6762536,
+    "ast_hash": "e6e7ea1aad6caf529ef02f8c2ecba000",
     "semantic_hash": ""
   },
   "betaC/app/src/main/assets/incognito_hub.html": {
@@ -1692,9 +1692,9 @@
     "semantic_hash": ""
   },
   "betaC/app/src/test/java/com/caspian/betac/tabs/TabControllerTest.java": {
-    "mtime": 1789643622.9440417,
-    "seen": 1789643850.2463963,
-    "ast_hash": "b4f5459b2ff7685fb245c3ad37564996",
+    "mtime": 1789647284.0220346,
+    "seen": 1789647364.874057,
+    "ast_hash": "3b6a587e74db8a1cafc9dac18e97b19b",
     "semantic_hash": ""
   },
   "betaC/app/src/test/java/com/caspian/betac/tabs/TabStateRepositoryTest.java": {

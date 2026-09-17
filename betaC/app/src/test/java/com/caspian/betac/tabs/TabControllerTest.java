@@ -219,5 +219,24 @@ public class TabControllerTest {
         assertEquals(0, lastSplitState[0]);
         assertEquals(-1, lastSecondaryId[0]);
     }
+
+    @Test
+    public void testUpdateTabDetailsUpdatesStateAndFiresListener() {
+        TabState tab = controller.getActiveTab();
+        final boolean[] updated = {false};
+        controller.setEventListener(new TabController.TabEventListener() {
+            @Override public void onTabAdded(TabState tab) {}
+            @Override public void onTabSwitched(int oldTabId, int newTabId) {}
+            @Override public void onTabClosed(int closedTabId, int newActiveTabId) {}
+            @Override public void onTabsUpdated() { updated[0] = true; }
+            @Override public void onSplitModeChanged(int splitState, int secondaryId, float ratio) {}
+        });
+
+        controller.updateTabDetails(tab.id, "YouTube Music", "https://music.youtube.com", "MyMusic");
+        assertTrue(updated[0]);
+        assertEquals("YouTube Music", tab.title);
+        assertEquals("https://music.youtube.com", tab.url);
+        assertEquals("MyMusic", tab.nickname);
+    }
 }
 
