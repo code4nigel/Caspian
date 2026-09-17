@@ -73,4 +73,19 @@ public class WebViewSecurityPolicyTest {
         assertTrue("music.youtube.com must be allowed",
                 TrustedMediaMessageHandler.ALLOWED_ORIGIN_RULES.contains("https://music.youtube.com"));
     }
+
+    @Test
+    public void testControlSheetJsIntegrity() throws Exception {
+        File jsFile = new File("src/main/assets/browser_control.js");
+        if (!jsFile.exists()) {
+            jsFile = new File("app/src/main/assets/browser_control.js");
+        }
+        if (jsFile.exists()) {
+            String content = new String(Files.readAllBytes(jsFile.toPath()), java.nio.charset.StandardCharsets.UTF_8);
+            assertTrue("browser_control.js must define renderOpenTabs", content.contains("function renderOpenTabs()"));
+            assertTrue("browser_control.js must define onTabFaviconReceived", content.contains("window.onTabFaviconReceived"));
+            assertTrue("getOpenTabs block must be protected with catch block",
+                    content.contains("getOpenTabs();") && content.contains("} catch (e) { }"));
+        }
+    }
 }

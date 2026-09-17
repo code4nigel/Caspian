@@ -659,6 +659,7 @@
           tabs = JSON.parse(jsonStr);
         }
       }
+    } catch (e) { }
     cachedOpenTabs = tabs;
     window.cachedOpenTabs = tabs;
 

@@ -324,9 +324,9 @@
     "semantic_hash": ""
   },
   "betaC/app/build.gradle.kts": {
-    "mtime": 1789643417.0579188,
-    "seen": 1789643850.2462642,
-    "ast_hash": "ce7f28d4121609cd3df168c0dc9700ee",
+    "mtime": 1789643864.9654653,
+    "seen": 1789643923.4460354,
+    "ast_hash": "ccbb208220c9851a139ef377024d696f",
     "semantic_hash": ""
   },
   "betaC/app/src/main/assets/adblock_rules.json": {
@@ -336,9 +336,9 @@
     "semantic_hash": ""
   },
   "betaC/app/src/main/assets/browser_control.js": {
-    "mtime": 1789642772.29638,
-    "seen": 1789643850.2462754,
-    "ast_hash": "81c17ebaa3b2602004f79ad918af4402",
+    "mtime": 1789644352.908052,
+    "seen": 1789644542.439722,
+    "ast_hash": "ab349d3cbeee0b7c0fb643db4d489c95",
     "semantic_hash": ""
   },
   "betaC/app/src/main/assets/chatgpt_network_interceptor.js": {
@@ -648,9 +648,9 @@
     "semantic_hash": ""
   },
   "betaC/app/src/main/assets/browser_control.html": {
-    "mtime": 1789641870.219949,
-    "seen": 1789641927.86121,
-    "ast_hash": "d4630893705f55a97b1494c5c47593a6",
+    "mtime": 1789643865.0864556,
+    "seen": 1789643923.4462557,
+    "ast_hash": "4140b2145a6f486bdc8341be52948a80",
     "semantic_hash": ""
   },
   "betaC/app/src/main/assets/incognito_hub.html": {
@@ -1716,9 +1716,9 @@
     "semantic_hash": ""
   },
   "betaC/app/src/test/java/com/caspian/betac/security/WebViewSecurityPolicyTest.java": {
-    "mtime": 1789641365.0672536,
-    "seen": 1789641856.411986,
-    "ast_hash": "4a76c18a44849bf0d88ebeeee715efae",
+    "mtime": 1789644478.8013837,
+    "seen": 1789644542.4397962,
+    "ast_hash": "f38eb9c46eac507d1da43dfda7ec46c6",
     "semantic_hash": ""
   },
   "betaC/app/src/androidTest/java/com/caspian/betac/tabs/TabControllerDeviceTest.java": {
