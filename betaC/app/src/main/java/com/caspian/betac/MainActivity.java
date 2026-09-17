@@ -1559,38 +1559,33 @@ public class MainActivity extends AppCompatActivity {
 
     public void saveOpenTabsState() {
         try {
-            JSONArray arr = new JSONArray();
+            List<com.caspian.betac.tabs.TabState> states = new ArrayList<>();
             for (TabItem tab : tabsList) {
-                if (tab.isIncognito) continue; // Privacy: Never persist incognito private tabs
-                JSONObject obj = new JSONObject();
-                obj.put("id", tab.id);
-                obj.put("title", tab.title);
-                obj.put("nickname", tab.nickname);
-                obj.put("url", tab.url);
-                obj.put("service", tab.service);
-                obj.put("isDesktop", tab.isDesktop);
-                obj.put("isIncognito", false);
-                obj.put("isMuted", tab.isMuted);
-                obj.put("isFavorite", tab.isFavorite);
-                obj.put("splitPartnerId", tab.splitPartnerId);
-                obj.put("splitRole", tab.splitRole != null ? tab.splitRole : "");
-                obj.put("splitOrientation", tab.splitOrientation);
-                obj.put("splitName", tab.splitName != null ? tab.splitName : "");
-                obj.put("caskId", tab.caskId != null ? tab.caskId : CaskManager.DEFAULT_CASK_ID);
-                obj.put("caskName", tab.caskName != null ? tab.caskName : "Caspian Cask");
-                obj.put("caskIcon", tab.caskIcon != null ? tab.caskIcon : "🌊");
-                obj.put("caskColor", tab.caskColor != null ? tab.caskColor : "#1B4264");
-                arr.put(obj);
+                if (tab == null || tab.isIncognito) continue;
+                com.caspian.betac.tabs.TabState s = new com.caspian.betac.tabs.TabState();
+                s.id = tab.id;
+                s.title = tab.title;
+                s.nickname = tab.nickname;
+                s.url = tab.url;
+                s.service = tab.service;
+                s.isDesktop = tab.isDesktop;
+                s.isIncognito = false;
+                s.isMuted = tab.isMuted;
+                s.isFavorite = tab.isFavorite;
+                s.splitPartnerId = tab.splitPartnerId;
+                s.splitRole = tab.splitRole != null ? tab.splitRole : "";
+                s.splitOrientation = tab.splitOrientation;
+                s.splitName = tab.splitName != null ? tab.splitName : "";
+                s.caskId = tab.caskId != null ? tab.caskId : CaskManager.DEFAULT_CASK_ID;
+                s.caskName = tab.caskName != null ? tab.caskName : "Caspian Cask";
+                s.caskIcon = tab.caskIcon != null ? tab.caskIcon : "🌊";
+                s.caskColor = tab.caskColor != null ? tab.caskColor : "#1B4264";
+                states.add(s);
             }
             SharedPreferences prefs = getSharedPreferences(PREFS_NAME, MODE_PRIVATE);
-            prefs.edit()
-                    .putString("caspian_open_tabs_json", arr.toString())
-                    .putInt("caspian_active_tab_id", activeTabId)
-                    .putInt("caspian_secondary_split_id", secondarySplitTabId)
-                    .putInt("caspian_split_mode_state", splitModeState)
-                    .putFloat("caspian_split_ratio", splitRatio)
-                    .putInt("caspian_next_tab_id", nextTabId)
-                    .apply();
+            com.caspian.betac.tabs.TabStateRepository.saveSession(
+                    prefs, states, activeTabId, secondarySplitTabId, splitModeState, splitRatio, nextTabId
+            );
         } catch (Exception e) {
             Log.e(TAG, "saveOpenTabsState error: " + e.getMessage());
         }
@@ -1598,73 +1593,45 @@ public class MainActivity extends AppCompatActivity {
 
     public void restoreOpenTabsState() {
         SharedPreferences prefs = getSharedPreferences(PREFS_NAME, MODE_PRIVATE);
-        String tabsJson = prefs.getString("caspian_open_tabs_json", null);
-        int savedActiveId = prefs.getInt("caspian_active_tab_id", 1);
-        int savedSecondarySplitId = prefs.getInt("caspian_secondary_split_id", -1);
-        int savedSplitMode = prefs.getInt("caspian_split_mode_state", 0);
-        float savedSplitRatio = prefs.getFloat("caspian_split_ratio", 0.5f);
-        nextTabId = prefs.getInt("caspian_next_tab_id", 2);
+        com.caspian.betac.tabs.TabStateRepository.SessionSnapshot snapshot = 
+                com.caspian.betac.tabs.TabStateRepository.restoreSession(prefs);
 
-        if (tabsJson != null && !tabsJson.isEmpty()) {
-            try {
-                JSONArray arr = new JSONArray(tabsJson);
-                if (arr.length() > 0) {
-                    tabsList.clear();
-                    int maxId = 0;
-                    for (int i = 0; i < arr.length(); i++) {
-                        JSONObject obj = arr.getJSONObject(i);
-                        int id = obj.optInt("id", i + 1);
-                        String url = obj.optString("url", "https://www.google.com");
-                        String service = obj.optString("service", "web");
-                        String nickname = obj.optString("nickname", null);
-                        boolean isDesktop = obj.optBoolean("isDesktop", false);
-                        boolean isIncognito = obj.optBoolean("isIncognito", false);
-                        boolean isMuted = obj.optBoolean("isMuted", false);
-                        boolean isFavorite = obj.optBoolean("isFavorite", false);
-                        String title = obj.optString("title", null);
-                        String caskId = obj.optString("caskId", CaskManager.DEFAULT_CASK_ID);
-
-                        TabItem item = createNewTabInstance(id, url, service, null, isIncognito, caskId);
-                        item.isRestoredFromSavedState = true;
-                        item.title = title;
-                        item.nickname = nickname;
-                        item.isDesktop = isDesktop;
-                        item.isMuted = isMuted;
-                        item.isFavorite = isFavorite;
-                        item.splitPartnerId = obj.optInt("splitPartnerId", -1);
-                        item.splitRole = obj.optString("splitRole", "");
-                        item.splitOrientation = obj.optInt("splitOrientation", 0);
-                        item.splitName = obj.optString("splitName", "");
-                        item.caskId = caskId;
-                        item.caskName = obj.optString("caskName", "Caspian Cask");
-                        item.caskIcon = obj.optString("caskIcon", "🌊");
-                        item.caskColor = obj.optString("caskColor", "#1B4264");
-                        tabsList.add(item);
-                        if (id > maxId) maxId = id;
-                    }
-                    if (nextTabId <= maxId) nextTabId = maxId + 1;
-
-                    activeTabId = savedActiveId;
-                    if (getTabById(activeTabId) == null && !tabsList.isEmpty()) {
-                        activeTabId = tabsList.get(0).id;
-                    }
-
-                    if (savedSplitMode > 0 && savedSecondarySplitId != -1 && getTabById(savedSecondarySplitId) != null && savedSecondarySplitId != activeTabId) {
-                        secondarySplitTabId = savedSecondarySplitId;
-                        splitModeState = savedSplitMode;
-                        splitRatio = savedSplitRatio;
-                        applySplitViewLayout();
-                    } else {
-                        splitModeState = 0;
-                        secondarySplitTabId = -1;
-                        switchToTab(activeTabId);
-                    }
-                    updateOmniboxState();
-                    return;
-                }
-            } catch (Exception e) {
-                Log.e(TAG, "restoreOpenTabsState error: " + e.getMessage());
+        if (snapshot != null && !snapshot.tabs.isEmpty()) {
+            tabsList.clear();
+            for (com.caspian.betac.tabs.TabState s : snapshot.tabs) {
+                TabItem item = createNewTabInstance(s.id, s.url, s.service, null, s.isIncognito, s.caskId);
+                item.isRestoredFromSavedState = true;
+                item.title = s.title;
+                item.nickname = s.nickname;
+                item.isDesktop = s.isDesktop;
+                item.isMuted = s.isMuted;
+                item.isFavorite = s.isFavorite;
+                item.splitPartnerId = s.splitPartnerId;
+                item.splitRole = s.splitRole;
+                item.splitOrientation = s.splitOrientation;
+                item.splitName = s.splitName;
+                item.caskId = s.caskId;
+                item.caskName = s.caskName;
+                item.caskIcon = s.caskIcon;
+                item.caskColor = s.caskColor;
+                tabsList.add(item);
             }
+            nextTabId = snapshot.nextTabId;
+            activeTabId = snapshot.activeTabId;
+
+            if (snapshot.splitModeState > 0 && snapshot.secondarySplitId != -1 && 
+                getTabById(snapshot.secondarySplitId) != null && snapshot.secondarySplitId != activeTabId) {
+                secondarySplitTabId = snapshot.secondarySplitId;
+                splitModeState = snapshot.splitModeState;
+                splitRatio = snapshot.splitRatio;
+                applySplitViewLayout();
+            } else {
+                splitModeState = 0;
+                secondarySplitTabId = -1;
+                switchToTab(activeTabId);
+            }
+            updateOmniboxState();
+            return;
         }
 
         // Fallback default: Open Caspian Hub Tab
@@ -21238,7 +21205,10 @@ public class MainActivity extends AppCompatActivity {
     @SuppressLint("SetJavaScriptEnabled")
     private void setupTabClientsAndListeners(final TabItem tabItem, final CaspianWebView webView) {
         final int id = tabItem.id;
-        webView.addJavascriptInterface(new CaspianBridge(this, id), "CaspianBridge");
+        if (com.caspian.betac.security.OriginVerifier.isLocalAsset(tabItem.url) || 
+            com.caspian.betac.security.OriginVerifier.isTrustedMediaHost(tabItem.url)) {
+            webView.addJavascriptInterface(new CaspianBridge(this, id), "CaspianBridge");
+        }
         applyWebViewTheme(webView, isDarkTheme);
 
         webView.setOnScrollChangeListener((v, scrollX, scrollY, oldScrollX, oldScrollY) -> {
@@ -21446,6 +21416,14 @@ public class MainActivity extends AppCompatActivity {
 
             @Override
             public void onPageStarted(WebView view, String pageUrl, Bitmap favicon) {
+                // Security Boundary: Only local assets and trusted media retain CaspianBridge
+                if (com.caspian.betac.security.OriginVerifier.isLocalAsset(pageUrl) || 
+                    com.caspian.betac.security.OriginVerifier.isTrustedMediaHost(pageUrl)) {
+                    view.addJavascriptInterface(new CaspianBridge(MainActivity.this, id), "CaspianBridge");
+                } else {
+                    view.removeJavascriptInterface("CaspianBridge");
+                }
+
                 if (pageUrl != null && pageUrl.contains("lastfm-callback")) {
                     try {
                         Uri uri = Uri.parse(pageUrl);
@@ -22735,7 +22713,7 @@ public class MainActivity extends AppCompatActivity {
         }
     }
 
-    private TabItem getTabById(int tabId) {
+    public TabItem getTabById(int tabId) {
         for (TabItem item : tabsList) {
             if (item.id == tabId) return item;
         }

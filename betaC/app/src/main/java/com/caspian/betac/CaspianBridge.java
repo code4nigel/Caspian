@@ -20,6 +20,9 @@ import androidx.appcompat.app.AlertDialog;
 import org.json.JSONArray;
 import org.json.JSONObject;
 
+import com.caspian.betac.security.BridgeSecurityPolicy;
+import com.caspian.betac.security.OriginVerifier;
+
 import java.io.File;
 import java.io.FileOutputStream;
 import java.nio.charset.StandardCharsets;
@@ -43,6 +46,26 @@ public class CaspianBridge {
     public CaspianBridge(MainActivity activity, int tabId) {
         this.activity = activity;
         this.boundTabId = tabId;
+    }
+
+    private String getCallerUrl() {
+        if (activity == null) return "";
+        if (boundTabId == null) {
+            return OriginVerifier.CONTROL_SHEET_URL;
+        }
+        MainActivity.TabItem tab = activity.getTabById(boundTabId);
+        if (tab != null) {
+            if (tab.webView != null && tab.webView.getUrl() != null && !tab.webView.getUrl().isEmpty()) {
+                return tab.webView.getUrl();
+            }
+            return tab.url != null ? tab.url : "";
+        }
+        return "";
+    }
+
+    private boolean isAuthorized(String method, BridgeSecurityPolicy.Category category) {
+        boolean isControlSheet = (boundTabId == null);
+        return BridgeSecurityPolicy.isAuthorized(method, category, getCallerUrl(), isControlSheet);
     }
 
     @JavascriptInterface
@@ -219,11 +242,13 @@ public class CaspianBridge {
 
     @JavascriptInterface
     public String getOpenTabs() {
+        if (!isAuthorized("getOpenTabs", BridgeSecurityPolicy.Category.LOCAL_UI)) return "[]";
         return getOpenTabsJson();
     }
 
     @JavascriptInterface
     public String getOpenTabsJson() {
+        if (!isAuthorized("getOpenTabsJson", BridgeSecurityPolicy.Category.LOCAL_UI)) return "[]";
         if (activity != null) {
             return activity.getOpenTabsJson();
         }
@@ -957,6 +982,7 @@ public class CaspianBridge {
 
     @JavascriptInterface
     public void downloadAndInstallUpdate(String apkUrl, String apkFileName) {
+        if (!isAuthorized("downloadAndInstallUpdate", BridgeSecurityPolicy.Category.LOCAL_UI)) return;
         if (activity == null) return;
         GitHubUpdateManager updateManager = new GitHubUpdateManager(activity);
         updateManager.downloadApk(apkUrl, apkFileName, new GitHubUpdateManager.DownloadCallback() {
@@ -1154,7 +1180,12 @@ public class CaspianBridge {
 
     @JavascriptInterface
     public String getPdfBase64(String path) {
-        if (path == null || path.trim().isEmpty()) return "";
+        if (!isAuthorized("getPdfBase64", BridgeSecurityPolicy.Category.PDF_VIEWER)) {
+            return "";
+        }
+        if (!OriginVerifier.isSafePdfPath(path)) {
+            return "";
+        }
         try {
             File f = new File(path);
             if (!f.exists() || !f.canRead()) return "";
@@ -1200,6 +1231,7 @@ public class CaspianBridge {
 
     @JavascriptInterface
     public boolean openDownloadedFile(String downloadId) {
+        if (!isAuthorized("openDownloadedFile", BridgeSecurityPolicy.Category.LOCAL_UI)) return false;
         if (activity == null || downloadId == null) return false;
         activity.runOnUiThread(() -> {
             CaspianDownloadManager.getInstance(activity).openFile(downloadId);
@@ -1209,6 +1241,7 @@ public class CaspianBridge {
 
     @JavascriptInterface
     public boolean shareDownloadedFile(String downloadId) {
+        if (!isAuthorized("shareDownloadedFile", BridgeSecurityPolicy.Category.LOCAL_UI)) return false;
         if (activity == null || downloadId == null) return false;
         activity.runOnUiThread(() -> {
             CaspianDownloadManager.getInstance(activity).shareFile(downloadId);
@@ -1218,6 +1251,7 @@ public class CaspianBridge {
 
     @JavascriptInterface
     public void deleteDownload(String downloadId, boolean deleteFile) {
+        if (!isAuthorized("deleteDownload", BridgeSecurityPolicy.Category.LOCAL_UI)) return;
         if (activity == null || downloadId == null) return;
         CaspianDownloadManager.getInstance(activity).deleteDownload(downloadId, deleteFile);
     }
