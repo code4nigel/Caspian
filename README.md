@@ -1,6 +1,6 @@
 # Caspian: AI Chat Pruner, Universal Media Speed Engine & Productivity Suite
 
-Caspian is a lightweight, privacy-focused productivity tool available as a Chromium desktop extension and native Android companion applications (Caspian Flow & Caspian Mobile).
+Caspian is a lightweight, privacy-focused productivity tool available as desktop extensions (for Chromium and Mozilla Firefox) and native Android companion applications (Caspian Flow & Caspian Mobile).
 
 It addresses everyday web performance and workflow friction: eliminating typing lag in long AI conversations via real-time DOM pruning, providing universal playback speed control across all media sites, cleaning up your YouTube homepage with quick feed limits and 1-click "Not interested" actions, converting temporary chats to permanent history, and exporting conversation transcripts to clean, publication-ready formats.
 
@@ -8,9 +8,9 @@ It addresses everyday web performance and workflow friction: eliminating typing 
 
 ## Platforms & Ecosystem
 
-| Desktop Extension (Chromium) | Caspian Flow / Mobile (Android) | Automatic Updates (Obtainium) |
+| Desktop Extensions (Chromium & Firefox) | Caspian Flow / Mobile (Android) | Automatic Updates (Obtainium) |
 | :--- | :--- | :--- |
-| Universal Chromium Extension (V6.3.0) | Floating Action Pod & Bottom Sheet UI | One-click app updates via GitHub Releases |
+| Chromium (V6.3.0) & Firefox (V6.3.0 MV3) | Floating Action Pod & Bottom Sheet UI | One-click app updates via GitHub Releases |
 | ChatGPT, Google Gemini, YouTube, Media | Omnibox Multi-Tab Browser & AI Docks | Import configuration file included in repo |
 | DOM Pruner, Flow Speed, RippleFrame, Exporters | Zero-Lag DOM Pruning & Video Remote | Background update notifications & installs |
 
@@ -92,11 +92,14 @@ Easily backup all your theme accents, chat limits, YouTube preferences, and Flow
 ## Desktop Extension Installation
 
 ### Supported Browsers
-- Google Chrome, Microsoft Edge, Brave, Opera, Vivaldi, Arc, and other Chromium-based browsers.
+- **Chromium Browsers**: Google Chrome, Microsoft Edge, Brave, Opera, Vivaldi, Arc, and other Chromium-based browsers.
+- **Mozilla Firefox**: Firefox Desktop (Standard, Developer Edition, Nightly, Floorp, Zen) via `about:debugging`.
 
 ### Installation Steps
+
+#### For Chromium Browsers (Chrome, Edge, Brave, etc.)
 1. Download the latest release archive (`Caspian-Extension-v6.3.0.zip`) from the [GitHub Releases Page](https://github.com/code4nigel/Caspian/releases).
-2. Unzip the downloaded file to a local folder.
+2. Unzip the downloaded file to a local folder (or use the `Caspian` folder in the repository).
 3. Open your browser and go to the extensions management page:
    - **Chrome**: `chrome://extensions`
    - **Edge**: `edge://extensions`
@@ -104,6 +107,17 @@ Easily backup all your theme accents, chat limits, YouTube preferences, and Flow
 4. Enable **Developer mode** (toggle in the top-right corner).
 5. Click **Load unpacked** and select the unzipped `Caspian` folder.
 6. Pin Caspian to your toolbar for quick access.
+
+#### For Mozilla Firefox
+1. Download the latest release archive (`Caspian-Fox-Extension-v6.3.0.zip`) from the [GitHub Releases Page](https://github.com/code4nigel/Caspian/releases) (or locate the `caspian fox extension` folder in the repository).
+2. Unzip the downloaded file (if needed).
+3. Open Firefox and navigate to:
+   ```
+   about:debugging#/runtime/this-firefox
+   ```
+4. Click **Load Temporary Add-on...**
+5. Select `manifest.json` inside the unzipped `caspian fox extension` folder (or select `Caspian-Fox-Extension-v6.3.0.zip`).
+6. Pin Caspian to your Firefox toolbar for quick access.
 
 ---
 

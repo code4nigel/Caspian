@@ -28783,7 +28783,7 @@
       "file_type": "code",
       "norm_label": "setupsitebookmarks()",
       "source_file": "caspian fox extension/popup.js",
-      "source_location": "L2735"
+      "source_location": "L2528"
     },
     {
       "id": "caspian_fox_extension_popup_setupsitetoggles",
@@ -28831,7 +28831,7 @@
       "file_type": "code",
       "norm_label": "syncversiontag()",
       "source_file": "caspian fox extension/popup.js",
-      "source_location": "L2747"
+      "source_location": "L2540"
     },
     {
       "id": "caspian_fox_extension_popup_unpinpreset",
@@ -41079,7 +41079,7 @@
       "file_type": "code",
       "norm_label": "setupsitebookmarks()",
       "source_file": "Caspian/popup.js",
-      "source_location": "L2733"
+      "source_location": "L2526"
     },
     {
       "id": "caspian_popup_setupsitetoggles",
@@ -41127,7 +41127,7 @@
       "file_type": "code",
       "norm_label": "syncversiontag()",
       "source_file": "Caspian/popup.js",
-      "source_location": "L2745"
+      "source_location": "L2538"
     },
     {
       "id": "caspian_popup_unpinpreset",
@@ -91826,7 +91826,7 @@
       "confidence_score": 1.0,
       "context": "call",
       "source_file": "caspian fox extension/popup.js",
-      "source_location": "L2712",
+      "source_location": "L2510",
       "weight": 1.0
     },
     {
@@ -91838,7 +91838,7 @@
       "confidence_score": 1.0,
       "context": "call",
       "source_file": "caspian fox extension/popup.js",
-      "source_location": "L2713",
+      "source_location": "L2511",
       "weight": 1.0
     },
     {
@@ -93074,7 +93074,7 @@
       "confidence_score": 1.0,
       "context": "call",
       "source_file": "Caspian/popup.js",
-      "source_location": "L2710",
+      "source_location": "L2508",
       "weight": 1.0
     },
     {
@@ -93086,7 +93086,7 @@
       "confidence_score": 1.0,
       "context": "call",
       "source_file": "Caspian/popup.js",
-      "source_location": "L2711",
+      "source_location": "L2509",
       "weight": 1.0
     },
     {
@@ -108460,24 +108460,13 @@
     },
     {
       "source": "caspian_fox_extension_popup",
-      "target": "caspian_fox_extension_popup_updatethemecolors",
-      "relation": "contains",
-      "_origin": "ast",
-      "confidence": "EXTRACTED",
-      "confidence_score": 1.0,
-      "source_file": "caspian fox extension/popup.js",
-      "source_location": "L257",
-      "weight": 1.0
-    },
-    {
-      "source": "caspian_fox_extension_popup",
       "target": "caspian_fox_extension_popup_setupsitebookmarks",
       "relation": "contains",
       "_origin": "ast",
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "caspian fox extension/popup.js",
-      "source_location": "L2735",
+      "source_location": "L2528",
       "weight": 1.0
     },
     {
@@ -108488,7 +108477,18 @@
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "caspian fox extension/popup.js",
-      "source_location": "L2747",
+      "source_location": "L2540",
+      "weight": 1.0
+    },
+    {
+      "source": "caspian_fox_extension_popup",
+      "target": "caspian_fox_extension_popup_updatethemecolors",
+      "relation": "contains",
+      "_origin": "ast",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "caspian fox extension/popup.js",
+      "source_location": "L257",
       "weight": 1.0
     },
     {
@@ -110044,24 +110044,13 @@
     },
     {
       "source": "caspian_popup",
-      "target": "caspian_popup_updatethemecolors",
-      "relation": "contains",
-      "_origin": "ast",
-      "confidence": "EXTRACTED",
-      "confidence_score": 1.0,
-      "source_file": "Caspian/popup.js",
-      "source_location": "L257",
-      "weight": 1.0
-    },
-    {
-      "source": "caspian_popup",
       "target": "caspian_popup_setupsitebookmarks",
       "relation": "contains",
       "_origin": "ast",
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "Caspian/popup.js",
-      "source_location": "L2733",
+      "source_location": "L2526",
       "weight": 1.0
     },
     {
@@ -110072,7 +110061,18 @@
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "Caspian/popup.js",
-      "source_location": "L2745",
+      "source_location": "L2538",
+      "weight": 1.0
+    },
+    {
+      "source": "caspian_popup",
+      "target": "caspian_popup_updatethemecolors",
+      "relation": "contains",
+      "_origin": "ast",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "Caspian/popup.js",
+      "source_location": "L257",
       "weight": 1.0
     },
     {

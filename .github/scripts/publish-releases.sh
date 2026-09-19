@@ -23,7 +23,8 @@ run_with_retry() {
 # Dynamically detect Flow version from betaC/app/build.gradle.kts
 FLOW_VER=$(grep 'versionName' betaC/app/build.gradle.kts | head -n1 | sed -E 's/.*"([^"]+)".*/\1/')
 EXT_VER=$(node -p "try { require('./Caspian/manifest.json').version } catch(e) { '6.3.0' }")
-echo "Detected Flow Version: v${FLOW_VER}, Extension Version: v${EXT_VER}"
+FOX_VER=$(node -p "try { require('./caspian fox extension/manifest.json').version } catch(e) { '6.3.0' }")
+echo "Detected Flow Version: v${FLOW_VER}, Chromium Extension Version: v${EXT_VER}, Firefox Extension Version: v${FOX_VER}"
 
 COMMIT_MSG=$(git log -1 --pretty=%B || echo "Automated release")
 
@@ -152,12 +153,39 @@ if [ -f "$EXT_ASSET" ]; then
   echo "✓ Completed ${EXT_TITLE}"
 fi
 
-# 6. Publish Unified "🌟 Caspian Multi-Platform Suite (Latest)"
+# 6. Publish Caspian Firefox Extension
+FOX_TAG="Caspian-Fox-Extension-v${FOX_VER}"
+FOX_TITLE="[Firefox Extension] Caspian Firefox Extension v${FOX_VER}"
+FOX_ASSET="versions/Caspian-Fox-Extension-v${FOX_VER}.zip"
+FOX_NOTES="### 🦊 Caspian for Firefox (Mozilla Firefox Extension)
+
+Official Mozilla Firefox Desktop Browser Extension (Manifest V3) for ChatGPT/Gemini DOM optimization, universal Flow Speed playback controller, YouTube feed limits, Temporary Chat Vault with session authentication, and RippleFrame full-page screenshot studio.
+
+- **Version Tag**: \`${FOX_TAG}\`
+- **Artifact**: \`Caspian-Fox-Extension-v${FOX_VER}.zip\`
+
+#### 🦊 How to Install in Firefox
+1. Download \`Caspian-Fox-Extension-v${FOX_VER}.zip\` and unzip it.
+2. Open Firefox and go to \`about:debugging#/runtime/this-firefox\`.
+3. Click **Load Temporary Add-on...** and select \`manifest.json\` (or select the .zip archive)."
+
+if [ -f "$FOX_ASSET" ]; then
+  echo "Publishing ${FOX_TITLE}..."
+  if run_with_retry gh release view "$FOX_TAG" >/dev/null 2>&1; then
+    run_with_retry gh release edit "$FOX_TAG" --title "$FOX_TITLE" --notes "$FOX_NOTES"
+  else
+    run_with_retry gh release create "$FOX_TAG" --title "$FOX_TITLE" --notes "$FOX_NOTES"
+  fi
+  run_with_retry gh release upload "$FOX_TAG" "$FOX_ASSET" --clobber
+  echo "✓ Completed ${FOX_TITLE}"
+fi
+
+# 7. Publish Unified "🌟 Caspian Multi-Platform Suite (Latest)"
 SUITE_TAG="Caspian-Latest-Suite"
 SUITE_TITLE="🌟 Caspian Multi-Platform Suite (Latest)"
 SUITE_NOTES="## 🌟 Caspian Multi-Platform Suite (Latest Releases)
 
-This release bundles the **latest official builds** for all Caspian applications across Android and Desktop.
+This release bundles the **latest official builds** for all Caspian applications across Android, Chromium, and Firefox.
 
 | Application | Latest Version | Platform | Asset Download |
 | :--- | :--- | :--- | :--- |
@@ -165,7 +193,8 @@ This release bundles the **latest official builds** for all Caspian applications
 | **Caspian Mobile** | \`${MOBILE_TAG}\` | Android APK | \`Caspian-Mobile-v1.2.40.apk\` |
 | **Caspian Beta A** | \`${BETA_A_TAG}\` | Android APK | \`Caspian-Beta-A-v1.2.48.apk\` |
 | **Caspian Beta B** | \`${BETA_B_TAG}\` | Android APK | \`Caspian-Beta-B-v1.0.5.apk\` |
-| **Caspian Extension** | \`${EXT_TAG}\` | Chromium Extension ZIP | \`Caspian-Extension-v${EXT_VER}.zip\` |
+| **Caspian Extension (Chromium)** | \`${EXT_TAG}\` | Chromium Extension ZIP | \`Caspian-Extension-v${EXT_VER}.zip\` |
+| **Caspian Extension (Firefox)** | \`${FOX_TAG}\` | Firefox Extension ZIP | \`Caspian-Fox-Extension-v${FOX_VER}.zip\` |
 
 ### 📦 Direct Downloads
 Click on any of the attached assets below to download the latest build for your platform."
@@ -184,12 +213,13 @@ run_with_retry gh release upload "$SUITE_TAG" \
   "$BETA_A_ASSET" \
   "$BETA_B_ASSET" \
   "$EXT_ASSET" \
+  "$FOX_ASSET" \
   --clobber
 
 # Clean up obsolete assets from Latest Suite
 for old_asset in $(gh release view "$SUITE_TAG" --json assets -q '.assets[].name' 2>/dev/null || true); do
   case "$old_asset" in
-    "Caspian-Flow-v${FLOW_VER}.apk"|"app-v${FLOW_VER}.apk"|"Caspian-Mobile-v1.2.40.apk"|"Caspian-Beta-A-v1.2.48.apk"|"Caspian-Beta-B-v1.0.5.apk"|"Caspian-Extension-v${EXT_VER}.zip")
+    "Caspian-Flow-v${FLOW_VER}.apk"|"app-v${FLOW_VER}.apk"|"Caspian-Mobile-v1.2.40.apk"|"Caspian-Beta-A-v1.2.48.apk"|"Caspian-Beta-B-v1.0.5.apk"|"Caspian-Extension-v${EXT_VER}.zip"|"Caspian-Fox-Extension-v${FOX_VER}.zip")
       ;;
     *)
       echo "Removing obsolete asset from Latest Suite: $old_asset"

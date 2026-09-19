@@ -294,9 +294,9 @@
     "semantic_hash": ""
   },
   "Caspian/popup.js": {
-    "mtime": 1789812016.116497,
-    "seen": 1789812120.0452425,
-    "ast_hash": "1f01584cba1b83828d6b4af0d282e17b",
+    "mtime": 1788503110.3557801,
+    "seen": 1789062562.2364812,
+    "ast_hash": "51a21ea6b24f1af67023dca6111f173f",
     "semantic_hash": ""
   },
   "Caspian/rippleframe.js": {
@@ -630,9 +630,9 @@
     "semantic_hash": ""
   },
   "Caspian/popup.html": {
-    "mtime": 1789812045.3805776,
-    "seen": 1789812120.0454707,
-    "ast_hash": "edb5ec928fc08a02913390578f9eee35",
+    "mtime": 1788503000.7036915,
+    "seen": 1789062562.2366092,
+    "ast_hash": "9bbeac43f0df732d2053da9031ecb2e7",
     "semantic_hash": ""
   },
   "Caspian/rippleframe.html": {
@@ -1758,9 +1758,9 @@
     "semantic_hash": ""
   },
   "caspian fox extension/popup.js": {
-    "mtime": 1789812031.774691,
-    "seen": 1789812120.0454106,
-    "ast_hash": "5796db0bffcbf89563e5fb5e79d9619e",
+    "mtime": 1789811568.1404135,
+    "seen": 1789811691.9232268,
+    "ast_hash": "22d37b007d1aa013c152e87723ae6e51",
     "semantic_hash": ""
   },
   "caspian fox extension/rippleframe.js": {
@@ -1794,9 +1794,9 @@
     "semantic_hash": ""
   },
   "caspian fox extension/popup.html": {
-    "mtime": 1789812051.279457,
-    "seen": 1789812120.0454915,
-    "ast_hash": "edb5ec928fc08a02913390578f9eee35",
+    "mtime": 1788503000.7036915,
+    "seen": 1789811691.9232726,
+    "ast_hash": "9bbeac43f0df732d2053da9031ecb2e7",
     "semantic_hash": ""
   },
   "caspian fox extension/rippleframe.html": {

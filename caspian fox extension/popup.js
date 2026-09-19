@@ -398,10 +398,12 @@ async function extractPageConversationPayload() {
     if (conversationId) {
       let token = null;
 
-      // Token Path 1: Check window.__NEXT_DATA__
+      // Token Path 1: Check window.__NEXT_DATA__ (supporting Firefox Xray bypass)
       try {
-        if (window.__NEXT_DATA__ && window.__NEXT_DATA__.props && window.__NEXT_DATA__.props.pageProps) {
-          token = window.__NEXT_DATA__.props.pageProps.accessToken;
+        const pageWin = (typeof window.wrappedJSObject !== 'undefined') ? window.wrappedJSObject : window;
+        const nextData = pageWin.__NEXT_DATA__ || window.__NEXT_DATA__;
+        if (nextData && nextData.props && nextData.props.pageProps) {
+          token = nextData.props.pageProps.accessToken;
           if (token) console.log('Caspian API Debug: Access token retrieved from __NEXT_DATA__');
         }
       } catch (e) {}

@@ -1,0 +1,820 @@
+// ==========================================
+// CASPIAN - CONTENT SCRIPT & TEMP CHAT VAULT
+// ==========================================
+
+// ------------------------------------------
+// 1. HIGH-PERFORMANCE DOM LAG FIXER & PRUNER (Caspian Flow Engine)
+// ------------------------------------------
+function isSiteDisabled(disabledSites = []) {
+  const host = window.location.hostname;
+  return disabledSites.some(d => host.includes(d));
+}
+
+let isTyping = false;
+let isScrolling = false;
+let scrollDebounceTimer = null;
+let currentWindowStart = -1;
+let currentStepTurnIndex = -1;
+let lastKnownTurnsCount = 0;
+let isPruningScheduled = false;
+let mutationDebounceTimer = null;
+
+function ensurePrunerStyles() {
+  if (document.getElementById('caspian-pruner-styles')) return;
+  const style = document.createElement('style');
+  style.id = 'caspian-pruner-styles';
+  style.textContent = `
+    .caspian-turn-pruned {
+      content-visibility: hidden !important;
+      contain: layout style paint !important;
+      contain-intrinsic-size: 0 120px !important;
+      opacity: 0 !important;
+      pointer-events: none !important;
+      user-select: none !important;
+    }
+    .caspian-turn-active {
+      content-visibility: auto !important;
+      contain-intrinsic-size: 0 250px;
+    }
+  `;
+  const target = document.head || document.documentElement;
+  if (target) target.appendChild(style);
+}
+
+function getTopLevelTurns() {
+  const host = (location && location.hostname) ? location.hostname.toLowerCase() : '';
+  const isGemini = host.includes('gemini.google.com');
+
+  if (!isGemini) {
+    // 1. ChatGPT primary selector: conversation turns
+    const turns = Array.from(document.querySelectorAll('[data-testid^="conversation-turn"]'));
+    if (turns.length > 0) return turns;
+
+    // 2. Standard article tag fallback
+    const articles = Array.from(document.querySelectorAll('main article, article'));
+    if (articles.length > 0) return articles;
+
+    // 3. Message role container fallback
+    const roleEls = Array.from(document.querySelectorAll('[data-message-author-role]'));
+    if (roleEls.length > 0) return roleEls;
+
+    // 4. Generic turn container fallback
+    const groupEls = Array.from(document.querySelectorAll('div[class*="group/conversation-turn"]'));
+    if (groupEls.length > 0) return groupEls;
+
+    return [];
+  }
+
+  // Google Gemini
+  let elements = Array.from(document.querySelectorAll('user-query, model-response, chat-turn'));
+  try {
+    const customHosts = document.querySelectorAll('user-query, model-response, chat-turn, gds-theme-provider');
+    for (let i = 0; i < customHosts.length; i++) {
+      const sr = customHosts[i].shadowRoot;
+      if (sr) {
+        elements = elements.concat(Array.from(sr.querySelectorAll('user-query, model-response, chat-turn')));
+      }
+    }
+  } catch(e) {}
+
+  return elements;
+}
+
+function clearAllPruning(turns) {
+  if (!turns) return;
+  for (let i = 0; i < turns.length; i++) {
+    turns[i].style.removeProperty('display');
+  }
+}
+
+function findVisibleCenterTurnIndex(turns) {
+  if (!turns || turns.length === 0) return -1;
+  const viewportHeight = window.innerHeight || document.documentElement.clientHeight || 800;
+  const centerY = viewportHeight / 2;
+
+  let closestIdx = -1;
+  let minDistance = Infinity;
+
+  for (let i = 0; i < turns.length; i++) {
+    const rect = turns[i].getBoundingClientRect();
+    if (rect.bottom >= 0 && rect.top <= viewportHeight) {
+      const turnCenter = (rect.top + rect.bottom) / 2;
+      const dist = Math.abs(turnCenter - centerY);
+      if (dist < minDistance) {
+        minDistance = dist;
+        closestIdx = i;
+      }
+    }
+  }
+  return closestIdx;
+}
+
+function applyTurbo() {
+  chrome.storage.local.get(['globalActive', 'pruningEnabled', 'enabled', 'limit', 'disabledSites', 'chat_pruning_mode'], (data) => {
+    const globalActive = data.globalActive ?? true;
+    const isSiteOff = isSiteDisabled(data.disabledSites || []);
+    const turns = getTopLevelTurns();
+
+    if (!globalActive || isSiteOff) {
+      clearAllPruning(turns);
+      return;
+    }
+
+    const isEnabled = data.pruningEnabled ?? (data.enabled ?? true);
+    const limit = data.limit ?? 5;
+    const mode = data.chat_pruning_mode || 'sliding_window';
+
+    if (turns.length === 0) return;
+
+    if (!isEnabled || limit >= 9999) {
+      clearAllPruning(turns);
+      return;
+    }
+
+    if (turns.length <= limit) {
+      clearAllPruning(turns);
+      return;
+    }
+
+    let startIdx = 0;
+    let endIdx = turns.length - 1;
+
+    if (mode === 'tail') {
+      startIdx = Math.max(0, turns.length - limit);
+      endIdx = turns.length - 1;
+    } else {
+      if (currentWindowStart < 0 || currentWindowStart > turns.length - limit) {
+        currentWindowStart = Math.max(0, turns.length - limit);
+      }
+      startIdx = currentWindowStart;
+      endIdx = Math.min(turns.length - 1, currentWindowStart + limit - 1);
+    }
+
+    for (let i = 0; i < turns.length; i++) {
+      const t = turns[i];
+      const isVisible = (i >= startIdx && i <= endIdx);
+      if (isVisible) {
+        t.style.setProperty('display', 'block', 'important');
+      } else {
+        t.style.setProperty('display', 'none', 'important');
+      }
+    }
+  });
+}
+
+function schedulePruning(immediate) {
+  if (isTyping) return;
+  if (isPruningScheduled && !immediate) return;
+
+  isPruningScheduled = true;
+  const runner = () => {
+    isPruningScheduled = false;
+    if (isTyping) return;
+    applyTurbo();
+  };
+
+  if (window.requestIdleCallback && !immediate) {
+    window.requestIdleCallback(runner, { timeout: 250 });
+  } else {
+    window.requestAnimationFrame(runner);
+  }
+}
+
+// Scroll listener for sliding window adjustment
+window.addEventListener('scroll', () => {
+  if (isTyping) return;
+  isScrolling = true;
+  if (scrollDebounceTimer) clearTimeout(scrollDebounceTimer);
+
+  scrollDebounceTimer = setTimeout(() => {
+    isScrolling = false;
+    chrome.storage.local.get(['pruningEnabled', 'enabled', 'limit', 'chat_pruning_mode'], (data) => {
+      const mode = data.chat_pruning_mode || 'sliding_window';
+      const isEnabled = data.pruningEnabled ?? (data.enabled ?? true);
+      if (mode === 'sliding_window' && isEnabled) {
+        const turns = getTopLevelTurns();
+        const visibleIdx = findVisibleCenterTurnIndex(turns);
+        if (visibleIdx >= 0) {
+          const limit = Math.max(1, data.limit || 5);
+          currentStepTurnIndex = visibleIdx;
+          currentWindowStart = Math.max(0, Math.min(turns.length - limit, visibleIdx - Math.floor(limit / 2)));
+          applyTurbo();
+        }
+      }
+    });
+  }, 180);
+}, { capture: true, passive: true });
+
+// DOM MutationObserver with debouncing
+const domObserver = new MutationObserver(() => {
+  if (isTyping || isScrolling) return;
+  if (!mutationDebounceTimer) {
+    mutationDebounceTimer = setTimeout(() => {
+      mutationDebounceTimer = null;
+      schedulePruning(false);
+    }, 300);
+  }
+});
+
+const targetObserverNode = document.body || document.documentElement;
+if (targetObserverNode) {
+  domObserver.observe(targetObserverNode, { childList: true, subtree: true });
+}
+
+// Typing detection so input focus never stutters
+document.addEventListener('focusin', (e) => {
+  const tag = e.target && e.target.tagName ? e.target.tagName.toLowerCase() : '';
+  if (tag === 'textarea' || tag === 'input' || (e.target && e.target.isContentEditable)) {
+    isTyping = true;
+  }
+});
+
+document.addEventListener('focusout', () => {
+  isTyping = false;
+  setTimeout(() => schedulePruning(false), 300);
+});
+
+chrome.storage.onChanged.addListener(applyTurbo);
+applyTurbo();
+
+// ------------------------------------------
+// 2. KEYBOARD SHORTCUT & AESTHETIC FLOATING TOAST
+// ------------------------------------------
+function showCaspianToast(message) {
+  const existing = document.getElementById('caspian-live-toast');
+  if (existing) existing.remove();
+
+  const toast = document.createElement('div');
+  toast.id = 'caspian-live-toast';
+  toast.style.cssText = `
+    position: fixed;
+    bottom: 24px;
+    right: 24px;
+    background: rgba(15, 23, 42, 0.92);
+    backdrop-filter: blur(12px);
+    -webkit-backdrop-filter: blur(12px);
+    color: #f8fafc;
+    padding: 10px 18px;
+    border-radius: 24px;
+    font-family: 'Outfit', -apple-system, BlinkMacSystemFont, sans-serif;
+    font-size: 12.5px;
+    font-weight: 600;
+    z-index: 99999999;
+    box-shadow: 0 8px 32px rgba(0, 0, 0, 0.35);
+    border: 1px solid rgba(255, 255, 255, 0.15);
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    pointer-events: none;
+  `;
+  toast.innerHTML = message;
+  document.body.appendChild(toast);
+
+  setTimeout(() => {
+    toast.style.opacity = '0';
+    toast.style.transform = 'translateY(8px)';
+    toast.style.transition = 'all 0.25s ease';
+    setTimeout(() => toast.remove(), 250);
+  }, 2400);
+}
+
+window.addEventListener('keydown', (e) => {
+  const isTargetKey = (e.key === 'x' || e.key === 'X' || e.code === 'KeyX' || e.key === 'c' || e.key === 'C' || e.code === 'KeyC');
+  const isCtrlAlt = e.ctrlKey && e.altKey;
+  const isCtrlShift = e.ctrlKey && e.shiftKey;
+
+  if (isTargetKey && (isCtrlAlt || isCtrlShift)) {
+    e.preventDefault();
+    chrome.storage.local.get(['pruningEnabled', 'enabled'], (data) => {
+      const current = data.pruningEnabled ?? (data.enabled ?? true);
+      const nextState = !current;
+      chrome.storage.local.set({ pruningEnabled: nextState, enabled: nextState }, () => {
+        showCaspianToast(`⚡ Chat Message Limit: <b>${nextState ? 'ON' : 'OFF'}</b>`);
+      });
+    });
+  }
+});
+
+// ------------------------------------------
+// 3. TEMPORARY CHAT DETECTION & EXTRACTION
+// ------------------------------------------
+function isTemporaryChat() {
+  const isUrlTemp = window.location.href.includes('temporary-chat=true');
+  const isDomTemp = !!document.querySelector('[data-testid="temporary-chat-indicator"]') ||
+                    !!document.querySelector('button[aria-label*="Temporary"]') ||
+                    (document.body && document.body.innerText && document.body.innerText.toLowerCase().includes('temporary chat'));
+  return isUrlTemp || isDomTemp;
+}
+
+function getChatTitle() {
+  const titleEl = document.querySelector('title') || document.querySelector('h1');
+  let title = titleEl ? titleEl.textContent.trim() : 'ChatGPT Conversation';
+  title = title.replace(/ - (ChatGPT|Gemini)$/i, '').replace(/^(ChatGPT|Gemini) - /i, '').trim();
+  return title || 'Saved Conversation';
+}
+
+function extractConversationData() {
+  const isTemp = isTemporaryChat();
+  const title = getChatTitle();
+  const url = window.location.href;
+  const match = url.match(/\/c\/([a-f0-9-]+)/i);
+  const conversationId = match ? match[1] : null;
+
+  let turns = [];
+
+  // LAYER A: React Fiber State Tree Inspection (Instantaneous 0ms Memory Extract)
+  try {
+    const rawEl = document.querySelector('main') || document.body;
+    const mainEl = (rawEl && rawEl.wrappedJSObject) ? rawEl.wrappedJSObject : rawEl;
+    const fiberKey = Object.keys(mainEl).find(k => k.startsWith('__reactFiber$') || k.startsWith('__reactProps$'));
+    if (fiberKey && mainEl[fiberKey]) {
+      let curr = mainEl[fiberKey];
+      let foundMessages = null;
+      let depth = 0;
+
+      while (curr && depth < 40 && !foundMessages) {
+        depth++;
+        const props = curr.memoizedProps || curr.pendingProps;
+        if (props) {
+          if (Array.isArray(props.messages)) {
+            foundMessages = props.messages;
+          } else if (props.conversation && Array.isArray(props.conversation)) {
+            foundMessages = props.conversation;
+          }
+        }
+        curr = curr.child || curr.sibling;
+      }
+
+      if (foundMessages && Array.isArray(foundMessages)) {
+        const processedTexts = new Set();
+        foundMessages.forEach(msg => {
+          const role = (msg.author && msg.author.role === 'user') || msg.role === 'user' ? 'User' : 'ChatGPT';
+          let text = '';
+          if (typeof msg.content === 'string') text = msg.content;
+          else if (msg.content && Array.isArray(msg.content.parts)) {
+            text = msg.content.parts.filter(p => typeof p === 'string').join('\n');
+          } else if (msg.text) text = msg.text;
+
+          text = text ? text.trim() : '';
+          if (text && !processedTexts.has(text)) {
+            processedTexts.add(text);
+            turns.push({
+              role,
+              content: text,
+              htmlContent: '',
+              index: turns.length + 1
+            });
+          }
+        });
+      }
+    }
+  } catch (e) {
+    console.warn('Caspian: React Fiber inspection fallback:', e);
+  }
+
+  // LAYER B: DOM Query Fallback
+  if (turns.length === 0) {
+    const hiddenMsgs = document.querySelectorAll('[data-testid^="conversation-turn"], article, main div.group');
+    hiddenMsgs.forEach(msg => msg.style.setProperty('display', 'block', 'important'));
+
+    let turnEls = Array.from(document.querySelectorAll('[data-message-author-role], [data-testid^="conversation-turn"], article, main div.group'));
+    const processedTexts = new Set();
+
+    turnEls.forEach((el) => {
+      const isUser = !!el.querySelector('[data-message-author-role="user"]') ||
+                     el.getAttribute('data-message-author-role') === 'user' ||
+                     (el.innerText && el.innerText.includes('You said:'));
+      const role = isUser ? 'User' : 'ChatGPT';
+
+      const bodyEl = el.querySelector('.markdown') || el.querySelector('[data-message-author-role]') || el;
+      const text = bodyEl ? bodyEl.innerText.trim() : '';
+      const html = bodyEl ? bodyEl.innerHTML : '';
+
+      if (text && !processedTexts.has(text)) {
+        processedTexts.add(text);
+        turns.push({ role, content: text, htmlContent: html, index: turns.length + 1 });
+      }
+    });
+
+    applyTurbo();
+  }
+
+  const dateStr = new Date().toLocaleString();
+
+  let markdown = `# ${title}\n\n`;
+  markdown += `*Exported via Caspian on ${dateStr}*\n`;
+  markdown += `*Session Mode: ${isTemp ? 'Temporary Chat Session' : 'Standard Session'}*\n\n`;
+  markdown += `---\n\n`;
+
+  turns.forEach((t) => {
+    const icon = t.role === 'User' ? '👤 **User**' : '🤖 **AI**';
+    markdown += `### ${icon}\n\n${t.content}\n\n---\n\n`;
+  });
+
+  return {
+    title,
+    isTemporary: isTemp,
+    turnCount: turns.length,
+    turns,
+    markdown
+  };
+}
+
+// ------------------------------------------
+// 4. AUTO-RESTORATION ON NEW NORMAL CHAT
+// ------------------------------------------
+function checkAndRestoreTransferContext() {
+  const isGemini = window.location.hostname.includes('gemini');
+  const isNormalChat = isGemini ? true : !window.location.href.includes('temporary-chat=true');
+  if (!isNormalChat) return;
+
+  chrome.storage.local.get(['pendingTransferContext', 'disabledSites'], (data) => {
+    if (!data.pendingTransferContext || isSiteDisabled(data.disabledSites || [])) return;
+
+    const transferData = data.pendingTransferContext;
+    console.log('[Caspian] Restoring temporary chat into new normal chat session on', window.location.hostname);
+
+    let attempts = 0;
+    const interval = setInterval(() => {
+      attempts++;
+      
+      const foundEl = document.querySelector('rich-textarea div[contenteditable="true"]') ||
+                      document.querySelector('div[contenteditable="true"]') ||
+                      document.querySelector('[aria-label*="Ask Gemini"]') ||
+                      document.querySelector('rich-textarea p') ||
+                      document.querySelector('.ql-editor p') ||
+                      document.querySelector('.ql-editor') ||
+                      document.querySelector('#prompt-textarea') || 
+                      document.querySelector('textarea') ||
+                      document.querySelector('p[data-placeholder]');
+      
+      if (foundEl) {
+        clearInterval(interval);
+
+        const promptPrefix = `Below is a saved conversation history from a temporary chat session ("${transferData.title}"). Please review and remember this context so we can seamlessly continue our session here:\n\n---\n\n`;
+        const fullPrompt = promptPrefix + transferData.markdown;
+
+        // 1. Copy to clipboard as guaranteed 100% backup fallback
+        if (navigator.clipboard && navigator.clipboard.writeText) {
+          navigator.clipboard.writeText(fullPrompt).catch(() => {});
+        }
+
+        const editable = foundEl.closest('[contenteditable="true"]') || foundEl;
+
+        editable.click();
+        editable.focus();
+
+        if (editable.tagName === 'TEXTAREA' || editable.id === 'prompt-textarea') {
+          if (document.queryCommandSupported && document.queryCommandSupported('insertText')) {
+            document.execCommand('insertText', false, fullPrompt);
+          } else {
+            editable.value = fullPrompt;
+            editable.dispatchEvent(new Event('input', { bubbles: true }));
+          }
+        } else {
+          // 2. Gemini rich-textarea / Lit / Quill contenteditable handling
+          try {
+            editable.innerText = fullPrompt;
+            editable.textContent = fullPrompt;
+
+            const pChild = editable.querySelector('p');
+            if (pChild) pChild.innerText = fullPrompt;
+
+            const sel = window.getSelection();
+            if (sel) {
+              const range = document.createRange();
+              range.selectNodeContents(editable);
+              range.collapse(false);
+              sel.removeAllRanges();
+              sel.addRange(range);
+            }
+
+            const events = ['focus', 'keydown', 'keypress', 'beforeinput', 'input', 'change', 'keyup'];
+            events.forEach(type => {
+              editable.dispatchEvent(new Event(type, { bubbles: true, composed: true }));
+            });
+
+            if (document.queryCommandSupported && document.queryCommandSupported('insertText')) {
+              document.execCommand('insertText', false, ' ');
+            }
+          } catch (err) {
+            console.error('[Caspian] Gemini injection error:', err);
+          }
+        }
+
+        showCaspianToast(`✨ Temporary Chat Context Ready! Injected & Copied to Clipboard (Press Ctrl+V if needed).`);
+        chrome.storage.local.remove('pendingTransferContext');
+      }
+
+      if (attempts > 60) {
+        clearInterval(interval);
+      }
+    }, 500);
+  });
+}
+
+function showCaspianToast(message) {
+  const existing = document.getElementById('caspian-toast-overlay');
+  if (existing) existing.remove();
+
+  const toast = document.createElement('div');
+  toast.id = 'caspian-toast-overlay';
+  toast.style.position = 'fixed';
+  toast.style.bottom = '24px';
+  toast.style.right = '24px';
+  toast.style.zIndex = '999999';
+  toast.style.background = 'linear-gradient(135deg, var(--accent, #A2A9A9), var(--secondary, #1B4264))';
+  toast.style.color = '#ffffff';
+  toast.style.padding = '12px 18px';
+  toast.style.borderRadius = '12px';
+  toast.style.fontFamily = 'system-ui, -apple-system, sans-serif';
+  toast.style.fontSize = '13px';
+  toast.style.fontWeight = '600';
+  toast.style.boxShadow = '0 8px 24px rgba(0, 0, 0, 0.2)';
+  toast.style.transition = 'all 0.3s ease';
+  toast.innerText = message;
+
+  document.body.appendChild(toast);
+  setTimeout(() => {
+    toast.style.opacity = '0';
+    toast.style.transform = 'translateY(10px)';
+    setTimeout(() => toast.remove(), 300);
+  }, 3500);
+}
+
+// ------------------------------------------
+// 5. CHROME MESSAGE LISTENER (POPUP COMM)
+// ------------------------------------------
+chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
+  if (request.action === 'GET_CHAT_INFO') {
+    const data = extractConversationData();
+    sendResponse({
+      isTemporary: data.isTemporary,
+      turnCount: data.turnCount,
+      title: data.title
+    });
+    return false;
+  }
+
+  if (request.action === 'DO_COPY') {
+    const data = extractConversationData();
+    if (data.markdown && data.turnCount > 0) {
+      navigator.clipboard.writeText(data.markdown).then(() => {
+        showCaspianToast('📋 Full transcript copied to clipboard!');
+        sendResponse({ success: true, count: data.turnCount });
+      }).catch(() => {
+        const ta = document.createElement('textarea');
+        ta.value = data.markdown;
+        document.body.appendChild(ta);
+        ta.select();
+        document.execCommand('copy');
+        document.body.removeChild(ta);
+        showCaspianToast('📋 Full transcript copied to clipboard!');
+        sendResponse({ success: true, count: data.turnCount });
+      });
+    } else {
+      showCaspianToast('⚠️ No conversation messages found on this page.');
+      sendResponse({ success: false, count: 0 });
+    }
+    return true;
+  }
+
+  if (request.action === 'DO_EXPORT') {
+    const data = extractConversationData();
+    if (data.markdown && data.turnCount > 0) {
+      const blob = new Blob([data.markdown], { type: 'text/markdown;charset=utf-8' });
+      const url = URL.createObjectURL(blob);
+      const safeTitle = (data.title || 'ChatGPT_Export').replace(/[^a-z0-9_-]/gi, '_');
+
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `${safeTitle}.md`;
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      URL.revokeObjectURL(url);
+
+      showCaspianToast('💾 Transcript exported as Markdown (.md)!');
+      sendResponse({ success: true, count: data.turnCount });
+    } else {
+      showCaspianToast('⚠️ No conversation messages found to export.');
+      sendResponse({ success: false, count: 0 });
+    }
+    return false;
+  }
+
+  if (request.action === 'DO_CONVERT') {
+    const data = extractConversationData();
+    if (data.markdown && data.turnCount > 0) {
+      const isGemini = window.location.hostname.includes('gemini');
+      const targetUrl = isGemini ? 'https://gemini.google.com/app' : 'https://chatgpt.com/';
+
+      chrome.storage.local.set({ pendingTransferContext: data }, () => {
+        showCaspianToast('🚀 Opening new permanent chat session...');
+        window.open(targetUrl, '_blank');
+        sendResponse({ success: true, count: data.turnCount });
+      });
+    } else {
+      showCaspianToast('⚠️ No conversation messages found to convert.');
+      sendResponse({ success: false, count: 0 });
+    }
+    return true;
+  }
+
+  if (request.action === 'DO_WEBPDF' || request.action === 'RERENDER_DOM_FOR_PRINT') {
+    const scrollers = Array.from(document.querySelectorAll('main div.overflow-y-auto, main div[class*="overflow"], main, div[data-projection-id]'));
+    if (scrollers.length === 0) scrollers.push(document.documentElement, document.body);
+
+    const oldOverlay = document.getElementById('caspian-print-loader');
+    if (oldOverlay) oldOverlay.remove();
+
+    const overlay = document.createElement('div');
+    overlay.id = 'caspian-print-loader';
+    overlay.style.cssText = 'position:fixed;top:24px;left:50%;transform:translateX(-50%);z-index:9999999;background:linear-gradient(135deg, #0f172a, #1e293b);color:#ffffff;padding:12px 24px;border-radius:30px;font-family:system-ui,-apple-system,sans-serif;font-size:13px;font-weight:600;box-shadow:0 10px 30px rgba(0,0,0,0.4);border:1px solid rgba(255,255,255,0.15);pointer-events:none;';
+    overlay.innerHTML = '⚡ Caspian Turbo-Loading 100% Messages into DOM... Please wait';
+    document.body.appendChild(overlay);
+
+    let printStyle = document.getElementById('caspian-native-print-styles');
+    if (!printStyle) {
+      printStyle = document.createElement('style');
+      printStyle.id = 'caspian-native-print-styles';
+      printStyle.innerHTML = `
+        @media print {
+          @page { margin: 1cm; size: auto; }
+          body, html, main, div, article {
+            overflow: visible !important;
+            height: auto !important;
+            max-height: none !important;
+            min-height: 0 !important;
+            position: static !important;
+          }
+          [data-testid^="conversation-turn"], article, main div.group {
+            display: block !important;
+            page-break-inside: avoid !important;
+            break-inside: avoid !important;
+            margin-bottom: 20px !important;
+          }
+          #caspian-native-header {
+            display: block !important;
+            margin-bottom: 20px !important;
+            padding-bottom: 10px !important;
+            border-bottom: 2px solid #e2e8f0 !important;
+            font-family: system-ui, -apple-system, sans-serif !important;
+            font-size: 12px !important;
+            color: #64748b !important;
+          }
+          #caspian-print-loader, nav, header, [data-testid="sidebar"] {
+            display: none !important;
+          }
+        }
+      `;
+      document.head.appendChild(printStyle);
+    }
+
+    let currentY = 0;
+    const viewportH = window.innerHeight || 800;
+    let maxScroll = 1;
+    scrollers.forEach(s => {
+      if (s.scrollHeight > maxScroll) maxScroll = s.scrollHeight;
+    });
+    maxScroll = Math.max(1, maxScroll - viewportH);
+
+    const step = 300;
+    let phase = 'down';
+
+    const scrollInterval = setInterval(() => {
+      if (phase === 'down') {
+        currentY += step;
+        if (currentY >= maxScroll + step) {
+          phase = 'up';
+          currentY = maxScroll;
+        }
+      } else if (phase === 'up') {
+        currentY -= step;
+        if (currentY <= 0) {
+          currentY = 0;
+          phase = 'print';
+        }
+      }
+
+      scrollers.forEach(s => {
+        s.scrollTop = currentY;
+        if (typeof s.scrollTo === 'function') s.scrollTo(0, currentY);
+        s.dispatchEvent(new Event('scroll', { bubbles: true }));
+      });
+      window.scrollTo(0, currentY);
+      window.dispatchEvent(new Event('scroll', { bubbles: true }));
+
+      const msgNodes = document.querySelectorAll('[data-testid^="conversation-turn"], article, main div.group');
+      msgNodes.forEach(m => m.style.setProperty('display', 'block', 'important'));
+
+      const progress = phase === 'down'
+        ? Math.min(50, Math.round((currentY / maxScroll) * 50))
+        : Math.min(100, 50 + Math.round(((maxScroll - currentY) / maxScroll) * 50));
+      overlay.innerHTML = `⚡ Turbo-Mounting DOM Messages (${progress}%)... [${msgNodes.length} Turns Loaded]`;
+
+      if (phase === 'print') {
+        clearInterval(scrollInterval);
+
+        const virtualHolders = document.querySelectorAll('main div[style*="height"], main div[style*="min-height"]');
+        virtualHolders.forEach(div => {
+          div.style.setProperty('height', 'auto', 'important');
+          div.style.setProperty('min-height', '0px', 'important');
+        });
+
+        const finalNodes = document.querySelectorAll('[data-testid^="conversation-turn"], article, main div.group');
+        finalNodes.forEach(m => m.style.setProperty('display', 'block', 'important'));
+
+        scrollers.forEach(s => { s.scrollTop = 0; });
+        window.scrollTo(0, 0);
+
+        overlay.innerHTML = `✨ 100% Loaded (${finalNodes.length} Messages Mounted)! Opening Print Dialog...`;
+
+        const dateText = new Date().toLocaleString();
+        let header = document.getElementById('caspian-native-header');
+        if (!header) {
+          header = document.createElement('div');
+          header.id = 'caspian-native-header';
+          header.innerHTML = `Full Conversation Transcript &bull; Exported via <a href="https://github.com/code4nigel/Caspian.git" target="_blank" style="color: #2563eb; text-decoration: underline; font-weight: 600;">Caspian</a> on ${dateText}`;
+          const main = document.querySelector('main') || document.body;
+          main.insertBefore(header, main.firstChild);
+        }
+
+        setTimeout(() => {
+          if (overlay) overlay.remove();
+          window.print();
+          setTimeout(() => {
+            if (header) header.remove();
+            applyTurbo();
+          }, 1500);
+          sendResponse({ success: true, count: finalNodes.length });
+        }, 500);
+      }
+    }, 25);
+
+    return true;
+  }
+});
+
+function checkAndRestoreTransferContext() {
+  chrome.storage.local.get('pendingTransferContext', (storageData) => {
+    const data = storageData.pendingTransferContext;
+    if (!data || !data.markdown) return;
+
+    chrome.storage.local.remove('pendingTransferContext');
+
+    const promptText = `This is the complete context from my previous temporary chat session. Please process this full context and continue our conversation seamlessly:\n\n--- START OF CONTEXT ---\n${data.markdown}\n--- END OF CONTEXT ---`;
+
+    let attempts = 0;
+    const maxAttempts = 30;
+
+    const fillPromptBox = setInterval(() => {
+      attempts++;
+      const promptEl = document.querySelector('#prompt-textarea') || document.querySelector('div[contenteditable="true"]');
+
+      if (promptEl) {
+        clearInterval(fillPromptBox);
+
+        promptEl.focus();
+
+        if (promptEl.tagName === 'TEXTAREA') {
+          promptEl.value = promptText;
+          promptEl.dispatchEvent(new Event('input', { bubbles: true }));
+        } else {
+          promptEl.innerText = promptText;
+          promptEl.dispatchEvent(new Event('input', { bubbles: true }));
+        }
+
+        const toast = document.createElement('div');
+        toast.style.cssText = `
+          position: fixed;
+          top: 20px;
+          left: 50%;
+          transform: translateX(-50%);
+          background: #0f172a;
+          color: #ffffff;
+          padding: 12px 24px;
+          border-radius: 30px;
+          font-family: system-ui, -apple-system, sans-serif;
+          font-size: 13.5px;
+          font-weight: 600;
+          z-index: 999999;
+          box-shadow: 0 10px 30px rgba(0,0,0,0.3);
+          border: 1px solid #334155;
+        `;
+        toast.innerHTML = `🚀 Caspian Context Restored! Press <b>Enter</b> to continue conversation.`;
+        document.body.appendChild(toast);
+
+        setTimeout(() => toast.remove(), 6000);
+      } else if (attempts >= maxAttempts) {
+        clearInterval(fillPromptBox);
+      }
+    }, 300);
+  });
+}
+
+if (document.readyState === 'complete' || document.readyState === 'interactive') {
+  checkAndRestoreTransferContext();
+} else {
+  window.addEventListener('DOMContentLoaded', checkAndRestoreTransferContext);
+}

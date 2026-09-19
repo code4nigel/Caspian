@@ -1,1 +1,3 @@
 graphify-out/graph.json merge=graphify
+*.sh text eol=lf
+

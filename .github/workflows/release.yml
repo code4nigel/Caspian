@@ -40,6 +40,16 @@ jobs:
             cp "versions/Caspian-Extension-v${EXT_VER}.zip" "./Caspian-Extension-v${EXT_VER}.zip"
           fi
 
+          # Dynamically detect and package Caspian Firefox Extension from manifest.json
+          if [ -d "caspian fox extension" ]; then
+            FOX_VER=$(node -p "try { require('./caspian fox extension/manifest.json').version } catch(e) { '6.3.0' }")
+            echo "Packaging Caspian Firefox Extension v${FOX_VER}..."
+            cd "caspian fox extension"
+            zip -r "../versions/Caspian-Fox-Extension-v${FOX_VER}.zip" ./* -x "*.git*"
+            cd ..
+            cp "versions/Caspian-Fox-Extension-v${FOX_VER}.zip" "./Caspian-Fox-Extension-v${FOX_VER}.zip"
+          fi
+
           # Standardize mobile naming for collision-free clarity
           if [ -f "versions/Caspian-v1.2.40.apk" ] && [ ! -f "versions/Caspian-Mobile-v1.2.40.apk" ]; then
             cp "versions/Caspian-v1.2.40.apk" "versions/Caspian-Mobile-v1.2.40.apk"
