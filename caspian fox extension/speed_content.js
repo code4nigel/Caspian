@@ -1,5 +1,7 @@
 // ==========================================================
 // CASPIAN - FLOW SPEED UNIVERSAL VIDEO/AUDIO SPEED ENGINE
+// Supports: YouTube, Reddit, Twitter/X, TikTok, Netflix,
+// Web Components & Shadow DOM Players, IFrames, Dynamic Feeds
 // ==========================================================
 
 (function () {
@@ -156,41 +158,109 @@
     }, 1400);
   }
 
-  // Apply speed to a specific media element
+  // ==========================================================
+  // SHADOW DOM PIERCING MEDIA DISCOVERY ENGINE
+  // ==========================================================
   const trackedMedia = new WeakSet();
-  function attachMediaListeners(media) {
-    if (!media || trackedMedia.has(media)) return;
-    trackedMedia.add(media);
+  const activeMediaList = new Set();
+  const rateEnforcingElements = new WeakSet();
 
-    const enforceSpeed = () => {
-      if (!config.enabled) return;
-      if (media.playbackRate !== config.speed) {
-        media.playbackRate = config.speed;
+  // Recursively search DOM and all open Shadow Roots for video/audio elements
+  function findAllMediaElements(root = document, seenRoots = new Set()) {
+    const results = [];
+    if (!root || seenRoots.has(root)) return results;
+    seenRoots.add(root);
+
+    try {
+      if (root.querySelectorAll) {
+        // 1. Direct media elements in this root
+        const media = root.querySelectorAll('video, audio');
+        for (let i = 0; i < media.length; i++) {
+          results.push(media[i]);
+        }
+
+        // 2. Discover all shadow hosts (like <shreddit-player> on Reddit)
+        const hosts = root.querySelectorAll('*');
+        for (let i = 0; i < hosts.length; i++) {
+          const host = hosts[i];
+          if (host.shadowRoot && !seenRoots.has(host.shadowRoot)) {
+            observeRoot(host.shadowRoot);
+            const shadowMedia = findAllMediaElements(host.shadowRoot, seenRoots);
+            for (let j = 0; j < shadowMedia.length; j++) {
+              results.push(shadowMedia[j]);
+            }
+          }
+        }
       }
-    };
+    } catch (e) {}
 
-    media.addEventListener('play', enforceSpeed);
-    media.addEventListener('playing', enforceSpeed);
-    media.addEventListener('ratechange', () => {
-      if (config.enabled && Math.abs(media.playbackRate - config.speed) > 0.01) {
-        media.playbackRate = config.speed;
+    return results;
+  }
+
+  // Safely enforce target speed without infinite event recursion
+  function enforceRate(media, targetRate) {
+    if (!media) return;
+    const rate = targetRate !== undefined ? targetRate : (config.enabled ? config.speed : 1.0);
+    if (Math.abs(media.playbackRate - rate) < 0.01) return;
+    if (rateEnforcingElements.has(media)) return;
+
+    try {
+      rateEnforcingElements.add(media);
+      media.playbackRate = rate;
+      if (media.defaultPlaybackRate !== undefined && config.enabled) {
+        media.defaultPlaybackRate = rate;
       }
-    });
-
-    if (config.enabled) {
-      media.playbackRate = config.speed;
+    } catch (e) {
+    } finally {
+      setTimeout(() => rateEnforcingElements.delete(media), 0);
     }
   }
 
-  // Apply target speed across all video/audio tags
+  // Register and bind listeners to a discovered media element
+  function registerAndEnforceMedia(media, targetRate) {
+    if (!media || !(media.tagName === 'VIDEO' || media.tagName === 'AUDIO')) return;
+    activeMediaList.add(media);
+
+    if (!trackedMedia.has(media)) {
+      trackedMedia.add(media);
+
+      const onEnforce = () => {
+        if (config.enabled) {
+          enforceRate(media, config.speed);
+        }
+      };
+
+      media.addEventListener('play', onEnforce, { passive: true });
+      media.addEventListener('playing', onEnforce, { passive: true });
+      media.addEventListener('loadedmetadata', onEnforce, { passive: true });
+      media.addEventListener('canplay', onEnforce, { passive: true });
+      media.addEventListener('seeked', onEnforce, { passive: true });
+      media.addEventListener('ratechange', () => {
+        if (config.enabled && Math.abs(media.playbackRate - config.speed) > 0.01) {
+          enforceRate(media, config.speed);
+        }
+      });
+    }
+
+    enforceRate(media, targetRate);
+  }
+
+  // Apply speed across all media (light DOM, shadow DOM, active set)
   function applySpeedToAllMedia(targetSpeed) {
-    const mediaElements = document.querySelectorAll('video, audio');
-    mediaElements.forEach(media => {
-      attachMediaListeners(media);
-      try {
-        media.playbackRate = targetSpeed;
-      } catch (e) {}
-    });
+    // 1. Update elements currently in our active tracker
+    for (const media of activeMediaList) {
+      if (!media.isConnected) {
+        activeMediaList.delete(media);
+        continue;
+      }
+      enforceRate(media, targetSpeed);
+    }
+
+    // 2. Perform deep shadow-piercing discovery scan
+    const allFound = findAllMediaElements(document);
+    for (let i = 0; i < allFound.length; i++) {
+      registerAndEnforceMedia(allFound[i], targetSpeed);
+    }
   }
 
   // Set new speed and sync with storage
@@ -228,6 +298,7 @@
     const tag = (target.tagName || '').toLowerCase();
     if (tag === 'input' || tag === 'textarea' || tag === 'select') return true;
     if (target.isContentEditable || target.getAttribute('contenteditable') === 'true') return true;
+    if (target.closest && target.closest('input, textarea, [contenteditable="true"]')) return true;
     return false;
   }
 
@@ -290,40 +361,87 @@
     }
   }, true);
 
-  // Monitor DOM for dynamically added video/audio elements
-  function observeMedia() {
-    applySpeedToAllMedia(config.enabled ? config.speed : 1.0);
+  // ==========================================================
+  // CAPTURE-PHASE EVENT LISTENER (PIERCES ANY SHADOW ROOT)
+  // When ANY video plays anywhere on the page, catch it immediately
+  // ==========================================================
+  ['play', 'playing', 'loadedmetadata', 'canplay', 'ratechange', 'seeked'].forEach(evt => {
+    window.addEventListener(evt, (e) => {
+      const target = (e.composedPath && e.composedPath()[0]) || e.target;
+      if (target && (target.tagName === 'VIDEO' || target.tagName === 'AUDIO')) {
+        registerAndEnforceMedia(target);
+      }
+    }, true);
+  });
 
-    const observer = new MutationObserver((mutations) => {
-      for (const mutation of mutations) {
-        for (const node of mutation.addedNodes) {
-          if (node.nodeType === 1) {
-            if (node.tagName === 'VIDEO' || node.tagName === 'AUDIO') {
-              attachMediaListeners(node);
-            } else if (node.querySelectorAll) {
-              const nested = node.querySelectorAll('video, audio');
-              nested.forEach(m => attachMediaListeners(m));
+  // Observe a DOM node or ShadowRoot for dynamic media insertions
+  const observedRoots = new WeakSet();
+  function observeRoot(root) {
+    if (!root || observedRoots.has(root)) return;
+    observedRoots.add(root);
+
+    try {
+      const observer = new MutationObserver((mutations) => {
+        for (let i = 0; i < mutations.length; i++) {
+          const added = mutations[i].addedNodes;
+          for (let j = 0; j < added.length; j++) {
+            const node = added[j];
+            if (node.nodeType === 1) {
+              if (node.tagName === 'VIDEO' || node.tagName === 'AUDIO') {
+                registerAndEnforceMedia(node);
+              }
+              if (node.shadowRoot) {
+                observeRoot(node.shadowRoot);
+                findAllMediaElements(node.shadowRoot).forEach(registerAndEnforceMedia);
+              }
+              if (node.querySelectorAll) {
+                const nested = node.querySelectorAll('video, audio');
+                for (let k = 0; k < nested.length; k++) {
+                  registerAndEnforceMedia(nested[k]);
+                }
+                const potentialHosts = node.querySelectorAll('*');
+                for (let k = 0; k < potentialHosts.length; k++) {
+                  if (potentialHosts[k].shadowRoot) {
+                    observeRoot(potentialHosts[k].shadowRoot);
+                    findAllMediaElements(potentialHosts[k].shadowRoot).forEach(registerAndEnforceMedia);
+                  }
+                }
+              }
             }
           }
         }
-      }
-    });
-
-    if (document.body) {
-      observer.observe(document.body, { childList: true, subtree: true });
-    } else {
-      window.addEventListener('DOMContentLoaded', () => {
-        observer.observe(document.body, { childList: true, subtree: true });
       });
+
+      observer.observe(root, { childList: true, subtree: true });
+    } catch (e) {}
+  }
+
+  // Regular periodic watchdog to keep playing videos locked to speed (handles Reddit virtual feeds)
+  setInterval(() => {
+    if (!config.enabled) return;
+    for (const media of activeMediaList) {
+      if (!media.isConnected) {
+        activeMediaList.delete(media);
+        continue;
+      }
+      if (!media.paused && Math.abs(media.playbackRate - config.speed) > 0.01) {
+        enforceRate(media, config.speed);
+      }
     }
+  }, 1200);
+
+  // Monitor DOM for dynamically added video/audio elements
+  function startEngine() {
+    applySpeedToAllMedia(config.enabled ? config.speed : 1.0);
+    observeRoot(document.body || document.documentElement);
   }
 
   // Initialize
   loadConfig(() => {
     if (document.readyState === 'complete' || document.readyState === 'interactive') {
-      observeMedia();
+      startEngine();
     } else {
-      window.addEventListener('DOMContentLoaded', observeMedia);
+      window.addEventListener('DOMContentLoaded', startEngine);
     }
   });
 

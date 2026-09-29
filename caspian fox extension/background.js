@@ -1,21 +1,27 @@
 // Dynamic Extension Icon Speed Badge Manager
 function updateSpeedBadge() {
+  if (!chrome.action || !chrome.action.setBadgeText) return;
   chrome.storage.local.get(['flow_speed_enabled', 'flow_speed_badge_enabled', 'flow_speed_val', 'accent'], (data) => {
+    if (!chrome.action || !chrome.action.setBadgeText) return;
     const enabled = data.flow_speed_enabled ?? true;
     const badgeEnabled = data.flow_speed_badge_enabled ?? true;
     const speed = parseFloat(data.flow_speed_val) || 1.0;
 
     if (!enabled || !badgeEnabled) {
-      chrome.action.setBadgeText({ text: '' });
+      try { chrome.action.setBadgeText({ text: '' }); } catch (e) {}
       return;
     }
 
     const badgeText = speed % 1 === 0 ? `${speed.toFixed(1)}` : `${parseFloat(speed.toFixed(2))}`;
-    chrome.action.setBadgeText({ text: badgeText });
-    chrome.action.setBadgeBackgroundColor({ color: '#0284c7' });
-    if (chrome.action.setBadgeTextColor) {
-      chrome.action.setBadgeTextColor({ color: '#ffffff' });
-    }
+    try {
+      chrome.action.setBadgeText({ text: badgeText });
+      if (chrome.action.setBadgeBackgroundColor) {
+        chrome.action.setBadgeBackgroundColor({ color: '#0284c7' });
+      }
+      if (chrome.action.setBadgeTextColor) {
+        chrome.action.setBadgeTextColor({ color: '#ffffff' });
+      }
+    } catch (e) {}
   });
 }
 
@@ -30,34 +36,36 @@ chrome.storage.onChanged.addListener((changes, area) => {
   }
 });
 
-chrome.commands.onCommand.addListener((command) => {
-  if (command === "toggle-feature") {
-    chrome.storage.local.get(['pruningEnabled', 'vaultEnabled', 'enabled', 'yt_feed_limit_enabled', 'flow_speed_enabled', 'rf_enabled'], (data) => {
-      const isCurrentlyOn = (data.pruningEnabled ?? true) || 
-                            (data.vaultEnabled ?? true) || 
-                            (data.yt_feed_limit_enabled ?? true) || 
-                            (data.flow_speed_enabled ?? true) || 
-                            (data.rf_enabled ?? true);
-      const next = !isCurrentlyOn;
-      chrome.storage.local.set({
-        pruningEnabled: next,
-        vaultEnabled: next,
-        enabled: next,
-        yt_feed_limit_enabled: next,
-        flow_speed_enabled: next,
-        rf_enabled: next
+if (chrome.commands && chrome.commands.onCommand && chrome.commands.onCommand.addListener) {
+  chrome.commands.onCommand.addListener((command) => {
+    if (command === "toggle-feature") {
+      chrome.storage.local.get(['pruningEnabled', 'vaultEnabled', 'enabled', 'yt_feed_limit_enabled', 'flow_speed_enabled', 'rf_enabled'], (data) => {
+        const isCurrentlyOn = (data.pruningEnabled ?? true) || 
+                              (data.vaultEnabled ?? true) || 
+                              (data.yt_feed_limit_enabled ?? true) || 
+                              (data.flow_speed_enabled ?? true) || 
+                              (data.rf_enabled ?? true);
+        const next = !isCurrentlyOn;
+        chrome.storage.local.set({
+          pruningEnabled: next,
+          vaultEnabled: next,
+          enabled: next,
+          yt_feed_limit_enabled: next,
+          flow_speed_enabled: next,
+          rf_enabled: next
+        });
       });
-    });
-  }
-  if (command === "reset-colors") {
-    chrome.storage.local.set({
-      mode: 'light',
-      accent: '#A2A9A9',
-      secondary: '#1B4264',
-      limit: 5
-    });
-  }
-});
+    }
+    if (command === "reset-colors") {
+      chrome.storage.local.set({
+        mode: 'light',
+        accent: '#A2A9A9',
+        secondary: '#1B4264',
+        limit: 5
+      });
+    }
+  });
+}
 
 // IndexedDB Storage Helper for High-Res PNG Blobs
 function saveCaptureToDB(captureData) {
@@ -172,8 +180,14 @@ async function performRippleFrameCapture(tabId, options = {}) {
         console.log(`[RippleFrame Background] Step ${sliceIndex + 1}: Scrolling to target Y = ${targetY}px (y = ${y}, totalHeight = ${totalHeight}px)`);
 
         const progressPct = Math.min(99, Math.round(((sliceIndex + 1) / Math.max(1, Math.ceil(totalHeight / viewportHeight))) * 100));
-        chrome.action.setBadgeText({ text: `${progressPct}%` });
-        chrome.action.setBadgeBackgroundColor({ color: '#0284c7' });
+        if (chrome.action && chrome.action.setBadgeText) {
+          try {
+            chrome.action.setBadgeText({ text: `${progressPct}%` });
+            if (chrome.action.setBadgeBackgroundColor) {
+              chrome.action.setBadgeBackgroundColor({ color: '#0284c7' });
+            }
+          } catch (e) {}
+        }
 
         const scrollRes = await new Promise((resolve) => {
           chrome.tabs.sendMessage(tabId, {

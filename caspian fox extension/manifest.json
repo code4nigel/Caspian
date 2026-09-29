@@ -1,12 +1,18 @@
 {
   "manifest_version": 3,
   "name": "Caspian - AI Chat Pruner & Speed Suite",
-  "version": "6.3.0",
+  "version": "6.3.1",
   "description": "Firefox Browser Extension to fix AI chat lag via DOM pruning, convert temporary chats to permanent history, universal media speed engine, YouTube home feed cleaner, and full-page annotation studio.",
   "browser_specific_settings": {
     "gecko": {
       "id": "caspian-fox@extension",
-      "strict_min_version": "109.0"
+      "strict_min_version": "109.0",
+      "data_collection_permissions": {
+        "required": ["none"]
+      }
+    },
+    "gecko_android": {
+      "strict_min_version": "120.0"
     }
   },
   "permissions": [
@@ -63,6 +69,7 @@
       "matches": ["<all_urls>"],
       "js": ["speed_content.js"],
       "all_frames": true,
+      "match_about_blank": true,
       "run_at": "document_start"
     }
   ],

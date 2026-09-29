@@ -1,6 +1,18 @@
 # Caspian: AI Chat Pruner, Universal Media Speed Engine & Productivity Suite
 
-Caspian is a lightweight, privacy-focused productivity tool available as desktop extensions (for Chromium and Mozilla Firefox) and native Android companion applications (Caspian Flow & Caspian Mobile).
+<p align="left">
+  <a href="https://addons.mozilla.org/en-US/firefox/addon/caspian-fox-extension/">
+    <img src="https://img.shields.io/badge/Firefox_Add--ons-Install_Caspian-orange?style=for-the-badge&logo=firefox-browser&logoColor=white" alt="Install on Firefox Add-ons" />
+  </a>
+  <a href="https://github.com/code4nigel/Caspian/releases">
+    <img src="https://img.shields.io/github/v/release/code4nigel/Caspian?style=for-the-badge&color=0284c7" alt="GitHub Release" />
+  </a>
+  <a href="LICENSE">
+    <img src="https://img.shields.io/badge/License-GPLv3-blue.svg?style=for-the-badge" alt="License: GPL v3" />
+  </a>
+</p>
+
+Caspian is a lightweight, privacy-focused productivity tool available on **[Mozilla Firefox Add-ons (AMO)](https://addons.mozilla.org/en-US/firefox/addon/caspian-fox-extension/)**, unpackaged for Chromium browsers, and as native Android companion applications (Caspian Flow & Caspian Mobile).
 
 It addresses everyday web performance and workflow friction: eliminating typing lag in long AI conversations via real-time DOM pruning, providing universal playback speed control across all media sites, cleaning up your YouTube homepage with quick feed limits and 1-click "Not interested" actions, converting temporary chats to permanent history, and exporting conversation transcripts to clean, publication-ready formats.
 
@@ -10,9 +22,54 @@ It addresses everyday web performance and workflow friction: eliminating typing 
 
 | Desktop Extensions (Chromium & Firefox) | Caspian Flow / Mobile (Android) | Automatic Updates (Obtainium) |
 | :--- | :--- | :--- |
-| Chromium (V6.3.0) & Firefox (V6.3.0 MV3) | Floating Action Pod & Bottom Sheet UI | One-click app updates via GitHub Releases |
-| ChatGPT, Google Gemini, YouTube, Media | Omnibox Multi-Tab Browser & AI Docks | Import configuration file included in repo |
-| DOM Pruner, Flow Speed, RippleFrame, Exporters | Zero-Lag DOM Pruning & Video Remote | Background update notifications & installs |
+| **[Official Firefox Add-on (AMO)](https://addons.mozilla.org/en-US/firefox/addon/caspian-fox-extension/)** | Floating Action Pod & Bottom Sheet UI | One-click app updates via GitHub Releases |
+| Chromium (V6.3.0) & Firefox (V6.3.1 MV3) | Omnibox Multi-Tab Browser & AI Docks | Import configuration file included in repo |
+| ChatGPT, Google Gemini, YouTube, Media | Zero-Lag DOM Pruning & Video Remote | Background update notifications & installs |
+| DOM Pruner, Flow Speed, RippleFrame, Exporters | Multi-Account Containers (Casks) | Automated install & update pipeline |
+
+---
+
+## 🦊 Official Firefox Add-on (Now Live!)
+
+Caspian is now officially published and available on **[Mozilla Firefox Add-ons (AMO)](https://addons.mozilla.org/en-US/firefox/addon/caspian-fox-extension/)**! Install it directly into your browser with one click to get automated updates, full privacy protection, and zero configuration.
+
+<p align="center">
+  <a href="https://addons.mozilla.org/en-US/firefox/addon/caspian-fox-extension/">
+    <img src="https://img.shields.io/badge/🦊_Install_Caspian_on_Firefox_Add--ons-Click_Here_to_Install-orange?style=for-the-badge&logo=firefox-browser&logoColor=white" height="42" alt="Install on Firefox Add-ons" />
+  </a>
+</p>
+
+### Visual Feature Demonstration
+
+<p align="center">
+  <a href="https://addons.mozilla.org/en-US/firefox/addon/caspian-fox-extension/">
+    <img src="Images/AMO_Showcase/1_ai_chat_pruner.png" width="95%" alt="Zero Typing Lag on AI Chats (ChatGPT & Gemini)" />
+  </a>
+</p>
+
+<p align="center">
+  <a href="https://addons.mozilla.org/en-US/firefox/addon/caspian-fox-extension/">
+    <img src="Images/AMO_Showcase/2_universal_flow_speed.png" width="95%" alt="Universal Flow Speed Engine on YouTube, Reddit & All Media" />
+  </a>
+</p>
+
+<p align="center">
+  <a href="https://addons.mozilla.org/en-US/firefox/addon/caspian-fox-extension/">
+    <img src="Images/AMO_Showcase/3_youtube_feed_cleaner.png" width="95%" alt="YouTube Minimalist Feed & Distraction Blocker" />
+  </a>
+</p>
+
+<p align="center">
+  <a href="https://addons.mozilla.org/en-US/firefox/addon/caspian-fox-extension/">
+    <img src="Images/AMO_Showcase/4_rippleframe_and_vault.png" width="95%" alt="RippleFrame Full-Page Screenshot & Chat Vault Studio" />
+  </a>
+</p>
+
+<p align="center">
+  <a href="https://addons.mozilla.org/en-US/firefox/addon/caspian-fox-extension/">
+    <img src="Images/AMO_Showcase/5_modern_adaptive_ui.png" width="95%" alt="Glassmorphic Dark and Light Themes" />
+  </a>
+</p>
 
 ---
 
@@ -109,14 +166,21 @@ Easily backup all your theme accents, chat limits, YouTube preferences, and Flow
 6. Pin Caspian to your toolbar for quick access.
 
 #### For Mozilla Firefox
-1. Download the latest release archive (`Caspian-Fox-Extension-v6.3.0.zip`) from the [GitHub Releases Page](https://github.com/code4nigel/Caspian/releases) (or locate the `caspian fox extension` folder in the repository).
+
+##### Method 1: Official Add-ons Store (Recommended)
+Install Caspian with automatic background updates directly from the official Mozilla Add-ons repository:
+
+👉 **[Install Caspian on Firefox Add-ons (AMO)](https://addons.mozilla.org/en-US/firefox/addon/caspian-fox-extension/)**
+
+##### Method 2: Sideload / Developer Installation
+1. Download the latest release archive (`Caspian-Fox-Extension-v6.3.1.zip`) from the [GitHub Releases Page](https://github.com/code4nigel/Caspian/releases) (or locate the `caspian fox extension` folder in the repository).
 2. Unzip the downloaded file (if needed).
 3. Open Firefox and navigate to:
    ```
    about:debugging#/runtime/this-firefox
    ```
 4. Click **Load Temporary Add-on...**
-5. Select `manifest.json` inside the unzipped `caspian fox extension` folder (or select `Caspian-Fox-Extension-v6.3.0.zip`).
+5. Select `manifest.json` inside the `caspian fox extension` folder (or select `Caspian-Fox-Extension-v6.3.1.zip`).
 6. Pin Caspian to your Firefox toolbar for quick access.
 
 ---

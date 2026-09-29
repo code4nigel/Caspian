@@ -1,8 +1,20 @@
 # Caspian for Firefox (Mozilla Firefox Browser Extension)
 
-Caspian is a lightweight, privacy-focused productivity suite ported specifically for Mozilla Firefox (Manifest V3).
+<p align="left">
+  <a href="https://addons.mozilla.org/en-US/firefox/addon/caspian-fox-extension/">
+    <img src="https://img.shields.io/badge/Firefox_Add--ons-Install_Caspian-orange?style=for-the-badge&logo=firefox-browser&logoColor=white" alt="Install on Firefox Add-ons" />
+  </a>
+  <a href="https://github.com/code4nigel/Caspian/releases">
+    <img src="https://img.shields.io/github/v/release/code4nigel/Caspian?style=for-the-badge&color=0284c7" alt="GitHub Release" />
+  </a>
+</p>
 
-It eliminates typing lag in long AI conversations via real-time DOM pruning, provides universal playback speed control across all media sites, cleans up your YouTube homepage with feed limits and 1-click "Not interested" actions, converts temporary chats to permanent history, and provides the RippleFrame full-page scrolling screenshot and annotation studio.
+> **Now live on Firefox Add-ons!** You can install Caspian directly from the official store:  
+> 👉 **[addons.mozilla.org/en-US/firefox/addon/caspian-fox-extension/](https://addons.mozilla.org/en-US/firefox/addon/caspian-fox-extension/)**
+
+Caspian is a lightweight, privacy-focused productivity suite built specifically for Mozilla Firefox (Manifest V3) with support for both Firefox Desktop and Firefox for Android.
+
+It eliminates typing lag in long AI conversations via real-time DOM pruning, provides universal playback speed control across all media sites (including Reddit, YouTube, and Shadow DOM players), cleans up your YouTube homepage with feed limits and 1-click "Not interested" actions, converts temporary chats to permanent history, and provides the RippleFrame full-page scrolling screenshot and annotation studio.
 
 ---
 
@@ -36,9 +48,14 @@ It eliminates typing lag in long AI conversations via real-time DOM pruning, pro
 
 ---
 
-## How to Install and Test in Firefox
+## How to Install in Firefox
 
-### Option A: Load as Temporary Add-on (Development & Immediate Testing)
+### Option 1: Official Mozilla Add-ons Store (Recommended)
+
+Install directly with 1-click and automatic background updates:
+👉 **[Install Caspian on Firefox Add-ons (AMO)](https://addons.mozilla.org/en-US/firefox/addon/caspian-fox-extension/)**
+
+### Option 2: Load as Temporary Add-on (Development & Immediate Testing)
 
 1. Open **Mozilla Firefox**.
 2. In the address bar, type `about:debugging#/runtime/this-firefox` and press <kbd>Enter</kbd>.
@@ -50,13 +67,13 @@ It eliminates typing lag in long AI conversations via real-time DOM pruning, pro
 5. Select the `manifest.json` file and click **Open**.
 6. The Caspian extension icon will now appear in your Firefox toolbar!
 
-### Option B: Build a Zip / XPI Archive
+### Option 3: Build a Zip / XPI Archive
 
 You can package the extension directory into a `.zip` or `.xpi` file for distribution or signing on addons.mozilla.org (AMO):
 
 Using PowerShell:
 ```powershell
-Compress-Archive -Path "d:\Projects\Chatgpt Pruner\caspian fox extension\*" -DestinationPath "d:\Projects\Chatgpt Pruner\Caspian-Fox-Extension-v6.3.0.zip" -Force
+Compress-Archive -Path "d:\Projects\Chatgpt Pruner\caspian fox extension\*" -DestinationPath "d:\Projects\Chatgpt Pruner\Caspian-Fox-Extension-v6.3.1.zip" -Force
 ```
 
 ---
