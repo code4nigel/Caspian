@@ -1,7 +1,7 @@
 # Graph Report - Chatgpt Pruner  (2026-10-18)
 
 ## Corpus Check
-- 131 files · ~664,969 words
+- 131 files · ~665,009 words
 - Verdict: corpus is large enough that graph structure adds value.
 
 ## Summary
@@ -10,7 +10,7 @@
 - Token cost: 0 input · 0 output
 
 ## Graph Freshness
-- Built from commit: `6e914250`
+- Built from commit: `f7d514c0`
 - Run `git rev-parse HEAD` and compare to check if the graph is stale.
 - Run `graphify update .` after code changes (no API cost).
 

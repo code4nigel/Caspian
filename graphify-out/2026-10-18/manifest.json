@@ -336,9 +336,9 @@
     "semantic_hash": ""
   },
   "betaC/app/src/main/assets/browser_control.js": {
-    "mtime": 1789644352.908052,
-    "seen": 1789644542.439722,
-    "ast_hash": "ab349d3cbeee0b7c0fb643db4d489c95",
+    "mtime": 1792307212.6317518,
+    "seen": 1792307465.506459,
+    "ast_hash": "67662235811e7193925df50be1e70d94",
     "semantic_hash": ""
   },
   "betaC/app/src/main/assets/chatgpt_network_interceptor.js": {
@@ -450,9 +450,9 @@
     "semantic_hash": ""
   },
   "betaC/app/src/main/java/com/caspian/betac/MainActivity.java": {
-    "mtime": 1789666790.531726,
-    "seen": 1789666964.5868642,
-    "ast_hash": "3d8cdba56e0fcbb675f629aa341daab4",
+    "mtime": 1792307309.1619205,
+    "seen": 1792307465.5065227,
+    "ast_hash": "b80d12eed832ed04d2a76e0a091e19ae",
     "semantic_hash": ""
   },
   "betaC/app/src/main/java/com/caspian/betac/SearchSuggestionService.java": {

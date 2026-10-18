@@ -20540,9 +20540,17 @@ public class MainActivity extends AppCompatActivity {
                     String jobName = (currentTab.title != null && !currentTab.title.trim().isEmpty())
                             ? currentTab.title
                             : "Caspian Document";
+
+                    PrintAttributes.Builder attrBuilder = new PrintAttributes.Builder();
+                    attrBuilder.setMediaSize(PrintAttributes.MediaSize.ISO_A4);
+                    attrBuilder.setColorMode(PrintAttributes.COLOR_MODE_COLOR);
+                    attrBuilder.setResolution(new PrintAttributes.Resolution("pdf", "pdf", 300, 300));
+                    attrBuilder.setMinMargins(PrintAttributes.Margins.NO_MARGINS);
+                    PrintAttributes printAttributes = attrBuilder.build();
+
                     PrintDocumentAdapter printAdapter = currentTab.webView.createPrintDocumentAdapter(jobName);
                     if (printManager != null) {
-                        printManager.print(jobName, printAdapter, new PrintAttributes.Builder().build());
+                        printManager.print(jobName, printAdapter, printAttributes);
                     }
                 } else {
                     Toast.makeText(this, "No active page to print", Toast.LENGTH_SHORT).show();
@@ -21339,8 +21347,16 @@ public class MainActivity extends AppCompatActivity {
                             String safeJobName = (jobName != null && !jobName.trim().isEmpty())
                                     ? jobName
                                     : "Caspian_AI_Document";
+
+                            PrintAttributes.Builder attrBuilder = new PrintAttributes.Builder();
+                            attrBuilder.setMediaSize(PrintAttributes.MediaSize.ISO_A4);
+                            attrBuilder.setColorMode(PrintAttributes.COLOR_MODE_COLOR);
+                            attrBuilder.setResolution(new PrintAttributes.Resolution("pdf", "pdf", 300, 300));
+                            attrBuilder.setMinMargins(PrintAttributes.Margins.NO_MARGINS);
+                            PrintAttributes printAttributes = attrBuilder.build();
+
                             PrintDocumentAdapter printAdapter = view.createPrintDocumentAdapter(safeJobName);
-                            printManager.print(safeJobName, printAdapter, new PrintAttributes.Builder().build());
+                            printManager.print(safeJobName, printAdapter, printAttributes);
                         }
                     }
                 });
