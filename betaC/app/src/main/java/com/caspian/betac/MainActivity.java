@@ -896,9 +896,6 @@ public class MainActivity extends AppCompatActivity {
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.LOLLIPOP) {
-            try { WebView.enableSlowWholeDocumentDraw(); } catch (Throwable ignored) {}
-        }
         super.onCreate(savedInstanceState);
 
         try {
@@ -20619,151 +20616,306 @@ public class MainActivity extends AppCompatActivity {
 
             LinearLayout root = new LinearLayout(this);
             root.setOrientation(LinearLayout.VERTICAL);
-            root.setPadding(dpToPx(20), dpToPx(14), dpToPx(20), dpToPx(24));
+            root.setPadding(dpToPx(20), dpToPx(12), dpToPx(20), dpToPx(24));
 
             GradientDrawable rootBg = new GradientDrawable();
             rootBg.setColor(!isDarkTheme ? 0xFFFFFFFF : 0xFF0D1117);
             rootBg.setCornerRadii(new float[]{dpToPx(24), dpToPx(24), dpToPx(24), dpToPx(24), 0, 0, 0, 0});
             root.setBackground(rootBg);
 
+            // Drag handle
             View handle = new View(this);
-            LinearLayout.LayoutParams hLp = new LinearLayout.LayoutParams(dpToPx(44), dpToPx(5));
+            LinearLayout.LayoutParams hLp = new LinearLayout.LayoutParams(dpToPx(38), dpToPx(4));
             hLp.gravity = Gravity.CENTER_HORIZONTAL;
             hLp.bottomMargin = dpToPx(14);
             handle.setLayoutParams(hLp);
             GradientDrawable hBg = new GradientDrawable();
             hBg.setColor(!isDarkTheme ? 0xFFCBD5E1 : 0xFF30363D);
-            hBg.setCornerRadius(dpToPx(3));
+            hBg.setCornerRadius(dpToPx(2));
             handle.setBackground(hBg);
             root.addView(handle);
 
+            // Header title & subtitle
             TextView title = new TextView(this);
-            title.setText("Export Document");
-            title.setTextSize(TypedValue.COMPLEX_UNIT_SP, 17f);
+            title.setText("Export Conversation");
+            title.setTextSize(TypedValue.COMPLEX_UNIT_SP, 18f);
             title.setTypeface(Typeface.DEFAULT_BOLD);
-            title.setTextColor(!isDarkTheme ? 0xFF0F172A : 0xFFDFE2F0);
-            title.setPadding(dpToPx(2), 0, dpToPx(2), dpToPx(4));
+            title.setTextColor(!isDarkTheme ? 0xFF0F172A : 0xFFF1F5F9);
+            title.setPadding(0, 0, 0, dpToPx(2));
             root.addView(title);
 
             TextView subtitle = new TextView(this);
-            subtitle.setText("Export rich formatted document with KaTeX, code snippets & tables");
-            subtitle.setTextSize(TypedValue.COMPLEX_UNIT_SP, 11.5f);
-            subtitle.setTextColor(!isDarkTheme ? 0xFF64748B : 0xFF94A3B8);
-            subtitle.setPadding(dpToPx(2), 0, dpToPx(2), dpToPx(16));
+            subtitle.setText("Select format, message scope, and save options");
+            subtitle.setTextSize(TypedValue.COMPLEX_UNIT_SP, 12f);
+            subtitle.setTextColor(!isDarkTheme ? 0xFF64748B : 0xFF8B949E);
+            subtitle.setPadding(0, 0, 0, dpToPx(16));
             root.addView(subtitle);
 
+            // 1. CONVERSATION SCOPE
             TextView scopeLabel = new TextView(this);
-            scopeLabel.setText("MESSAGE SCOPE");
+            scopeLabel.setText("CONVERSATION SCOPE");
             scopeLabel.setTextSize(TypedValue.COMPLEX_UNIT_SP, 10.5f);
             scopeLabel.setTypeface(Typeface.DEFAULT_BOLD);
-            scopeLabel.setTextColor(!isDarkTheme ? 0xFF475569 : 0xFF94A3B8);
-            scopeLabel.setPadding(dpToPx(2), dpToPx(4), dpToPx(2), dpToPx(6));
+            scopeLabel.setTextColor(!isDarkTheme ? 0xFF475569 : 0xFF8B949E);
+            scopeLabel.setLetterSpacing(0.05f);
+            scopeLabel.setPadding(0, 0, 0, dpToPx(6));
             root.addView(scopeLabel);
 
             final String[] selectedScope = new String[]{"both"};
-            LinearLayout scopeRow = new LinearLayout(this);
-            scopeRow.setOrientation(LinearLayout.HORIZONTAL);
-            LinearLayout.LayoutParams scopeLp = new LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT);
-            scopeLp.bottomMargin = dpToPx(16);
-            scopeRow.setLayoutParams(scopeLp);
+            LinearLayout scopeContainer = new LinearLayout(this);
+            scopeContainer.setOrientation(LinearLayout.HORIZONTAL);
+            scopeContainer.setPadding(dpToPx(4), dpToPx(4), dpToPx(4), dpToPx(4));
+            GradientDrawable scBg = new GradientDrawable();
+            scBg.setColor(!isDarkTheme ? 0xFFF1F5F9 : 0xFF161B22);
+            scBg.setCornerRadius(dpToPx(12));
+            scopeContainer.setBackground(scBg);
+            LinearLayout.LayoutParams scLp = new LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT);
+            scLp.bottomMargin = dpToPx(16);
+            scopeContainer.setLayoutParams(scLp);
 
             class ScopeOpt {
                 String id, label;
                 ScopeOpt(String id, String label) { this.id = id; this.label = label; }
             }
             List<ScopeOpt> scopeOpts = Arrays.asList(
-                    new ScopeOpt("both", "💬 Full Chat"),
-                    new ScopeOpt("ai_only", "🤖 AI Only"),
-                    new ScopeOpt("user_only", "👤 User Only")
+                    new ScopeOpt("both", "Full Chat"),
+                    new ScopeOpt("ai_only", "AI Only"),
+                    new ScopeOpt("user_only", "User Only")
             );
 
             List<TextView> scopePills = new ArrayList<>();
             for (ScopeOpt sOpt : scopeOpts) {
                 TextView pill = new TextView(this);
                 pill.setText(sOpt.label);
-                pill.setTextSize(TypedValue.COMPLEX_UNIT_SP, 11.5f);
+                pill.setTextSize(TypedValue.COMPLEX_UNIT_SP, 12f);
                 pill.setGravity(Gravity.CENTER);
-                pill.setPadding(dpToPx(12), dpToPx(8), dpToPx(12), dpToPx(8));
+                pill.setPadding(dpToPx(8), dpToPx(7), dpToPx(8), dpToPx(7));
                 LinearLayout.LayoutParams pLp = new LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.WRAP_CONTENT, 1f);
-                pLp.rightMargin = dpToPx(6);
                 pill.setLayoutParams(pLp);
-                updateSegmentPill(pill, sOpt.id.equals(selectedScope[0]), isDarkTheme);
+
                 pill.setOnClickListener(v -> {
                     selectedScope[0] = sOpt.id;
                     playUiFeedbackSound("tap");
                     for (int k = 0; k < scopePills.size(); k++) {
-                        updateSegmentPill(scopePills.get(k), scopeOpts.get(k).id.equals(selectedScope[0]), isDarkTheme);
+                        boolean sel = scopeOpts.get(k).id.equals(selectedScope[0]);
+                        GradientDrawable pBg = new GradientDrawable();
+                        pBg.setCornerRadius(dpToPx(9));
+                        if (sel) {
+                            pBg.setColor(!isDarkTheme ? 0xFFFFFFFF : 0xFF21262D);
+                            scopePills.get(k).setTextColor(!isDarkTheme ? 0xFF0F172A : 0xFFF1F5F9);
+                            scopePills.get(k).setTypeface(Typeface.DEFAULT_BOLD);
+                            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.LOLLIPOP) {
+                                scopePills.get(k).setElevation(dpToPx(1));
+                            }
+                        } else {
+                            pBg.setColor(0x00000000);
+                            scopePills.get(k).setTextColor(!isDarkTheme ? 0xFF64748B : 0xFF8B949E);
+                            scopePills.get(k).setTypeface(Typeface.DEFAULT);
+                            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.LOLLIPOP) {
+                                scopePills.get(k).setElevation(0);
+                            }
+                        }
+                        scopePills.get(k).setBackground(pBg);
                     }
                 });
-                scopePills.add(pill);
-                scopeRow.addView(pill);
-            }
-            root.addView(scopeRow);
 
+                boolean isSel = sOpt.id.equals(selectedScope[0]);
+                GradientDrawable pBg = new GradientDrawable();
+                pBg.setCornerRadius(dpToPx(9));
+                if (isSel) {
+                    pBg.setColor(!isDarkTheme ? 0xFFFFFFFF : 0xFF21262D);
+                    pill.setTextColor(!isDarkTheme ? 0xFF0F172A : 0xFFF1F5F9);
+                    pill.setTypeface(Typeface.DEFAULT_BOLD);
+                    if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.LOLLIPOP) pill.setElevation(dpToPx(1));
+                } else {
+                    pBg.setColor(0x00000000);
+                    pill.setTextColor(!isDarkTheme ? 0xFF64748B : 0xFF8B949E);
+                    pill.setTypeface(Typeface.DEFAULT);
+                    if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.LOLLIPOP) pill.setElevation(0);
+                }
+                pill.setBackground(pBg);
+
+                scopePills.add(pill);
+                scopeContainer.addView(pill);
+            }
+            root.addView(scopeContainer);
+
+            // 2. EXPORT FORMAT (2x2 Grid)
             TextView fmtLabel = new TextView(this);
             fmtLabel.setText("EXPORT FORMAT");
             fmtLabel.setTextSize(TypedValue.COMPLEX_UNIT_SP, 10.5f);
             fmtLabel.setTypeface(Typeface.DEFAULT_BOLD);
-            fmtLabel.setTextColor(!isDarkTheme ? 0xFF475569 : 0xFF94A3B8);
-            fmtLabel.setPadding(dpToPx(2), dpToPx(4), dpToPx(2), dpToPx(6));
+            fmtLabel.setTextColor(!isDarkTheme ? 0xFF475569 : 0xFF8B949E);
+            fmtLabel.setLetterSpacing(0.05f);
+            fmtLabel.setPadding(0, 0, 0, dpToPx(6));
             root.addView(fmtLabel);
 
             String initialFmt = (defaultFormat != null && !defaultFormat.isEmpty()) ? defaultFormat : "styledpdf";
             if ("pdf".equalsIgnoreCase(initialFmt) || "nativepdf".equalsIgnoreCase(initialFmt)) initialFmt = "styledpdf";
             final String[] selectedFmt = new String[]{ initialFmt };
 
-            HorizontalScrollView fmtScroll = new HorizontalScrollView(this);
-            fmtScroll.setHorizontalScrollBarEnabled(false);
-            LinearLayout.LayoutParams fsLp = new LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT);
-            fsLp.bottomMargin = dpToPx(16);
-            fmtScroll.setLayoutParams(fsLp);
+            class FormatOption {
+                String id, title, subtitle, badgeText, extension;
+                int badgeColorLight, badgeColorDark;
+                LinearLayout cardView;
+                TextView titleView, subView, badgeView;
 
-            LinearLayout fmtRow = new LinearLayout(this);
-            fmtRow.setOrientation(LinearLayout.HORIZONTAL);
-
-            class FmtOpt {
-                String id, label;
-                FmtOpt(String id, String label) { this.id = id; this.label = label; }
+                FormatOption(String id, String title, String subtitle, String badgeText, String extension, int badgeColorLight, int badgeColorDark) {
+                    this.id = id;
+                    this.title = title;
+                    this.subtitle = subtitle;
+                    this.badgeText = badgeText;
+                    this.extension = extension;
+                    this.badgeColorLight = badgeColorLight;
+                    this.badgeColorDark = badgeColorDark;
+                }
             }
-            List<FmtOpt> fmtOpts = Arrays.asList(
-                    new FmtOpt("styledpdf", "📄 PDF (Rich Sliced)"),
-                    new FmtOpt("md", "📝 Markdown (.md)"),
-                    new FmtOpt("txt", "📄 Plain Text (.txt)"),
-                    new FmtOpt("doc", "📑 Word (.doc)"),
-                    new FmtOpt("convert", "🤖 Port to AI")
+
+            final List<FormatOption> formatOptions = Arrays.asList(
+                    new FormatOption("styledpdf", "PDF Document", "Vector, code & math", "PDF", ".pdf", 0xFFE11D48, 0xFFF43F5E),
+                    new FormatOption("md", "Markdown", "Standard .md format", "MD", ".md", 0xFF4F46E5, 0xFF6366F1),
+                    new FormatOption("txt", "Plain Text", "Simple transcript", "TXT", ".txt", 0xFF0284C7, 0xFF38BDF8),
+                    new FormatOption("doc", "Word Doc", "Formatted HTML doc", "DOC", ".doc", 0xFF0D9488, 0xFF14B8A6)
             );
 
-            List<TextView> fmtPills = new ArrayList<>();
-            for (FmtOpt fOpt : fmtOpts) {
-                TextView pill = new TextView(this);
-                pill.setText(fOpt.label);
-                pill.setTextSize(TypedValue.COMPLEX_UNIT_SP, 11.5f);
-                pill.setGravity(Gravity.CENTER);
-                pill.setPadding(dpToPx(14), dpToPx(8), dpToPx(14), dpToPx(8));
-                LinearLayout.LayoutParams pLp = new LinearLayout.LayoutParams(ViewGroup.LayoutParams.WRAP_CONTENT, ViewGroup.LayoutParams.WRAP_CONTENT);
-                pLp.rightMargin = dpToPx(8);
-                pill.setLayoutParams(pLp);
-                updateSegmentPill(pill, fOpt.id.equalsIgnoreCase(selectedFmt[0]), isDarkTheme);
-                pill.setOnClickListener(v -> {
-                    selectedFmt[0] = fOpt.id;
-                    playUiFeedbackSound("tap");
-                    for (int k = 0; k < fmtPills.size(); k++) {
-                        updateSegmentPill(fmtPills.get(k), fmtOpts.get(k).id.equalsIgnoreCase(selectedFmt[0]), isDarkTheme);
-                    }
-                });
-                fmtPills.add(pill);
-                fmtRow.addView(pill);
-            }
-            fmtScroll.addView(fmtRow);
-            root.addView(fmtScroll);
+            LinearLayout gridContainer = new LinearLayout(this);
+            gridContainer.setOrientation(LinearLayout.VERTICAL);
+            LinearLayout.LayoutParams gcLp = new LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT);
+            gcLp.bottomMargin = dpToPx(8);
+            gridContainer.setLayoutParams(gcLp);
 
+            LinearLayout rowTop = new LinearLayout(this);
+            rowTop.setOrientation(LinearLayout.HORIZONTAL);
+            LinearLayout.LayoutParams rtLp = new LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT);
+            rtLp.bottomMargin = dpToPx(8);
+            rowTop.setLayoutParams(rtLp);
+
+            LinearLayout rowBottom = new LinearLayout(this);
+            rowBottom.setOrientation(LinearLayout.HORIZONTAL);
+            rowBottom.setLayoutParams(new LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT));
+
+            gridContainer.addView(rowTop);
+            gridContainer.addView(rowBottom);
+
+            for (int i = 0; i < formatOptions.size(); i++) {
+                final FormatOption opt = formatOptions.get(i);
+                LinearLayout card = new LinearLayout(this);
+                card.setOrientation(LinearLayout.HORIZONTAL);
+                card.setGravity(Gravity.CENTER_VERTICAL);
+                card.setPadding(dpToPx(10), dpToPx(10), dpToPx(10), dpToPx(10));
+                LinearLayout.LayoutParams cLp = new LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.WRAP_CONTENT, 1f);
+                if (i % 2 == 0) cLp.rightMargin = dpToPx(8);
+                card.setLayoutParams(cLp);
+
+                // Badge View
+                TextView bView = new TextView(this);
+                bView.setText(opt.badgeText);
+                bView.setTextSize(TypedValue.COMPLEX_UNIT_SP, 10f);
+                bView.setTypeface(Typeface.DEFAULT_BOLD);
+                bView.setGravity(Gravity.CENTER);
+                LinearLayout.LayoutParams bLp = new LinearLayout.LayoutParams(dpToPx(34), dpToPx(34));
+                bLp.rightMargin = dpToPx(8);
+                bView.setLayoutParams(bLp);
+
+                GradientDrawable bBg = new GradientDrawable();
+                bBg.setCornerRadius(dpToPx(8));
+                int accent = !isDarkTheme ? opt.badgeColorLight : opt.badgeColorDark;
+                bBg.setColor((accent & 0x00FFFFFF) | 0x22000000);
+                bView.setBackground(bBg);
+                bView.setTextColor(accent);
+
+                // Texts
+                LinearLayout textCol = new LinearLayout(this);
+                textCol.setOrientation(LinearLayout.VERTICAL);
+                textCol.setLayoutParams(new LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.WRAP_CONTENT, 1f));
+
+                TextView tView = new TextView(this);
+                tView.setText(opt.title);
+                tView.setTextSize(TypedValue.COMPLEX_UNIT_SP, 12.5f);
+                tView.setTypeface(Typeface.DEFAULT_BOLD);
+                tView.setSingleLine(true);
+                tView.setEllipsize(android.text.TextUtils.TruncateAt.END);
+
+                TextView sView = new TextView(this);
+                sView.setText(opt.subtitle);
+                sView.setTextSize(TypedValue.COMPLEX_UNIT_SP, 10f);
+                sView.setTextColor(!isDarkTheme ? 0xFF64748B : 0xFF8B949E);
+                sView.setSingleLine(true);
+                sView.setEllipsize(android.text.TextUtils.TruncateAt.END);
+
+                textCol.addView(tView);
+                textCol.addView(sView);
+
+                card.addView(bView);
+                card.addView(textCol);
+
+                opt.cardView = card;
+                opt.titleView = tView;
+                opt.subView = sView;
+                opt.badgeView = bView;
+
+                if (i < 2) rowTop.addView(card);
+                else rowBottom.addView(card);
+            }
+            root.addView(gridContainer);
+
+            // Optional Port to AI row
+            LinearLayout portAiRow = new LinearLayout(this);
+            portAiRow.setOrientation(LinearLayout.HORIZONTAL);
+            portAiRow.setGravity(Gravity.CENTER_VERTICAL);
+            portAiRow.setPadding(dpToPx(12), dpToPx(9), dpToPx(12), dpToPx(9));
+            GradientDrawable paiBg = new GradientDrawable();
+            paiBg.setColor(!isDarkTheme ? 0xFFF8FAFC : 0xFF161B22);
+            paiBg.setStroke(dpToPx(1), !isDarkTheme ? 0xFFE2E8F0 : 0xFF30363D);
+            paiBg.setCornerRadius(dpToPx(10));
+            portAiRow.setBackground(paiBg);
+            LinearLayout.LayoutParams paiLp = new LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT);
+            paiLp.bottomMargin = dpToPx(16);
+            portAiRow.setLayoutParams(paiLp);
+
+            TextView paiIcon = new TextView(this);
+            paiIcon.setText("🤖");
+            paiIcon.setTextSize(TypedValue.COMPLEX_UNIT_SP, 14f);
+            paiIcon.setPadding(0, 0, dpToPx(8), 0);
+            portAiRow.addView(paiIcon);
+
+            TextView paiText = new TextView(this);
+            paiText.setText("Port directly to another AI (ChatGPT / Gemini)");
+            paiText.setTextSize(TypedValue.COMPLEX_UNIT_SP, 11.5f);
+            paiText.setTextColor(!isDarkTheme ? 0xFF334155 : 0xFFCBD5E1);
+            LinearLayout.LayoutParams pitLp = new LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.WRAP_CONTENT, 1f);
+            paiText.setLayoutParams(pitLp);
+            portAiRow.addView(paiText);
+
+            TextView paiArrow = new TextView(this);
+            paiArrow.setText("→");
+            paiArrow.setTextSize(TypedValue.COMPLEX_UNIT_SP, 14f);
+            paiArrow.setTextColor(!isDarkTheme ? 0xFF1B4264 : 0xFF38BDF8);
+            portAiRow.addView(paiArrow);
+            root.addView(portAiRow);
+
+            // 3. FILE NAME WITH DYNAMIC EXTENSION
             TextView nameLabel = new TextView(this);
             nameLabel.setText("FILE NAME");
             nameLabel.setTextSize(TypedValue.COMPLEX_UNIT_SP, 10.5f);
             nameLabel.setTypeface(Typeface.DEFAULT_BOLD);
-            nameLabel.setTextColor(!isDarkTheme ? 0xFF475569 : 0xFF94A3B8);
-            nameLabel.setPadding(dpToPx(2), dpToPx(4), dpToPx(2), dpToPx(6));
+            nameLabel.setTextColor(!isDarkTheme ? 0xFF475569 : 0xFF8B949E);
+            nameLabel.setLetterSpacing(0.05f);
+            nameLabel.setPadding(0, 0, 0, dpToPx(6));
             root.addView(nameLabel);
+
+            LinearLayout nameBox = new LinearLayout(this);
+            nameBox.setOrientation(LinearLayout.HORIZONTAL);
+            nameBox.setGravity(Gravity.CENTER_VERTICAL);
+            nameBox.setPadding(dpToPx(12), dpToPx(4), dpToPx(8), dpToPx(4));
+            GradientDrawable nbBg = new GradientDrawable();
+            nbBg.setColor(!isDarkTheme ? 0xFFF8FAFC : 0xFF161B22);
+            nbBg.setStroke(dpToPx(1), !isDarkTheme ? 0xFFCBD5E1 : 0xFF30363D);
+            nbBg.setCornerRadius(dpToPx(12));
+            nameBox.setBackground(nbBg);
+            LinearLayout.LayoutParams nbLp = new LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT);
+            nbLp.bottomMargin = dpToPx(16);
+            nameBox.setLayoutParams(nbLp);
 
             String defaultTitle = (activeTab.title != null && !activeTab.title.trim().isEmpty() && !activeTab.title.equalsIgnoreCase("New Tab"))
                     ? activeTab.title.trim()
@@ -20776,79 +20928,214 @@ public class MainActivity extends AppCompatActivity {
             etFileName.setTextColor(!isDarkTheme ? 0xFF0F172A : 0xFFDFE2F0);
             etFileName.setHintTextColor(!isDarkTheme ? 0xFF94A3B8 : 0xFF64748B);
             etFileName.setSingleLine(true);
-            etFileName.setPadding(dpToPx(14), dpToPx(10), dpToPx(14), dpToPx(10));
-            LinearLayout.LayoutParams etLp = new LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT);
-            etLp.bottomMargin = dpToPx(16);
+            etFileName.setBackground(null);
+            etFileName.setPadding(0, dpToPx(6), dpToPx(6), dpToPx(6));
+            LinearLayout.LayoutParams etLp = new LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.WRAP_CONTENT, 1f);
             etFileName.setLayoutParams(etLp);
+            nameBox.addView(etFileName);
 
-            GradientDrawable etBg = new GradientDrawable();
-            etBg.setColor(!isDarkTheme ? 0xFFF8FAFC : 0xFF161B22);
-            etBg.setStroke(dpToPx(1), !isDarkTheme ? 0xFFCBD5E1 : 0xFF30363D);
-            etBg.setCornerRadius(dpToPx(10));
-            etFileName.setBackground(etBg);
-            root.addView(etFileName);
+            TextView extBadge = new TextView(this);
+            extBadge.setTextSize(TypedValue.COMPLEX_UNIT_SP, 11f);
+            extBadge.setTypeface(Typeface.MONOSPACE, Typeface.BOLD);
+            extBadge.setPadding(dpToPx(8), dpToPx(4), dpToPx(8), dpToPx(4));
+            GradientDrawable ebBg = new GradientDrawable();
+            ebBg.setColor(!isDarkTheme ? 0xFFE2E8F0 : 0xFF30363D);
+            ebBg.setCornerRadius(dpToPx(6));
+            extBadge.setBackground(ebBg);
+            extBadge.setTextColor(!isDarkTheme ? 0xFF334155 : 0xFFCBD5E1);
+            extBadge.setText(".pdf");
+            nameBox.addView(extBadge);
+            root.addView(nameBox);
 
+            Runnable updateFormatSelection = () -> {
+                for (FormatOption opt : formatOptions) {
+                    boolean isSelected = opt.id.equalsIgnoreCase(selectedFmt[0]);
+                    GradientDrawable cBg = new GradientDrawable();
+                    cBg.setCornerRadius(dpToPx(12));
+                    if (isSelected) {
+                        cBg.setColor(!isDarkTheme ? 0xFFF0F7FF : 0xFF142438);
+                        cBg.setStroke(dpToPx(1.8f), !isDarkTheme ? 0xFF1B4264 : 0xFF38BDF8);
+                        opt.titleView.setTextColor(!isDarkTheme ? 0xFF1B4264 : 0xFF38BDF8);
+                        extBadge.setText(opt.extension);
+                    } else {
+                        cBg.setColor(!isDarkTheme ? 0xFFFFFFFF : 0xFF161B22);
+                        cBg.setStroke(dpToPx(1f), !isDarkTheme ? 0xFFE2E8F0 : 0xFF30363D);
+                        opt.titleView.setTextColor(!isDarkTheme ? 0xFF0F172A : 0xFFF1F5F9);
+                    }
+                    opt.cardView.setBackground(cBg);
+                }
+            };
+
+            for (FormatOption opt : formatOptions) {
+                opt.cardView.setOnClickListener(v -> {
+                    selectedFmt[0] = opt.id;
+                    playUiFeedbackSound("tap");
+                    updateFormatSelection.run();
+                });
+            }
+            updateFormatSelection.run();
+
+            portAiRow.setOnClickListener(v -> {
+                modal.dismiss();
+                playUiFeedbackSound("tap");
+                executeExportWithConfig("convert", selectedScope[0], etFileName.getText().toString().trim(), false, false);
+            });
+
+            // 4. SAVE DESTINATION (Stacked Full-Width Cards)
             TextView destLabel = new TextView(this);
             destLabel.setText("SAVE DESTINATION");
             destLabel.setTextSize(TypedValue.COMPLEX_UNIT_SP, 10.5f);
             destLabel.setTypeface(Typeface.DEFAULT_BOLD);
-            destLabel.setTextColor(!isDarkTheme ? 0xFF475569 : 0xFF94A3B8);
-            destLabel.setPadding(dpToPx(2), dpToPx(4), dpToPx(2), dpToPx(6));
+            destLabel.setTextColor(!isDarkTheme ? 0xFF475569 : 0xFF8B949E);
+            destLabel.setLetterSpacing(0.05f);
+            destLabel.setPadding(0, 0, 0, dpToPx(6));
             root.addView(destLabel);
 
             final boolean[] useSaf = new boolean[]{ false };
-            LinearLayout destRow = new LinearLayout(this);
-            destRow.setOrientation(LinearLayout.HORIZONTAL);
-            LinearLayout.LayoutParams destLp = new LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT);
-            destLp.bottomMargin = dpToPx(22);
-            destRow.setLayoutParams(destLp);
+            LinearLayout destCol = new LinearLayout(this);
+            destCol.setOrientation(LinearLayout.VERTICAL);
+            LinearLayout.LayoutParams dcLp = new LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT);
+            dcLp.bottomMargin = dpToPx(20);
+            destCol.setLayoutParams(dcLp);
 
-            TextView optDefaultDest = new TextView(this);
-            optDefaultDest.setText("📁 Default (Downloads/Caspian)");
-            optDefaultDest.setTextSize(TypedValue.COMPLEX_UNIT_SP, 11f);
-            optDefaultDest.setGravity(Gravity.CENTER);
-            optDefaultDest.setPadding(dpToPx(10), dpToPx(8), dpToPx(10), dpToPx(8));
-            LinearLayout.LayoutParams ddLp = new LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.WRAP_CONTENT, 1f);
-            ddLp.rightMargin = dpToPx(6);
-            optDefaultDest.setLayoutParams(ddLp);
+            // Card 1: Default
+            LinearLayout cardDefault = new LinearLayout(this);
+            cardDefault.setOrientation(LinearLayout.HORIZONTAL);
+            cardDefault.setGravity(Gravity.CENTER_VERTICAL);
+            cardDefault.setPadding(dpToPx(14), dpToPx(10), dpToPx(14), dpToPx(10));
+            LinearLayout.LayoutParams cdLp = new LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT);
+            cdLp.bottomMargin = dpToPx(8);
+            cardDefault.setLayoutParams(cdLp);
 
-            TextView optSafDest = new TextView(this);
-            optSafDest.setText("📂 Choose Folder...");
-            optSafDest.setTextSize(TypedValue.COMPLEX_UNIT_SP, 11f);
-            optSafDest.setGravity(Gravity.CENTER);
-            optSafDest.setPadding(dpToPx(10), dpToPx(8), dpToPx(10), dpToPx(8));
-            LinearLayout.LayoutParams sdLp = new LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.WRAP_CONTENT, 1f);
-            optSafDest.setLayoutParams(sdLp);
+            TextView dIcon = new TextView(this);
+            dIcon.setText("📁");
+            dIcon.setTextSize(TypedValue.COMPLEX_UNIT_SP, 15f);
+            dIcon.setPadding(0, 0, dpToPx(10), 0);
+            cardDefault.addView(dIcon);
 
-            updateSegmentPill(optDefaultDest, !useSaf[0], isDarkTheme);
-            updateSegmentPill(optSafDest, useSaf[0], isDarkTheme);
+            LinearLayout dTextCol = new LinearLayout(this);
+            dTextCol.setOrientation(LinearLayout.VERTICAL);
+            dTextCol.setLayoutParams(new LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.WRAP_CONTENT, 1f));
 
-            optDefaultDest.setOnClickListener(v -> {
+            TextView dtTitle = new TextView(this);
+            dtTitle.setText("Default Caspian Directory");
+            dtTitle.setTextSize(TypedValue.COMPLEX_UNIT_SP, 12.5f);
+            dtTitle.setTypeface(Typeface.DEFAULT_BOLD);
+
+            TextView dtSub = new TextView(this);
+            dtSub.setText("Downloads/Caspian/Export");
+            dtSub.setTextSize(TypedValue.COMPLEX_UNIT_SP, 10.5f);
+            dtSub.setTextColor(!isDarkTheme ? 0xFF64748B : 0xFF8B949E);
+
+            dTextCol.addView(dtTitle);
+            dTextCol.addView(dtSub);
+            cardDefault.addView(dTextCol);
+
+            TextView dCheck = new TextView(this);
+            dCheck.setText("✓");
+            dCheck.setTextSize(TypedValue.COMPLEX_UNIT_SP, 14f);
+            dCheck.setTypeface(Typeface.DEFAULT_BOLD);
+            dCheck.setTextColor(!isDarkTheme ? 0xFF1B4264 : 0xFF38BDF8);
+            cardDefault.addView(dCheck);
+
+            // Card 2: SAF
+            LinearLayout cardSaf = new LinearLayout(this);
+            cardSaf.setOrientation(LinearLayout.HORIZONTAL);
+            cardSaf.setGravity(Gravity.CENTER_VERTICAL);
+            cardSaf.setPadding(dpToPx(14), dpToPx(10), dpToPx(14), dpToPx(10));
+            cardSaf.setLayoutParams(new LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT));
+
+            TextView sIcon = new TextView(this);
+            sIcon.setText("📂");
+            sIcon.setTextSize(TypedValue.COMPLEX_UNIT_SP, 15f);
+            sIcon.setPadding(0, 0, dpToPx(10), 0);
+            cardSaf.addView(sIcon);
+
+            LinearLayout sTextCol = new LinearLayout(this);
+            sTextCol.setOrientation(LinearLayout.VERTICAL);
+            sTextCol.setLayoutParams(new LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.WRAP_CONTENT, 1f));
+
+            TextView stTitle = new TextView(this);
+            stTitle.setText("Choose Custom Location");
+            stTitle.setTextSize(TypedValue.COMPLEX_UNIT_SP, 12.5f);
+            stTitle.setTypeface(Typeface.DEFAULT_BOLD);
+
+            TextView stSub = new TextView(this);
+            stSub.setText("Select folder via Android file picker (SAF)");
+            stSub.setTextSize(TypedValue.COMPLEX_UNIT_SP, 10.5f);
+            stSub.setTextColor(!isDarkTheme ? 0xFF64748B : 0xFF8B949E);
+
+            sTextCol.addView(stTitle);
+            sTextCol.addView(stSub);
+            cardSaf.addView(sTextCol);
+
+            TextView sCheck = new TextView(this);
+            sCheck.setText("✓");
+            sCheck.setTextSize(TypedValue.COMPLEX_UNIT_SP, 14f);
+            sCheck.setTypeface(Typeface.DEFAULT_BOLD);
+            sCheck.setTextColor(!isDarkTheme ? 0xFF1B4264 : 0xFF38BDF8);
+            cardSaf.addView(sCheck);
+
+            Runnable updateDestSelection = () -> {
+                boolean isDefault = !useSaf[0];
+                GradientDrawable cdBg = new GradientDrawable();
+                cdBg.setCornerRadius(dpToPx(12));
+                if (isDefault) {
+                    cdBg.setColor(!isDarkTheme ? 0xFFF0F7FF : 0xFF142438);
+                    cdBg.setStroke(dpToPx(1.5f), !isDarkTheme ? 0xFF1B4264 : 0xFF38BDF8);
+                    dtTitle.setTextColor(!isDarkTheme ? 0xFF1B4264 : 0xFF38BDF8);
+                    dCheck.setVisibility(View.VISIBLE);
+                } else {
+                    cdBg.setColor(!isDarkTheme ? 0xFFFFFFFF : 0xFF161B22);
+                    cdBg.setStroke(dpToPx(1f), !isDarkTheme ? 0xFFE2E8F0 : 0xFF30363D);
+                    dtTitle.setTextColor(!isDarkTheme ? 0xFF0F172A : 0xFFF1F5F9);
+                    dCheck.setVisibility(View.INVISIBLE);
+                }
+                cardDefault.setBackground(cdBg);
+
+                GradientDrawable csBg = new GradientDrawable();
+                csBg.setCornerRadius(dpToPx(12));
+                if (!isDefault) {
+                    csBg.setColor(!isDarkTheme ? 0xFFF0F7FF : 0xFF142438);
+                    csBg.setStroke(dpToPx(1.5f), !isDarkTheme ? 0xFF1B4264 : 0xFF38BDF8);
+                    stTitle.setTextColor(!isDarkTheme ? 0xFF1B4264 : 0xFF38BDF8);
+                    sCheck.setVisibility(View.VISIBLE);
+                } else {
+                    csBg.setColor(!isDarkTheme ? 0xFFFFFFFF : 0xFF161B22);
+                    csBg.setStroke(dpToPx(1f), !isDarkTheme ? 0xFFE2E8F0 : 0xFF30363D);
+                    stTitle.setTextColor(!isDarkTheme ? 0xFF0F172A : 0xFFF1F5F9);
+                    sCheck.setVisibility(View.INVISIBLE);
+                }
+                cardSaf.setBackground(csBg);
+            };
+
+            cardDefault.setOnClickListener(v -> {
                 useSaf[0] = false;
                 playUiFeedbackSound("tap");
-                updateSegmentPill(optDefaultDest, true, isDarkTheme);
-                updateSegmentPill(optSafDest, false, isDarkTheme);
+                updateDestSelection.run();
             });
-            optSafDest.setOnClickListener(v -> {
+
+            cardSaf.setOnClickListener(v -> {
                 useSaf[0] = true;
                 playUiFeedbackSound("tap");
-                updateSegmentPill(optDefaultDest, false, isDarkTheme);
-                updateSegmentPill(optSafDest, true, isDarkTheme);
+                updateDestSelection.run();
             });
 
-            destRow.addView(optDefaultDest);
-            destRow.addView(optSafDest);
-            root.addView(destRow);
+            updateDestSelection.run();
+            destCol.addView(cardDefault);
+            destCol.addView(cardSaf);
+            root.addView(destCol);
 
+            // 5. ACTION BUTTONS
             LinearLayout actionsRow = new LinearLayout(this);
             actionsRow.setOrientation(LinearLayout.HORIZONTAL);
             actionsRow.setLayoutParams(new LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT));
 
             Button btnShare = new Button(this);
-            btnShare.setText("↗ Share");
+            btnShare.setText("↗  Share");
             btnShare.setTextSize(TypedValue.COMPLEX_UNIT_SP, 13f);
             btnShare.setTypeface(Typeface.DEFAULT_BOLD);
-            btnShare.setTextColor(!isDarkTheme ? 0xFF0F172A : 0xFFDFE2F0);
+            btnShare.setTextColor(!isDarkTheme ? 0xFF0F172A : 0xFFF1F5F9);
             LinearLayout.LayoutParams shareLp = new LinearLayout.LayoutParams(0, dpToPx(46), 1f);
             shareLp.rightMargin = dpToPx(10);
             btnShare.setLayoutParams(shareLp);
@@ -20860,11 +21147,11 @@ public class MainActivity extends AppCompatActivity {
             btnShare.setBackground(shareBg);
 
             Button btnExport = new Button(this);
-            btnExport.setText("Export & Open");
-            btnExport.setTextSize(TypedValue.COMPLEX_UNIT_SP, 13f);
+            btnExport.setText("Export Document");
+            btnExport.setTextSize(TypedValue.COMPLEX_UNIT_SP, 13.5f);
             btnExport.setTypeface(Typeface.DEFAULT_BOLD);
             btnExport.setTextColor(0xFFFFFFFF);
-            LinearLayout.LayoutParams expLp = new LinearLayout.LayoutParams(0, dpToPx(46), 1.5f);
+            LinearLayout.LayoutParams expLp = new LinearLayout.LayoutParams(0, dpToPx(46), 1.6f);
             btnExport.setLayoutParams(expLp);
 
             GradientDrawable expBg = new GradientDrawable();
@@ -21412,9 +21699,6 @@ public class MainActivity extends AppCompatActivity {
                 "  }\n" +
                 "\n" +
                 "  var jsonPayload = JSON.stringify(turns);\n" +
-                "  if (window.CaspianBridge && typeof window.CaspianBridge.onConversationExtracted === 'function') {\n" +
-                "    window.CaspianBridge.onConversationExtracted(jsonPayload, '" + exportFmt + "');\n" +
-                "  }\n" +
                 "  return jsonPayload;\n" +
                 "})();";
 
@@ -21550,74 +21834,57 @@ public class MainActivity extends AppCompatActivity {
                     }
                 }
 
-                String richHtml = CaspianPdfExporter.buildRichHtmlDocument(title, turnsArray, detectionService, scope, dateStr);
-                File exportDir = CaspianPdfExporter.getExportDir(this);
-                File targetPdfFile = new File(exportDir, safeTitle + ".pdf");
                 final String finalTitle = title;
                 final String finalDetectionService = detectionService;
                 final String finalSafeTitle = safeTitle;
 
-                CaspianPdfExporter.renderHtmlToPdf(this, richHtml, safeTitle, targetPdfFile, new CaspianPdfExporter.OnPdfGeneratedCallback() {
-                    @Override
-                    public void onSuccess(File pdfFile) {
-                        runOnUiThread(() -> {
-                            if (useSaf) {
-                                pendingExportPdfFile = pdfFile;
-                                pendingExportAutoShare = autoShare;
-                                try {
-                                    Intent intent = new Intent(Intent.ACTION_CREATE_DOCUMENT);
-                                    intent.addCategory(Intent.CATEGORY_OPENABLE);
-                                    intent.setType("application/pdf");
-                                    intent.putExtra(Intent.EXTRA_TITLE, pdfFile.getName());
-                                    startActivityForResult(intent, REQUEST_CODE_CREATE_PDF_DOCUMENT);
-                                } catch (Throwable t) {
-                                    Log.e(TAG, "SAF document creation failed", t);
-                                    openCachedPdfInNewTab(pdfFile.getAbsolutePath(), finalTitle);
-                                    if (autoShare) sharePdfFile(pdfFile);
-                                    else showPdfExportSuccess(pdfFile, finalTitle);
-                                }
-                            } else {
-                                openCachedPdfInNewTab(pdfFile.getAbsolutePath(), finalTitle);
-                                if (autoShare) {
-                                    sharePdfFile(pdfFile);
-                                } else {
-                                    showPdfExportSuccess(pdfFile, finalTitle);
-                                }
-                            }
-                        });
-                    }
+                Toast.makeText(this, "Generating Caspian document...", Toast.LENGTH_SHORT).show();
 
-                    @Override
-                    public void onError(Throwable error) {
+                new Thread(() -> {
+                    try {
+                        File pdfFile = CaspianPdfExporter.exportConversationToPdf(
+                                MainActivity.this,
+                                finalTitle,
+                                turnsArray,
+                                finalDetectionService,
+                                scope,
+                                finalSafeTitle
+                        );
+
                         runOnUiThread(() -> {
-                            Log.w(TAG, "Offscreen HTML slicing failed, using canvas fallback", error);
-                            File fallback = CaspianPdfExporter.exportConversationToPdf(MainActivity.this, finalTitle, turnsArray, finalDetectionService, scope, finalSafeTitle);
-                            if (fallback != null && fallback.exists()) {
+                            if (pdfFile != null && pdfFile.exists()) {
                                 if (useSaf) {
-                                    pendingExportPdfFile = fallback;
+                                    pendingExportPdfFile = pdfFile;
                                     pendingExportAutoShare = autoShare;
                                     try {
                                         Intent intent = new Intent(Intent.ACTION_CREATE_DOCUMENT);
                                         intent.addCategory(Intent.CATEGORY_OPENABLE);
                                         intent.setType("application/pdf");
-                                        intent.putExtra(Intent.EXTRA_TITLE, fallback.getName());
+                                        intent.putExtra(Intent.EXTRA_TITLE, pdfFile.getName());
                                         startActivityForResult(intent, REQUEST_CODE_CREATE_PDF_DOCUMENT);
                                     } catch (Throwable t) {
-                                        openCachedPdfInNewTab(fallback.getAbsolutePath(), finalTitle);
-                                        if (autoShare) sharePdfFile(fallback);
-                                        else showPdfExportSuccess(fallback, finalTitle);
+                                        Log.e(TAG, "SAF document creation failed", t);
+                                        openCachedPdfInNewTab(pdfFile.getAbsolutePath(), finalTitle);
+                                        if (autoShare) sharePdfFile(pdfFile);
+                                        else showPdfExportSuccess(pdfFile, finalTitle);
                                     }
                                 } else {
-                                    openCachedPdfInNewTab(fallback.getAbsolutePath(), finalTitle);
-                                    if (autoShare) sharePdfFile(fallback);
-                                    else showPdfExportSuccess(fallback, finalTitle);
+                                    openCachedPdfInNewTab(pdfFile.getAbsolutePath(), finalTitle);
+                                    if (autoShare) {
+                                        sharePdfFile(pdfFile);
+                                    } else {
+                                        showPdfExportSuccess(pdfFile, finalTitle);
+                                    }
                                 }
                             } else {
-                                Toast.makeText(MainActivity.this, "Export failed: " + error.getMessage(), Toast.LENGTH_SHORT).show();
+                                Toast.makeText(MainActivity.this, "Export failed: unable to write PDF file", Toast.LENGTH_LONG).show();
                             }
                         });
+                    } catch (Throwable t) {
+                        Log.e(TAG, "Native PDF generation error", t);
+                        runOnUiThread(() -> Toast.makeText(MainActivity.this, "Export error: " + t.getMessage(), Toast.LENGTH_LONG).show());
                     }
-                });
+                }).start();
 
             } else if ("convert".equalsIgnoreCase(exportFmt) || "copy".equalsIgnoreCase(exportFmt)) {
                 StringBuilder sb = new StringBuilder();
@@ -21675,28 +21942,50 @@ public class MainActivity extends AppCompatActivity {
 
     public File downloadFile(String fileName, String content, String mimeType) {
         try {
-            File exportDir = new File(Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_DOWNLOADS), "Caspian/Export");
-            if (!exportDir.exists()) exportDir.mkdirs();
-            File file = new File(exportDir, fileName);
-            FileOutputStream fos = new FileOutputStream(file);
-            fos.write(content.getBytes(StandardCharsets.UTF_8));
-            fos.close();
-            Toast.makeText(this, "Saved: " + file.getName() + " in Downloads/Caspian/Export", Toast.LENGTH_LONG).show();
-            return file;
-        } catch (Exception e) {
-            try {
-                File exportDir = new File(getExternalFilesDir(null), "Downloads");
-                if (!exportDir.exists()) exportDir.mkdirs();
-                File file = new File(exportDir, fileName);
-                FileOutputStream fos = new FileOutputStream(file);
+            File cacheFile = new File(getCacheDir(), fileName);
+            try (FileOutputStream fos = new FileOutputStream(cacheFile)) {
                 fos.write(content.getBytes(StandardCharsets.UTF_8));
-                fos.close();
-                Toast.makeText(this, "Saved: " + file.getName(), Toast.LENGTH_LONG).show();
-                return file;
-            } catch (Exception ex) {
-                Toast.makeText(this, "Download failed: " + ex.getMessage(), Toast.LENGTH_SHORT).show();
-                return null;
+                fos.flush();
             }
+
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
+                try {
+                    android.content.ContentValues values = new android.content.ContentValues();
+                    values.put(android.provider.MediaStore.MediaColumns.DISPLAY_NAME, fileName);
+                    values.put(android.provider.MediaStore.MediaColumns.MIME_TYPE, mimeType);
+                    values.put(android.provider.MediaStore.MediaColumns.RELATIVE_PATH, Environment.DIRECTORY_DOWNLOADS + "/Caspian/Export");
+                    Uri uri = getContentResolver().insert(android.provider.MediaStore.Downloads.EXTERNAL_CONTENT_URI, values);
+                    if (uri != null) {
+                        try (OutputStream out = getContentResolver().openOutputStream(uri)) {
+                            if (out != null) {
+                                out.write(content.getBytes(StandardCharsets.UTF_8));
+                                out.flush();
+                            }
+                        }
+                    }
+                } catch (Throwable t) {
+                    Log.w(TAG, "MediaStore save failed", t);
+                }
+            } else {
+                try {
+                    File exportDir = new File(Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_DOWNLOADS), "Caspian/Export");
+                    if (!exportDir.exists()) exportDir.mkdirs();
+                    File pubFile = new File(exportDir, fileName);
+                    try (FileOutputStream fos = new FileOutputStream(pubFile)) {
+                        fos.write(content.getBytes(StandardCharsets.UTF_8));
+                        fos.flush();
+                    }
+                } catch (Throwable t) {
+                    Log.w(TAG, "Legacy public download save failed", t);
+                }
+            }
+
+            Toast.makeText(this, "Saved: " + fileName + " in Downloads/Caspian/Export", Toast.LENGTH_LONG).show();
+            return cacheFile;
+        } catch (Exception e) {
+            Log.e(TAG, "downloadFile error", e);
+            Toast.makeText(this, "Download failed: " + e.getMessage(), Toast.LENGTH_SHORT).show();
+            return null;
         }
     }
 

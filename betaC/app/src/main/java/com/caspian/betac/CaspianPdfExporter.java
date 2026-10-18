@@ -2,17 +2,23 @@ package com.caspian.betac;
 
 import android.app.Activity;
 import android.content.Context;
+import android.graphics.Bitmap;
+import android.graphics.BitmapFactory;
 import android.graphics.Canvas;
 import android.graphics.Color;
 import android.graphics.Paint;
+import android.graphics.Rect;
 import android.graphics.RectF;
 import android.graphics.Typeface;
 import android.graphics.pdf.PdfDocument;
+import android.net.Uri;
 import android.os.Build;
 import android.os.Environment;
+import android.provider.MediaStore;
 import android.text.Layout;
 import android.text.StaticLayout;
 import android.text.TextPaint;
+import android.util.Base64;
 import android.util.Log;
 import android.view.View;
 import android.webkit.WebSettings;
@@ -23,9 +29,14 @@ import org.json.JSONArray;
 import org.json.JSONObject;
 
 import java.io.File;
+import java.io.FileInputStream;
 import java.io.FileOutputStream;
+import java.io.InputStream;
+import java.io.OutputStream;
 import java.text.SimpleDateFormat;
+import java.util.ArrayList;
 import java.util.Date;
+import java.util.List;
 import java.util.Locale;
 
 /**
@@ -350,7 +361,77 @@ public class CaspianPdfExporter {
 
             // Divider
             canvas.drawLine(MARGIN_LEFT, currentY, MARGIN_RIGHT, currentY, dividerPaint);
-            currentY += 16f;
+            currentY += 14f;
+
+            // Code block styling
+            Paint codeCardBgPaint = new Paint(Paint.ANTI_ALIAS_FLAG);
+            codeCardBgPaint.setStyle(Paint.Style.FILL);
+            codeCardBgPaint.setColor(0xFF1E1E2E);
+
+            Paint codeHeaderPaint = new Paint(Paint.ANTI_ALIAS_FLAG);
+            codeHeaderPaint.setStyle(Paint.Style.FILL);
+            codeHeaderPaint.setColor(0xFF262638);
+
+            TextPaint codeLangPaint = new TextPaint(Paint.ANTI_ALIAS_FLAG);
+            codeLangPaint.setColor(0xFF8E8EA0);
+            codeLangPaint.setTextSize(7.5f);
+            codeLangPaint.setTypeface(Typeface.create(Typeface.MONOSPACE, Typeface.BOLD));
+
+            TextPaint codeTextPaint = new TextPaint(Paint.ANTI_ALIAS_FLAG);
+            codeTextPaint.setColor(0xFFCDD6F4);
+            codeTextPaint.setTextSize(8f);
+            codeTextPaint.setTypeface(Typeface.MONOSPACE);
+
+            // Math styling
+            Paint mathCardBgPaint = new Paint(Paint.ANTI_ALIAS_FLAG);
+            mathCardBgPaint.setStyle(Paint.Style.FILL);
+            mathCardBgPaint.setColor(0xFFF8FAFC);
+
+            Paint mathAccentPaint = new Paint(Paint.ANTI_ALIAS_FLAG);
+            mathAccentPaint.setStyle(Paint.Style.FILL);
+            mathAccentPaint.setColor(COLOR_NAVY_800);
+
+            TextPaint mathTextPaint = new TextPaint(Paint.ANTI_ALIAS_FLAG);
+            mathTextPaint.setColor(COLOR_SLATE_900);
+            mathTextPaint.setTextSize(9f);
+            mathTextPaint.setTypeface(Typeface.create(Typeface.MONOSPACE, Typeface.BOLD));
+
+            // Table styling
+            Paint tableHeaderBgPaint = new Paint(Paint.ANTI_ALIAS_FLAG);
+            tableHeaderBgPaint.setStyle(Paint.Style.FILL);
+            tableHeaderBgPaint.setColor(0xFFF1F5F9);
+
+            Paint tableRowEvenBgPaint = new Paint(Paint.ANTI_ALIAS_FLAG);
+            tableRowEvenBgPaint.setStyle(Paint.Style.FILL);
+            tableRowEvenBgPaint.setColor(Color.WHITE);
+
+            Paint tableRowOddBgPaint = new Paint(Paint.ANTI_ALIAS_FLAG);
+            tableRowOddBgPaint.setStyle(Paint.Style.FILL);
+            tableRowOddBgPaint.setColor(0xFFF8FAFC);
+
+            Paint tableGridPaint = new Paint(Paint.ANTI_ALIAS_FLAG);
+            tableGridPaint.setStyle(Paint.Style.STROKE);
+            tableGridPaint.setStrokeWidth(0.5f);
+            tableGridPaint.setColor(COLOR_SLATE_200);
+
+            TextPaint tableHeaderPaint = new TextPaint(Paint.ANTI_ALIAS_FLAG);
+            tableHeaderPaint.setColor(COLOR_SLATE_900);
+            tableHeaderPaint.setTextSize(8f);
+            tableHeaderPaint.setTypeface(Typeface.create(Typeface.DEFAULT, Typeface.BOLD));
+
+            TextPaint tableCellPaint = new TextPaint(Paint.ANTI_ALIAS_FLAG);
+            tableCellPaint.setColor(COLOR_SLATE_700);
+            tableCellPaint.setTextSize(8f);
+
+            // Quote styling
+            Paint quoteBarPaint = new Paint(Paint.ANTI_ALIAS_FLAG);
+            quoteBarPaint.setStyle(Paint.Style.FILL);
+            quoteBarPaint.setColor(COLOR_NAVY_800);
+
+            TextPaint quoteTextPaint = new TextPaint(Paint.ANTI_ALIAS_FLAG);
+            quoteTextPaint.setColor(COLOR_SLATE_700);
+            quoteTextPaint.setTextSize(9f);
+            quoteTextPaint.setTypeface(Typeface.create(Typeface.DEFAULT, Typeface.ITALIC));
 
             // Render turns
             if (turnsArray != null && turnsArray.length() > 0) {
@@ -370,85 +451,220 @@ public class CaspianPdfExporter {
                     String badgeLabel = isUser ? ("USER PROMPT #" + idx)
                             : (isGemini ? ("GEMINI RESPONSE #" + idx) : ("CHATGPT RESPONSE #" + idx));
                     int badgeColor = isUser ? COLOR_BLUE_700 : (isGemini ? COLOR_NAVY_800 : COLOR_EMERALD_700);
-                    int cardBgColor = isUser ? COLOR_SLATE_50 : Color.WHITE;
 
-                    String cleanBody = cleanMarkdownForPrint(turnText);
-                    float innerCardPadding = 10f;
-                    float cardWidth = CONTENT_WIDTH;
-                    float innerTextWidth = cardWidth - (innerCardPadding * 2f);
+                    // Ensure minimum space for badge
+                    if (currentY > MARGIN_BOTTOM - 60f) {
+                        drawFooter(canvas, pageIndex, subPaint);
+                        pdfDocument.finishPage(page);
+                        pageIndex++;
+                        pageInfo = new PdfDocument.PageInfo.Builder(PAGE_WIDTH, PAGE_HEIGHT, pageIndex).create();
+                        page = pdfDocument.startPage(pageInfo);
+                        canvas = page.getCanvas();
+                        currentY = MARGIN_TOP;
+                    }
 
-                    StaticLayout textLayout = createStaticLayout(cleanBody, bodyPaint, (int) innerTextWidth);
-                    int totalLines = textLayout.getLineCount();
-
+                    // Draw Sender Badge
                     float badgeWidth = badgeTextPaint.measureText(badgeLabel) + 14f;
-                    float headerHeight = 24f;
+                    badgeBgPaint.setColor(badgeColor);
+                    RectF badgeRect = new RectF(MARGIN_LEFT, currentY, MARGIN_LEFT + badgeWidth, currentY + 15f);
+                    canvas.drawRoundRect(badgeRect, 3.5f, 3.5f, badgeBgPaint);
+                    canvas.drawText(badgeLabel, MARGIN_LEFT + 7f, currentY + 11f, badgeTextPaint);
+                    currentY += 21f;
 
-                    int startLine = 0;
-                    while (startLine < totalLines) {
-                        float availableHeight = MARGIN_BOTTOM - currentY - innerCardPadding;
-                        if (availableHeight < 40f) {
-                            drawFooter(canvas, pageIndex, subPaint);
-                            pdfDocument.finishPage(page);
-                            pageIndex++;
-                            pageInfo = new PdfDocument.PageInfo.Builder(PAGE_WIDTH, PAGE_HEIGHT, pageIndex).create();
-                            page = pdfDocument.startPage(pageInfo);
-                            canvas = page.getCanvas();
-                            currentY = MARGIN_TOP;
-                            availableHeight = MARGIN_BOTTOM - currentY - innerCardPadding;
-                        }
+                    // Parse turn into structured blocks
+                    List<FormattedBlock> blocks = parseBlocks(turnText);
+                    for (FormattedBlock block : blocks) {
+                        if (block.type == FormattedBlock.TYPE_TEXT) {
+                            String cleanText = cleanMarkdownForPrint(block.content);
+                            StaticLayout tl = createStaticLayout(cleanText, bodyPaint, (int) CONTENT_WIDTH);
+                            int lines = tl.getLineCount();
+                            int sLine = 0;
+                            while (sLine < lines) {
+                                float avail = MARGIN_BOTTOM - currentY;
+                                if (avail < 25f) {
+                                    drawFooter(canvas, pageIndex, subPaint);
+                                    pdfDocument.finishPage(page);
+                                    pageIndex++;
+                                    pageInfo = new PdfDocument.PageInfo.Builder(PAGE_WIDTH, PAGE_HEIGHT, pageIndex).create();
+                                    page = pdfDocument.startPage(pageInfo);
+                                    canvas = page.getCanvas();
+                                    currentY = MARGIN_TOP;
+                                    avail = MARGIN_BOTTOM - currentY;
+                                }
+                                float sTop = tl.getLineTop(sLine);
+                                int eLine = sLine;
+                                while (eLine < lines && (tl.getLineBottom(eLine) - sTop) <= avail) {
+                                    eLine++;
+                                }
+                                if (eLine == sLine) eLine = sLine + 1;
+                                float chunkH = tl.getLineBottom(eLine - 1) - sTop;
 
-                        float startLineTop = textLayout.getLineTop(startLine);
-                        int endLine = startLine;
-                        float headerAllowance = (startLine == 0) ? headerHeight : 0f;
+                                canvas.save();
+                                canvas.clipRect(MARGIN_LEFT, currentY, MARGIN_RIGHT, currentY + chunkH);
+                                canvas.translate(MARGIN_LEFT, currentY - sTop);
+                                tl.draw(canvas);
+                                canvas.restore();
 
-                        while (endLine < totalLines &&
-                                (textLayout.getLineBottom(endLine) - startLineTop + headerAllowance) <= availableHeight) {
-                            endLine++;
-                        }
-                        if (endLine == startLine) {
-                            endLine = startLine + 1;
-                        }
+                                currentY += chunkH + 6f;
+                                sLine = eLine;
+                            }
+                        } else if (block.type == FormattedBlock.TYPE_CODE) {
+                            StaticLayout cl = createStaticLayout(block.content, codeTextPaint, (int) (CONTENT_WIDTH - 16f));
+                            int cLines = cl.getLineCount();
+                            int csLine = 0;
+                            while (csLine < cLines) {
+                                float avail = MARGIN_BOTTOM - currentY - 20f;
+                                if (avail < 30f) {
+                                    drawFooter(canvas, pageIndex, subPaint);
+                                    pdfDocument.finishPage(page);
+                                    pageIndex++;
+                                    pageInfo = new PdfDocument.PageInfo.Builder(PAGE_WIDTH, PAGE_HEIGHT, pageIndex).create();
+                                    page = pdfDocument.startPage(pageInfo);
+                                    canvas = page.getCanvas();
+                                    currentY = MARGIN_TOP;
+                                    avail = MARGIN_BOTTOM - currentY - 20f;
+                                }
+                                float csTop = cl.getLineTop(csLine);
+                                int ceLine = csLine;
+                                while (ceLine < cLines && (cl.getLineBottom(ceLine) - csTop) <= avail) {
+                                    ceLine++;
+                                }
+                                if (ceLine == csLine) ceLine = csLine + 1;
+                                float cchunkH = cl.getLineBottom(ceLine - 1) - csTop;
+                                float totalBoxH = cchunkH + (csLine == 0 ? 18f : 8f) + 8f;
 
-                        float chunkTextHeight = textLayout.getLineBottom(endLine - 1) - startLineTop;
-                        float chunkCardHeight = chunkTextHeight + headerAllowance + (innerCardPadding * 2f);
+                                RectF cBox = new RectF(MARGIN_LEFT, currentY, MARGIN_RIGHT, currentY + totalBoxH);
+                                canvas.drawRoundRect(cBox, 5f, 5f, codeCardBgPaint);
 
-                        RectF cardRect = new RectF(MARGIN_LEFT, currentY, MARGIN_RIGHT, currentY + chunkCardHeight);
-                        cardBgPaint.setColor(cardBgColor);
-                        canvas.drawRoundRect(cardRect, 7f, 7f, cardBgPaint);
-                        canvas.drawRoundRect(cardRect, 7f, 7f, cardStrokePaint);
+                                float textDrawY = currentY + 6f;
+                                if (csLine == 0) {
+                                    RectF hBar = new RectF(MARGIN_LEFT, currentY, MARGIN_RIGHT, currentY + 16f);
+                                    canvas.drawRoundRect(hBar, 5f, 5f, codeHeaderPaint);
+                                    canvas.drawText(block.language.isEmpty() ? "CODE" : block.language, MARGIN_LEFT + 8f, currentY + 11.5f, codeLangPaint);
+                                    textDrawY = currentY + 22f;
+                                }
 
-                        float drawY = currentY + innerCardPadding;
+                                canvas.save();
+                                canvas.clipRect(MARGIN_LEFT + 8f, textDrawY, MARGIN_RIGHT - 8f, textDrawY + cchunkH);
+                                canvas.translate(MARGIN_LEFT + 8f, textDrawY - csTop);
+                                cl.draw(canvas);
+                                canvas.restore();
 
-                        if (startLine == 0) {
-                            badgeBgPaint.setColor(badgeColor);
-                            RectF badgeRect = new RectF(MARGIN_LEFT + innerCardPadding, drawY,
-                                    MARGIN_LEFT + innerCardPadding + badgeWidth, drawY + 14f);
-                            canvas.drawRoundRect(badgeRect, 3.5f, 3.5f, badgeBgPaint);
-                            canvas.drawText(badgeLabel, MARGIN_LEFT + innerCardPadding + 7f, drawY + 10.5f, badgeTextPaint);
-                            drawY += headerHeight;
-                        }
+                                currentY += totalBoxH + 8f;
+                                csLine = ceLine;
+                            }
+                        } else if (block.type == FormattedBlock.TYPE_TABLE) {
+                            if (!block.tableRows.isEmpty()) {
+                                int cols = block.tableRows.get(0).length;
+                                if (cols > 0) {
+                                    float colW = CONTENT_WIDTH / cols;
+                                    float rowH = 18f;
+                                    for (int r = 0; r < block.tableRows.size(); r++) {
+                                        if (currentY + rowH > MARGIN_BOTTOM - 20f) {
+                                            drawFooter(canvas, pageIndex, subPaint);
+                                            pdfDocument.finishPage(page);
+                                            pageIndex++;
+                                            pageInfo = new PdfDocument.PageInfo.Builder(PAGE_WIDTH, PAGE_HEIGHT, pageIndex).create();
+                                            page = pdfDocument.startPage(pageInfo);
+                                            canvas = page.getCanvas();
+                                            currentY = MARGIN_TOP;
+                                        }
 
-                        canvas.save();
-                        canvas.clipRect(MARGIN_LEFT + innerCardPadding, drawY,
-                                MARGIN_RIGHT - innerCardPadding, drawY + chunkTextHeight);
-                        canvas.translate(MARGIN_LEFT + innerCardPadding, drawY - startLineTop);
-                        textLayout.draw(canvas);
-                        canvas.restore();
+                                        boolean isHeader = (r == 0);
+                                        RectF rRect = new RectF(MARGIN_LEFT, currentY, MARGIN_RIGHT, currentY + rowH);
+                                        canvas.drawRect(rRect, isHeader ? tableHeaderBgPaint : (r % 2 == 0 ? tableRowEvenBgPaint : tableRowOddBgPaint));
+                                        canvas.drawRect(rRect, tableGridPaint);
 
-                        currentY += chunkCardHeight + 10f;
-                        startLine = endLine;
+                                        String[] rowCells = block.tableRows.get(r);
+                                        for (int c = 0; c < rowCells.length && c < cols; c++) {
+                                            float cx = MARGIN_LEFT + (c * colW);
+                                            canvas.drawLine(cx, currentY, cx, currentY + rowH, tableGridPaint);
+                                            canvas.save();
+                                            canvas.clipRect(cx + 4f, currentY, cx + colW - 4f, currentY + rowH);
+                                            canvas.drawText(rowCells[c], cx + 4f, currentY + 12.5f, isHeader ? tableHeaderPaint : tableCellPaint);
+                                            canvas.restore();
+                                        }
+                                        currentY += rowH;
+                                    }
+                                    currentY += 8f;
+                                }
+                            }
+                        } else if (block.type == FormattedBlock.TYPE_MATH) {
+                            StaticLayout ml = createStaticLayout(block.content, mathTextPaint, (int) (CONTENT_WIDTH - 24f));
+                            float mH = ml.getHeight() + 14f;
+                            if (currentY + mH > MARGIN_BOTTOM - 20f) {
+                                drawFooter(canvas, pageIndex, subPaint);
+                                pdfDocument.finishPage(page);
+                                pageIndex++;
+                                pageInfo = new PdfDocument.PageInfo.Builder(PAGE_WIDTH, PAGE_HEIGHT, pageIndex).create();
+                                page = pdfDocument.startPage(pageInfo);
+                                canvas = page.getCanvas();
+                                currentY = MARGIN_TOP;
+                            }
+                            RectF mBox = new RectF(MARGIN_LEFT, currentY, MARGIN_RIGHT, currentY + mH);
+                            canvas.drawRoundRect(mBox, 4f, 4f, mathCardBgPaint);
+                            canvas.drawRoundRect(mBox, 4f, 4f, cardStrokePaint);
+                            canvas.drawRect(MARGIN_LEFT, currentY, MARGIN_LEFT + 3.5f, currentY + mH, mathAccentPaint);
 
-                        if (startLine < totalLines) {
-                            drawFooter(canvas, pageIndex, subPaint);
-                            pdfDocument.finishPage(page);
-                            pageIndex++;
-                            pageInfo = new PdfDocument.PageInfo.Builder(PAGE_WIDTH, PAGE_HEIGHT, pageIndex).create();
-                            page = pdfDocument.startPage(pageInfo);
-                            canvas = page.getCanvas();
-                            currentY = MARGIN_TOP;
+                            canvas.save();
+                            canvas.translate(MARGIN_LEFT + 12f, currentY + 7f);
+                            ml.draw(canvas);
+                            canvas.restore();
+
+                            currentY += mH + 8f;
+                        } else if (block.type == FormattedBlock.TYPE_QUOTE) {
+                            StaticLayout ql = createStaticLayout(block.content, quoteTextPaint, (int) (CONTENT_WIDTH - 20f));
+                            float qH = ql.getHeight() + 8f;
+                            if (currentY + qH > MARGIN_BOTTOM - 20f) {
+                                drawFooter(canvas, pageIndex, subPaint);
+                                pdfDocument.finishPage(page);
+                                pageIndex++;
+                                pageInfo = new PdfDocument.PageInfo.Builder(PAGE_WIDTH, PAGE_HEIGHT, pageIndex).create();
+                                page = pdfDocument.startPage(pageInfo);
+                                canvas = page.getCanvas();
+                                currentY = MARGIN_TOP;
+                            }
+                            canvas.drawRect(MARGIN_LEFT, currentY, MARGIN_LEFT + 3f, currentY + qH, quoteBarPaint);
+                            canvas.save();
+                            canvas.translate(MARGIN_LEFT + 10f, currentY + 4f);
+                            ql.draw(canvas);
+                            canvas.restore();
+                            currentY += qH + 8f;
                         }
                     }
-                }
+
+                    // Render turn images if present
+                    JSONArray imgs = turn.optJSONArray("images");
+                    if (imgs != null && imgs.length() > 0) {
+                        for (int imgIdx = 0; imgIdx < imgs.length(); imgIdx++) {
+                            String b64 = imgs.optString(imgIdx, null);
+                            Bitmap bmp = decodeBase64Bitmap(b64);
+                            if (bmp != null) {
+                                float imgW = Math.min(bmp.getWidth(), CONTENT_WIDTH);
+                                float imgH = (bmp.getHeight() * imgW) / bmp.getWidth();
+                                if (imgH > 350f) {
+                                    imgW = (imgW * 350f) / imgH;
+                                    imgH = 350f;
+                                }
+                                if (currentY + imgH > MARGIN_BOTTOM - 20f) {
+                                    drawFooter(canvas, pageIndex, subPaint);
+                                    pdfDocument.finishPage(page);
+                                    pageIndex++;
+                                    pageInfo = new PdfDocument.PageInfo.Builder(PAGE_WIDTH, PAGE_HEIGHT, pageIndex).create();
+                                    page = pdfDocument.startPage(pageInfo);
+                                    canvas = page.getCanvas();
+                                    currentY = MARGIN_TOP;
+                                }
+                                float imgLeft = MARGIN_LEFT + (CONTENT_WIDTH - imgW) / 2f;
+                                Rect srcR = new Rect(0, 0, bmp.getWidth(), bmp.getHeight());
+                                RectF dstR = new RectF(imgLeft, currentY, imgLeft + imgW, currentY + imgH);
+                                canvas.drawBitmap(bmp, srcR, dstR, null);
+                                currentY += imgH + 10f;
+                            }
+                        }
+                    }
+
+                    currentY += 12f;         }
             } else {
                 canvas.drawText("No conversational turns available to display.", MARGIN_LEFT, currentY + 20f, bodyPaint);
             }
@@ -608,12 +824,172 @@ public class CaspianPdfExporter {
         }
     }
 
+    public static class FormattedBlock {
+        public static final int TYPE_TEXT = 0;
+        public static final int TYPE_CODE = 1;
+        public static final int TYPE_TABLE = 2;
+        public static final int TYPE_MATH = 3;
+        public static final int TYPE_QUOTE = 4;
+
+        public int type;
+        public String language = "";
+        public String content = "";
+        public List<String[]> tableRows = new ArrayList<>();
+    }
+
+    public static List<FormattedBlock> parseBlocks(String rawText) {
+        List<FormattedBlock> blocks = new ArrayList<>();
+        if (rawText == null || rawText.trim().isEmpty()) return blocks;
+
+        String[] lines = rawText.replace("\r\n", "\n").split("\n");
+        StringBuilder currentText = new StringBuilder();
+        boolean inCode = false;
+        String codeLang = "";
+        StringBuilder codeContent = new StringBuilder();
+
+        boolean inTable = false;
+        List<String[]> currentTable = new ArrayList<>();
+
+        for (int i = 0; i < lines.length; i++) {
+            String line = lines[i];
+
+            if (line.trim().startsWith("```")) {
+                if (inCode) {
+                    FormattedBlock b = new FormattedBlock();
+                    b.type = FormattedBlock.TYPE_CODE;
+                    b.language = codeLang.isEmpty() ? "CODE" : codeLang.toUpperCase(Locale.ROOT);
+                    b.content = codeContent.toString().trim();
+                    blocks.add(b);
+                    codeContent.setLength(0);
+                    codeLang = "";
+                    inCode = false;
+                } else {
+                    if (currentText.length() > 0) {
+                        FormattedBlock b = new FormattedBlock();
+                        b.type = FormattedBlock.TYPE_TEXT;
+                        b.content = currentText.toString().trim();
+                        blocks.add(b);
+                        currentText.setLength(0);
+                    }
+                    inCode = true;
+                    codeLang = line.trim().substring(3).trim();
+                }
+                continue;
+            }
+
+            if (inCode) {
+                codeContent.append(line).append("\n");
+                continue;
+            }
+
+            if (line.trim().startsWith("|") && line.trim().endsWith("|")) {
+                if (!inTable) {
+                    if (currentText.length() > 0) {
+                        FormattedBlock b = new FormattedBlock();
+                        b.type = FormattedBlock.TYPE_TEXT;
+                        b.content = currentText.toString().trim();
+                        blocks.add(b);
+                        currentText.setLength(0);
+                    }
+                    inTable = true;
+                    currentTable = new ArrayList<>();
+                }
+                if (!line.replaceAll("[|:\\-\\s]", "").isEmpty()) {
+                    String[] cells = line.split("\\|");
+                    List<String> cleanCells = new ArrayList<>();
+                    for (int c = 1; c < cells.length; c++) {
+                        cleanCells.add(cells[c].trim());
+                    }
+                    if (!cleanCells.isEmpty()) {
+                        currentTable.add(cleanCells.toArray(new String[0]));
+                    }
+                }
+                continue;
+            } else if (inTable) {
+                if (!currentTable.isEmpty()) {
+                    FormattedBlock b = new FormattedBlock();
+                    b.type = FormattedBlock.TYPE_TABLE;
+                    b.tableRows = currentTable;
+                    blocks.add(b);
+                }
+                inTable = false;
+            }
+
+            if (line.trim().startsWith("$$") || line.trim().startsWith("\\[")) {
+                if (currentText.length() > 0) {
+                    FormattedBlock b = new FormattedBlock();
+                    b.type = FormattedBlock.TYPE_TEXT;
+                    b.content = currentText.toString().trim();
+                    blocks.add(b);
+                    currentText.setLength(0);
+                }
+                FormattedBlock b = new FormattedBlock();
+                b.type = FormattedBlock.TYPE_MATH;
+                b.content = line.replaceAll("^(\\$\\$|\\\\\\[)", "").replaceAll("(\\$\\$|\\\\\\])$", "").trim();
+                blocks.add(b);
+                continue;
+            }
+
+            if (line.trim().startsWith(">")) {
+                if (currentText.length() > 0) {
+                    FormattedBlock b = new FormattedBlock();
+                    b.type = FormattedBlock.TYPE_TEXT;
+                    b.content = currentText.toString().trim();
+                    blocks.add(b);
+                    currentText.setLength(0);
+                }
+                FormattedBlock b = new FormattedBlock();
+                b.type = FormattedBlock.TYPE_QUOTE;
+                b.content = line.replaceFirst("^>\\s*", "").trim();
+                blocks.add(b);
+                continue;
+            }
+
+            currentText.append(line).append("\n");
+        }
+
+        if (inCode && codeContent.length() > 0) {
+            FormattedBlock b = new FormattedBlock();
+            b.type = FormattedBlock.TYPE_CODE;
+            b.language = codeLang.isEmpty() ? "CODE" : codeLang.toUpperCase(Locale.ROOT);
+            b.content = codeContent.toString().trim();
+            blocks.add(b);
+        } else if (inTable && !currentTable.isEmpty()) {
+            FormattedBlock b = new FormattedBlock();
+            b.type = FormattedBlock.TYPE_TABLE;
+            b.tableRows = currentTable;
+            blocks.add(b);
+        } else if (currentText.length() > 0) {
+            FormattedBlock b = new FormattedBlock();
+            b.type = FormattedBlock.TYPE_TEXT;
+            b.content = currentText.toString().trim();
+            blocks.add(b);
+        }
+
+        return blocks;
+    }
+
+    public static Bitmap decodeBase64Bitmap(String b64) {
+        try {
+            if (b64 == null || b64.isEmpty()) return null;
+            String clean = b64.contains(",") ? b64.substring(b64.indexOf(",") + 1) : b64;
+            byte[] bytes = Base64.decode(clean, Base64.DEFAULT);
+            return BitmapFactory.decodeByteArray(bytes, 0, bytes.length);
+        } catch (Throwable t) {
+            return null;
+        }
+    }
+
     private static String cleanMarkdownForPrint(String md) {
         if (md == null) return "";
         String text = md.replace("\r\n", "\n");
-        text = text.replaceAll("(?m)^#{1,6}\\s+", "");
-        text = text.replaceAll("```[a-zA-Z0-9_-]*\n", "\n[Code Block]\n");
-        text = text.replaceAll("```", "");
+        text = text.replaceAll("(?m)^### (.*)$", "• $1");
+        text = text.replaceAll("(?m)^## (.*)$", "$1");
+        text = text.replaceAll("(?m)^# (.*)$", "$1");
+        text = text.replaceAll("\\*\\*(.*?)\\*\\*", "$1");
+        text = text.replaceAll("\\*(.*?)\\*", "$1");
+        text = text.replaceAll("`([^`]+)`", "$1");
+        text = text.replaceAll("(?m)^\\s*[-*]\\s+", "• ");
         return text.trim();
     }
 
@@ -634,42 +1010,59 @@ public class CaspianPdfExporter {
             String safeTitle = title.replaceAll("[^a-zA-Z0-9._-]", "_");
             if (safeTitle.length() > 50) safeTitle = safeTitle.substring(0, 50);
             if (!safeTitle.toLowerCase(Locale.ROOT).endsWith(".pdf")) {
-                String timestamp = new SimpleDateFormat("yyyyMMdd_HHmmss", Locale.getDefault()).format(new Date());
-                safeTitle = safeTitle + "_" + timestamp + ".pdf";
+                safeTitle = safeTitle + ".pdf";
             }
 
-            File exportDir = new File(Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_DOWNLOADS), "Caspian/Export");
-            if (!exportDir.exists()) {
-                exportDir.mkdirs();
-            }
-
-            File targetFile = new File(exportDir, safeTitle);
-            FileOutputStream fos = new FileOutputStream(targetFile);
-            pdfDocument.writeTo(fos);
-            fos.flush();
-            fos.close();
-            pdfDocument.close();
-
-            Log.i(TAG, "Successfully generated native PDF at: " + targetFile.getAbsolutePath());
-            return targetFile;
-        } catch (Exception e) {
-            Log.w(TAG, "Failed to save to public Downloads, trying app internal storage", e);
-            try {
-                File appDir = new File(context.getExternalFilesDir(Environment.DIRECTORY_DOWNLOADS), "Export");
-                if (!appDir.exists()) appDir.mkdirs();
-                String timestamp = new SimpleDateFormat("yyyyMMdd_HHmmss", Locale.getDefault()).format(new Date());
-                File targetFile = new File(appDir, "Caspian_Export_" + timestamp + ".pdf");
-                FileOutputStream fos = new FileOutputStream(targetFile);
+            File cacheDir = new File(context.getExternalFilesDir(Environment.DIRECTORY_DOWNLOADS), "Export");
+            if (!cacheDir.exists()) cacheDir.mkdirs();
+            File cachedFile = new File(cacheDir, safeTitle);
+            try (FileOutputStream fos = new FileOutputStream(cachedFile)) {
                 pdfDocument.writeTo(fos);
                 fos.flush();
-                fos.close();
-                pdfDocument.close();
-                return targetFile;
-            } catch (Exception ex) {
-                Log.e(TAG, "Fatal error saving PDF to app storage", ex);
-                try { pdfDocument.close(); } catch (Throwable ignored) {}
-                return null;
             }
+
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
+                try {
+                    android.content.ContentValues values = new android.content.ContentValues();
+                    values.put(android.provider.MediaStore.MediaColumns.DISPLAY_NAME, safeTitle);
+                    values.put(android.provider.MediaStore.MediaColumns.MIME_TYPE, "application/pdf");
+                    values.put(android.provider.MediaStore.MediaColumns.RELATIVE_PATH, Environment.DIRECTORY_DOWNLOADS + "/Caspian/Export");
+                    Uri uri = context.getContentResolver().insert(android.provider.MediaStore.Downloads.EXTERNAL_CONTENT_URI, values);
+                    if (uri != null) {
+                        try (InputStream in = new FileInputStream(cachedFile);
+                             OutputStream out = context.getContentResolver().openOutputStream(uri)) {
+                            if (out != null) {
+                                byte[] buf = new byte[8192];
+                                int len;
+                                while ((len = in.read(buf)) > 0) out.write(buf, 0, len);
+                                out.flush();
+                            }
+                        }
+                    }
+                } catch (Throwable t) {
+                    Log.w(TAG, "MediaStore save fallback", t);
+                }
+            } else {
+                try {
+                    File pubDir = new File(Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_DOWNLOADS), "Caspian/Export");
+                    if (!pubDir.exists()) pubDir.mkdirs();
+                    File pubFile = new File(pubDir, safeTitle);
+                    try (InputStream in = new FileInputStream(cachedFile);
+                         OutputStream out = new FileOutputStream(pubFile)) {
+                        byte[] buf = new byte[8192];
+                        int len;
+                        while ((len = in.read(buf)) > 0) out.write(buf, 0, len);
+                        out.flush();
+                    }
+                } catch (Throwable ignored) {}
+            }
+
+            pdfDocument.close();
+            return cachedFile;
+        } catch (Exception e) {
+            Log.e(TAG, "Error saving PDF", e);
+            try { pdfDocument.close(); } catch (Throwable ignored) {}
+            return null;
         }
     }
 }

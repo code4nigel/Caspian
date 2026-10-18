@@ -324,9 +324,9 @@
     "semantic_hash": ""
   },
   "betaC/app/build.gradle.kts": {
-    "mtime": 1792309925.1281211,
-    "seen": 1792320879.5759075,
-    "ast_hash": "5bacb1df87cafdb47ca9d5e7bfce2314",
+    "mtime": 1792320888.3856566,
+    "seen": 1792323131.7799163,
+    "ast_hash": "1d8bdadbfbe30c13773b77966d466e42",
     "semantic_hash": ""
   },
   "betaC/app/src/main/assets/adblock_rules.json": {
@@ -450,9 +450,9 @@
     "semantic_hash": ""
   },
   "betaC/app/src/main/java/com/caspian/betac/MainActivity.java": {
-    "mtime": 1792320752.9365258,
-    "seen": 1792320879.575947,
-    "ast_hash": "9468f36feccf754a6d03e093fe38d636",
+    "mtime": 1792322968.3971965,
+    "seen": 1792323131.779988,
+    "ast_hash": "58cf13874ea8e755cad2d7d27aa69d06",
     "semantic_hash": ""
   },
   "betaC/app/src/main/java/com/caspian/betac/SearchSuggestionService.java": {
@@ -648,9 +648,9 @@
     "semantic_hash": ""
   },
   "betaC/app/src/main/assets/browser_control.html": {
-    "mtime": 1792309925.3207574,
-    "seen": 1792320879.5760424,
-    "ast_hash": "02fd571f7419acc6763024bffbb0de61",
+    "mtime": 1792320888.5514984,
+    "seen": 1792323131.7801561,
+    "ast_hash": "a6769ae79567c3aee32ba4497d8eef44",
     "semantic_hash": ""
   },
   "betaC/app/src/main/assets/incognito_hub.html": {
@@ -1914,9 +1914,9 @@
     "semantic_hash": ""
   },
   "betaC/app/src/main/java/com/caspian/betac/CaspianPdfExporter.java": {
-    "mtime": 1792320420.2419333,
-    "seen": 1792320879.5759392,
-    "ast_hash": "c91178c167f0de42e738b9c9ab5a2279",
+    "mtime": 1792323029.9077756,
+    "seen": 1792323131.7799745,
+    "ast_hash": "62f213d75daf94d3487377f9d77476e3",
     "semantic_hash": ""
   }
 }
