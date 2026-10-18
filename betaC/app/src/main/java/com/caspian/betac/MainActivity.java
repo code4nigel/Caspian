@@ -808,6 +808,9 @@ public class MainActivity extends AppCompatActivity {
     private final static int REQUEST_CODE_EXPORT_BOOKMARKS_TREE = 9410;
     private final static int REQUEST_CODE_IMPORT_BOOKMARKS_FILE = 9411;
     private final static int REQUEST_CODE_WALLPAPER_PICKER = 9412;
+    private final static int REQUEST_CODE_CREATE_PDF_DOCUMENT = 9415;
+    private File pendingExportPdfFile = null;
+    private boolean pendingExportAutoShare = false;
     private boolean isHubSearchVoiceActive = false;
     private Runnable currentBookmarksRefreshRunnable = null;
     private Uri cameraCapturedUri = null;
@@ -893,6 +896,9 @@ public class MainActivity extends AppCompatActivity {
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.LOLLIPOP) {
+            try { WebView.enableSlowWholeDocumentDraw(); } catch (Throwable ignored) {}
+        }
         super.onCreate(savedInstanceState);
 
         try {
@@ -1084,6 +1090,11 @@ public class MainActivity extends AppCompatActivity {
 
         if (requestCode == REQUEST_CODE_WALLPAPER_PICKER && resultCode == RESULT_OK && data != null && data.getData() != null) {
             handleWallpaperImageSelected(data.getData());
+            return;
+        }
+
+        if (requestCode == REQUEST_CODE_CREATE_PDF_DOCUMENT && resultCode == RESULT_OK && data != null && data.getData() != null) {
+            handleSavePdfToSafUri(data.getData());
             return;
         }
 
@@ -20513,7 +20524,7 @@ public class MainActivity extends AppCompatActivity {
                     if ("print_system".equals(opt.action)) {
                         printActivePageViaSystem();
                     } else {
-                        performExportOnMainWebView(opt.action);
+                        showExportConfigModal(opt.action);
                     }
                 });
 
@@ -20573,12 +20584,334 @@ public class MainActivity extends AppCompatActivity {
     }
 
     public void performExportOnMainWebView(String fmt) {
+        showExportConfigModal(fmt);
+    }
+
+    private void updateSegmentPill(TextView pill, boolean isSelected, boolean isDark) {
+        GradientDrawable bg = new GradientDrawable();
+        bg.setCornerRadius(dpToPx(20));
+        if (isSelected) {
+            bg.setColor(0xFF1B4264);
+            pill.setTextColor(0xFFFFFFFF);
+            pill.setTypeface(Typeface.DEFAULT_BOLD);
+        } else {
+            bg.setColor(!isDark ? 0xFFF1F5F9 : 0xFF161B22);
+            bg.setStroke(dpToPx(1), !isDark ? 0xFFCBD5E1 : 0xFF30363D);
+            pill.setTextColor(!isDark ? 0xFF475569 : 0xFF94A3B8);
+            pill.setTypeface(Typeface.DEFAULT);
+        }
+        pill.setBackground(bg);
+    }
+
+    public void showExportConfigModal(String defaultFormat) {
+        try {
+            TabItem activeTab = getActiveOrDominantTab();
+            if (activeTab == null || activeTab.webView == null) {
+                Toast.makeText(this, "No active page to export", Toast.LENGTH_SHORT).show();
+                return;
+            }
+
+            com.google.android.material.bottomsheet.BottomSheetDialog modal =
+                    new com.google.android.material.bottomsheet.BottomSheetDialog(this);
+
+            ScrollView scroll = new ScrollView(this);
+            scroll.setFillViewport(true);
+
+            LinearLayout root = new LinearLayout(this);
+            root.setOrientation(LinearLayout.VERTICAL);
+            root.setPadding(dpToPx(20), dpToPx(14), dpToPx(20), dpToPx(24));
+
+            GradientDrawable rootBg = new GradientDrawable();
+            rootBg.setColor(!isDarkTheme ? 0xFFFFFFFF : 0xFF0D1117);
+            rootBg.setCornerRadii(new float[]{dpToPx(24), dpToPx(24), dpToPx(24), dpToPx(24), 0, 0, 0, 0});
+            root.setBackground(rootBg);
+
+            View handle = new View(this);
+            LinearLayout.LayoutParams hLp = new LinearLayout.LayoutParams(dpToPx(44), dpToPx(5));
+            hLp.gravity = Gravity.CENTER_HORIZONTAL;
+            hLp.bottomMargin = dpToPx(14);
+            handle.setLayoutParams(hLp);
+            GradientDrawable hBg = new GradientDrawable();
+            hBg.setColor(!isDarkTheme ? 0xFFCBD5E1 : 0xFF30363D);
+            hBg.setCornerRadius(dpToPx(3));
+            handle.setBackground(hBg);
+            root.addView(handle);
+
+            TextView title = new TextView(this);
+            title.setText("Export Document");
+            title.setTextSize(TypedValue.COMPLEX_UNIT_SP, 17f);
+            title.setTypeface(Typeface.DEFAULT_BOLD);
+            title.setTextColor(!isDarkTheme ? 0xFF0F172A : 0xFFDFE2F0);
+            title.setPadding(dpToPx(2), 0, dpToPx(2), dpToPx(4));
+            root.addView(title);
+
+            TextView subtitle = new TextView(this);
+            subtitle.setText("Export rich formatted document with KaTeX, code snippets & tables");
+            subtitle.setTextSize(TypedValue.COMPLEX_UNIT_SP, 11.5f);
+            subtitle.setTextColor(!isDarkTheme ? 0xFF64748B : 0xFF94A3B8);
+            subtitle.setPadding(dpToPx(2), 0, dpToPx(2), dpToPx(16));
+            root.addView(subtitle);
+
+            TextView scopeLabel = new TextView(this);
+            scopeLabel.setText("MESSAGE SCOPE");
+            scopeLabel.setTextSize(TypedValue.COMPLEX_UNIT_SP, 10.5f);
+            scopeLabel.setTypeface(Typeface.DEFAULT_BOLD);
+            scopeLabel.setTextColor(!isDarkTheme ? 0xFF475569 : 0xFF94A3B8);
+            scopeLabel.setPadding(dpToPx(2), dpToPx(4), dpToPx(2), dpToPx(6));
+            root.addView(scopeLabel);
+
+            final String[] selectedScope = new String[]{"both"};
+            LinearLayout scopeRow = new LinearLayout(this);
+            scopeRow.setOrientation(LinearLayout.HORIZONTAL);
+            LinearLayout.LayoutParams scopeLp = new LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT);
+            scopeLp.bottomMargin = dpToPx(16);
+            scopeRow.setLayoutParams(scopeLp);
+
+            class ScopeOpt {
+                String id, label;
+                ScopeOpt(String id, String label) { this.id = id; this.label = label; }
+            }
+            List<ScopeOpt> scopeOpts = Arrays.asList(
+                    new ScopeOpt("both", "💬 Full Chat"),
+                    new ScopeOpt("ai_only", "🤖 AI Only"),
+                    new ScopeOpt("user_only", "👤 User Only")
+            );
+
+            List<TextView> scopePills = new ArrayList<>();
+            for (ScopeOpt sOpt : scopeOpts) {
+                TextView pill = new TextView(this);
+                pill.setText(sOpt.label);
+                pill.setTextSize(TypedValue.COMPLEX_UNIT_SP, 11.5f);
+                pill.setGravity(Gravity.CENTER);
+                pill.setPadding(dpToPx(12), dpToPx(8), dpToPx(12), dpToPx(8));
+                LinearLayout.LayoutParams pLp = new LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.WRAP_CONTENT, 1f);
+                pLp.rightMargin = dpToPx(6);
+                pill.setLayoutParams(pLp);
+                updateSegmentPill(pill, sOpt.id.equals(selectedScope[0]), isDarkTheme);
+                pill.setOnClickListener(v -> {
+                    selectedScope[0] = sOpt.id;
+                    playUiFeedbackSound("tap");
+                    for (int k = 0; k < scopePills.size(); k++) {
+                        updateSegmentPill(scopePills.get(k), scopeOpts.get(k).id.equals(selectedScope[0]), isDarkTheme);
+                    }
+                });
+                scopePills.add(pill);
+                scopeRow.addView(pill);
+            }
+            root.addView(scopeRow);
+
+            TextView fmtLabel = new TextView(this);
+            fmtLabel.setText("EXPORT FORMAT");
+            fmtLabel.setTextSize(TypedValue.COMPLEX_UNIT_SP, 10.5f);
+            fmtLabel.setTypeface(Typeface.DEFAULT_BOLD);
+            fmtLabel.setTextColor(!isDarkTheme ? 0xFF475569 : 0xFF94A3B8);
+            fmtLabel.setPadding(dpToPx(2), dpToPx(4), dpToPx(2), dpToPx(6));
+            root.addView(fmtLabel);
+
+            String initialFmt = (defaultFormat != null && !defaultFormat.isEmpty()) ? defaultFormat : "styledpdf";
+            if ("pdf".equalsIgnoreCase(initialFmt) || "nativepdf".equalsIgnoreCase(initialFmt)) initialFmt = "styledpdf";
+            final String[] selectedFmt = new String[]{ initialFmt };
+
+            HorizontalScrollView fmtScroll = new HorizontalScrollView(this);
+            fmtScroll.setHorizontalScrollBarEnabled(false);
+            LinearLayout.LayoutParams fsLp = new LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT);
+            fsLp.bottomMargin = dpToPx(16);
+            fmtScroll.setLayoutParams(fsLp);
+
+            LinearLayout fmtRow = new LinearLayout(this);
+            fmtRow.setOrientation(LinearLayout.HORIZONTAL);
+
+            class FmtOpt {
+                String id, label;
+                FmtOpt(String id, String label) { this.id = id; this.label = label; }
+            }
+            List<FmtOpt> fmtOpts = Arrays.asList(
+                    new FmtOpt("styledpdf", "📄 PDF (Rich Sliced)"),
+                    new FmtOpt("md", "📝 Markdown (.md)"),
+                    new FmtOpt("txt", "📄 Plain Text (.txt)"),
+                    new FmtOpt("doc", "📑 Word (.doc)"),
+                    new FmtOpt("convert", "🤖 Port to AI")
+            );
+
+            List<TextView> fmtPills = new ArrayList<>();
+            for (FmtOpt fOpt : fmtOpts) {
+                TextView pill = new TextView(this);
+                pill.setText(fOpt.label);
+                pill.setTextSize(TypedValue.COMPLEX_UNIT_SP, 11.5f);
+                pill.setGravity(Gravity.CENTER);
+                pill.setPadding(dpToPx(14), dpToPx(8), dpToPx(14), dpToPx(8));
+                LinearLayout.LayoutParams pLp = new LinearLayout.LayoutParams(ViewGroup.LayoutParams.WRAP_CONTENT, ViewGroup.LayoutParams.WRAP_CONTENT);
+                pLp.rightMargin = dpToPx(8);
+                pill.setLayoutParams(pLp);
+                updateSegmentPill(pill, fOpt.id.equalsIgnoreCase(selectedFmt[0]), isDarkTheme);
+                pill.setOnClickListener(v -> {
+                    selectedFmt[0] = fOpt.id;
+                    playUiFeedbackSound("tap");
+                    for (int k = 0; k < fmtPills.size(); k++) {
+                        updateSegmentPill(fmtPills.get(k), fmtOpts.get(k).id.equalsIgnoreCase(selectedFmt[0]), isDarkTheme);
+                    }
+                });
+                fmtPills.add(pill);
+                fmtRow.addView(pill);
+            }
+            fmtScroll.addView(fmtRow);
+            root.addView(fmtScroll);
+
+            TextView nameLabel = new TextView(this);
+            nameLabel.setText("FILE NAME");
+            nameLabel.setTextSize(TypedValue.COMPLEX_UNIT_SP, 10.5f);
+            nameLabel.setTypeface(Typeface.DEFAULT_BOLD);
+            nameLabel.setTextColor(!isDarkTheme ? 0xFF475569 : 0xFF94A3B8);
+            nameLabel.setPadding(dpToPx(2), dpToPx(4), dpToPx(2), dpToPx(6));
+            root.addView(nameLabel);
+
+            String defaultTitle = (activeTab.title != null && !activeTab.title.trim().isEmpty() && !activeTab.title.equalsIgnoreCase("New Tab"))
+                    ? activeTab.title.trim()
+                    : "Caspian_Export";
+            String cleanDefaultName = defaultTitle.replaceAll("[\\\\/:*?\"<>|]", "_");
+
+            EditText etFileName = new EditText(this);
+            etFileName.setText(cleanDefaultName);
+            etFileName.setTextSize(TypedValue.COMPLEX_UNIT_SP, 13f);
+            etFileName.setTextColor(!isDarkTheme ? 0xFF0F172A : 0xFFDFE2F0);
+            etFileName.setHintTextColor(!isDarkTheme ? 0xFF94A3B8 : 0xFF64748B);
+            etFileName.setSingleLine(true);
+            etFileName.setPadding(dpToPx(14), dpToPx(10), dpToPx(14), dpToPx(10));
+            LinearLayout.LayoutParams etLp = new LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT);
+            etLp.bottomMargin = dpToPx(16);
+            etFileName.setLayoutParams(etLp);
+
+            GradientDrawable etBg = new GradientDrawable();
+            etBg.setColor(!isDarkTheme ? 0xFFF8FAFC : 0xFF161B22);
+            etBg.setStroke(dpToPx(1), !isDarkTheme ? 0xFFCBD5E1 : 0xFF30363D);
+            etBg.setCornerRadius(dpToPx(10));
+            etFileName.setBackground(etBg);
+            root.addView(etFileName);
+
+            TextView destLabel = new TextView(this);
+            destLabel.setText("SAVE DESTINATION");
+            destLabel.setTextSize(TypedValue.COMPLEX_UNIT_SP, 10.5f);
+            destLabel.setTypeface(Typeface.DEFAULT_BOLD);
+            destLabel.setTextColor(!isDarkTheme ? 0xFF475569 : 0xFF94A3B8);
+            destLabel.setPadding(dpToPx(2), dpToPx(4), dpToPx(2), dpToPx(6));
+            root.addView(destLabel);
+
+            final boolean[] useSaf = new boolean[]{ false };
+            LinearLayout destRow = new LinearLayout(this);
+            destRow.setOrientation(LinearLayout.HORIZONTAL);
+            LinearLayout.LayoutParams destLp = new LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT);
+            destLp.bottomMargin = dpToPx(22);
+            destRow.setLayoutParams(destLp);
+
+            TextView optDefaultDest = new TextView(this);
+            optDefaultDest.setText("📁 Default (Downloads/Caspian)");
+            optDefaultDest.setTextSize(TypedValue.COMPLEX_UNIT_SP, 11f);
+            optDefaultDest.setGravity(Gravity.CENTER);
+            optDefaultDest.setPadding(dpToPx(10), dpToPx(8), dpToPx(10), dpToPx(8));
+            LinearLayout.LayoutParams ddLp = new LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.WRAP_CONTENT, 1f);
+            ddLp.rightMargin = dpToPx(6);
+            optDefaultDest.setLayoutParams(ddLp);
+
+            TextView optSafDest = new TextView(this);
+            optSafDest.setText("📂 Choose Folder...");
+            optSafDest.setTextSize(TypedValue.COMPLEX_UNIT_SP, 11f);
+            optSafDest.setGravity(Gravity.CENTER);
+            optSafDest.setPadding(dpToPx(10), dpToPx(8), dpToPx(10), dpToPx(8));
+            LinearLayout.LayoutParams sdLp = new LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.WRAP_CONTENT, 1f);
+            optSafDest.setLayoutParams(sdLp);
+
+            updateSegmentPill(optDefaultDest, !useSaf[0], isDarkTheme);
+            updateSegmentPill(optSafDest, useSaf[0], isDarkTheme);
+
+            optDefaultDest.setOnClickListener(v -> {
+                useSaf[0] = false;
+                playUiFeedbackSound("tap");
+                updateSegmentPill(optDefaultDest, true, isDarkTheme);
+                updateSegmentPill(optSafDest, false, isDarkTheme);
+            });
+            optSafDest.setOnClickListener(v -> {
+                useSaf[0] = true;
+                playUiFeedbackSound("tap");
+                updateSegmentPill(optDefaultDest, false, isDarkTheme);
+                updateSegmentPill(optSafDest, true, isDarkTheme);
+            });
+
+            destRow.addView(optDefaultDest);
+            destRow.addView(optSafDest);
+            root.addView(destRow);
+
+            LinearLayout actionsRow = new LinearLayout(this);
+            actionsRow.setOrientation(LinearLayout.HORIZONTAL);
+            actionsRow.setLayoutParams(new LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT));
+
+            Button btnShare = new Button(this);
+            btnShare.setText("↗ Share");
+            btnShare.setTextSize(TypedValue.COMPLEX_UNIT_SP, 13f);
+            btnShare.setTypeface(Typeface.DEFAULT_BOLD);
+            btnShare.setTextColor(!isDarkTheme ? 0xFF0F172A : 0xFFDFE2F0);
+            LinearLayout.LayoutParams shareLp = new LinearLayout.LayoutParams(0, dpToPx(46), 1f);
+            shareLp.rightMargin = dpToPx(10);
+            btnShare.setLayoutParams(shareLp);
+
+            GradientDrawable shareBg = new GradientDrawable();
+            shareBg.setColor(!isDarkTheme ? 0xFFF1F5F9 : 0xFF161B22);
+            shareBg.setStroke(dpToPx(1.5f), !isDarkTheme ? 0xFFCBD5E1 : 0xFF30363D);
+            shareBg.setCornerRadius(dpToPx(14));
+            btnShare.setBackground(shareBg);
+
+            Button btnExport = new Button(this);
+            btnExport.setText("Export & Open");
+            btnExport.setTextSize(TypedValue.COMPLEX_UNIT_SP, 13f);
+            btnExport.setTypeface(Typeface.DEFAULT_BOLD);
+            btnExport.setTextColor(0xFFFFFFFF);
+            LinearLayout.LayoutParams expLp = new LinearLayout.LayoutParams(0, dpToPx(46), 1.5f);
+            btnExport.setLayoutParams(expLp);
+
+            GradientDrawable expBg = new GradientDrawable();
+            expBg.setColor(0xFF1B4264);
+            expBg.setCornerRadius(dpToPx(14));
+            btnExport.setBackground(expBg);
+
+            btnShare.setOnClickListener(v -> {
+                modal.dismiss();
+                playUiFeedbackSound("tap");
+                String enteredName = etFileName.getText().toString().trim();
+                executeExportWithConfig(selectedFmt[0], selectedScope[0], enteredName, useSaf[0], true);
+            });
+
+            btnExport.setOnClickListener(v -> {
+                modal.dismiss();
+                playUiFeedbackSound("tap");
+                String enteredName = etFileName.getText().toString().trim();
+                executeExportWithConfig(selectedFmt[0], selectedScope[0], enteredName, useSaf[0], false);
+            });
+
+            actionsRow.addView(btnShare);
+            actionsRow.addView(btnExport);
+            root.addView(actionsRow);
+
+            scroll.addView(root);
+            modal.setContentView(scroll);
+            if (modal.getWindow() != null) {
+                View bs = modal.getWindow().findViewById(com.google.android.material.R.id.design_bottom_sheet);
+                if (bs != null) bs.setBackgroundResource(android.R.color.transparent);
+            }
+            modal.show();
+        } catch (Throwable t) {
+            Log.e(TAG, "showExportConfigModal error", t);
+        }
+    }
+
+    public void executeExportWithConfig(String fmt, String scope, String customFileName, boolean useSaf, boolean autoShare) {
         TabItem activeTab = getActiveOrDominantTab();
         if (activeTab == null || activeTab.webView == null) {
             Toast.makeText(this, "No active page to export", Toast.LENGTH_SHORT).show();
             return;
         }
         WebView mainWebView = activeTab.webView;
+
+        final String targetScope = (scope != null && !scope.isEmpty()) ? scope : "both";
+        final String targetFileName = (customFileName != null && !customFileName.trim().isEmpty()) ? customFileName.trim() : null;
 
         String targetFormat = fmt;
         if ("pdf".equalsIgnoreCase(fmt) || "nativepdf".equalsIgnoreCase(fmt)) {
@@ -21096,7 +21429,7 @@ public class MainActivity extends AppCompatActivity {
                     if (unescaped != null && !unescaped.trim().isEmpty() && !unescaped.trim().equals("[]")) {
                         final String finalJson = unescaped;
                         handled = true;
-                        runOnUiThread(() -> handleExtractedConversation(finalJson, exportFmt));
+                        runOnUiThread(() -> handleExtractedConversation(finalJson, exportFmt, targetScope, targetFileName, useSaf, autoShare));
                     }
                 } catch (Throwable t) {
                     Log.e(TAG, "evaluateJavascript parse error", t);
@@ -21105,7 +21438,7 @@ public class MainActivity extends AppCompatActivity {
             if (!handled) {
                 runOnUiThread(() -> {
                     if ("styledpdf".equalsIgnoreCase(exportFmt) || "pdf".equalsIgnoreCase(exportFmt) || "nativepdf".equalsIgnoreCase(exportFmt)) {
-                        exportActiveWebPageToPdf();
+                        exportActiveWebPageToPdf(targetFileName, useSaf, autoShare);
                     } else {
                         Toast.makeText(this, "No content found to export!", Toast.LENGTH_SHORT).show();
                     }
@@ -21115,23 +21448,44 @@ public class MainActivity extends AppCompatActivity {
     }
 
     public void handleExtractedConversation(String jsonStr, String exportFmt) {
+        handleExtractedConversation(jsonStr, exportFmt, "both", null, false, false);
+    }
+
+    public void handleExtractedConversation(String jsonStr, String exportFmt, String scope, String customFileName, boolean useSaf, boolean autoShare) {
         try {
             if (jsonStr == null || jsonStr.equals("null") || jsonStr.equals("[]")) {
                 if ("styledpdf".equalsIgnoreCase(exportFmt) || "pdf".equalsIgnoreCase(exportFmt) || "nativepdf".equalsIgnoreCase(exportFmt)) {
-                    exportActiveWebPageToPdf();
+                    exportActiveWebPageToPdf(customFileName, useSaf, autoShare);
                 } else {
                     Toast.makeText(this, "No content found to export!", Toast.LENGTH_SHORT).show();
                 }
                 return;
             }
 
-            JSONArray turnsArray = new JSONArray(jsonStr);
-            if (turnsArray.length() == 0) {
+            JSONArray rawTurnsArray = new JSONArray(jsonStr);
+            if (rawTurnsArray.length() == 0) {
                 if ("styledpdf".equalsIgnoreCase(exportFmt) || "pdf".equalsIgnoreCase(exportFmt) || "nativepdf".equalsIgnoreCase(exportFmt)) {
-                    exportActiveWebPageToPdf();
+                    exportActiveWebPageToPdf(customFileName, useSaf, autoShare);
                 } else {
                     Toast.makeText(this, "No content found to export!", Toast.LENGTH_SHORT).show();
                 }
+                return;
+            }
+
+            // Filter turns according to selected scope
+            JSONArray turnsArray = new JSONArray();
+            for (int i = 0; i < rawTurnsArray.length(); i++) {
+                JSONObject obj = rawTurnsArray.getJSONObject(i);
+                int idx = obj.optInt("index", i + 1);
+                String author = obj.optString("author", (idx % 2 != 0) ? "user" : "assistant");
+                boolean isUser = "user".equalsIgnoreCase(author);
+                if ("ai_only".equalsIgnoreCase(scope) && isUser) continue;
+                if ("user_only".equalsIgnoreCase(scope) && !isUser) continue;
+                turnsArray.put(obj);
+            }
+
+            if (turnsArray.length() == 0) {
+                Toast.makeText(this, "No messages matched selected scope (" + scope + ")", Toast.LENGTH_SHORT).show();
                 return;
             }
 
@@ -21143,7 +21497,14 @@ public class MainActivity extends AppCompatActivity {
                 title = curTab.title.trim();
             }
             String dateStr = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss", Locale.getDefault()).format(new Date());
-            String safeTitle = title.replaceAll("[^a-zA-Z0-9_-]", "_");
+
+            String safeTitle;
+            if (customFileName != null && !customFileName.trim().isEmpty()) {
+                safeTitle = customFileName.trim().replaceAll("[\\\\/:*?\"<>|]", "_");
+            } else {
+                safeTitle = title.replaceAll("[^a-zA-Z0-9_-]", "_");
+                if (safeTitle.isEmpty()) safeTitle = "Caspian_Export";
+            }
 
             if ("md".equalsIgnoreCase(exportFmt) || "markdown".equalsIgnoreCase(exportFmt)) {
                 StringBuilder sb = new StringBuilder("# " + title + "\n\n*Exported via Caspian Flow on " + dateStr + "*\n\n---\n\n");
@@ -21151,7 +21512,10 @@ public class MainActivity extends AppCompatActivity {
                     JSONObject obj = turnsArray.getJSONObject(i);
                     sb.append("### Turn ").append(obj.getInt("index")).append(" (").append(obj.getString("role")).append(")\n\n").append(obj.getString("text")).append("\n\n---\n\n");
                 }
-                downloadFile(safeTitle + "_Caspian_Export.md", sb.toString(), "text/markdown");
+                File savedFile = downloadFile(safeTitle + ".md", sb.toString(), "text/markdown");
+                if (savedFile != null && autoShare) {
+                    shareExportedFile(savedFile, "text/markdown");
+                }
 
             } else if ("txt".equalsIgnoreCase(exportFmt) || "text".equalsIgnoreCase(exportFmt)) {
                 StringBuilder sb = new StringBuilder("======================================\n" + title.toUpperCase() + "\nExported via Caspian Flow on " + dateStr + "\n======================================\n\n");
@@ -21159,7 +21523,10 @@ public class MainActivity extends AppCompatActivity {
                     JSONObject obj = turnsArray.getJSONObject(i);
                     sb.append("[TURN ").append(obj.getInt("index")).append(" - ").append(obj.getString("role")).append("]\n").append(obj.getString("text")).append("\n\n--------------------------------------\n\n");
                 }
-                downloadFile(safeTitle + "_Caspian_Export.txt", sb.toString(), "text/plain");
+                File savedFile = downloadFile(safeTitle + ".txt", sb.toString(), "text/plain");
+                if (savedFile != null && autoShare) {
+                    shareExportedFile(savedFile, "text/plain");
+                }
 
             } else if ("doc".equalsIgnoreCase(exportFmt)) {
                 StringBuilder sb = new StringBuilder("<html><body><h1>" + title + "</h1><p>Exported via Caspian Flow on " + dateStr + "</p>");
@@ -21168,80 +21535,89 @@ public class MainActivity extends AppCompatActivity {
                     sb.append("<h3>Turn ").append(obj.getInt("index")).append(" (").append(obj.getString("role")).append(")</h3><div>").append(obj.getString("html")).append("</div><hr>");
                 }
                 sb.append("</body></html>");
-                downloadFile(safeTitle + "_Caspian_Export.doc", sb.toString(), "application/msword");
+                File savedFile = downloadFile(safeTitle + ".doc", sb.toString(), "application/msword");
+                if (savedFile != null && autoShare) {
+                    shareExportedFile(savedFile, "application/msword");
+                }
 
             } else if ("styledpdf".equalsIgnoreCase(exportFmt) || "pdf".equalsIgnoreCase(exportFmt)) {
-                StringBuilder turnsHtml = new StringBuilder();
                 String detectionService = "chatgpt";
-
                 for (int i = 0; i < turnsArray.length(); i++) {
                     JSONObject obj = turnsArray.getJSONObject(i);
-                    int idx = obj.getInt("index");
-                    String html = obj.getString("html");
-                    String author = obj.optString("author", (idx % 2 != 0) ? "user" : "assistant");
-                    String service = obj.optString("service", "chatgpt");
-                    detectionService = service;
-                    boolean isUser = "user".equalsIgnoreCase(author);
-                    boolean isGemini = "gemini".equalsIgnoreCase(service);
-
-                    String bgStyle = isUser ? "background: #f7f7f8; border: 1px solid #e5e5e5;" : "background: #ffffff; border: 1px solid #e1e4e8;";
-                    String badgeBg = isUser ? (isGemini ? "background: #153d6f; color: #ffffff;" : "background: #10a37f; color: #ffffff;")
-                                            : "background: #1B4264; color: #ffffff;";
-                    String senderLabel = isUser ? "User Prompt" : (isGemini ? "Gemini Response" : "ChatGPT Response");
-
-                    turnsHtml.append("<div style=\"margin-bottom: 24px; border-radius: 12px; ").append(bgStyle).append(" padding: 20px; box-shadow: 0 2px 8px rgba(0,0,0,0.04); page-break-inside: avoid;\">")
-                            .append("<div style=\"display: flex; align-items: center; justify-content: space-between; margin-bottom: 12px; border-bottom: 1px solid #ececf1; padding-bottom: 8px;\">")
-                            .append("<span style=\"font-weight: 700; font-size: 12px; padding: 4px 10px; border-radius: 6px; ").append(badgeBg).append("\">").append(senderLabel).append(" #").append(idx).append("</span>")
-                            .append("<span style=\"font-size: 10px; color: #8e8ea0;\">Caspian Flow</span>")
-                            .append("</div>")
-                            .append("<div class=\"chat-turn-content\" style=\"font-size: 14px; line-height: 1.7; color: #353740; font-family: 'Inter', -apple-system, sans-serif;\">").append(html).append("</div></div>");
+                    if (obj.has("service")) {
+                        detectionService = obj.optString("service", "chatgpt");
+                        break;
+                    }
                 }
 
-                String badgeTitle = "gemini".equalsIgnoreCase(detectionService) ? "Caspian Flow (Gemini)" : "Caspian Flow (ChatGPT)";
+                String richHtml = CaspianPdfExporter.buildRichHtmlDocument(title, turnsArray, detectionService, scope, dateStr);
+                File exportDir = CaspianPdfExporter.getExportDir(this);
+                File targetPdfFile = new File(exportDir, safeTitle + ".pdf");
+                final String finalTitle = title;
+                final String finalDetectionService = detectionService;
+                final String finalSafeTitle = safeTitle;
 
-                String fullHtml = "<!DOCTYPE html><html><head><meta charset=\"utf-8\"><title>" + title + "</title>" +
-                        "<style>" +
-                        "@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&family=JetBrains+Mono:wght@400;500&display=swap');" +
-                        "@import url('https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.css');" +
-                        "body { font-family: 'Inter', -apple-system, sans-serif; padding: 32px; background: #ffffff; color: #353740; max-width: 900px; margin: 0 auto; }" +
-                        "h1 { font-size: 24px; font-weight: 700; color: #202123; margin-bottom: 8px; font-family: 'Inter', sans-serif; }" +
-                        ".doc-header { border-bottom: 2px solid #1B4264; padding-bottom: 14px; margin-bottom: 28px; display: flex; justify-content: space-between; align-items: center; }" +
-                        ".doc-meta { font-size: 11px; color: #8e8ea0; font-weight: 500; }" +
-                        "pre { background: #202123 !important; color: #ececf1 !important; padding: 14px; border-radius: 8px; overflow-x: auto; font-family: 'JetBrains Mono', monospace; font-size: 13px; margin: 14px 0; }" +
-                        "code { font-family: 'JetBrains Mono', monospace; font-size: 13px; background: rgba(175,184,193,0.2); padding: 2px 6px; border-radius: 4px; }" +
-                        "blockquote { border-left: 4px solid #1B4264; margin: 12px 0; padding-left: 16px; color: #565869; font-style: italic; }" +
-                        "table { width: 100%; border-collapse: collapse; margin: 16px 0; font-size: 13px; }" +
-                        "th, td { border: 1px solid #d9d9e3; padding: 8px 12px; text-align: left; }" +
-                        "th { background: #f7f7f8; font-weight: 600; }" +
-                        "</style>" +
-                        "<script src=\"https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.js\"></script>" +
-                        "<script src=\"https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/contrib/auto-render.min.js\"></script>" +
-                        "<script>" +
-                        "document.addEventListener('DOMContentLoaded', function() {" +
-                        "  renderMathInElement(document.body, {" +
-                        "    delimiters: [" +
-                        "      {left: '$$', right: '$$', display: true}," +
-                        "      {left: '$', right: '$', display: false}," +
-                        "      {left: '\\\\(', right: '\\\\)', display: false}," +
-                        "      {left: '\\\\[', right: '\\\\]', display: true}" +
-                        "    ]," +
-                        "    throwOnError : false" +
-                        "  });" +
-                        "});" +
-                        "</script>" +
-                        "</head><body>" +
-                        "<div class=\"doc-header\"><div><h1>" + title + "</h1><div class=\"doc-meta\">Exported via Caspian Flow &bull; " + dateStr + "</div></div>" +
-                        "<div style=\"font-size: 12px; font-weight: 700; color: #1B4264; border: 1px solid #1B4264; padding: 4px 10px; border-radius: 6px;\">" + badgeTitle + "</div></div>" +
-                        turnsHtml.toString() + "</body></html>";
+                CaspianPdfExporter.renderHtmlToPdf(this, richHtml, safeTitle, targetPdfFile, new CaspianPdfExporter.OnPdfGeneratedCallback() {
+                    @Override
+                    public void onSuccess(File pdfFile) {
+                        runOnUiThread(() -> {
+                            if (useSaf) {
+                                pendingExportPdfFile = pdfFile;
+                                pendingExportAutoShare = autoShare;
+                                try {
+                                    Intent intent = new Intent(Intent.ACTION_CREATE_DOCUMENT);
+                                    intent.addCategory(Intent.CATEGORY_OPENABLE);
+                                    intent.setType("application/pdf");
+                                    intent.putExtra(Intent.EXTRA_TITLE, pdfFile.getName());
+                                    startActivityForResult(intent, REQUEST_CODE_CREATE_PDF_DOCUMENT);
+                                } catch (Throwable t) {
+                                    Log.e(TAG, "SAF document creation failed", t);
+                                    openCachedPdfInNewTab(pdfFile.getAbsolutePath(), finalTitle);
+                                    if (autoShare) sharePdfFile(pdfFile);
+                                    else showPdfExportSuccess(pdfFile, finalTitle);
+                                }
+                            } else {
+                                openCachedPdfInNewTab(pdfFile.getAbsolutePath(), finalTitle);
+                                if (autoShare) {
+                                    sharePdfFile(pdfFile);
+                                } else {
+                                    showPdfExportSuccess(pdfFile, finalTitle);
+                                }
+                            }
+                        });
+                    }
 
-                File pdfFile = CaspianPdfExporter.exportConversationToPdf(this, title, turnsArray, detectionService);
-                if (pdfFile != null && pdfFile.exists()) {
-                    openCachedPdfInNewTab(pdfFile.getAbsolutePath(), title);
-                    showPdfExportSuccess(pdfFile, title);
-                } else {
-                    downloadFile(safeTitle + "_AI_Export.html", fullHtml, "text/html");
-                    Toast.makeText(this, "Saved export to Downloads/Caspian/Export", Toast.LENGTH_SHORT).show();
-                }
+                    @Override
+                    public void onError(Throwable error) {
+                        runOnUiThread(() -> {
+                            Log.w(TAG, "Offscreen HTML slicing failed, using canvas fallback", error);
+                            File fallback = CaspianPdfExporter.exportConversationToPdf(MainActivity.this, finalTitle, turnsArray, finalDetectionService, scope, finalSafeTitle);
+                            if (fallback != null && fallback.exists()) {
+                                if (useSaf) {
+                                    pendingExportPdfFile = fallback;
+                                    pendingExportAutoShare = autoShare;
+                                    try {
+                                        Intent intent = new Intent(Intent.ACTION_CREATE_DOCUMENT);
+                                        intent.addCategory(Intent.CATEGORY_OPENABLE);
+                                        intent.setType("application/pdf");
+                                        intent.putExtra(Intent.EXTRA_TITLE, fallback.getName());
+                                        startActivityForResult(intent, REQUEST_CODE_CREATE_PDF_DOCUMENT);
+                                    } catch (Throwable t) {
+                                        openCachedPdfInNewTab(fallback.getAbsolutePath(), finalTitle);
+                                        if (autoShare) sharePdfFile(fallback);
+                                        else showPdfExportSuccess(fallback, finalTitle);
+                                    }
+                                } else {
+                                    openCachedPdfInNewTab(fallback.getAbsolutePath(), finalTitle);
+                                    if (autoShare) sharePdfFile(fallback);
+                                    else showPdfExportSuccess(fallback, finalTitle);
+                                }
+                            } else {
+                                Toast.makeText(MainActivity.this, "Export failed: " + error.getMessage(), Toast.LENGTH_SHORT).show();
+                            }
+                        });
+                    }
+                });
 
             } else if ("convert".equalsIgnoreCase(exportFmt) || "copy".equalsIgnoreCase(exportFmt)) {
                 StringBuilder sb = new StringBuilder();
@@ -21297,7 +21673,7 @@ public class MainActivity extends AppCompatActivity {
         addNewTab(targetService, prompt, targetUrl, false);
     }
 
-    public void downloadFile(String fileName, String content, String mimeType) {
+    public File downloadFile(String fileName, String content, String mimeType) {
         try {
             File exportDir = new File(Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_DOWNLOADS), "Caspian/Export");
             if (!exportDir.exists()) exportDir.mkdirs();
@@ -21306,6 +21682,7 @@ public class MainActivity extends AppCompatActivity {
             fos.write(content.getBytes(StandardCharsets.UTF_8));
             fos.close();
             Toast.makeText(this, "Saved: " + file.getName() + " in Downloads/Caspian/Export", Toast.LENGTH_LONG).show();
+            return file;
         } catch (Exception e) {
             try {
                 File exportDir = new File(getExternalFilesDir(null), "Downloads");
@@ -21315,9 +21692,30 @@ public class MainActivity extends AppCompatActivity {
                 fos.write(content.getBytes(StandardCharsets.UTF_8));
                 fos.close();
                 Toast.makeText(this, "Saved: " + file.getName(), Toast.LENGTH_LONG).show();
+                return file;
             } catch (Exception ex) {
                 Toast.makeText(this, "Download failed: " + ex.getMessage(), Toast.LENGTH_SHORT).show();
+                return null;
             }
+        }
+    }
+
+    public void shareExportedFile(File file, String mimeType) {
+        if (file == null || !file.exists()) return;
+        try {
+            Uri contentUri = androidx.core.content.FileProvider.getUriForFile(
+                    this, getPackageName() + ".fileprovider", file);
+            Intent intent = new Intent(Intent.ACTION_SEND);
+            intent.setType(mimeType != null ? mimeType : "*/*");
+            intent.putExtra(Intent.EXTRA_STREAM, contentUri);
+            intent.putExtra(Intent.EXTRA_SUBJECT, file.getName());
+            intent.addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION);
+            Intent chooser = Intent.createChooser(intent, "Share " + file.getName());
+            chooser.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
+            startActivity(chooser);
+        } catch (Exception e) {
+            Log.e(TAG, "Failed to share exported file", e);
+            Toast.makeText(this, "Could not share file: " + e.getMessage(), Toast.LENGTH_SHORT).show();
         }
     }
 
@@ -21366,6 +21764,10 @@ public class MainActivity extends AppCompatActivity {
     }
 
     public void exportActiveWebPageToPdf() {
+        exportActiveWebPageToPdf(null, false, false);
+    }
+
+    public void exportActiveWebPageToPdf(String customFileName, boolean useSaf, boolean autoShare) {
         TabItem activeTab = getActiveOrDominantTab();
         if (activeTab == null || activeTab.webView == null) {
             Toast.makeText(this, "No active page to export", Toast.LENGTH_SHORT).show();
@@ -21382,13 +21784,35 @@ public class MainActivity extends AppCompatActivity {
                             cleanJson = new org.json.JSONTokener(cleanJson).nextValue().toString();
                         }
                         JSONObject pageObj = new JSONObject(cleanJson);
-                        String pageTitle = pageObj.optString("title", (activeTab.title != null && !activeTab.title.isEmpty()) ? activeTab.title : "Document");
+                        String pageTitle = (customFileName != null && !customFileName.trim().isEmpty())
+                                ? customFileName.trim()
+                                : pageObj.optString("title", (activeTab.title != null && !activeTab.title.isEmpty()) ? activeTab.title : "Document");
                         String pageUrl = pageObj.optString("url", (activeTab.url != null) ? activeTab.url : "");
                         String pageText = pageObj.optString("text", "");
                         File pdf = CaspianPdfExporter.exportWebPageToPdf(this, pageTitle, pageUrl, pageText);
                         if (pdf != null && pdf.exists()) {
-                            openCachedPdfInNewTab(pdf.getAbsolutePath(), pageTitle);
-                            showPdfExportSuccess(pdf, pageTitle);
+                            if (useSaf) {
+                                pendingExportPdfFile = pdf;
+                                pendingExportAutoShare = autoShare;
+                                try {
+                                    Intent intent = new Intent(Intent.ACTION_CREATE_DOCUMENT);
+                                    intent.addCategory(Intent.CATEGORY_OPENABLE);
+                                    intent.setType("application/pdf");
+                                    intent.putExtra(Intent.EXTRA_TITLE, pdf.getName());
+                                    startActivityForResult(intent, REQUEST_CODE_CREATE_PDF_DOCUMENT);
+                                } catch (Throwable t) {
+                                    openCachedPdfInNewTab(pdf.getAbsolutePath(), pageTitle);
+                                    if (autoShare) sharePdfFile(pdf);
+                                    else showPdfExportSuccess(pdf, pageTitle);
+                                }
+                            } else {
+                                openCachedPdfInNewTab(pdf.getAbsolutePath(), pageTitle);
+                                if (autoShare) {
+                                    sharePdfFile(pdf);
+                                } else {
+                                    showPdfExportSuccess(pdf, pageTitle);
+                                }
+                            }
                         } else {
                             Toast.makeText(this, "PDF generation failed", Toast.LENGTH_SHORT).show();
                         }
@@ -21433,6 +21857,47 @@ public class MainActivity extends AppCompatActivity {
             Log.e(TAG, "Failed to share PDF", e);
             Toast.makeText(this, "Could not share PDF: " + e.getMessage(), Toast.LENGTH_SHORT).show();
         }
+    }
+
+    private void handleSavePdfToSafUri(Uri destinationUri) {
+        if (pendingExportPdfFile == null || !pendingExportPdfFile.exists() || destinationUri == null) {
+            Toast.makeText(this, "Export saved to Caspian folder", Toast.LENGTH_SHORT).show();
+            return;
+        }
+        final File srcFile = pendingExportPdfFile;
+        final boolean autoShare = pendingExportAutoShare;
+        new Thread(() -> {
+            boolean success = false;
+            try (java.io.InputStream in = new java.io.FileInputStream(srcFile);
+                 java.io.OutputStream out = getContentResolver().openOutputStream(destinationUri)) {
+                if (out != null) {
+                    byte[] buffer = new byte[8192];
+                    int read;
+                    while ((read = in.read(buffer)) != -1) {
+                        out.write(buffer, 0, read);
+                    }
+                    out.flush();
+                    success = true;
+                }
+            } catch (Throwable t) {
+                Log.e(TAG, "Failed to write PDF to SAF URI", t);
+            }
+            final boolean finalSuccess = success;
+            runOnUiThread(() -> {
+                if (finalSuccess) {
+                    Toast.makeText(this, "Saved: " + srcFile.getName(), Toast.LENGTH_SHORT).show();
+                    openCachedPdfInNewTab(srcFile.getAbsolutePath(), srcFile.getName().replace(".pdf", ""));
+                    if (autoShare) {
+                        sharePdfFile(srcFile);
+                    } else {
+                        showPdfExportSuccess(srcFile, srcFile.getName());
+                    }
+                } else {
+                    Toast.makeText(this, "Saved in Downloads/Caspian/Export", Toast.LENGTH_LONG).show();
+                    openCachedPdfInNewTab(srcFile.getAbsolutePath(), srcFile.getName().replace(".pdf", ""));
+                }
+            });
+        }).start();
     }
 
     public void printPage() {
