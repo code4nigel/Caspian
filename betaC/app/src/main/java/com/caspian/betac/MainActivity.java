@@ -20580,14 +20580,8 @@ public class MainActivity extends AppCompatActivity {
         }
         WebView mainWebView = activeTab.webView;
 
-        if ("nativepdf".equalsIgnoreCase(fmt)) {
-            hideControlSheet();
-            printActivePageViaSystem();
-            return;
-        }
-
         String targetFormat = fmt;
-        if ("pdf".equalsIgnoreCase(fmt)) {
+        if ("pdf".equalsIgnoreCase(fmt) || "nativepdf".equalsIgnoreCase(fmt)) {
             targetFormat = "styledpdf";
         }
         final String exportFmt = targetFormat;
@@ -21111,9 +21105,7 @@ public class MainActivity extends AppCompatActivity {
             if (!handled) {
                 runOnUiThread(() -> {
                     if ("styledpdf".equalsIgnoreCase(exportFmt) || "pdf".equalsIgnoreCase(exportFmt) || "nativepdf".equalsIgnoreCase(exportFmt)) {
-                        hideControlSheet();
-                        Toast.makeText(this, "Generating system print...", Toast.LENGTH_SHORT).show();
-                        printActivePageViaSystem();
+                        exportActiveWebPageToPdf();
                     } else {
                         Toast.makeText(this, "No content found to export!", Toast.LENGTH_SHORT).show();
                     }
@@ -21126,8 +21118,7 @@ public class MainActivity extends AppCompatActivity {
         try {
             if (jsonStr == null || jsonStr.equals("null") || jsonStr.equals("[]")) {
                 if ("styledpdf".equalsIgnoreCase(exportFmt) || "pdf".equalsIgnoreCase(exportFmt) || "nativepdf".equalsIgnoreCase(exportFmt)) {
-                    hideControlSheet();
-                    printActivePageViaSystem();
+                    exportActiveWebPageToPdf();
                 } else {
                     Toast.makeText(this, "No content found to export!", Toast.LENGTH_SHORT).show();
                 }
@@ -21137,8 +21128,7 @@ public class MainActivity extends AppCompatActivity {
             JSONArray turnsArray = new JSONArray(jsonStr);
             if (turnsArray.length() == 0) {
                 if ("styledpdf".equalsIgnoreCase(exportFmt) || "pdf".equalsIgnoreCase(exportFmt) || "nativepdf".equalsIgnoreCase(exportFmt)) {
-                    hideControlSheet();
-                    printActivePageViaSystem();
+                    exportActiveWebPageToPdf();
                 } else {
                     Toast.makeText(this, "No content found to export!", Toast.LENGTH_SHORT).show();
                 }
@@ -21244,8 +21234,14 @@ public class MainActivity extends AppCompatActivity {
                         "<div style=\"font-size: 12px; font-weight: 700; color: #1B4264; border: 1px solid #1B4264; padding: 4px 10px; border-radius: 6px;\">" + badgeTitle + "</div></div>" +
                         turnsHtml.toString() + "</body></html>";
 
-                downloadFile(safeTitle + "_AI_Export.html", fullHtml, "text/html");
-                printHtml("Caspian_AI_Document", fullHtml);
+                File pdfFile = CaspianPdfExporter.exportConversationToPdf(this, title, turnsArray, detectionService);
+                if (pdfFile != null && pdfFile.exists()) {
+                    openCachedPdfInNewTab(pdfFile.getAbsolutePath(), title);
+                    showPdfExportSuccess(pdfFile, title);
+                } else {
+                    downloadFile(safeTitle + "_AI_Export.html", fullHtml, "text/html");
+                    Toast.makeText(this, "Saved export to Downloads/Caspian/Export", Toast.LENGTH_SHORT).show();
+                }
 
             } else if ("convert".equalsIgnoreCase(exportFmt) || "copy".equalsIgnoreCase(exportFmt)) {
                 StringBuilder sb = new StringBuilder();
@@ -21367,6 +21363,76 @@ public class MainActivity extends AppCompatActivity {
                 printActivePageViaSystem();
             }
         });
+    }
+
+    public void exportActiveWebPageToPdf() {
+        TabItem activeTab = getActiveOrDominantTab();
+        if (activeTab == null || activeTab.webView == null) {
+            Toast.makeText(this, "No active page to export", Toast.LENGTH_SHORT).show();
+            return;
+        }
+        hideControlSheet();
+        Toast.makeText(this, "Generating Caspian PDF...", Toast.LENGTH_SHORT).show();
+        activeTab.webView.evaluateJavascript(
+                "(function(){ return JSON.stringify({title: document.title, url: window.location.href, text: document.body.innerText}); })()",
+                pageJson -> {
+                    try {
+                        String cleanJson = pageJson;
+                        if (cleanJson != null && cleanJson.startsWith("\"") && cleanJson.endsWith("\"")) {
+                            cleanJson = new org.json.JSONTokener(cleanJson).nextValue().toString();
+                        }
+                        JSONObject pageObj = new JSONObject(cleanJson);
+                        String pageTitle = pageObj.optString("title", (activeTab.title != null && !activeTab.title.isEmpty()) ? activeTab.title : "Document");
+                        String pageUrl = pageObj.optString("url", (activeTab.url != null) ? activeTab.url : "");
+                        String pageText = pageObj.optString("text", "");
+                        File pdf = CaspianPdfExporter.exportWebPageToPdf(this, pageTitle, pageUrl, pageText);
+                        if (pdf != null && pdf.exists()) {
+                            openCachedPdfInNewTab(pdf.getAbsolutePath(), pageTitle);
+                            showPdfExportSuccess(pdf, pageTitle);
+                        } else {
+                            Toast.makeText(this, "PDF generation failed", Toast.LENGTH_SHORT).show();
+                        }
+                    } catch (Exception ex) {
+                        Log.e(TAG, "Error generating web page PDF", ex);
+                        Toast.makeText(this, "PDF generation failed: " + ex.getMessage(), Toast.LENGTH_SHORT).show();
+                    }
+                });
+    }
+
+    public void showPdfExportSuccess(File pdfFile, String title) {
+        if (pdfFile == null) return;
+        runOnUiThread(() -> {
+            try {
+                com.google.android.material.snackbar.Snackbar snackbar =
+                        com.google.android.material.snackbar.Snackbar.make(
+                                findViewById(android.R.id.content),
+                                "PDF saved & opened in Caspian Study Viewer",
+                                com.google.android.material.snackbar.Snackbar.LENGTH_LONG);
+                snackbar.setAction("Share", v -> sharePdfFile(pdfFile));
+                snackbar.show();
+            } catch (Throwable t) {
+                Toast.makeText(this, "Saved: " + pdfFile.getName() + " in Downloads/Caspian/Export", Toast.LENGTH_LONG).show();
+            }
+        });
+    }
+
+    public void sharePdfFile(File file) {
+        if (file == null || !file.exists()) return;
+        try {
+            Uri contentUri = androidx.core.content.FileProvider.getUriForFile(
+                    this, getPackageName() + ".fileprovider", file);
+            Intent intent = new Intent(Intent.ACTION_SEND);
+            intent.setType("application/pdf");
+            intent.putExtra(Intent.EXTRA_STREAM, contentUri);
+            intent.putExtra(Intent.EXTRA_SUBJECT, file.getName());
+            intent.addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION);
+            Intent chooser = Intent.createChooser(intent, "Share " + file.getName());
+            chooser.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
+            startActivity(chooser);
+        } catch (Exception e) {
+            Log.e(TAG, "Failed to share PDF", e);
+            Toast.makeText(this, "Could not share PDF: " + e.getMessage(), Toast.LENGTH_SHORT).show();
+        }
     }
 
     public void printPage() {

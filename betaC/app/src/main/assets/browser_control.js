@@ -4068,19 +4068,17 @@
         if (parentCard) parentCard.classList.remove('dropdown-open');
       }
 
-      if (fmt === 'styledpdf') {
+      if (fmt === 'styledpdf' || fmt === 'nativepdf') {
         const progressOverlay = document.getElementById('pdf-progress-overlay');
         const progressTimer = document.getElementById('progress-timer');
         if (progressOverlay && progressTimer) {
           progressOverlay.style.display = 'flex';
-          let count = 3;
-          progressTimer.textContent = `Typesetting math formulas... ${count}s`;
+          let count = 2;
+          progressTimer.textContent = `Formatting Caspian PDF... ${count}s`;
           const interval = setInterval(() => {
             count--;
-            if (count === 2) {
-              progressTimer.textContent = `Preparing document layout... ${count}s`;
-            } else if (count === 1) {
-              progressTimer.textContent = `Launching Android Print... ${count}s`;
+            if (count === 1) {
+              progressTimer.textContent = `Opening Caspian Study Viewer... ${count}s`;
             } else if (count <= 0) {
               clearInterval(interval);
               progressOverlay.style.display = 'none';
