@@ -4068,7 +4068,7 @@
         if (parentCard) parentCard.classList.remove('dropdown-open');
       }
 
-      if (fmt === 'nativepdf' || fmt === 'styledpdf') {
+      if (fmt === 'styledpdf') {
         const progressOverlay = document.getElementById('pdf-progress-overlay');
         const progressTimer = document.getElementById('progress-timer');
         if (progressOverlay && progressTimer) {

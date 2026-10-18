@@ -398,10 +398,12 @@ async function extractPageConversationPayload() {
     if (conversationId) {
       let token = null;
 
-      // Token Path 1: Check window.__NEXT_DATA__
+      // Token Path 1: Check window.__NEXT_DATA__ (supporting Firefox Xray bypass)
       try {
-        if (window.__NEXT_DATA__ && window.__NEXT_DATA__.props && window.__NEXT_DATA__.props.pageProps) {
-          token = window.__NEXT_DATA__.props.pageProps.accessToken;
+        const pageWin = (typeof window.wrappedJSObject !== 'undefined') ? window.wrappedJSObject : window;
+        const nextData = pageWin.__NEXT_DATA__ || window.__NEXT_DATA__;
+        if (nextData && nextData.props && nextData.props.pageProps) {
+          token = nextData.props.pageProps.accessToken;
           if (token) console.log('Caspian API Debug: Access token retrieved from __NEXT_DATA__');
         }
       } catch (e) {}
@@ -1629,7 +1631,7 @@ function setupCardToggleHandlers() {
     });
   });
 
-  // Flow Speed Card Handlers
+  // Flow Speed Card Handlers & Utilities
   const toggleFlowSpeedBtn = document.getElementById('toggle-flow-speed-btn');
   const flowSpeedHeader = document.getElementById('flow-speed-header');
   const flowSpeedBody = document.getElementById('flow-speed-body');
@@ -1638,9 +1640,66 @@ function setupCardToggleHandlers() {
   const flowSpeedSlider = document.getElementById('flow-speed-slider');
   const speedDownBtn = document.getElementById('speed-down-btn');
   const speedUpBtn = document.getElementById('speed-up-btn');
+  const speedResetBtn = document.getElementById('speed-reset-btn');
   const flowSpeedCycleInput = document.getElementById('flow-speed-cycle-input');
   const shortcutResetInput = document.getElementById('shortcut-reset-input');
   const shortcutCycleInput = document.getElementById('shortcut-cycle-input');
+  const toggleCycleEditBtn = document.getElementById('toggle-cycle-edit-btn');
+  const flowCycleEditTray = document.getElementById('flow-cycle-edit-tray');
+
+  function updateSliderTrack(slider) {
+    if (!slider) return;
+    const min = parseFloat(slider.min) || 0.25;
+    const max = parseFloat(slider.max) || 5.0;
+    const val = parseFloat(slider.value) || 1.0;
+    const pct = Math.max(0, Math.min(100, ((val - min) / (max - min)) * 100));
+    slider.style.background = `linear-gradient(to right, var(--accent) 0%, var(--accent) ${pct}%, var(--border-glass) ${pct}%, var(--border-glass) 100%)`;
+  }
+
+  function renderCycleChips(listStr, activeSpeed) {
+    const ribbon = document.getElementById('flow-cycle-chips-ribbon');
+    if (!ribbon) return;
+    ribbon.innerHTML = '';
+    const speeds = (listStr || '1, 1.25, 1.5, 1.75, 2, 2.5, 3')
+      .split(',')
+      .map(s => parseFloat(s.trim()))
+      .filter(s => !isNaN(s) && s > 0);
+
+    speeds.forEach(speed => {
+      const chip = document.createElement('button');
+      chip.type = 'button';
+      chip.className = 'flow-cycle-chip';
+      const isAct = Math.abs(speed - activeSpeed) < 0.02;
+      if (isAct) chip.classList.add('active');
+      chip.textContent = `${speed.toFixed(speed % 1 === 0 ? 1 : 2)}x`;
+      chip.title = `Jump directly to ${speed}x playback`;
+      chip.addEventListener('click', (e) => {
+        e.stopPropagation();
+        applyFlowSpeed(speed, true);
+      });
+      ribbon.appendChild(chip);
+    });
+  }
+
+  function applyFlowSpeed(val, updateSlider = true) {
+    const speed = Math.max(0.25, Math.min(5.0, parseFloat(val.toFixed(2))));
+    const slider = document.getElementById('flow-speed-slider');
+    const display = document.getElementById('flow-speed-val-display');
+    const badge = document.getElementById('flow-speed-active-badge');
+    if (updateSlider && slider) slider.value = speed;
+    if (slider) updateSliderTrack(slider);
+    if (display) display.textContent = `${speed.toFixed(2)}x`;
+    if (badge) badge.textContent = `${speed.toFixed(2)}x`;
+
+    chrome.storage.local.set({ flow_speed_val: speed });
+
+    document.querySelectorAll('.speed-pill').forEach(p => {
+      p.classList.toggle('active', Math.abs(parseFloat(p.dataset.speed) - speed) < 0.02);
+    });
+
+    const cycleInput = document.getElementById('flow-speed-cycle-input');
+    renderCycleChips(cycleInput?.value || '1, 1.25, 1.5, 1.75, 2, 2.5, 3', speed);
+  }
 
   if (toggleFlowSpeedBtn) {
     toggleFlowSpeedBtn.addEventListener('click', (e) => {
@@ -1653,7 +1712,8 @@ function setupCardToggleHandlers() {
   }
 
   if (flowSpeedHeader && flowSpeedBody) {
-    flowSpeedHeader.addEventListener('click', () => {
+    flowSpeedHeader.addEventListener('click', (e) => {
+      if (e.target.closest('#toggle-flow-speed-btn') || e.target.closest('.card-reorder-ctrls')) return;
       const isVisible = flowSpeedBody.style.display !== 'none';
       const nextVisible = !isVisible;
       flowSpeedBody.style.display = nextVisible ? 'flex' : 'none';
@@ -1668,14 +1728,7 @@ function setupCardToggleHandlers() {
     flowSpeedSlider.addEventListener('input', (e) => {
       const val = parseFloat(e.target.value);
       if (!isNaN(val)) {
-        const display = document.getElementById('flow-speed-val-display');
-        const badge = document.getElementById('flow-speed-active-badge');
-        if (display) display.textContent = `${val.toFixed(2)}x`;
-        if (badge) badge.textContent = `${val.toFixed(2)}x`;
-        chrome.storage.local.set({ flow_speed_val: val });
-        document.querySelectorAll('.speed-pill').forEach(p => {
-          p.classList.toggle('active', Math.abs(parseFloat(p.dataset.speed) - val) < 0.02);
-        });
+        applyFlowSpeed(val, false);
       }
     });
   }
@@ -1685,8 +1738,7 @@ function setupCardToggleHandlers() {
       e.stopPropagation();
       const current = parseFloat(flowSpeedSlider.value) || 1.0;
       const next = Math.max(0.25, parseFloat((current - 0.25).toFixed(2)));
-      flowSpeedSlider.value = next;
-      flowSpeedSlider.dispatchEvent(new Event('input'));
+      applyFlowSpeed(next, true);
     });
   }
 
@@ -1695,25 +1747,67 @@ function setupCardToggleHandlers() {
       e.stopPropagation();
       const current = parseFloat(flowSpeedSlider.value) || 1.0;
       const next = Math.min(5.0, parseFloat((current + 0.25).toFixed(2)));
-      flowSpeedSlider.value = next;
-      flowSpeedSlider.dispatchEvent(new Event('input'));
+      applyFlowSpeed(next, true);
     });
   }
+
+  if (speedResetBtn) {
+    speedResetBtn.addEventListener('click', (e) => {
+      e.stopPropagation();
+      applyFlowSpeed(1.0, true);
+    });
+  }
+
+  // Slider scale points
+  document.querySelectorAll('.scale-point').forEach(pt => {
+    pt.addEventListener('click', (e) => {
+      e.stopPropagation();
+      const sp = parseFloat(pt.dataset.speed);
+      if (!isNaN(sp)) applyFlowSpeed(sp, true);
+    });
+  });
 
   document.querySelectorAll('.speed-pill').forEach(pill => {
     pill.addEventListener('click', (e) => {
       e.stopPropagation();
       const speed = parseFloat(pill.dataset.speed);
       if (!isNaN(speed)) {
-        if (flowSpeedSlider) flowSpeedSlider.value = speed;
-        chrome.storage.local.set({ flow_speed_val: speed }, loadSettings);
+        applyFlowSpeed(speed, true);
+      }
+    });
+  });
+
+  // Cycle Speeds Ribbon & Edit Drawer Handlers
+  if (toggleCycleEditBtn && flowCycleEditTray) {
+    toggleCycleEditBtn.addEventListener('click', (e) => {
+      e.stopPropagation();
+      const isVisible = flowCycleEditTray.style.display !== 'none';
+      flowCycleEditTray.style.display = isVisible ? 'none' : 'flex';
+      toggleCycleEditBtn.textContent = isVisible ? 'Edit' : 'Done';
+    });
+  }
+
+  document.querySelectorAll('.cycle-quick-preset').forEach(btn => {
+    btn.addEventListener('click', (e) => {
+      e.stopPropagation();
+      const preset = btn.dataset.preset;
+      if (preset && flowSpeedCycleInput) {
+        flowSpeedCycleInput.value = preset;
+        flowSpeedCycleInput.dispatchEvent(new Event('change'));
       }
     });
   });
 
   if (flowSpeedCycleInput) {
     flowSpeedCycleInput.addEventListener('change', (e) => {
-      chrome.storage.local.set({ flow_speed_cycle_list: e.target.value.trim() });
+      const val = e.target.value.trim();
+      chrome.storage.local.set({ flow_speed_cycle_list: val });
+      const currentSpeed = parseFloat(flowSpeedSlider?.value) || 1.0;
+      renderCycleChips(val, currentSpeed);
+    });
+    flowSpeedCycleInput.addEventListener('input', (e) => {
+      const currentSpeed = parseFloat(flowSpeedSlider?.value) || 1.0;
+      renderCycleChips(e.target.value.trim(), currentSpeed);
     });
   }
 
@@ -1990,10 +2084,17 @@ function loadSettings() {
     if (flowSpeedStatusTitle) flowSpeedStatusTitle.textContent = flowSpeedEnabled ? 'Flow Speed: ON' : 'Flow Speed: OFF';
     if (flowSpeedActiveBadge) flowSpeedActiveBadge.textContent = `${flowSpeedVal.toFixed(2)}x`;
     if (flowSpeedValDisplay) flowSpeedValDisplay.textContent = `${flowSpeedVal.toFixed(2)}x`;
-    if (flowSpeedSlider) flowSpeedSlider.value = flowSpeedVal;
+    if (flowSpeedSlider) {
+      flowSpeedSlider.value = flowSpeedVal;
+      if (typeof updateSliderTrack === 'function') updateSliderTrack(flowSpeedSlider);
+    }
     if (flowSpeedCycleInput) flowSpeedCycleInput.value = flowSpeedCycleList;
     if (shortcutResetInput) shortcutResetInput.value = shortcutReset.toUpperCase();
     if (shortcutCycleInput) shortcutCycleInput.value = shortcutCycle.toUpperCase();
+
+    if (typeof renderCycleChips === 'function') {
+      renderCycleChips(flowSpeedCycleList, flowSpeedVal);
+    }
 
     if (flowSpeedBtn) {
       flowSpeedBtn.textContent = flowSpeedEnabled ? 'ON' : 'OFF';
@@ -2741,6 +2842,85 @@ function setupSiteBookmarks() {
   });
 }
 
+// Engine Tab: Card Move / Drag-and-Drop Reordering Controller
+function initCardReordering() {
+  const container = document.getElementById('tab-engine');
+  if (!container) return;
+
+  function saveCardsOrder() {
+    const cards = Array.from(container.querySelectorAll(':scope > .glass-card'));
+    const order = cards.map(c => c.dataset.cardId || c.id).filter(Boolean);
+    chrome.storage.local.set({ engine_cards_order: order });
+  }
+
+  // Restore saved order
+  chrome.storage.local.get('engine_cards_order', (data) => {
+    const savedOrder = data.engine_cards_order;
+    if (Array.isArray(savedOrder) && savedOrder.length) {
+      savedOrder.forEach(id => {
+        const card = document.getElementById(id);
+        if (card && card.parentNode === container) {
+          container.appendChild(card);
+        }
+      });
+    }
+  });
+
+  // Drag and Drop Card Reordering
+  let draggedCard = null;
+  const allCards = container.querySelectorAll(':scope > .glass-card');
+  allCards.forEach(card => {
+    const grip = card.querySelector('.card-reorder-ctrls');
+    if (grip) {
+      grip.setAttribute('draggable', 'true');
+      grip.addEventListener('dragstart', (e) => {
+        draggedCard = card;
+        card.classList.add('is-dragging');
+        e.dataTransfer.effectAllowed = 'move';
+        e.dataTransfer.setData('text/plain', card.id);
+      });
+      grip.addEventListener('dragend', () => {
+        card.classList.remove('is-dragging');
+        allCards.forEach(c => c.classList.remove('drag-over-top', 'drag-over-bottom'));
+        draggedCard = null;
+        saveCardsOrder();
+      });
+    }
+
+    card.addEventListener('dragover', (e) => {
+      e.preventDefault();
+      if (!draggedCard || draggedCard === card) return;
+      const rect = card.getBoundingClientRect();
+      const midY = rect.top + rect.height / 2;
+      if (e.clientY < midY) {
+        card.classList.add('drag-over-top');
+        card.classList.remove('drag-over-bottom');
+      } else {
+        card.classList.add('drag-over-bottom');
+        card.classList.remove('drag-over-top');
+      }
+    });
+
+    card.addEventListener('dragleave', () => {
+      card.classList.remove('drag-over-top', 'drag-over-bottom');
+    });
+
+    card.addEventListener('drop', (e) => {
+      e.preventDefault();
+      card.classList.remove('drag-over-top', 'drag-over-bottom');
+      if (!draggedCard || draggedCard === card) return;
+      const rect = card.getBoundingClientRect();
+      const midY = rect.top + rect.height / 2;
+      if (e.clientY < midY) {
+        container.insertBefore(draggedCard, card);
+      } else {
+        container.insertBefore(draggedCard, card.nextSibling);
+      }
+      saveCardsOrder();
+    });
+  });
+}
+
 // Dynamic Manifest Version Synchronization
 function syncVersionTag() {
   try {
@@ -2761,6 +2941,7 @@ window.addEventListener('DOMContentLoaded', () => {
   syncVersionTag();
   loadSettings();
   initTempChatVault();
+  initCardReordering();
   setupCardToggleHandlers();
   setupSiteBookmarks();
   setupDevExclusiveThemes();

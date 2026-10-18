@@ -134,7 +134,8 @@ fi
 # 5. Publish Caspian Extension
 EXT_TAG="Caspian-Extension-v${EXT_VER}"
 EXT_TITLE="[Extension] Caspian Extension v${EXT_VER}"
-EXT_ASSET="versions/Caspian-Extension-v${EXT_VER}.zip"
+EXT_ASSET="versions/Extension Versions/Caspian-Extension-v${EXT_VER}.zip"
+[ ! -f "$EXT_ASSET" ] && EXT_ASSET="versions/Caspian-Extension-v${EXT_VER}.zip"
 EXT_NOTES="### 🧩 Caspian Extension
 
 Official Chromium Desktop Browser Extension for ChatGPT/Gemini DOM optimization, universal Flow Speed playback controller, YouTube feed limits & multi-format document exporter.
@@ -156,7 +157,8 @@ fi
 # 6. Publish Caspian Firefox Extension
 FOX_TAG="Caspian-Fox-Extension-v${FOX_VER}"
 FOX_TITLE="[Firefox Extension] Caspian Firefox Extension v${FOX_VER}"
-FOX_ASSET="versions/Caspian-Fox-Extension-v${FOX_VER}.zip"
+FOX_ASSET="versions/Extension Versions/Caspian-Fox-Extension-v${FOX_VER}.zip"
+[ ! -f "$FOX_ASSET" ] && FOX_ASSET="versions/Caspian-Fox-Extension-v${FOX_VER}.zip"
 FOX_NOTES="### 🦊 Caspian for Firefox (Mozilla Firefox Extension)
 
 Official Mozilla Firefox Desktop Browser Extension (Manifest V3) for ChatGPT/Gemini DOM optimization, universal Flow Speed playback controller, YouTube feed limits, Temporary Chat Vault with session authentication, and RippleFrame full-page screenshot studio.

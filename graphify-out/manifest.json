@@ -288,15 +288,15 @@
     "semantic_hash": ""
   },
   "Caspian/manifest.json": {
-    "mtime": 1788504268.3963535,
-    "seen": 1789062562.236479,
-    "ast_hash": "6ed637dc246abcc8548e05b4e9961626",
+    "mtime": 1790752106.50689,
+    "seen": 1790752392.7778182,
+    "ast_hash": "3efb7ff3aa116c0b7dceb28786aba3b0",
     "semantic_hash": ""
   },
   "Caspian/popup.js": {
-    "mtime": 1789812016.116497,
-    "seen": 1789812120.0452425,
-    "ast_hash": "1f01584cba1b83828d6b4af0d282e17b",
+    "mtime": 1790752172.6584427,
+    "seen": 1790752392.7778196,
+    "ast_hash": "51d3c09889b03e35357f6cfe9d761b19",
     "semantic_hash": ""
   },
   "Caspian/rippleframe.js": {
@@ -312,9 +312,9 @@
     "semantic_hash": ""
   },
   "Caspian/speed_content.js": {
-    "mtime": 1788069663.7708383,
-    "seen": 1789062562.2364888,
-    "ast_hash": "9af9f857ac82cbbc630dfd48c9fadbf3",
+    "mtime": 1790744781.3034625,
+    "seen": 1790752392.777824,
+    "ast_hash": "c70577c657d28ef06407f04fd4d5bc35",
     "semantic_hash": ""
   },
   "Caspian/youtube_content.js": {
@@ -336,9 +336,9 @@
     "semantic_hash": ""
   },
   "betaC/app/src/main/assets/browser_control.js": {
-    "mtime": 1789644352.908052,
-    "seen": 1789644542.439722,
-    "ast_hash": "ab349d3cbeee0b7c0fb643db4d489c95",
+    "mtime": 1792307212.6317518,
+    "seen": 1792307465.506459,
+    "ast_hash": "67662235811e7193925df50be1e70d94",
     "semantic_hash": ""
   },
   "betaC/app/src/main/assets/chatgpt_network_interceptor.js": {
@@ -450,9 +450,9 @@
     "semantic_hash": ""
   },
   "betaC/app/src/main/java/com/caspian/betac/MainActivity.java": {
-    "mtime": 1789666790.531726,
-    "seen": 1789666964.5868642,
-    "ast_hash": "3d8cdba56e0fcbb675f629aa341daab4",
+    "mtime": 1792307309.1619205,
+    "seen": 1792307465.5065227,
+    "ast_hash": "b80d12eed832ed04d2a76e0a091e19ae",
     "semantic_hash": ""
   },
   "betaC/app/src/main/java/com/caspian/betac/SearchSuggestionService.java": {
@@ -546,9 +546,9 @@
     "semantic_hash": ""
   },
   ".github/workflows/release.yml": {
-    "mtime": 1789293770.155979,
-    "seen": 1789309597.8509595,
-    "ast_hash": "35420cea09d073b28099ab08014e63e6",
+    "mtime": 1790743623.9295619,
+    "seen": 1790752392.7779436,
+    "ast_hash": "8661d7a2a1aa5943869ddaa01ebcfbde",
     "semantic_hash": ""
   },
   "Caspian-Android/README.md": {
@@ -630,21 +630,21 @@
     "semantic_hash": ""
   },
   "Caspian/popup.html": {
-    "mtime": 1789812045.3805776,
-    "seen": 1789812120.0454707,
-    "ast_hash": "edb5ec928fc08a02913390578f9eee35",
+    "mtime": 1790752052.2165978,
+    "seen": 1790752392.777966,
+    "ast_hash": "a6e5cc4189e60f189ab2c7d0a0d510b6",
     "semantic_hash": ""
   },
   "Caspian/rippleframe.html": {
-    "mtime": 1788502330.4982185,
-    "seen": 1789062562.2366116,
-    "ast_hash": "f876e3da1fea3543e2dfda4c46eaa5a1",
+    "mtime": 1790744794.8196385,
+    "seen": 1790752392.7779677,
+    "ast_hash": "261d56abb8f8ad82389fe96e85292aca",
     "semantic_hash": ""
   },
   "README.md": {
-    "mtime": 1789811642.7433658,
-    "seen": 1789811691.9232635,
-    "ast_hash": "418a19338b943929d73bed66b86dd53f",
+    "mtime": 1790689609.5512395,
+    "seen": 1790752392.777969,
+    "ast_hash": "1dcd9c5e7b2a53c8ee425d64185a21af",
     "semantic_hash": ""
   },
   "betaC/app/src/main/assets/browser_control.html": {
@@ -1626,9 +1626,9 @@
     "semantic_hash": ""
   },
   ".github/scripts/publish-releases.sh": {
-    "mtime": 1789293782.2533271,
-    "seen": 1789309597.8503234,
-    "ast_hash": "eb45f3e3d1905628f8469aec66b91fe9",
+    "mtime": 1790743669.2497692,
+    "seen": 1790752392.7777307,
+    "ast_hash": "abe9c170e90d65120347d7d8bb29652c",
     "semantic_hash": ""
   },
   "betaC/app/src/main/assets/scrobby_engine.js": {
@@ -1740,9 +1740,9 @@
     "semantic_hash": ""
   },
   "caspian fox extension/background.js": {
-    "mtime": 1789811529.8314588,
-    "seen": 1789811691.923222,
-    "ast_hash": "58ec90fd3d5efe45ed75de98912626f4",
+    "mtime": 1790688630.2284324,
+    "seen": 1790688769.7485428,
+    "ast_hash": "d72e48bc095dd516e42aa2ba96cb2464",
     "semantic_hash": ""
   },
   "caspian fox extension/content.js": {
@@ -1752,15 +1752,15 @@
     "semantic_hash": ""
   },
   "caspian fox extension/manifest.json": {
-    "mtime": 1789811516.9828048,
-    "seen": 1789811691.9232254,
-    "ast_hash": "453118d3f7ed4ffad9a3469bbfbba80a",
+    "mtime": 1790752158.7342117,
+    "seen": 1790752392.7779245,
+    "ast_hash": "452a4d27b36e463603c65677fc9a4bd5",
     "semantic_hash": ""
   },
   "caspian fox extension/popup.js": {
-    "mtime": 1789812031.774691,
-    "seen": 1789812120.0454106,
-    "ast_hash": "5796db0bffcbf89563e5fb5e79d9619e",
+    "mtime": 1790752184.9662395,
+    "seen": 1790752392.7779267,
+    "ast_hash": "51d3c09889b03e35357f6cfe9d761b19",
     "semantic_hash": ""
   },
   "caspian fox extension/rippleframe.js": {
@@ -1776,9 +1776,9 @@
     "semantic_hash": ""
   },
   "caspian fox extension/speed_content.js": {
-    "mtime": 1788069663.7708383,
-    "seen": 1789811691.923231,
-    "ast_hash": "9af9f857ac82cbbc630dfd48c9fadbf3",
+    "mtime": 1790752184.9672458,
+    "seen": 1790752392.777931,
+    "ast_hash": "c70577c657d28ef06407f04fd4d5bc35",
     "semantic_hash": ""
   },
   "caspian fox extension/youtube_content.js": {
@@ -1788,21 +1788,21 @@
     "semantic_hash": ""
   },
   "caspian fox extension/README.md": {
-    "mtime": 1789811602.2996905,
-    "seen": 1789811691.9232714,
-    "ast_hash": "e5744b93e97106241fd7c8334dcbf846",
+    "mtime": 1790752221.3787303,
+    "seen": 1790752392.7779765,
+    "ast_hash": "f6d4eeec3d3dc89d19e73c8ef67a2f96",
     "semantic_hash": ""
   },
   "caspian fox extension/popup.html": {
-    "mtime": 1789812051.279457,
-    "seen": 1789812120.0454915,
-    "ast_hash": "edb5ec928fc08a02913390578f9eee35",
+    "mtime": 1790752184.965238,
+    "seen": 1790752392.7779782,
+    "ast_hash": "a6e5cc4189e60f189ab2c7d0a0d510b6",
     "semantic_hash": ""
   },
   "caspian fox extension/rippleframe.html": {
-    "mtime": 1788502330.4982185,
-    "seen": 1789811691.923274,
-    "ast_hash": "f876e3da1fea3543e2dfda4c46eaa5a1",
+    "mtime": 1790752184.9672458,
+    "seen": 1790752392.7779791,
+    "ast_hash": "261d56abb8f8ad82389fe96e85292aca",
     "semantic_hash": ""
   },
   "caspian fox extension/developer.png": {
@@ -1857,6 +1857,60 @@
     "mtime": 1785313663.9778547,
     "seen": 1789811691.9234283,
     "ast_hash": "2450ebb7896de12eb712c38677153ecd",
+    "semantic_hash": ""
+  },
+  "scripts/generate_amo_assets.py": {
+    "mtime": 1790688558.738726,
+    "seen": 1790688769.748562,
+    "ast_hash": "95b4050c8d92c8fd68111d007a0c8296",
+    "semantic_hash": ""
+  },
+  "Images/AMO_Showcase/1_ai_chat_pruner.png": {
+    "mtime": 1790688565.5512245,
+    "seen": 1790688769.7487183,
+    "ast_hash": "8e1008ff7623a324943e64156d70a853",
+    "semantic_hash": ""
+  },
+  "Images/AMO_Showcase/2_universal_flow_speed.png": {
+    "mtime": 1790688565.8624067,
+    "seen": 1790688769.7487202,
+    "ast_hash": "7c434ea3437ec4385f01f5cf10a423fe",
+    "semantic_hash": ""
+  },
+  "Images/AMO_Showcase/3_youtube_feed_cleaner.png": {
+    "mtime": 1790688566.1942794,
+    "seen": 1790688769.7487214,
+    "ast_hash": "7d6be54bb836030fef62c9647cffa7c6",
+    "semantic_hash": ""
+  },
+  "Images/AMO_Showcase/4_rippleframe_and_vault.png": {
+    "mtime": 1790688566.4800203,
+    "seen": 1790688769.7487228,
+    "ast_hash": "94c411f1ac1b241fc3e3003729a1ac0f",
+    "semantic_hash": ""
+  },
+  "Images/AMO_Showcase/5_modern_adaptive_ui.png": {
+    "mtime": 1790688566.7296839,
+    "seen": 1790688769.748724,
+    "ast_hash": "b5fcdfdb7edc60d842b545317e8b9b3b",
+    "semantic_hash": ""
+  },
+  "Images/AMO_Showcase/amo_developer_256x256.png": {
+    "mtime": 1790688586.4266057,
+    "seen": 1790688769.748725,
+    "ast_hash": "a6322f970c80697d820ae254abfedc9c",
+    "semantic_hash": ""
+  },
+  "Images/AMO_Showcase/amo_icon_128x128.png": {
+    "mtime": 1790688586.400588,
+    "seen": 1790688769.7487264,
+    "ast_hash": "804674e5c1f5c20a622fac91b57d06d5",
+    "semantic_hash": ""
+  },
+  "scripts/package_extensions.py": {
+    "mtime": 1790743597.5169303,
+    "seen": 1790752392.7779417,
+    "ast_hash": "356a522b30d0c43c55f6b8f3e1aa7328",
     "semantic_hash": ""
   }
 }

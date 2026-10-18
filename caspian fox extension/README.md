@@ -73,7 +73,7 @@ You can package the extension directory into a `.zip` or `.xpi` file for distrib
 
 Using PowerShell:
 ```powershell
-Compress-Archive -Path "d:\Projects\Chatgpt Pruner\caspian fox extension\*" -DestinationPath "d:\Projects\Chatgpt Pruner\Caspian-Fox-Extension-v6.3.1.zip" -Force
+Compress-Archive -Path "d:\Projects\Chatgpt Pruner\caspian fox extension\*" -DestinationPath "d:\Projects\Chatgpt Pruner\versions\Extension Versions\Caspian-Fox-Extension-v6.4.0.zip" -Force
 ```
 
 ---

@@ -28,16 +28,16 @@ jobs:
 
       - name: Prepare Extension & Standardize Assets
         run: |
-          mkdir -p versions
+          mkdir -p "versions/Extension Versions"
           
           # Dynamically detect Caspian Extension version from manifest.json
           if [ -d "Caspian" ]; then
             EXT_VER=$(node -p "try { require('./Caspian/manifest.json').version } catch(e) { '6.3.0' }")
             echo "Packaging Caspian Extension v${EXT_VER}..."
             cd Caspian
-            zip -r "../versions/Caspian-Extension-v${EXT_VER}.zip" ./* -x "*.git*"
+            zip -r "../versions/Extension Versions/Caspian-Extension-v${EXT_VER}.zip" ./* -x "*.git*"
             cd ..
-            cp "versions/Caspian-Extension-v${EXT_VER}.zip" "./Caspian-Extension-v${EXT_VER}.zip"
+            cp "versions/Extension Versions/Caspian-Extension-v${EXT_VER}.zip" "versions/Caspian-Extension-v${EXT_VER}.zip"
           fi
 
           # Dynamically detect and package Caspian Firefox Extension from manifest.json
@@ -45,9 +45,9 @@ jobs:
             FOX_VER=$(node -p "try { require('./caspian fox extension/manifest.json').version } catch(e) { '6.3.0' }")
             echo "Packaging Caspian Firefox Extension v${FOX_VER}..."
             cd "caspian fox extension"
-            zip -r "../versions/Caspian-Fox-Extension-v${FOX_VER}.zip" ./* -x "*.git*"
+            zip -r "../versions/Extension Versions/Caspian-Fox-Extension-v${FOX_VER}.zip" ./* -x "*.git*"
             cd ..
-            cp "versions/Caspian-Fox-Extension-v${FOX_VER}.zip" "./Caspian-Fox-Extension-v${FOX_VER}.zip"
+            cp "versions/Extension Versions/Caspian-Fox-Extension-v${FOX_VER}.zip" "versions/Caspian-Fox-Extension-v${FOX_VER}.zip"
           fi
 
           # Standardize mobile naming for collision-free clarity

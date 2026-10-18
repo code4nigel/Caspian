@@ -142,10 +142,10 @@
     const hud = document.createElement('div');
     hud.className = 'caspian-speed-hud';
     hud.innerHTML = `
-      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#38bdf8" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
-        <path d="M2 6c.6.5 1.2 1 2.5 1 2.5 0 2.5-2 5-2 2.5 0 2.5-2 5-2 1.3 0 1.9.5 2.5 1"></path>
-        <path d="M2 12c.6.5 1.2 1 2.5 1 2.5 0 2.5-2 5-2 2.5 0 2.5-2 5-2 1.3 0 1.9.5 2.5 1"></path>
-        <path d="M2 18c.6.5 1.2 1 2.5 1 2.5 0 2.5-2 5-2 2.5 0 2.5-2 5-2 1.3 0 1.9.5 2.5 1"></path>
+      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#38bdf8" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+        <path d="M5 8 C6 9 7 9.5 9 9.5 C12 9.5 12 7.5 15 7.5 C17 7.5 18 8 19 9"></path>
+        <path d="M5 12 C6 13 7 13.5 9 13.5 C12 13.5 12 11.5 15 11.5 C17 11.5 18 12 19 13"></path>
+        <path d="M5 16 C6 17 7 17.5 9 17.5 C12 17.5 12 15.5 15 15.5 C17 15.5 18 16 19 17"></path>
       </svg>
       <span>${speedVal.toFixed(2)}x</span>
     `;

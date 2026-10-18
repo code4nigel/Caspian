@@ -20,15 +20,15 @@
       <div class="brand">
         <!-- Caspian Lake Water Wave Icon -->
         <div class="logo-icon">
-          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
-            <path d="M2 6c.6.5 1.2 1 2.5 1 2.5 0 2.5-2 5-2 2.5 0 2.5-2 5-2 2.5 0 2.5-2 5-2 1.3 0 1.9.5 2.5 1"></path>
-            <path d="M2 12c.6.5 1.2 1 2.5 1 2.5 0 2.5-2 5-2 2.5 0 2.5-2 5-2 1.3 0 1.9.5 2.5 1"></path>
-            <path d="M2 18c.6.5 1.2 1 2.5 1 2.5 0 2.5-2 5-2 2.5 0 2.5-2 5-2 1.3 0 1.9.5 2.5 1"></path>
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M5 8 C6 9 7 9.5 9 9.5 C12 9.5 12 7.5 15 7.5 C17 7.5 18 8 19 9"></path>
+            <path d="M5 12 C6 13 7 13.5 9 13.5 C12 13.5 12 11.5 15 11.5 C17 11.5 18 12 19 13"></path>
+            <path d="M5 16 C6 17 7 17.5 9 17.5 C12 17.5 12 15.5 15 15.5 C17 15.5 18 16 19 17"></path>
           </svg>
         </div>
         <div class="brand-text">
           <span class="brand-name">CASPIAN</span>
-          <span class="brand-tag" id="extension-version">V6.2.0</span>
+          <span class="brand-tag" id="extension-version">V6.4.0</span>
         </div>
       </div>
       
@@ -68,9 +68,12 @@
       <div id="tab-engine" class="tab-pane active">
         
         <!-- 1. Temporary Chat Vault & Exporter Card -->
-        <div id="temp-vault-card" class="glass-card temp-vault-card">
+        <div id="temp-vault-card" class="glass-card temp-vault-card" data-card-id="temp-vault-card">
           <div class="card-header-row" id="temp-vault-header">
             <div class="card-header-left">
+              <div class="card-reorder-ctrls" title="Drag to reorder card">
+                <span class="reorder-drag-grip">⋮⋮</span>
+              </div>
               <div id="temp-indicator-dot" class="pulse-dot active"></div>
               <div class="card-title-group">
                 <span id="temp-vault-title" class="card-title">Temporary Chat Saver</span>
@@ -121,9 +124,12 @@
         </div>
 
         <!-- 2. Collapsible Chat Message Limit Container -->
-        <div id="card-chat-limit" class="glass-card limit-container-card expandable">
+        <div id="card-chat-limit" class="glass-card limit-container-card expandable" data-card-id="card-chat-limit">
           <div class="card-header-row" id="chat-limit-header" style="cursor: pointer;" title="Tap to expand or collapse message limits">
             <div class="card-header-left">
+              <div class="card-reorder-ctrls" title="Drag to reorder card">
+                <span class="reorder-drag-grip">⋮⋮</span>
+              </div>
               <div id="status-indicator" class="pulse-dot active"></div>
               <div class="card-title-group">
                 <span id="status-state-text" class="card-title">Chat Message Limit: ON</span>
@@ -166,9 +172,12 @@
         </div>
 
         <!-- 3. Collapsible YouTube Home Optimizer Container -->
-        <div id="card-youtube-home" class="glass-card expandable" style="margin-top: 2px;">
+        <div id="card-youtube-home" class="glass-card expandable" data-card-id="card-youtube-home" style="margin-top: 2px;">
           <div class="card-header-row" id="youtube-home-header" style="cursor: pointer;" title="Tap to expand or collapse YouTube options">
             <div class="card-header-left">
+              <div class="card-reorder-ctrls" title="Drag to reorder card">
+                <span class="reorder-drag-grip">⋮⋮</span>
+              </div>
               <span class="chip-icon" style="font-size: 13px;">📺</span>
               <div class="card-title-group">
                 <span class="card-title" id="yt-status-title">YouTube Home Feed: ON</span>
@@ -212,9 +221,12 @@
         </div>
 
         <!-- 4. Collapsible Flow Speed Universal Controller -->
-        <div id="card-flow-speed" class="glass-card expandable" style="margin-top: 2px;">
+        <div id="card-flow-speed" class="glass-card expandable" data-card-id="card-flow-speed" style="margin-top: 2px;">
           <div class="card-header-row" id="flow-speed-header" style="cursor: pointer;" title="Tap to expand or collapse Flow Speed options">
             <div class="card-header-left">
+              <div class="card-reorder-ctrls" title="Drag to reorder card">
+                <span class="reorder-drag-grip">⋮⋮</span>
+              </div>
               <span class="chip-icon" style="font-size: 13px;">🌊</span>
               <div class="card-title-group">
                 <span class="card-title" id="flow-speed-status-title">Flow Speed: ON</span>
@@ -229,19 +241,38 @@
 
           <!-- Collapsible Body for Flow Speed -->
           <div class="limit-inner-body" id="flow-speed-body" style="gap: 8px;">
-            <!-- Speed Slider & Input -->
-            <div class="inner-section-label">
-              <span>PLAYBACK SPEED</span>
-              <span class="section-hint" id="flow-speed-val-display" style="font-family: 'JetBrains Mono', monospace; font-weight: 700; color: var(--accent);">1.00x</span>
-            </div>
-            <div class="zoom-slider-row" style="padding: 0 4px;">
-              <span class="zoom-btn" id="speed-down-btn" title="Decrease speed (-0.25x)">-</span>
-              <input type="range" id="flow-speed-slider" min="0.25" max="5.0" step="0.05" value="1.00" class="custom-range-slider">
-              <span class="zoom-btn" id="speed-up-btn" title="Increase speed (+0.25x)">+</span>
+            <!-- 1. Hero Speed Readout with Step Controls -->
+            <div class="flow-speed-hero">
+              <div class="flow-speed-hero-left">
+                <span class="flow-speed-hero-tag">CURRENT SPEED</span>
+                <span id="flow-speed-val-display" class="flow-speed-hero-val">1.00x</span>
+              </div>
+              <div class="flow-speed-hero-controls">
+                <button type="button" class="speed-nudge-btn" id="speed-down-btn" title="Decrease speed by 0.25x">-0.25x</button>
+                <button type="button" class="speed-reset-pill-btn" id="speed-reset-btn" title="Reset to standard 1.00x playback">1.0x Reset</button>
+                <button type="button" class="speed-nudge-btn" id="speed-up-btn" title="Increase speed by 0.25x">+0.25x</button>
+              </div>
             </div>
 
-            <!-- Preset Pills -->
-            <div class="pill-grid" style="grid-template-columns: repeat(5, 1fr);">
+            <!-- 2. High-Precision Range Slider with Visible 5.0x Scale -->
+            <div class="flow-slider-block">
+              <div class="flow-slider-row">
+                <input type="range" id="flow-speed-slider" min="0.25" max="5.0" step="0.05" value="1.00" class="custom-range-slider flow-speed-slider" title="Drag to adjust playback speed from 0.25x to 5.00x">
+              </div>
+              <div class="flow-slider-scale">
+                <span class="scale-point" data-speed="0.25">0.25x</span>
+                <span class="scale-point" data-speed="1.0">1.0x (Normal)</span>
+                <span class="scale-point" data-speed="2.5">2.5x</span>
+                <span class="scale-point scale-max" data-speed="5.0">5.0x (Max)</span>
+              </div>
+            </div>
+
+            <!-- 3. Preset Speed Pills (2 Rows of 5) -->
+            <div class="inner-section-label" style="margin-top: 1px;">
+              <span>SPEED PRESETS</span>
+              <span class="section-hint">TAP TO APPLY</span>
+            </div>
+            <div class="pill-grid speed-presets-grid">
               <button class="pill speed-pill" data-speed="0.75">0.75x</button>
               <button class="pill speed-pill active" data-speed="1.0">1.0x</button>
               <button class="pill speed-pill" data-speed="1.25">1.25x</button>
@@ -254,29 +285,63 @@
               <button class="pill speed-pill" data-speed="5.0">5.0x</button>
             </div>
 
-            <!-- Cycle Speeds List Input -->
-            <div class="theme-mode-row" style="margin-top: 4px; padding: 5px 8px; background: var(--input-bg); border-radius: 9px; border: 1px solid var(--border-glass); flex-direction: column; align-items: flex-start; gap: 4px;">
-              <div style="display: flex; justify-content: space-between; width: 100%;">
-                <span class="input-label" style="color: var(--text-main); font-weight: 700; font-size: calc(9.5px * var(--font-scale, 1));">🔄 Cycle Speeds List</span>
-                <span class="card-sub" style="font-size: calc(8px * var(--font-scale, 1));">Comma-separated</span>
+            <!-- 4. Modern Cycle Speeds Sequence Ribbon & Drawer -->
+            <div class="flow-cycle-card">
+              <div class="flow-cycle-header-row">
+                <div class="flow-cycle-title-wrap">
+                  <span class="flow-cycle-label">🔁 Cycle Speeds Sequence</span>
+                  <span class="flow-cycle-hint">Sequence used when cycling speeds</span>
+                </div>
+                <button type="button" id="toggle-cycle-edit-btn" class="cycle-action-btn" title="Edit sequence text">Edit</button>
               </div>
-              <input type="text" id="flow-speed-cycle-input" class="custom-text-input" value="1, 1.25, 1.5, 1.75, 2, 2.5, 3" style="width: 100%; box-sizing: border-box; padding: 4px 8px; font-size: 10.5px; border-radius: 6px; background: var(--bg-card); color: var(--text-main); border: 1px solid var(--border-glass);" placeholder="1, 1.25, 1.5, 2, 2.5, 3">
+
+              <!-- Interactive Sequence Chips Ribbon -->
+              <div id="flow-cycle-chips-ribbon" class="flow-cycle-chips-ribbon" title="Click any speed to set it immediately"></div>
+
+              <!-- Expandable Edit Tray -->
+              <div id="flow-cycle-edit-tray" class="flow-cycle-edit-tray" style="display: none;">
+                <input type="text" id="flow-speed-cycle-input" class="custom-text-input flow-cycle-input" value="1, 1.25, 1.5, 1.75, 2, 2.5, 3" placeholder="e.g. 1, 1.25, 1.5, 2, 2.5, 3, 5">
+                <div class="cycle-presets-bar">
+                  <span class="cycle-presets-label">Presets:</span>
+                  <button type="button" class="cycle-quick-preset" data-preset="1, 1.25, 1.5, 1.75, 2, 2.5, 3">Standard (1-3x)</button>
+                  <button type="button" class="cycle-quick-preset" data-preset="1.25, 1.5, 1.75, 2, 2.5, 3.5, 5">Fast (1.25-5x)</button>
+                </div>
+              </div>
             </div>
 
-            <!-- Hotkey Customization Row -->
-            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 6px; margin-top: 2px;">
-              <div class="theme-mode-row" style="padding: 4px 6px; background: var(--input-bg); border-radius: 8px; border: 1px solid var(--border-glass); justify-content: space-between;">
-                <span class="card-sub" style="font-weight: 700; color: var(--text-main); font-size: 9px;">Default 1.0x:</span>
-                <input type="text" id="shortcut-reset-input" maxlength="6" value="Alt+S" style="width: 44px; text-align: center; text-transform: uppercase; font-weight: 800; font-size: 10px; border-radius: 4px; background: var(--accent-light); color: var(--accent); border: 1px solid var(--accent);">
+            <!-- 5. Keyboard Shortcuts Section with Clear Explanation -->
+            <div class="flow-shortcuts-card">
+              <div class="inner-section-label" style="margin-bottom: 5px;">
+                <span>⌨️ KEYBOARD SHORTCUTS</span>
+                <span class="section-hint">IN-PAGE CONTROLS</span>
               </div>
-              <div class="theme-mode-row" style="padding: 4px 6px; background: var(--input-bg); border-radius: 8px; border: 1px solid var(--border-glass); justify-content: space-between;">
-                <span class="card-sub" style="font-weight: 700; color: var(--text-main); font-size: 9px;">Cycle Key:</span>
-                <input type="text" id="shortcut-cycle-input" maxlength="6" value="Alt+D" style="width: 44px; text-align: center; text-transform: uppercase; font-weight: 800; font-size: 10px; border-radius: 4px; background: var(--accent-light); color: var(--accent); border: 1px solid var(--accent);">
+              <div class="flow-shortcuts-list">
+                <div class="flow-shortcut-row">
+                  <div class="shortcut-desc-wrap">
+                    <span class="shortcut-action-title">Reset to Normal (1.0x)</span>
+                    <span class="shortcut-action-sub">Instantly restores default 1.0x speed</span>
+                  </div>
+                  <div class="shortcut-key-badge">
+                    <span class="shortcut-kbd-icon">⚡</span>
+                    <input type="text" id="shortcut-reset-input" maxlength="6" value="ALT+S" class="shortcut-key-field" title="Click to customize shortcut key (e.g. Alt+S)">
+                  </div>
+                </div>
+
+                <div class="flow-shortcut-row">
+                  <div class="shortcut-desc-wrap">
+                    <span class="shortcut-action-title">Cycle Next Speed</span>
+                    <span class="shortcut-action-sub">Jumps to next speed in sequence list</span>
+                  </div>
+                  <div class="shortcut-key-badge">
+                    <span class="shortcut-kbd-icon">🔄</span>
+                    <input type="text" id="shortcut-cycle-input" maxlength="6" value="ALT+D" class="shortcut-key-field" title="Click to customize shortcut key (e.g. Alt+D)">
+                  </div>
+                </div>
               </div>
             </div>
 
-            <!-- On-Screen HUD Toggle -->
-            <div class="theme-mode-row" style="margin-top: 2px; padding: 4px 6px; background: var(--input-bg); border-radius: 9px; border: 1px solid var(--border-glass); justify-content: space-between;">
+            <!-- 6. HUD and Toolbar Badge Toggles -->
+            <div class="theme-mode-row" style="margin-top: 1px; padding: 4px 6px; background: var(--input-bg); border-radius: 9px; border: 1px solid var(--border-glass); justify-content: space-between;">
               <div class="card-title-group" style="flex: 1;">
                 <span class="input-label" style="color: var(--text-main); font-weight: 700; font-size: calc(9.5px * var(--font-scale, 1));">🌊 On-Screen Speed HUD</span>
                 <span class="card-sub" style="font-size: calc(8px * var(--font-scale, 1));">Left-side badge indicator on speed change</span>
@@ -284,8 +349,7 @@
               <button class="pill-toggle-btn active" id="toggle-flow-speed-hud-btn" title="Toggle On-Screen Speed Badge">ON</button>
             </div>
 
-            <!-- Toolbar Icon Speed Badge Toggle -->
-            <div class="theme-mode-row" style="margin-top: 2px; padding: 4px 6px; background: var(--input-bg); border-radius: 9px; border: 1px solid var(--border-glass); justify-content: space-between;">
+            <div class="theme-mode-row" style="margin-top: 1px; padding: 4px 6px; background: var(--input-bg); border-radius: 9px; border: 1px solid var(--border-glass); justify-content: space-between;">
               <div class="card-title-group" style="flex: 1;">
                 <span class="input-label" style="color: var(--text-main); font-weight: 700; font-size: calc(9.5px * var(--font-scale, 1));">🏷️ Toolbar Icon Speed Badge</span>
                 <span class="card-sub" style="font-size: calc(8px * var(--font-scale, 1));">Show live playback speed on extension icon</span>
@@ -296,9 +360,12 @@
         </div>
 
         <!-- 5. Collapsible RippleFrame Full-Page Studio -->
-        <div id="card-rippleframe" class="glass-card expandable" style="margin-top: 2px;">
+        <div id="card-rippleframe" class="glass-card expandable" data-card-id="card-rippleframe" style="margin-top: 2px;">
           <div class="card-header-row" id="rippleframe-header" style="cursor: pointer;" title="Tap to expand or collapse RippleFrame options">
             <div class="card-header-left">
+              <div class="card-reorder-ctrls" title="Drag to reorder card">
+                <span class="reorder-drag-grip">⋮⋮</span>
+              </div>
               <span class="chip-icon" style="font-size: 13px;">🎞️</span>
               <div class="card-title-group">
                 <span class="card-title" id="rf-status-title">RippleFrame: ON</span>
@@ -751,10 +818,10 @@
       <div id="dock-indicator" class="nav-indicator"></div>
 
       <button class="dock-tab-btn active" data-target="engine">
-        <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
-          <path d="M2 6c.6.5 1.2 1 2.5 1 2.5 0 2.5-2 5-2 2.5 0 2.5-2 5-2 2.5 0 2.5-2 5-2 1.3 0 1.9.5 2.5 1"></path>
-          <path d="M2 12c.6.5 1.2 1 2.5 1 2.5 0 2.5-2 5-2 2.5 0 2.5-2 5-2 1.3 0 1.9.5 2.5 1"></path>
-          <path d="M2 18c.6.5 1.2 1 2.5 1 2.5 0 2.5-2 5-2 2.5 0 2.5-2 5-2 1.3 0 1.9.5 2.5 1"></path>
+        <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+          <path d="M5 8 C6 9 7 9.5 9 9.5 C12 9.5 12 7.5 15 7.5 C17 7.5 18 8 19 9"></path>
+          <path d="M5 12 C6 13 7 13.5 9 13.5 C12 13.5 12 11.5 15 11.5 C17 11.5 18 12 19 13"></path>
+          <path d="M5 16 C6 17 7 17.5 9 17.5 C12 17.5 12 15.5 15 15.5 C17 15.5 18 16 19 17"></path>
         </svg>
         <span>Engine</span>
       </button>

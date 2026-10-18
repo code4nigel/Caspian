@@ -20558,17 +20558,28 @@ public class MainActivity extends AppCompatActivity {
         showPrintAndExportDialog(getActiveOrDominantTab());
     }
 
+    private WebView activePrintWebView;
+
     public void exportCurrentDocument(String format) {
         performExportOnMainWebView(format);
     }
 
     public void performExportOnMainWebView(String fmt) {
         TabItem activeTab = getActiveOrDominantTab();
-        if (activeTab == null || activeTab.webView == null) return;
+        if (activeTab == null || activeTab.webView == null) {
+            Toast.makeText(this, "No active page to export", Toast.LENGTH_SHORT).show();
+            return;
+        }
         WebView mainWebView = activeTab.webView;
 
+        if ("nativepdf".equalsIgnoreCase(fmt)) {
+            hideControlSheet();
+            printActivePageViaSystem();
+            return;
+        }
+
         String targetFormat = fmt;
-        if ("nativepdf".equalsIgnoreCase(fmt) || "pdf".equalsIgnoreCase(fmt)) {
+        if ("pdf".equalsIgnoreCase(fmt)) {
             targetFormat = "styledpdf";
         }
         final String exportFmt = targetFormat;
@@ -20809,28 +20820,29 @@ public class MainActivity extends AppCompatActivity {
                 "\n" +
                 "          if (!token) {\n" +
                 "            try {\n" +
-                "              var sessionResp = await fetch('/api/auth/session', { credentials: 'include' });\n" +
-                "              if (sessionResp.ok) {\n" +
-                "                var sessionData = await sessionResp.json();\n" +
+                "              var sXhr = new XMLHttpRequest();\n" +
+                "              sXhr.open('GET', '/api/auth/session', false);\n" +
+                "              sXhr.withCredentials = true;\n" +
+                "              sXhr.send(null);\n" +
+                "              if (sXhr.status >= 200 && sXhr.status < 300) {\n" +
+                "                var sessionData = JSON.parse(sXhr.responseText);\n" +
                 "                token = sessionData.accessToken;\n" +
                 "              }\n" +
                 "            } catch(se) {}\n" +
                 "          }\n" +
                 "\n" +
-                "          var nativeFetch = window.__CASPIAN_NATIVE_FETCH || window.fetch;\n" +
-                "          var fetchHeaders = {\n" +
-                "            'Accept': 'application/json',\n" +
-                "            'X-Caspian-Export': 'full'\n" +
-                "          };\n" +
-                "          if (token) fetchHeaders['Authorization'] = 'Bearer ' + token;\n" +
-                "\n" +
-                "          var resp = await nativeFetch('/backend-api/conversation/' + convoId, {\n" +
-                "            headers: fetchHeaders,\n" +
-                "            credentials: 'include'\n" +
-                "          });\n" +
-                "          if (resp.ok) {\n" +
-                "            json = await resp.json();\n" +
-                "          }\n" +
+                "          try {\n" +
+                "            var cXhr = new XMLHttpRequest();\n" +
+                "            cXhr.open('GET', '/backend-api/conversation/' + convoId, false);\n" +
+                "            cXhr.withCredentials = true;\n" +
+                "            cXhr.setRequestHeader('Accept', 'application/json');\n" +
+                "            cXhr.setRequestHeader('X-Caspian-Export', 'full');\n" +
+                "            if (token) cXhr.setRequestHeader('Authorization', 'Bearer ' + token);\n" +
+                "            cXhr.send(null);\n" +
+                "            if (cXhr.status >= 200 && cXhr.status < 300) {\n" +
+                "              json = JSON.parse(cXhr.responseText);\n" +
+                "            }\n" +
+                "          } catch(ce) {}\n" +
                 "        }\n" +
                 "\n" +
                 "        if (json && json.mapping) {\n" +
@@ -21072,15 +21084,32 @@ public class MainActivity extends AppCompatActivity {
                 "})();";
 
         mainWebView.evaluateJavascript(extractorJs, result -> {
+            boolean handled = false;
             if (result != null && !result.equals("null") && !result.equals("\"\"") && !result.equals("[]")) {
                 try {
                     String unescaped = result;
                     if (unescaped.startsWith("\"") && unescaped.endsWith("\"")) {
                         unescaped = new org.json.JSONTokener(unescaped).nextValue().toString();
                     }
-                    final String finalJson = unescaped;
-                    runOnUiThread(() -> handleExtractedConversation(finalJson, exportFmt));
-                } catch (Throwable ignored) {}
+                    if (unescaped != null && !unescaped.trim().isEmpty() && !unescaped.trim().equals("[]")) {
+                        final String finalJson = unescaped;
+                        handled = true;
+                        runOnUiThread(() -> handleExtractedConversation(finalJson, exportFmt));
+                    }
+                } catch (Throwable t) {
+                    Log.e(TAG, "evaluateJavascript parse error", t);
+                }
+            }
+            if (!handled) {
+                runOnUiThread(() -> {
+                    if ("styledpdf".equalsIgnoreCase(exportFmt) || "pdf".equalsIgnoreCase(exportFmt) || "nativepdf".equalsIgnoreCase(exportFmt)) {
+                        hideControlSheet();
+                        Toast.makeText(this, "Generating system print...", Toast.LENGTH_SHORT).show();
+                        printActivePageViaSystem();
+                    } else {
+                        Toast.makeText(this, "No content found to export!", Toast.LENGTH_SHORT).show();
+                    }
+                });
             }
         });
     }
@@ -21088,13 +21117,23 @@ public class MainActivity extends AppCompatActivity {
     public void handleExtractedConversation(String jsonStr, String exportFmt) {
         try {
             if (jsonStr == null || jsonStr.equals("null") || jsonStr.equals("[]")) {
-                Toast.makeText(this, "No content found to export!", Toast.LENGTH_SHORT).show();
+                if ("styledpdf".equalsIgnoreCase(exportFmt) || "pdf".equalsIgnoreCase(exportFmt) || "nativepdf".equalsIgnoreCase(exportFmt)) {
+                    hideControlSheet();
+                    printActivePageViaSystem();
+                } else {
+                    Toast.makeText(this, "No content found to export!", Toast.LENGTH_SHORT).show();
+                }
                 return;
             }
 
             JSONArray turnsArray = new JSONArray(jsonStr);
             if (turnsArray.length() == 0) {
-                Toast.makeText(this, "No content found to export!", Toast.LENGTH_SHORT).show();
+                if ("styledpdf".equalsIgnoreCase(exportFmt) || "pdf".equalsIgnoreCase(exportFmt) || "nativepdf".equalsIgnoreCase(exportFmt)) {
+                    hideControlSheet();
+                    printActivePageViaSystem();
+                } else {
+                    Toast.makeText(this, "No content found to export!", Toast.LENGTH_SHORT).show();
+                }
                 return;
             }
 
@@ -21256,36 +21295,60 @@ public class MainActivity extends AppCompatActivity {
 
     public void downloadFile(String fileName, String content, String mimeType) {
         try {
-            File exportDir = new File(getExternalFilesDir(null), "Downloads");
+            File exportDir = new File(Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_DOWNLOADS), "Caspian/Export");
             if (!exportDir.exists()) exportDir.mkdirs();
             File file = new File(exportDir, fileName);
             FileOutputStream fos = new FileOutputStream(file);
             fos.write(content.getBytes(StandardCharsets.UTF_8));
             fos.close();
-            Toast.makeText(this, "Saved: " + file.getName(), Toast.LENGTH_LONG).show();
+            Toast.makeText(this, "Saved: " + file.getName() + " in Downloads/Caspian/Export", Toast.LENGTH_LONG).show();
         } catch (Exception e) {
-            Toast.makeText(this, "Download failed: " + e.getMessage(), Toast.LENGTH_SHORT).show();
+            try {
+                File exportDir = new File(getExternalFilesDir(null), "Downloads");
+                if (!exportDir.exists()) exportDir.mkdirs();
+                File file = new File(exportDir, fileName);
+                FileOutputStream fos = new FileOutputStream(file);
+                fos.write(content.getBytes(StandardCharsets.UTF_8));
+                fos.close();
+                Toast.makeText(this, "Saved: " + file.getName(), Toast.LENGTH_LONG).show();
+            } catch (Exception ex) {
+                Toast.makeText(this, "Download failed: " + ex.getMessage(), Toast.LENGTH_SHORT).show();
+            }
         }
     }
 
     public void printHtml(String jobName, String htmlContent) {
         runOnUiThread(() -> {
             try {
+                if (activePrintWebView != null) {
+                    try { activePrintWebView.destroy(); } catch (Throwable ignored) {}
+                    activePrintWebView = null;
+                }
                 WebView printWebView = new WebView(this);
+                activePrintWebView = printWebView;
                 printWebView.getSettings().setJavaScriptEnabled(true);
+                printWebView.getSettings().setDomStorageEnabled(true);
                 printWebView.setWebViewClient(new WebViewClient() {
+                    private boolean printed = false;
                     @Override
                     public void onPageFinished(WebView view, String url) {
+                        if (printed) return;
+                        printed = true;
                         PrintManager printManager = (PrintManager) getSystemService(Context.PRINT_SERVICE);
                         if (printManager != null) {
-                            PrintDocumentAdapter printAdapter = view.createPrintDocumentAdapter(jobName);
-                            printManager.print(jobName, printAdapter, new PrintAttributes.Builder().build());
+                            String safeJobName = (jobName != null && !jobName.trim().isEmpty())
+                                    ? jobName
+                                    : "Caspian_AI_Document";
+                            PrintDocumentAdapter printAdapter = view.createPrintDocumentAdapter(safeJobName);
+                            printManager.print(safeJobName, printAdapter, new PrintAttributes.Builder().build());
                         }
                     }
                 });
                 printWebView.loadDataWithBaseURL("https://cdn.jsdelivr.net/", htmlContent, "text/html", "utf-8", null);
             } catch (Exception e) {
+                Log.e(TAG, "printHtml error", e);
                 Toast.makeText(this, "Print error: " + e.getMessage(), Toast.LENGTH_SHORT).show();
+                printActivePageViaSystem();
             }
         });
     }
