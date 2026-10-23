@@ -27614,7 +27614,11 @@ public class MainActivity extends AppCompatActivity {
                     org.json.JSONObject obj = arr.getJSONObject(i);
                     String title = obj.optString("title", "Shortcut");
                     String url = obj.optString("url", "");
-                    String icon = obj.optString("icon", "🌐");
+                    String icon = obj.optString("icon", "");
+                    if (icon.isEmpty() || icon.length() <= 4 || (!icon.startsWith("http") && !icon.startsWith("data:"))) {
+                        String domain = url.replace("https://", "").replace("http://", "").split("/")[0].replace("www.", "");
+                        icon = "https://www.google.com/s2/favicons?sz=128&domain=" + domain;
+                    }
                     if (!url.isEmpty()) {
                         list.add(new CabRadialMenuView.ShortcutItem(title, url, icon));
                     }
@@ -27623,11 +27627,11 @@ public class MainActivity extends AppCompatActivity {
         } catch (Exception ignored) {}
 
         if (list.isEmpty()) {
-            list.add(new CabRadialMenuView.ShortcutItem("ChatGPT", "https://chatgpt.com/", "🤖"));
-            list.add(new CabRadialMenuView.ShortcutItem("Google Gemini", "https://gemini.google.com/", "✨"));
-            list.add(new CabRadialMenuView.ShortcutItem("YouTube", "https://youtube.com/", "🎬"));
-            list.add(new CabRadialMenuView.ShortcutItem("Reddit", "https://reddit.com/", "🌐"));
-            list.add(new CabRadialMenuView.ShortcutItem("Google", "https://www.google.com/", "G"));
+            list.add(new CabRadialMenuView.ShortcutItem("YouTube", "https://youtube.com/", "https://www.google.com/s2/favicons?sz=128&domain=youtube.com"));
+            list.add(new CabRadialMenuView.ShortcutItem("ChatGPT", "https://chatgpt.com/", "https://www.google.com/s2/favicons?sz=128&domain=chatgpt.com"));
+            list.add(new CabRadialMenuView.ShortcutItem("Google Gemini", "https://gemini.google.com/", "https://www.google.com/s2/favicons?sz=128&domain=gemini.google.com"));
+            list.add(new CabRadialMenuView.ShortcutItem("Reddit", "https://reddit.com/", "https://www.google.com/s2/favicons?sz=128&domain=reddit.com"));
+            list.add(new CabRadialMenuView.ShortcutItem("Google", "https://www.google.com/", "https://www.google.com/s2/favicons?sz=128&domain=google.com"));
         }
 
         // Add Tabs Overview planet
@@ -27653,11 +27657,11 @@ public class MainActivity extends AppCompatActivity {
                 } catch (Exception ignored) {}
             }
             if (shortcuts.isEmpty()) {
-                shortcuts.add(new org.json.JSONObject("{\"id\":\"sc_chatgpt\",\"title\":\"ChatGPT\",\"url\":\"https://chatgpt.com/\",\"icon\":\"🤖\"}"));
-                shortcuts.add(new org.json.JSONObject("{\"id\":\"sc_gemini\",\"title\":\"Google Gemini\",\"url\":\"https://gemini.google.com/\",\"icon\":\"✨\"}"));
-                shortcuts.add(new org.json.JSONObject("{\"id\":\"sc_youtube\",\"title\":\"YouTube\",\"url\":\"https://youtube.com/\",\"icon\":\"🎬\"}"));
-                shortcuts.add(new org.json.JSONObject("{\"id\":\"sc_reddit\",\"title\":\"Reddit\",\"url\":\"https://reddit.com/\",\"icon\":\"🌐\"}"));
-                shortcuts.add(new org.json.JSONObject("{\"id\":\"sc_google\",\"title\":\"Google\",\"url\":\"https://www.google.com/\",\"icon\":\"G\"}"));
+                shortcuts.add(new org.json.JSONObject("{\"id\":\"sc_youtube\",\"title\":\"YouTube\",\"url\":\"https://youtube.com/\",\"icon\":\"https://www.google.com/s2/favicons?sz=128&domain=youtube.com\"}"));
+                shortcuts.add(new org.json.JSONObject("{\"id\":\"sc_chatgpt\",\"title\":\"ChatGPT\",\"url\":\"https://chatgpt.com/\",\"icon\":\"https://www.google.com/s2/favicons?sz=128&domain=chatgpt.com\"}"));
+                shortcuts.add(new org.json.JSONObject("{\"id\":\"sc_gemini\",\"title\":\"Google Gemini\",\"url\":\"https://gemini.google.com/\",\"icon\":\"https://www.google.com/s2/favicons?sz=128&domain=gemini.google.com\"}"));
+                shortcuts.add(new org.json.JSONObject("{\"id\":\"sc_reddit\",\"title\":\"Reddit\",\"url\":\"https://reddit.com/\",\"icon\":\"https://www.google.com/s2/favicons?sz=128&domain=reddit.com\"}"));
+                shortcuts.add(new org.json.JSONObject("{\"id\":\"sc_google\",\"title\":\"Google\",\"url\":\"https://www.google.com/\",\"icon\":\"https://www.google.com/s2/favicons?sz=128&domain=google.com\"}"));
             }
 
             final int[] maxPlanets = { prefs.getInt("caspian_radial_max_shortcuts", 6) };
