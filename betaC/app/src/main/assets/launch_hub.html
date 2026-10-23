@@ -1447,7 +1447,7 @@
 
       <label class="form-label">Favicon Preview</label>
       <div style="display: flex; align-items: center; gap: 12px; margin-bottom: 14px; padding: 10px 14px; background: rgba(255,255,255,0.06); border-radius: 14px; border: 1px solid rgba(255,255,255,0.12);">
-        <img id="shortcut-preview-icon" src="data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'><circle cx='12' cy='12' r='10' fill='%2322D3EE'/></svg>" class="app-icon-img" style="margin-bottom:0; width:40px; height:40px;" alt="Favicon Preview" />
+        <img id="shortcut-preview-icon" src="data:image/svg+xml;charset=utf-8,%3Csvg%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%20viewBox%3D%220%200%2024%2024%22%3E%3Ccircle%20cx%3D%2212%22%20cy%3D%2212%22%20r%3D%2210%22%20fill%3D%22%2322D3EE%22%2F%3E%3C%2Fsvg%3E" class="app-icon-img" style="margin-bottom:0; width:40px; height:40px;" alt="Favicon Preview" />
         <div style="display: flex; flex-direction: column; overflow: hidden;">
           <span style="font-size: 11px; font-weight: 700; color: var(--caspian-cyan);">Authentic Site Favicon</span>
           <span id="shortcut-preview-domain" style="font-size: 9.5px; color: var(--text-muted); white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">Enter a URL to preview icon</span>
@@ -1735,7 +1735,7 @@
           if (t.faviconB64 && t.faviconB64.length > 20) {
             icon.src = t.faviconB64.startsWith('data:') ? t.faviconB64 : `data:image/png;base64,${t.faviconB64}`;
           } else {
-            icon.src = 'data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="%2322D3EE" stroke-width="2"><circle cx="12" cy="12" r="10"/><line x1="2" y1="12" x2="22" y2="12"/><path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"/></svg>';
+            icon.src = 'data:image/svg+xml;charset=utf-8,%3Csvg%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%20width%3D%2216%22%20height%3D%2216%22%20viewBox%3D%220%200%2024%2024%22%20fill%3D%22none%22%20stroke%3D%22%2322D3EE%22%20stroke-width%3D%222%22%3E%3Ccircle%20cx%3D%2212%22%20cy%3D%2212%22%20r%3D%2210%22%2F%3E%3Cline%20x1%3D%222%22%20y1%3D%2212%22%20x2%3D%2222%22%20y2%3D%2212%22%2F%3E%3Cpath%20d%3D%22M12%202a15.3%2015.3%200%200%201%204%2010%2015.3%2015.3%200%200%201-4%2010%2015.3%2015.3%200%200%201-4-10%2015.3%2015.3%200%200%201%204-10z%22%2F%3E%3C%2Fsvg%3E';
           }
 
           const span = document.createElement('span');
@@ -2460,18 +2460,22 @@
     };
 
     // 7. Shortcuts Engine & High-Res Favicon Resolution
+    function svgToDataUri(svgString) {
+      return 'data:image/svg+xml;charset=utf-8,' + encodeURIComponent(svgString.trim());
+    }
+
     const KNOWN_BRAND_SVGS = {
-      'youtube.com': 'data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64"><rect width="64" height="64" rx="16" fill="%23FF0000"/><polygon points="26,20 44,32 26,44" fill="%23FFFFFF"/></svg>',
-      'chatgpt.com': 'data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><rect width="24" height="24" rx="6" fill="%2310A37F"/><path fill="%23FFFFFF" transform="translate(2.4, 2.4) scale(0.8)" d="M22.282,9.821a5.985,5.985 0,0 0,-0.516,-4.91 6.046,6.046 0,0 0,-6.51,-2.9A6.065,6.065 0,0 0,10.68,0.3a6.046,6.046 0,0 0,-5.764,4.09A6.05,6.05 0,0 0,1.3,7.18a6.046,6.046 0,0 0,0.754,7.097 5.98,5.98 0,0 0,0.516,4.911 6.051,6.051 0,0 0,6.515,2.9A5.985,5.985 0,0 0,13.66,23.7a6.046,6.046 0,0 0,5.764,-4.09 6.05,6.05 0,0 0,3.615,-2.79 6.05,6.05 0,0 0,-0.757,-6.999zM12,14.65a2.65,2.65 0,1 1,2.65,-2.65A2.653,2.653 0,0 1,12,14.65z"/></svg>',
-      'openai.com': 'data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><rect width="24" height="24" rx="6" fill="%2310A37F"/><path fill="%23FFFFFF" transform="translate(2.4, 2.4) scale(0.8)" d="M22.282,9.821a5.985,5.985 0,0 0,-0.516,-4.91 6.046,6.046 0,0 0,-6.51,-2.9A6.065,6.065 0,0 0,10.68,0.3a6.046,6.046 0,0 0,-5.764,4.09A6.05,6.05 0,0 0,1.3,7.18a6.046,6.046 0,0 0,0.754,7.097 5.98,5.98 0,0 0,0.516,4.911 6.051,6.051 0,0 0,6.515,2.9A5.985,5.985 0,0 0,13.66,23.7a6.046,6.046 0,0 0,5.764,-4.09 6.05,6.05 0,0 0,3.615,-2.79 6.05,6.05 0,0 0,-0.757,-6.999zM12,14.65a2.65,2.65 0,1 1,2.65,-2.65A2.653,2.653 0,0 1,12,14.65z"/></svg>',
-      'gemini.google.com': 'data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><defs><linearGradient id="gem" x1="0%" y1="0%" x2="100%" y2="100%"><stop offset="0%" stop-color="%231BA1E3"/><stop offset="50%" stop-color="%23545BE8"/><stop offset="100%" stop-color="%23A855F7"/></linearGradient></defs><rect width="24" height="24" rx="6" fill="%230F172A"/><path fill="url(%23gem)" transform="translate(2.4, 2.4) scale(0.8)" d="M12,0 C12,6.627 6.627,12 0,12 C6.627,12 12,17.373 12,24 C12,17.373 17.373,12 24,12 C17.373,12 12,6.627 12,0 Z"/></svg>',
-      'reddit.com': 'data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><rect width="24" height="24" rx="6" fill="%23FF4500"/><circle cx="12" cy="12" r="7.5" fill="%23FFFFFF"/><circle cx="9.5" cy="11.5" r="1.2" fill="%23FF4500"/><circle cx="14.5" cy="11.5" r="1.2" fill="%23FF4500"/><path d="M10 14.5c.8.8 2.2.8 4 0" stroke="%23FF4500" stroke-width="1.2" stroke-linecap="round" fill="none"/></svg>',
-      'github.com': 'data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><rect width="24" height="24" rx="6" fill="%23181717"/><path fill="%23FFFFFF" transform="translate(2.4, 2.4) scale(0.8)" d="M12 2C6.477 2 2 6.484 2 12.017c0 4.425 2.865 8.18 6.839 9.504.5.092.682-.217.682-.483 0-.237-.008-.868-.013-1.703-2.782.605-3.369-1.343-3.369-1.343-.454-1.158-1.11-1.466-1.11-1.466-.908-.62.069-.608.069-.608 1.003.07 1.53 1.032 1.53 1.032.892 1.53 2.341 1.088 2.91.832.092-.647.35-1.088.636-1.338-2.22-.253-4.555-1.113-4.555-4.951 0-1.093.39-1.988 1.029-2.688-.103-.253-.446-1.272.098-2.65 0 0 .84-.27 2.75 1.026A9.564 9.564 0 0 1 12 6.844c.85.004 1.705.115 2.504.337 1.909-1.296 2.747-1.027 2.747-1.027.546 1.379.202 2.398.1 2.651.64.7 1.028 1.595 1.028 2.688 0 3.848-2.339 4.695-4.566 4.943.359.309.678.92.678 1.855 0 1.338-.012 2.419-.012 2.747 0 .268.18.58.688.482A10.019 10.019 0 0 0 22 12.017C22 6.484 17.522 2 12 2z"/></svg>',
-      'claude.ai': 'data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><rect width="24" height="24" rx="6" fill="%23D97706"/><path fill="%23FFFFFF" transform="translate(2.4, 2.4) scale(0.8)" d="M12 2L14.2 8.8L21.4 9L15.8 13.4L17.8 20.2L12 16.2L6.2 20.2L8.2 13.4L2.6 9L9.8 8.8L12 2Z"/></svg>',
-      'wikipedia.org': 'data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><rect width="24" height="24" rx="6" fill="%23FFFFFF"/><text x="12" y="18" font-family="serif" font-size="16" font-weight="bold" fill="%23111827" text-anchor="middle">W</text></svg>',
-      'x.com': 'data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><rect width="24" height="24" rx="6" fill="%23000000"/><path fill="%23FFFFFF" transform="translate(3, 3) scale(0.75)" d="M18.244 2.25h3.308l-7.227 8.26 8.502 11.24H16.17l-5.214-6.817L4.99 21.75H1.68l7.73-8.835L1.254 2.25H8.08l4.713 6.231zm-1.161 17.52h1.833L7.084 4.126H5.117z"/></svg>',
-      'twitter.com': 'data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><rect width="24" height="24" rx="6" fill="%23000000"/><path fill="%23FFFFFF" transform="translate(3, 3) scale(0.75)" d="M18.244 2.25h3.308l-7.227 8.26 8.502 11.24H16.17l-5.214-6.817L4.99 21.75H1.68l7.73-8.835L1.254 2.25H8.08l4.713 6.231zm-1.161 17.52h1.833L7.084 4.126H5.117z"/></svg>',
-      'google.com': 'data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><rect width="24" height="24" rx="6" fill="%23FFFFFF"/><path fill="%234285F4" d="M19.6 12.2c0-.7-.1-1.3-.2-1.9H12v3.6h4.3c-.2 1-.8 1.9-1.6 2.5v2.1h2.6c1.5-1.4 2.3-3.5 2.3-6.3z"/><path fill="%2334A853" d="M12 20c2.2 0 4-.7 5.3-2l-2.6-2.1c-.7.5-1.6.8-2.7.8-2.1 0-3.9-1.4-4.5-3.3H4.8v2.1C6.2 18.2 8.9 20 12 20z"/><path fill="%23FBBC05" d="M7.5 13.4c-.1-.5-.2-1-.2-1.4 0-.5.1-1 .2-1.4V8.5H4.8C4.3 9.6 4 10.7 4 12s.3 2.4.8 3.5l2.7-2.1z"/><path fill="%23EA4335" d="M12 6.8c1.2 0 2.2.4 3.1 1.2l2.3-2.3C16 4.3 14.2 3.6 12 3.6 8.9 3.6 6.2 5.4 4.8 8.1l2.7 2.1C8.1 8.2 9.9 6.8 12 6.8z"/></svg>'
+      'youtube.com': svgToDataUri('<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64"><rect width="64" height="64" rx="16" fill="#FF0000"/><polygon points="26,20 44,32 26,44" fill="#FFFFFF"/></svg>'),
+      'chatgpt.com': svgToDataUri('<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 48 48"><rect width="48" height="48" rx="12" fill="#10A37F"/><path fill="#FFFFFF" transform="translate(4.8, 4.8) scale(1.6)" d="M22.282,9.821a5.985,5.985 0,0 0,-0.516,-4.91 6.046,6.046 0,0 0,-6.51,-2.9A6.065,6.065 0,0 0,10.68,0.3a6.046,6.046 0,0 0,-5.764,4.09A6.05,6.05 0,0 0,1.3,7.18a6.046,6.046 0,0 0,0.754,7.097 5.98,5.98 0,0 0,0.516,4.911 6.051,6.051 0,0 0,6.515,2.9A5.985,5.985 0,0 0,13.66,23.7a6.046,6.046 0,0 0,5.764,-4.09 6.05,6.05 0,0 0,3.615,-2.79 6.05,6.05 0,0 0,-0.757,-6.999zM12,14.65a2.65,2.65 0,1 1,2.65,-2.65A2.653,2.653 0,0 1,12,14.65z"/></svg>'),
+      'openai.com': svgToDataUri('<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 48 48"><rect width="48" height="48" rx="12" fill="#10A37F"/><path fill="#FFFFFF" transform="translate(4.8, 4.8) scale(1.6)" d="M22.282,9.821a5.985,5.985 0,0 0,-0.516,-4.91 6.046,6.046 0,0 0,-6.51,-2.9A6.065,6.065 0,0 0,10.68,0.3a6.046,6.046 0,0 0,-5.764,4.09A6.05,6.05 0,0 0,1.3,7.18a6.046,6.046 0,0 0,0.754,7.097 5.98,5.98 0,0 0,0.516,4.911 6.051,6.051 0,0 0,6.515,2.9A5.985,5.985 0,0 0,13.66,23.7a6.046,6.046 0,0 0,5.764,-4.09 6.05,6.05 0,0 0,3.615,-2.79 6.05,6.05 0,0 0,-0.757,-6.999zM12,14.65a2.65,2.65 0,1 1,2.65,-2.65A2.653,2.653 0,0 1,12,14.65z"/></svg>'),
+      'gemini.google.com': svgToDataUri('<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 48 48"><defs><linearGradient id="gem" x1="0%" y1="0%" x2="100%" y2="100%"><stop offset="0%" stop-color="#1BA1E3"/><stop offset="50%" stop-color="#545BE8"/><stop offset="100%" stop-color="#A855F7"/></linearGradient></defs><rect width="48" height="48" rx="12" fill="#0F172A"/><path fill="url(#gem)" transform="translate(4.8, 4.8) scale(1.6)" d="M12,0 C12,6.627 6.627,12 0,12 C6.627,12 12,17.373 12,24 C12,17.373 17.373,12 24,12 C17.373,12 12,6.627 12,0 Z"/></svg>'),
+      'reddit.com': svgToDataUri('<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 48 48"><rect width="48" height="48" rx="12" fill="#FF4500"/><circle cx="24" cy="24" r="15" fill="#FFFFFF"/><circle cx="19" cy="23" r="2.4" fill="#FF4500"/><circle cx="29" cy="23" r="2.4" fill="#FF4500"/><path d="M20 29c1.6 1.6 4.4 1.6 8 0" stroke="#FF4500" stroke-width="2.4" stroke-linecap="round" fill="none"/></svg>'),
+      'github.com': svgToDataUri('<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 48 48"><rect width="48" height="48" rx="12" fill="#181717"/><path fill="#FFFFFF" transform="translate(4.8, 4.8) scale(1.6)" d="M12 2C6.477 2 2 6.484 2 12.017c0 4.425 2.865 8.18 6.839 9.504.5.092.682-.217.682-.483 0-.237-.008-.868-.013-1.703-2.782.605-3.369-1.343-3.369-1.343-.454-1.158-1.11-1.466-1.11-1.466-.908-.62.069-.608.069-.608 1.003.07 1.53 1.032 1.53 1.032.892 1.53 2.341 1.088 2.91.832.092-.647.35-1.088.636-1.338-2.22-.253-4.555-1.113-4.555-4.951 0-1.093.39-1.988 1.029-2.688-.103-.253-.446-1.272.098-2.65 0 0 .84-.27 2.75 1.026A9.564 9.564 0 0 1 12 6.844c.85.004 1.705.115 2.504.337 1.909-1.296 2.747-1.027 2.747-1.027.546 1.379.202 2.398.1 2.651.64.7 1.028 1.595 1.028 2.688 0 3.848-2.339 4.695-4.566 4.943.359.309.678.92.678 1.855 0 1.338-.012 2.419-.012 2.747 0 .268.18.58.688.482A10.019 10.019 0 0 0 22 12.017C22 6.484 17.522 2 12 2z"/></svg>'),
+      'claude.ai': svgToDataUri('<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 48 48"><rect width="48" height="48" rx="12" fill="#D97706"/><path fill="#FFFFFF" transform="translate(4.8, 4.8) scale(1.6)" d="M12 2L14.2 8.8L21.4 9L15.8 13.4L17.8 20.2L12 16.2L6.2 20.2L8.2 13.4L2.6 9L9.8 8.8L12 2Z"/></svg>'),
+      'wikipedia.org': svgToDataUri('<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 48 48"><rect width="48" height="48" rx="12" fill="#FFFFFF"/><text x="24" y="34" font-family="serif" font-size="28" font-weight="bold" fill="#111827" text-anchor="middle">W</text></svg>'),
+      'x.com': svgToDataUri('<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 48 48"><rect width="48" height="48" rx="12" fill="#000000"/><path fill="#FFFFFF" transform="translate(6, 6) scale(1.5)" d="M18.244 2.25h3.308l-7.227 8.26 8.502 11.24H16.17l-5.214-6.817L4.99 21.75H1.68l7.73-8.835L1.254 2.25H8.08l4.713 6.231zm-1.161 17.52h1.833L7.084 4.126H5.117z"/></svg>'),
+      'twitter.com': svgToDataUri('<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 48 48"><rect width="48" height="48" rx="12" fill="#000000"/><path fill="#FFFFFF" transform="translate(6, 6) scale(1.5)" d="M18.244 2.25h3.308l-7.227 8.26 8.502 11.24H16.17l-5.214-6.817L4.99 21.75H1.68l7.73-8.835L1.254 2.25H8.08l4.713 6.231zm-1.161 17.52h1.833L7.084 4.126H5.117z"/></svg>'),
+      'google.com': svgToDataUri('<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 48 48"><rect width="48" height="48" rx="12" fill="#FFFFFF"/><g transform="translate(4.8, 4.8) scale(1.6)"><path fill="#4285F4" d="M19.6 12.2c0-.7-.1-1.3-.2-1.9H12v3.6h4.3c-.2 1-.8 1.9-1.6 2.5v2.1h2.6c1.5-1.4 2.3-3.5 2.3-6.3z"/><path fill="#34A853" d="M12 20c2.2 0 4-.7 5.3-2l-2.6-2.1c-.7.5-1.6.8-2.7.8-2.1 0-3.9-1.4-4.5-3.3H4.8v2.1C6.2 18.2 8.9 20 12 20z"/><path fill="#FBBC05" d="M7.5 13.4c-.1-.5-.2-1-.2-1.4 0-.5.1-1 .2-1.4V8.5H4.8C4.3 9.6 4 10.7 4 12s.3 2.4.8 3.5l2.7-2.1z"/><path fill="#EA4335" d="M12 6.8c1.2 0 2.2.4 3.1 1.2l2.3-2.3C16 4.3 14.2 3.6 12 3.6 8.9 3.6 6.2 5.4 4.8 8.1l2.7 2.1C8.1 8.2 9.9 6.8 12 6.8z"/></g></svg>')
     };
 
     function cleanDomain(urlOrDomain) {
@@ -2481,7 +2485,7 @@
         if (d.includes('://')) d = new URL(d).hostname;
         else d = d.split('/')[0].split('?')[0];
       } catch(e) {}
-      return d.replace(/^www./, '');
+      return d.replace(/^www\./, '');
     }
 
     function generateLetterAvatar(title, domain) {
@@ -2491,7 +2495,8 @@
       const str = domain || title || 'web';
       for (let i = 0; i < str.length; i++) hash += str.charCodeAt(i);
       const hue = hues[Math.abs(hash) % hues.length];
-      return `data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" width="48" height="48" viewBox="0 0 48 48"><rect width="48" height="48" rx="14" fill="hsl(${hue},70%,50%)"/><text x="24" y="31" font-size="22" font-family="-apple-system,BlinkMacSystemFont,Segoe UI,Roboto,sans-serif" font-weight="700" fill="%23ffffff" text-anchor="middle">${char}</text></svg>`;
+      const svg = `<svg xmlns="http://www.w3.org/2000/svg" width="48" height="48" viewBox="0 0 48 48"><rect width="48" height="48" rx="12" fill="hsl(${hue},70%,45%)"/><text x="24" y="32" font-size="22" font-family="-apple-system,BlinkMacSystemFont,Segoe UI,Roboto,sans-serif" font-weight="700" fill="#ffffff" text-anchor="middle">${char}</text></svg>`;
+      return svgToDataUri(svg);
     }
 
     function getBestFaviconUrl(domain, service) {
@@ -2503,14 +2508,14 @@
     }
 
     const DEFAULT_SHORTCUTS = [
-      { id: "sc_youtube", title: "YouTube", url: "https://www.youtube.com/", domain: "youtube.com", service: "youtube", icon: getBestFaviconUrl("youtube.com", "youtube") },
-      { id: "sc_chatgpt", title: "ChatGPT", url: "https://chatgpt.com/", domain: "chatgpt.com", service: "chatgpt", icon: getBestFaviconUrl("chatgpt.com", "chatgpt") },
-      { id: "sc_gemini", title: "Google Gemini", url: "https://gemini.google.com/", domain: "gemini.google.com", service: "gemini", icon: getBestFaviconUrl("gemini.google.com", "gemini") },
-      { id: "sc_reddit", title: "Reddit", url: "https://www.reddit.com/", domain: "reddit.com", service: "", icon: getBestFaviconUrl("reddit.com") },
-      { id: "sc_github", title: "GitHub", url: "https://github.com/", domain: "github.com", service: "", icon: getBestFaviconUrl("github.com") },
-      { id: "sc_wikipedia", title: "Wikipedia", url: "https://www.wikipedia.org/", domain: "wikipedia.org", service: "", icon: getBestFaviconUrl("wikipedia.org") },
-      { id: "sc_claude", title: "Claude AI", url: "https://claude.ai/", domain: "claude.ai", service: "claude", icon: getBestFaviconUrl("claude.ai", "claude") },
-      { id: "sc_x", title: "X (Twitter)", url: "https://x.com/", domain: "x.com", service: "", icon: getBestFaviconUrl("x.com") }
+      { id: "sc_youtube", title: "YouTube", url: "https://www.youtube.com/", domain: "youtube.com", service: "youtube", icon: KNOWN_BRAND_SVGS["youtube.com"] },
+      { id: "sc_chatgpt", title: "ChatGPT", url: "https://chatgpt.com/", domain: "chatgpt.com", service: "chatgpt", icon: KNOWN_BRAND_SVGS["chatgpt.com"] },
+      { id: "sc_gemini", title: "Google Gemini", url: "https://gemini.google.com/", domain: "gemini.google.com", service: "gemini", icon: KNOWN_BRAND_SVGS["gemini.google.com"] },
+      { id: "sc_reddit", title: "Reddit", url: "https://www.reddit.com/", domain: "reddit.com", service: "", icon: KNOWN_BRAND_SVGS["reddit.com"] },
+      { id: "sc_github", title: "GitHub", url: "https://github.com/", domain: "github.com", service: "", icon: KNOWN_BRAND_SVGS["github.com"] },
+      { id: "sc_wikipedia", title: "Wikipedia", url: "https://www.wikipedia.org/", domain: "wikipedia.org", service: "", icon: KNOWN_BRAND_SVGS["wikipedia.org"] },
+      { id: "sc_claude", title: "Claude AI", url: "https://claude.ai/", domain: "claude.ai", service: "claude", icon: KNOWN_BRAND_SVGS["claude.ai"] },
+      { id: "sc_x", title: "X (Twitter)", url: "https://x.com/", domain: "x.com", service: "", icon: KNOWN_BRAND_SVGS["x.com"] }
     ];
 
     function loadShortcuts() {
@@ -2526,17 +2531,27 @@
         list = JSON.parse(JSON.stringify(DEFAULT_SHORTCUTS));
       }
 
-      // MIGRATE: Clean up any old emojis in shortcuts!
+      // MIGRATE: Ensure all shortcuts use crisp favicons/brand icons and clean up legacy data
       let changed = false;
       list.forEach(item => {
-        const isEmojiOrOutdated = !item.icon || 
-          (!item.icon.startsWith('http') && !item.icon.startsWith('data:image')) ||
-          item.icon.length <= 4;
-        if (isEmojiOrOutdated) {
-          const domain = cleanDomain(item.domain || item.url);
-          item.domain = domain;
-          item.icon = getBestFaviconUrl(domain, item.service);
-          changed = true;
+        const domain = cleanDomain(item.domain || item.url);
+        item.domain = domain;
+        const brandIcon = KNOWN_BRAND_SVGS[domain] || (item.service && KNOWN_BRAND_SVGS[item.service + '.com']);
+        if (brandIcon) {
+          if (item.icon !== brandIcon) {
+            item.icon = brandIcon;
+            changed = true;
+          }
+        } else {
+          const isEmojiOrOutdated = !item.icon || 
+            (!item.icon.startsWith('http') && !item.icon.startsWith('data:image')) ||
+            item.icon.length <= 4 ||
+            item.icon.includes('<svg') ||
+            item.icon.includes('width="48"');
+          if (isEmojiOrOutdated) {
+            item.icon = getBestFaviconUrl(domain, item.service);
+            changed = true;
+          }
         }
       });
 
@@ -2612,55 +2627,84 @@
             const cDomain = cleanDomain(item.domain || item.url);
             const isInvalidOrEmoji = !finalIconUrl || 
               (!finalIconUrl.startsWith('data:image') && !finalIconUrl.startsWith('http')) ||
-              finalIconUrl.length <= 4;
+              finalIconUrl.length <= 4 ||
+              finalIconUrl.includes('<svg') ||
+              finalIconUrl.includes('width="48"');
             
             if (isInvalidOrEmoji) {
               finalIconUrl = getBestFaviconUrl(cDomain, item.service);
               item.icon = finalIconUrl;
             }
 
-            const fallbackDdG = `https://icons.duckduckgo.com/ip3/${encodeURIComponent(cDomain || 'web')}.ico`;
-            const fallbackAvatar = generateLetterAvatar(item.title, cDomain);
-
-            const iconMarkup = `<img src="${finalIconUrl}" class="app-icon-img" alt="${item.title}" loading="lazy" onerror="if(!this.dataset.ddg){this.dataset.ddg='1';this.src='${fallbackDdG}';}else{this.onerror=null;this.src='${fallbackAvatar}';}" />`;
-
             const canMoveLeft = scIdx > 0;
             const canMoveRight = scIdx < currentShortcuts.length - 1;
 
-            card.innerHTML = `
-              <div class="card-delete-badge" data-del-id="${item.id}" title="Delete shortcut">✕</div>
-              ${iconMarkup}
-              <div class="app-icon-title">${item.title}</div>
-              <div class="app-icon-domain">${item.domain || 'website'}</div>
-              <div class="card-reorder-bar">
-                <button type="button" class="card-reorder-btn move-left" ${canMoveLeft ? '' : 'disabled style="opacity:0.25;pointer-events:none;"'} title="Move Left">◀</button>
-                <span class="card-reorder-drag-icon">⋮⋮</span>
-                <button type="button" class="card-reorder-btn move-right" ${canMoveRight ? '' : 'disabled style="opacity:0.25;pointer-events:none;"'} title="Move Right">▶</button>
-              </div>
-            `;
-
-            const delBadge = card.querySelector('.card-delete-badge');
+            // Delete badge
+            const delBadge = document.createElement('div');
+            delBadge.className = 'card-delete-badge';
+            delBadge.setAttribute('data-del-id', item.id);
+            delBadge.title = 'Delete shortcut';
+            delBadge.textContent = '✕';
             delBadge.addEventListener('click', (e) => {
               e.stopPropagation();
               playTapSFX();
               triggerHaptic(40);
               deleteShortcut(item.id);
             });
+            card.appendChild(delBadge);
 
-            const btnMoveLeft = card.querySelector('.move-left');
+            // Icon Image with robust multi-tiered fallback
+            const imgEl = document.createElement('img');
+            imgEl.className = 'app-icon-img';
+            imgEl.alt = item.title || 'shortcut';
+            imgEl.loading = 'lazy';
+            imgEl.dataset.triedDdg = '0';
+            imgEl.onerror = function() {
+              if (this.dataset.triedDdg === '0') {
+                this.dataset.triedDdg = '1';
+                this.src = `https://icons.duckduckgo.com/ip3/${encodeURIComponent(cDomain || 'web')}.ico`;
+              } else {
+                this.onerror = null;
+                this.src = generateLetterAvatar(item.title, cDomain);
+              }
+            };
+            imgEl.src = finalIconUrl;
+            card.appendChild(imgEl);
+
+            // Title & Domain
+            const titleEl = document.createElement('div');
+            titleEl.className = 'app-icon-title';
+            titleEl.textContent = item.title || 'Website';
+            card.appendChild(titleEl);
+
+            const domainEl = document.createElement('div');
+            domainEl.className = 'app-icon-domain';
+            domainEl.textContent = item.domain || 'website';
+            card.appendChild(domainEl);
+
+            // Reorder Bar
+            const reorderBar = document.createElement('div');
+            reorderBar.className = 'card-reorder-bar';
+            reorderBar.innerHTML = `
+              <button type="button" class="card-reorder-btn move-left" ${canMoveLeft ? '' : 'disabled style="opacity:0.25;pointer-events:none;"'} title="Move Left">◀</button>
+              <span class="card-reorder-drag-icon">⋮⋮</span>
+              <button type="button" class="card-reorder-btn move-right" ${canMoveRight ? '' : 'disabled style="opacity:0.25;pointer-events:none;"'} title="Move Right">▶</button>
+            `;
+            const btnMoveLeft = reorderBar.querySelector('.move-left');
             if (btnMoveLeft) {
               btnMoveLeft.addEventListener('click', (e) => {
                 e.stopPropagation();
                 moveShortcut(scIdx, -1);
               });
             }
-            const btnMoveRight = card.querySelector('.move-right');
+            const btnMoveRight = reorderBar.querySelector('.move-right');
             if (btnMoveRight) {
               btnMoveRight.addEventListener('click', (e) => {
                 e.stopPropagation();
                 moveShortcut(scIdx, 1);
               });
             }
+            card.appendChild(reorderBar);
 
             card.addEventListener('click', () => {
               if (isEditingShortcuts) {
@@ -2785,7 +2829,7 @@
         previewIcon.src = getBestFaviconUrl(d);
         if (previewDomain) previewDomain.textContent = d;
       } else {
-        previewIcon.src = 'data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10" fill="%2322D3EE"/></svg>';
+        previewIcon.src = svgToDataUri('<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10" fill="#22D3EE"/></svg>');
         if (previewDomain) previewDomain.textContent = 'Enter a URL to preview icon';
       }
     }
