@@ -14580,7 +14580,7 @@ public class MainActivity extends AppCompatActivity {
                 return;
             }
 
-            int deltaY = scrollY - oldScrollY;
+            deltaY = scrollY - oldScrollY;
             if (scrollY <= dpToPx(10)) {
                 if (currentOrbState != ORB_STATE_FULL_TOP) {
                     transitionToOrbState(ORB_STATE_FULL_TOP, true);
@@ -14610,7 +14610,7 @@ public class MainActivity extends AppCompatActivity {
             return;
         }
 
-        int deltaY = scrollY - oldScrollY;
+        deltaY = scrollY - oldScrollY;
         boolean isBottomMode = "bottom".equalsIgnoreCase(omniboxPosition);
         int toolbarH = getToolbarHeight();
 

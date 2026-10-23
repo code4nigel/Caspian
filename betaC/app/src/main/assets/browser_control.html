@@ -62,7 +62,7 @@
         </div>
         <div style="display: flex; flex-direction: column;">
           <span class="sheet-brand-name">CASPIAN FLOW</span>
-          <span class="sheet-brand-tag">V1.3.47-BetaC</span>
+          <span class="sheet-brand-tag">V1.3.48-BetaC</span>
         </div>
       </div>
       <div class="header-icon-actions">
@@ -1055,20 +1055,28 @@
 
         <!-- Floating Multi-Select Grouping Toolbar -->
         <div id="floating-grouping-toolbar" class="floating-group-bar" style="display: none;">
-          <div style="display: flex; align-items: center; justify-content: space-between; width: 100%; gap: 10px;">
-            <span id="grouping-select-count"
-              style="font-weight: 700; font-size: 13px; color: var(--text-main); white-space: nowrap;">0 Selected</span>
-            <div style="display: flex; align-items: center; gap: 8px;">
-              <button id="toolbar-group-btn" class="oneui-pill-btn primary"
-                style="height: 34px; border-radius: 17px; padding: 0 14px; font-size: 11px; font-weight: 600; display: inline-flex; align-items: center; gap: 4px;">📁
-                Make Group</button>
-              <button id="toolbar-favorite-btn" class="oneui-pill-btn secondary" title="Favorite / Unfavorite Selected Tabs"
-                style="width: 34px; height: 34px; border-radius: 17px; padding: 0; display: inline-flex; align-items: center; justify-content: center; font-size: 16px; color: #eab308; background: var(--input-bg); border: 1px solid var(--border-glass);">⭐</button>
-              <button id="toolbar-deselect-btn" class="oneui-pill-btn secondary"
-                style="height: 34px; border-radius: 17px; padding: 0 14px; font-size: 11px; font-weight: 600; display: inline-flex; align-items: center; justify-content: center;">Deselect</button>
-              <button id="toolbar-delete-btn" class="oneui-pill-btn danger" title="Delete Selected Tabs"
-                style="width: 34px; height: 34px; border-radius: 17px; padding: 0; display: inline-flex; align-items: center; justify-content: center; background: rgba(239,68,68,0.18); color: #ef4444; border: 1px solid rgba(239,68,68,0.3); font-size: 15px;">🗑️</button>
+          <!-- Top Row: Selection Status & Deselect Button -->
+          <div class="floating-group-top-row">
+            <div style="display: flex; align-items: center; gap: 6px;">
+              <span class="selection-indicator-dot"></span>
+              <span id="grouping-select-count" class="grouping-count-text">0 Selected</span>
             </div>
+            <button id="toolbar-deselect-btn" class="oneui-pill-btn secondary toolbar-sub-btn" type="button">
+              ✕ Deselect
+            </button>
+          </div>
+
+          <!-- Bottom Row: Primary Actions (Group, Star, Delete) -->
+          <div class="floating-group-actions-row">
+            <button id="toolbar-group-btn" class="oneui-pill-btn primary toolbar-action-btn" type="button" title="Create Tab Group from selected tabs">
+              📁 Make Group
+            </button>
+            <button id="toolbar-favorite-btn" class="oneui-pill-btn secondary toolbar-action-btn icon-only" type="button" title="Favorite / Unfavorite Selected Tabs">
+              ⭐
+            </button>
+            <button id="toolbar-delete-btn" class="oneui-pill-btn danger toolbar-action-btn danger-action" type="button" title="Delete Selected Tabs">
+              🗑️ Delete
+            </button>
           </div>
         </div>
 
@@ -1878,7 +1886,7 @@
             <div id="updater-status-dot" class="status-dot active"></div>
             <div>
               <div class="m3-card-title">Caspian Flow Updates</div>
-              <div id="updater-status-sub" class="m3-card-sub">Current: V1.3.47-BetaC • Direct in-app GitHub updater.
+              <div id="updater-status-sub" class="m3-card-sub">Current: V1.3.48-BetaC • Direct in-app GitHub updater.
               </div>
             </div>
           </div>

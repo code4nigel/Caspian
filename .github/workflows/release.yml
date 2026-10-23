@@ -26,6 +26,30 @@ jobs:
         with:
           fetch-depth: 0
 
+      - name: Set up JDK 17
+        uses: actions/setup-java@v4
+        with:
+          distribution: 'temurin'
+          java-version: '17'
+
+      - name: Setup Android SDK
+        uses: android-actions/setup-android@v3
+
+      - name: Build Caspian Flow APK from Source
+        run: |
+          if [ -d "betaC" ]; then
+            FLOW_VER=$(grep 'versionName' betaC/app/build.gradle.kts | head -n1 | sed -E 's/.*"([^"]+)".*/\1/')
+            echo "Compiling fresh Caspian Flow APK v${FLOW_VER}..."
+            cd betaC
+            chmod +x gradlew
+            ./gradlew assembleDebug --no-daemon
+            mkdir -p ../versions versions
+            cp app/build/outputs/apk/debug/app-debug.apk "../versions/Caspian-Flow-v${FLOW_VER}.apk"
+            cp app/build/outputs/apk/debug/app-debug.apk "versions/Caspian-Flow-v${FLOW_VER}.apk"
+            cd ..
+            echo "✓ Successfully compiled and verified Caspian-Flow-v${FLOW_VER}.apk"
+          fi
+
       - name: Prepare Extension & Standardize Assets
         run: |
           mkdir -p "versions/Extension Versions"

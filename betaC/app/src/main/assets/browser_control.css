@@ -1725,14 +1725,102 @@ select option {
   left: 0;
   right: 0;
   margin: 10px 0;
-  padding: 10px 14px;
-  border-radius: 18px;
+  padding: 12px 14px;
+  border-radius: 20px;
   background: var(--card-bg);
   border: 1.5px solid var(--accent);
-  box-shadow: 0 8px 24px var(--shadow-main);
+  box-shadow: 0 10px 28px var(--shadow-main);
   z-index: 900;
-  backdrop-filter: blur(16px);
-  -webkit-backdrop-filter: blur(16px);
+  backdrop-filter: blur(20px);
+  -webkit-backdrop-filter: blur(20px);
+  box-sizing: border-box;
+}
+
+.floating-group-top-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  width: 100%;
+  margin-bottom: 8px;
+}
+
+.selection-indicator-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: var(--accent, #00E5FF);
+  box-shadow: 0 0 8px var(--accent, #00E5FF);
+  display: inline-block;
+  animation: pulseSelectDot 1.5s infinite ease-in-out;
+}
+
+@keyframes pulseSelectDot {
+  0%, 100% { opacity: 1; transform: scale(1); }
+  50% { opacity: 0.45; transform: scale(0.8); }
+}
+
+.grouping-count-text {
+  font-weight: 700;
+  font-size: 13px;
+  color: var(--text-main);
+  white-space: nowrap;
+}
+
+.toolbar-sub-btn {
+  height: 28px !important;
+  border-radius: 14px !important;
+  padding: 0 12px !important;
+  font-size: 11px !important;
+  font-weight: 600 !important;
+  display: inline-flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  border: 1px solid var(--border-glass) !important;
+}
+
+.floating-group-actions-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  width: 100%;
+}
+
+.toolbar-action-btn {
+  height: 38px !important;
+  border-radius: 14px !important;
+  font-size: 12px !important;
+  font-weight: 700 !important;
+  display: inline-flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  gap: 6px !important;
+  flex: 1;
+  min-width: 0;
+  cursor: pointer;
+  transition: transform 0.15s ease, background 0.15s ease;
+}
+
+.toolbar-action-btn:active {
+  transform: scale(0.96);
+}
+
+.toolbar-action-btn.icon-only {
+  flex: 0 0 46px !important;
+  max-width: 46px !important;
+  font-size: 17px !important;
+  color: #eab308 !important;
+  background: var(--input-bg) !important;
+  border: 1px solid var(--border-glass) !important;
+}
+
+.toolbar-action-btn.danger-action {
+  background: rgba(239, 68, 68, 0.18) !important;
+  color: #ef4444 !important;
+  border: 1.5px solid rgba(239, 68, 68, 0.35) !important;
+}
+
+.toolbar-action-btn.danger-action:active {
+  background: rgba(239, 68, 68, 0.32) !important;
 }
 
 .group-color-dot.active {
