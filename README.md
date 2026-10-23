@@ -20,12 +20,17 @@ It addresses everyday web performance and workflow friction: eliminating typing 
 
 ## Platforms & Ecosystem
 
-| Desktop Extensions (Chromium & Firefox) | Caspian Flow / Mobile (Android) | Automatic Updates (Obtainium) |
-| :--- | :--- | :--- |
-| **[Official Firefox Add-on (AMO)](https://addons.mozilla.org/en-US/firefox/addon/caspian-fox-extension/)** | Floating Action Pod & Bottom Sheet UI | One-click app updates via GitHub Releases |
-| Chromium (V6.3.0) & Firefox (V6.3.1 MV3) | Omnibox Multi-Tab Browser & AI Docks | Import configuration file included in repo |
-| ChatGPT, Google Gemini, YouTube, Media | Zero-Lag DOM Pruning & Video Remote | Background update notifications & installs |
-| DOM Pruner, Flow Speed, RippleFrame, Exporters | Multi-Account Containers (Casks) | Automated install & update pipeline |
+### 🖥️ Desktop Platforms
+| Platform | Track & Version | Quick Installation Link | Highlights & Capabilities |
+| :--- | :--- | :--- | :--- |
+| **Google Chrome & Chromium** <br><sub>Edge, Brave, Opera, Vivaldi, Arc</sub> | **v6.3.0** <br>Local Unpacked / GitHub ZIP | 📖 **[Chromium Installation Guide](#for-chromium-browsers-chrome-edge-brave-etc)** | Real-time DOM Pruner, Universal Flow Speed Engine, RippleFrame Screenshot Studio, Multi-Format Exporters, YouTube Minimalist Feed |
+| **Mozilla Firefox** <br><sub>Standard, Developer Edition, Nightly, Zen</sub> | **v6.3.1 (MV3)** <br>Official Add-on (AMO) & GitHub | 🦊 **[Install on Firefox Add-ons (AMO)](https://addons.mozilla.org/en-US/firefox/addon/caspian-fox-extension/)** <br><sub>or [Firefox Sideload Guide](#for-mozilla-firefox)</sub> | Native Firefox Manifest V3, automatic background store updates, full chat DOM virtualization, universal media rate controller |
+
+### 📱 Android Platforms
+| App Track | Track & Version | Quick Installation Link | Highlights & Architecture |
+| :--- | :--- | :--- | :--- |
+| **Caspian Flow (Main)** <br><sub>Latest Active Development</sub> | **v1.1.91 Beta C** <br>GitHub Releases & Obtainium | 📥 **[Download Latest APK](#apk-installation--setup)** <br><sub>or [In-App & Obtainium Updates](#how-to-update-caspian-android)</sub> | **Browser-First Architecture**: Omnibox multi-tab browser, draggable floating action pod, AI quick docks (ChatGPT & Gemini), video remote, and session vaults (Casks) |
+| **Caspian Mobile (Legacy)** <br><sub>Maintenance Milestone</sub> | **v1.2.40 Stable** <br>GitHub Releases | 📦 **[View Legacy APKs](#apk-installation--setup)** | Dedicated standalone AI webview hub with bottom-sheet controls. *(Active feature development has transitioned to Caspian Flow)* |
 
 ---
 
@@ -150,82 +155,166 @@ Easily backup all your theme accents, chat limits, YouTube preferences, and Flow
 
 ### Supported Browsers
 - **Chromium Browsers**: Google Chrome, Microsoft Edge, Brave, Opera, Vivaldi, Arc, and other Chromium-based browsers.
-- **Mozilla Firefox**: Firefox Desktop (Standard, Developer Edition, Nightly, Floorp, Zen) via `about:debugging`.
-
-### Installation Steps
-
-#### For Chromium Browsers (Chrome, Edge, Brave, etc.)
-1. Download the latest release archive (`Caspian-Extension-v6.3.0.zip`) from the [GitHub Releases Page](https://github.com/code4nigel/Caspian/releases).
-2. Unzip the downloaded file to a local folder (or use the `Caspian` folder in the repository).
-3. Open your browser and go to the extensions management page:
-   - **Chrome**: `chrome://extensions`
-   - **Edge**: `edge://extensions`
-   - **Brave**: `brave://extensions`
-4. Enable **Developer mode** (toggle in the top-right corner).
-5. Click **Load unpacked** and select the unzipped `Caspian` folder.
-6. Pin Caspian to your toolbar for quick access.
-
-#### For Mozilla Firefox
-
-##### Method 1: Official Add-ons Store (Recommended)
-Install Caspian with automatic background updates directly from the official Mozilla Add-ons repository:
-
-👉 **[Install Caspian on Firefox Add-ons (AMO)](https://addons.mozilla.org/en-US/firefox/addon/caspian-fox-extension/)**
-
-##### Method 2: Sideload / Developer Installation
-1. Download the latest release archive (`Caspian-Fox-Extension-v6.3.1.zip`) from the [GitHub Releases Page](https://github.com/code4nigel/Caspian/releases) (or locate the `caspian fox extension` folder in the repository).
-2. Unzip the downloaded file (if needed).
-3. Open Firefox and navigate to:
-   ```
-   about:debugging#/runtime/this-firefox
-   ```
-4. Click **Load Temporary Add-on...**
-5. Select `manifest.json` inside the `caspian fox extension` folder (or select `Caspian-Fox-Extension-v6.3.1.zip`).
-6. Pin Caspian to your Firefox toolbar for quick access.
+- **Mozilla Firefox**: Firefox Desktop (Standard, Developer Edition, Nightly, Floorp, Zen).
 
 ---
 
-## Caspian Flow and Caspian Mobile (Android)
+<a id="for-chromium-browsers-chrome-edge-brave-etc"></a>
+### 🌐 For Chromium Browsers (Chrome, Edge, Brave, Arc, etc.)
 
-### Mobile Highlights
-- **Integrated Service Hub**: Switch seamlessly between ChatGPT, Google Gemini, Google Search, and YouTube.
-- **Floating Docks**:
-  - **ChatGPT & Gemini Docks**: Reload triggers, turn navigators, and pruning limits.
-  - **YouTube Floating Remote**: Custom glass dropdowns for playback speed (`0.25x` to `2.0x`) and video quality.
-  - **Google Search Dock**: Quick query switcher and one-tap page scrolling.
-- **Touch-Draggable Action Pod**: Customizable trigger button positionable anywhere on screen.
-- **Caspian Casks (Multi-Account Container Vaults)**: Isolate session cookies and login accounts per Cask (🌊 Caspian, ⚓ Pacific, 🐬 Atlantic, 🧊 Arctic, 🪸 Coral, 🔱 Abyss, or custom vaults) with 1-tap switching across ChatGPT, Gemini, Google, and YouTube while sharing global preferences.
-- **In-App Auto-Updater**: Direct GitHub releases query, changelog viewer, and 1-tap in-app APK installer without external tools.
-- **Dynamic App Launcher Icons**: Choose between 5 custom app icon themes (Classic, Cyber Cyan, Gold Shimmer, Midnight Violet, Matrix Emerald).
-- **Omnibox Browser**: Integrated URL bar with tab switching, privacy controls, and clipboard search previews.
+Chromium extensions run unpackaged Manifest V3 directly from source code with zero build steps required:
 
-### APK Installation
-1. Download the latest `.apk` from [GitHub Releases](https://github.com/code4nigel/Caspian/releases):
-   - **Caspian Flow (Beta C)**: `Caspian-Flow-v1.1.91-BetaC.apk`
-   - **Caspian Mobile (Stable)**: `Caspian-Mobile-v1.2.40.apk`
-   - **Caspian Beta A (Experimental)**: `Caspian-Beta-A-v1.2.48.apk`
-2. Open the file on your Android device (Android 7.0+).
-3. Allow installation from unknown sources if prompted.
+1. **Download the Extension**:
+   - Download the latest `Caspian-Extension-v6.3.0.zip` from the **[GitHub Releases Page](https://github.com/code4nigel/Caspian/releases)**, or use the local [`Caspian`](file:///d:/Projects/Caspian/Caspian) directory from this repository.
+2. **Extract Files**:
+   - If using the ZIP archive, extract it to a permanent folder on your computer.
+3. **Open Extensions Manager**:
+   - **Google Chrome**: Navigate to `chrome://extensions`
+   - **Microsoft Edge**: Navigate to `edge://extensions`
+   - **Brave Browser**: Navigate to `brave://extensions`
+4. **Enable Developer Mode**:
+   - Turn on the **Developer mode** toggle switch in the top-right corner.
+5. **Load Caspian**:
+   - Click the **"Load unpacked"** button in the top-left toolbar.
+   - Select the extracted `Caspian` folder (the directory containing `manifest.json`).
+6. **Pin & Use**:
+   - Pin Caspian to your browser toolbar for quick one-click access to the engine popup and settings.
 
 ---
 
-## Automatic Updates via Obtainium
+<a id="for-mozilla-firefox"></a>
+### 🦊 For Mozilla Firefox
 
-You can use [Obtainium](https://github.com/ImranR98/Obtainium) to receive automatic background update notifications and install releases directly from GitHub.
+There are **two distinct methods** to install and run Caspian on Firefox. Review the comparison below to pick the best method for your needs:
 
-### 1-Click Setup with Configuration File
-1. Install **Obtainium** from the [official repository](https://github.com/ImranR98/Obtainium).
-2. Download the pre-configured setup file: [`obtanium setup/Caspian_Obtainium_Setup_V2.json`](obtanium%20setup/Caspian_Obtainium_Setup_V2.json).
+> [!TIP]
+> **Why are there two methods for Firefox?**
+> - **Method 1: Official Mozilla Add-ons Store (AMO) — Recommended for Most Users**  
+>   Installs Caspian directly from Mozilla's official directory. You get **automatic background updates**, verified code signing, and a one-click install experience that persists across browser restarts.
+> - **Method 2: GitHub Release Sideload (`about:debugging`) — For Early Adopters & Developers**  
+>   Mozilla's store review and publishing process can take several days to approve updates. If you want the **latest release first**, cutting-edge improvements, or newly merged bug fixes the moment they land on GitHub, you can load the add-on directly using Firefox's developer loader.
+
+#### Method 1: Official Firefox Add-ons Store (AMO) — Recommended
+Install Caspian with automatic background updates directly from the official Mozilla Add-ons directory:
+
+<p align="left">
+  <a href="https://addons.mozilla.org/en-US/firefox/addon/caspian-fox-extension/">
+    <img src="https://img.shields.io/badge/🦊_Install_Caspian_on_Firefox_Add--ons-Click_Here_to_Install-orange?style=for-the-badge&logo=firefox-browser&logoColor=white" height="38" alt="Install on Firefox Add-ons" />
+  </a>
+</p>
+
+1. Visit the **[Official Caspian Firefox Add-ons Page](https://addons.mozilla.org/en-US/firefox/addon/caspian-fox-extension/)**.
+2. Click **"Add to Firefox"**.
+3. Accept the permissions prompt to complete installation. Updates will automatically be installed as new versions are approved.
+
+#### Method 2: GitHub Release Archive / Developer Sideload (`about:debugging`)
+Get immediate access to cutting-edge releases ahead of Mozilla's store review queue:
+
+1. **Download the Package**:
+   - Download the latest `Caspian-Fox-Extension-v6.3.1.zip` from **[GitHub Releases](https://github.com/code4nigel/Caspian/releases)** (or use the [`caspian fox extension`](file:///d:/Projects/Caspian/caspian%20fox%20extension) directory in this repository).
+2. **Open Firefox Add-on Debugging**:
+   - Enter `about:debugging#/runtime/this-firefox` into your Firefox address bar.
+3. **Load Temporary Add-on**:
+   - Click the **"Load Temporary Add-on..."** button.
+   - Browse to your downloaded ZIP archive (`Caspian-Fox-Extension-v6.3.1.zip`) or select the `manifest.json` file inside the `caspian fox extension` folder.
+4. **Instant Reloading**:
+   - The extension will activate immediately. You can click **"Reload"** on the debugging page at any time to test modifications.
+
+---
+
+## 📱 Caspian Android Applications
+
+### What is Caspian for Android?
+Caspian Android brings Caspian's signature lag-free AI chat virtualization, universal media speed engine, and offline conversation export tools to your mobile device. It delivers a fluid, distraction-free environment for both mobile research and heavy AI workflows.
+
+> [!IMPORTANT]
+> ### 🚀 Architecture Evolution: Caspian Flow (Main Track)
+> **Caspian Flow (Beta C)** is the **latest and active current main mobile application**.
+> 
+> While the original *Caspian Mobile* application was structured as a fixed portal hub, the Caspian project has transitioned fully to **Caspian Flow** because of its **browser-first approach**:
+> - **Full Web Navigation**: Caspian Flow features an **Omnibox address bar** with multi-tab browsing, allowing you to access any website, search engine, or AI interface freely rather than being locked into static portals.
+> - **Draggable Floating Action Pod**: An interactive pod floats unobtrusively over any active website, providing one-tap access to DOM pruners, turn navigation, YouTube speed controls, and export tools.
+> - **Active Development**: *Caspian Mobile* has reached maintenance status and is no longer receiving new feature updates. All ongoing engineering, performance enhancements, and new capabilities are built exclusively for **Caspian Flow**.
+
+### Key Mobile Capabilities
+- 🌐 **Omnibox Multi-Tab Web Engine**: Browse the web freely with URL previews, dynamic tab management, and private sandbox isolation.
+- ⚡ **Zero-Lag DOM Pruner**: Eliminates keyboard stutter and scroll lag in lengthy ChatGPT and Gemini conversations by dynamically virtualizing offscreen turns (`1`, `3`, `5`, `8`, `15`, `∞`).
+- 🔘 **Touch-Draggable Floating Action Pod**: Freely positionable trigger pod anywhere on screen with customizable shapes (`Squircle`, `Rounded`, `Circle`, `Full Square`).
+- 📑 **Slide-Up Bottom Control Sheet**: Frosted-glass bottom sheet with snap heights (`55vh`, `75vh`, `90vh`, `100vh`) and genie animations for instant tool access.
+- 🎛️ **Universal YouTube Floating Remote**: Quick-access glass dropdown for fine-grained playback speed (`0.25x` to `2.0x`) and video resolution switching.
+- 🏺 **Caspian Casks (Multi-Account Session Vaults)**: Isolate session cookies and account logins per Cask (🌊 Caspian, ⚓ Pacific, 🐬 Atlantic, 🧊 Arctic, 🪸 Coral, 🔱 Abyss) with 1-tap switching across AI services.
+- 🎙️ **Whisper Speech-to-Text Dictation**: Long-press the floating pod to dictate prompts with an animated voice waveform visualizer.
+- 📥 **Universal Offline Exporter**: Export conversations directly into styled PDF, Markdown (`.md`), Plain Text (`.txt`), or Microsoft Word (`.doc`) with KaTeX math rendering and code highlighting.
+- 🔔 **In-App Auto-Updater**: Direct GitHub releases query, changelog viewer, and 1-tap in-app APK installation without external tools.
+
+---
+
+<a id="apk-installation--setup"></a>
+### APK Installation & Setup
+
+1. **Download the APK**:
+   Visit the **[Caspian GitHub Releases Page](https://github.com/code4nigel/Caspian/releases)** and download your preferred track:
+   - 🌟 **Caspian Flow (Beta C — Main / Recommended)**: `Caspian-Flow-v1.1.91-BetaC.apk` *(Latest active features, browser-first engine)*
+   - 📦 **Caspian Mobile (Legacy Stable Milestone)**: `Caspian-Mobile-v1.2.40.apk` *(Classic fixed-portal hub)*
+   - 🧪 **Caspian Beta A (Experimental Track)**: `Caspian-Beta-A-v1.2.48.apk`
+2. **Install on Your Device**:
+   - Open the downloaded `.apk` file on your Android device (supports Android 7.0 / API 24 and above).
+   - If prompted, allow your browser or file manager to **"Install unknown apps"** in Android Settings.
+   - Tap **Install** to complete the setup.
+3. **Optional Permissions**:
+   - **Microphone**: Only required if you choose to use the Whisper speech dictation feature.
+   - **Storage / Downloads**: Required to save exported `.pdf`, `.md`, and `.doc` transcripts to your device.
+
+---
+
+<a id="how-to-update-caspian-android"></a>
+<a id="automatic-updates-via-obtainium"></a>
+### 🔄 How to Keep Caspian Android Updated
+
+There are **two flexible methods** to keep Caspian updated with the latest releases:
+
+#### Method 1: Built-in In-App Auto-Updater (Zero Configuration)
+Caspian Flow includes a native in-app update client built directly into the application:
+- **Automatic GitHub Check**: Queries the official GitHub Releases API on startup or manually from the Settings sheet.
+- **Integrated Changelog Viewer**: Read full release notes and feature improvements before updating.
+- **1-Tap APK Installation**: Automatically downloads the latest verified APK and triggers the native Android package installer without needing third-party tools or opening a browser.
+
+#### Method 2: Centralized Background Updates via Obtainium
+If you prefer a unified app manager for open-source applications, you can configure [Obtainium](https://github.com/ImranR98/Obtainium) to receive background update notifications and install releases automatically:
+
+1. Install **Obtainium** from its [official repository](https://github.com/ImranR98/Obtainium).
+2. Locate the included configuration template: [`obtanium setup/Caspian_Obtainium_Setup_V2.json`](obtanium%20setup/Caspian_Obtainium_Setup_V2.json).
 3. In Obtainium, go to **Settings** ➔ **Import/Export** ➔ **Import configuration**.
-4. Select the file to automatically configure all three Caspian app tracks.
+4. Select the JSON file to automatically track all Caspian release channels (Flow Beta C, Mobile Stable, and Experimental).
 
 ---
 
-## Privacy & Security
+## 🛡️ Privacy & Security Architecture
 
-- **100% Local Execution**: Caspian runs entirely inside your browser's local sandbox and Android app runtime.
-- **Zero Data Collection**: No prompts, chat logs, account credentials, or telemetry data are collected or transmitted.
-- **No External Tracking**: Caspian makes no third-party network requests.
+Caspian is built on a strict **zero-telemetry, privacy-first** engineering standard. Understanding what code runs in your browser and on your phone is paramount:
+
+### 1. 100% Local Execution
+- All core functions—DOM virtualization, media rate adjustments, transcript parsing, and session vaulting—execute entirely inside your local browser sandbox or native Android WebView container.
+- No servers, proxy intermediaries, or cloud processing layers exist between you and the web.
+
+### 2. Why Caspian Does What It Does
+- **DOM Virtualization (Lag Fix)**: Long conversations bog down browsers because thousands of HTML elements remain active in the rendering tree. Caspian injects non-destructive CSS rules (`display: none` / containment) on offscreen turns. It **never modifies message contents or deletes chat history**. When you scroll up, turns are unpruned immediately.
+- **Universal Flow Speed**: Caspian locates standard HTML5 `<video>` and `<audio>` elements in the DOM and adjusts `HTMLMediaElement.playbackRate`. It does not intercept, record, or stream your media content.
+- **Transcript Exporters**: Exporters read the conversation structure directly from the active webpage DOM or session storage, rendering PDFs locally with bundled KaTeX libraries. Your transcripts are written straight to your device disk—never uploaded anywhere.
+- **Caspian Casks (Session Vaults)**: On Android, Casks partition WebView cookie stores and local caches locally on device, preventing session cross-contamination across multiple accounts.
+
+### 3. Zero Telemetry & Zero Data Collection
+- Caspian collects **zero analytics, zero personal data, and zero telemetry**.
+- No prompts, responses, browsing URLs, credentials, or keystrokes are logged, stored externally, or transmitted.
+- Caspian makes **zero third-party network requests**; the only outbound network operations are user-initiated actions (e.g., in-app check for new GitHub releases).
+
+### 4. Permission Transparency
+- **Host Permissions** (`*://chatgpt.com/*`, `*://gemini.google.com/*`, etc.): Required solely to inject the lightweight DOM pruner, temporary chat converter, and exporter scripts into AI web apps.
+- **Storage Permission** (`storage`): Used strictly to persist your local user preferences (selected theme, speed shortcut hotkeys, pruning turn limits) on your device.
+- **ActiveTab & Scripting**: Used to capture the active tab viewport for RippleFrame scrolling screenshots and inject speed controls into media frames.
+
+### 5. Auditable Open-Source Code
+- Every line of code across the desktop extensions and Android apps is fully open source under the **GNU General Public License v3.0 (GPL-3.0)**. Anyone can inspect, verify, and build the source locally.
 
 ---
 
@@ -237,6 +326,28 @@ You can use [Obtainium](https://github.com/ImranR98/Obtainium) to receive automa
 
 ---
 
-<p align="center">
-  Built with 💗 by <a href="https://github.com/code4nigel">code4nigel</a>
-</p>
+<div align="center">
+  <p>
+    <img src="Caspian/icon128.png" width="48" height="48" alt="Caspian Logo" style="vertical-align: middle;" />
+  </p>
+  <h3>Crafted with passion for a faster, distraction-free web</h3>
+  <p>
+    Designed &amp; developed by <strong><a href="https://github.com/code4nigel">Shivanshu Yadav (@code4nigel)</a></strong>
+  </p>
+  <p>
+    <a href="https://github.com/code4nigel/Caspian/stargazers">
+      <img src="https://img.shields.io/github/stars/code4nigel/Caspian?style=social" alt="GitHub Stars" />
+    </a>
+    &nbsp;
+    <a href="https://github.com/code4nigel/Caspian/issues">
+      <img src="https://img.shields.io/badge/Support-GitHub_Issues-0284c7?style=flat-square&logo=github" alt="GitHub Issues" />
+    </a>
+    &nbsp;
+    <a href="https://addons.mozilla.org/en-US/firefox/addon/caspian-fox-extension/">
+      <img src="https://img.shields.io/badge/Firefox_Add--on-AMO_Store-orange?style=flat-square&logo=firefox" alt="Firefox AMO" />
+    </a>
+  </p>
+  <p>
+    <sub>Released under the <a href="LICENSE">GNU General Public License v3.0</a> &bull; © 2026 Shivanshu Yadav</sub>
+  </p>
+</div>
