@@ -90,7 +90,7 @@
                 <!-- Draggable Split Screen Divider Bar (Feature 1) -->
                 <FrameLayout
                     android:id="@+id/split_divider"
-                    android:layout_width="10dp"
+                    android:layout_width="24dp"
                     android:layout_height="match_parent"
                     android:clickable="true"
                     android:focusable="true">
@@ -293,8 +293,8 @@
             android:id="@+id/browser_progress_bar"
             style="?android:attr/progressBarStyleHorizontal"
             android:layout_width="match_parent"
-            android:layout_height="2.5dp"
-            android:progressDrawable="@drawable/bg_pill_accent"
+            android:layout_height="3dp"
+            android:progressDrawable="@drawable/bg_caspian_progress_glow"
             android:visibility="gone"
             android:elevation="360dp"
             android:layout_gravity="top"
@@ -333,7 +333,9 @@
                         android:layout_height="match_parent"
                         android:layout_weight="1"
                         android:scrollbars="none"
-                        android:overScrollMode="never">
+                        android:overScrollMode="never"
+                        android:requiresFadingEdge="horizontal"
+                        android:fadingEdgeLength="16dp">
 
                         <LinearLayout
                             android:id="@+id/omnibox_tab_strip_tabs"
@@ -408,38 +410,38 @@
                 <!-- Nav Back Button (Hidden) -->
                 <ImageButton
                     android:id="@+id/omnibox_back_btn"
-                    android:layout_width="23dp"
-                    android:layout_height="23dp"
-                    android:padding="2.5dp"
+                    android:layout_width="28dp"
+                    android:layout_height="32dp"
+                    android:padding="4dp"
                     android:background="?attr/selectableItemBackgroundBorderless"
                     android:src="@drawable/ic_pod_back"
-                    android:tint="#A2A9A9"
+                    android:tint="@color/caspian_icon_subdued"
                     android:visibility="gone"
                     android:contentDescription="Go Back" />
 
                 <!-- Nav Forward Button (Hidden) -->
                 <ImageButton
                     android:id="@+id/omnibox_forward_btn"
-                    android:layout_width="23dp"
-                    android:layout_height="23dp"
+                    android:layout_width="28dp"
+                    android:layout_height="32dp"
                     android:layout_marginStart="1.5dp"
-                    android:padding="2.5dp"
+                    android:padding="4dp"
                     android:background="?attr/selectableItemBackgroundBorderless"
                     android:src="@drawable/ic_pod_fwd"
-                    android:tint="#A2A9A9"
+                    android:tint="@color/caspian_icon_subdued"
                     android:visibility="gone"
                     android:contentDescription="Go Forward" />
 
                 <!-- Reload Active Tab Button (Moved to Left) -->
                 <ImageButton
                     android:id="@+id/omnibox_reload_btn"
-                    android:layout_width="23dp"
-                    android:layout_height="23dp"
+                    android:layout_width="28dp"
+                    android:layout_height="32dp"
                     android:layout_marginStart="1.5dp"
-                    android:padding="2.5dp"
+                    android:padding="4dp"
                     android:background="?attr/selectableItemBackgroundBorderless"
                     android:src="@drawable/ic_pod_reload"
-                    android:tint="#A2A9A9"
+                    android:tint="@color/caspian_icon_subdued"
                     android:contentDescription="Reload Page" />
 
                 <View
@@ -448,7 +450,7 @@
                     android:layout_height="14dp"
                     android:layout_marginStart="3dp"
                     android:layout_marginEnd="3dp"
-                    android:background="#33FFFFFF" />
+                    android:background="@color/caspian_divider_subtle" />
 
                 <!-- Center URL / In-Omnibox Morphing Finder Capsule -->
                 <FrameLayout
@@ -473,8 +475,8 @@
                         <!-- Lock / Privacy Shield Indicator Button -->
                         <FrameLayout
                             android:id="@+id/omnibox_shield_btn"
-                            android:layout_width="20dp"
-                            android:layout_height="20dp"
+                            android:layout_width="26dp"
+                            android:layout_height="match_parent"
                             android:clickable="true"
                             android:focusable="true"
                             android:background="?attr/selectableItemBackgroundBorderless"
@@ -486,7 +488,7 @@
                                 android:layout_height="14dp"
                                 android:layout_gravity="center"
                                 android:src="@drawable/ic_browser_shield"
-                                android:tint="#00E5FF"
+                                android:tint="@color/caspian_accent_cyan"
                                 android:contentDescription="Waveguard Active" />
                         </FrameLayout>
 
@@ -503,9 +505,9 @@
                             android:scrollHorizontally="true"
                             android:background="@android:color/transparent"
                             android:hint="Search or type URL..."
-                            android:textColorHint="#849396"
-                            android:textColor="#DFE2F0"
-                            android:textSize="12sp"
+                            android:textColorHint="@color/caspian_text_secondary"
+                            android:textColor="@color/caspian_text_primary"
+                            android:textSize="13sp"
                             android:singleLine="true"
                             android:imeOptions="actionGo"
                             android:inputType="textUri|textNoSuggestions"
@@ -514,53 +516,53 @@
                         <!-- Copy URL Button -->
                         <ImageButton
                             android:id="@+id/omnibox_copy_btn"
-                            android:layout_width="28dp"
-                            android:layout_height="28dp"
-                            android:layout_marginStart="3dp"
+                            android:layout_width="30dp"
+                            android:layout_height="match_parent"
+                            android:layout_marginStart="2dp"
                             android:padding="5dp"
                             android:background="?attr/selectableItemBackgroundBorderless"
                             android:src="@drawable/ic_omnibox_copy"
-                            android:tint="#00E5FF"
+                            android:tint="@color/caspian_accent_cyan"
                             android:visibility="gone"
                             android:contentDescription="Copy URL" />
 
                         <!-- Inline Paste Button (Icon form) -->
                         <ImageButton
                             android:id="@+id/omnibox_paste_btn"
-                            android:layout_width="28dp"
-                            android:layout_height="28dp"
-                            android:layout_marginStart="3dp"
+                            android:layout_width="30dp"
+                            android:layout_height="match_parent"
+                            android:layout_marginStart="2dp"
                             android:padding="5dp"
                             android:background="?attr/selectableItemBackgroundBorderless"
                             android:src="@drawable/ic_omnibox_paste"
-                            android:tint="#00E5FF"
+                            android:tint="@color/caspian_accent_cyan"
                             android:visibility="gone"
                             android:contentDescription="Paste URL" />
 
                         <!-- Shrink / Close Button -->
                         <ImageButton
                             android:id="@+id/omnibox_clear_btn"
-                            android:layout_width="28dp"
-                            android:layout_height="28dp"
-                            android:layout_marginStart="3dp"
+                            android:layout_width="30dp"
+                            android:layout_height="match_parent"
+                            android:layout_marginStart="2dp"
                             android:padding="5dp"
                             android:background="?attr/selectableItemBackgroundBorderless"
                             android:src="@drawable/ic_omnibox_close"
-                            android:tint="#00E5FF"
+                            android:tint="@color/caspian_accent_cyan"
                             android:visibility="gone"
                             android:contentDescription="Shrink URL Bar" />
 
                         <!-- Voice Dictation Button -->
                         <ImageButton
                             android:id="@+id/omnibox_voice_btn"
-                            android:layout_width="20dp"
-                            android:layout_height="20dp"
+                            android:layout_width="28dp"
+                            android:layout_height="match_parent"
                             android:layout_marginStart="2dp"
                             android:layout_marginEnd="0dp"
-                            android:padding="1dp"
+                            android:padding="4dp"
                             android:background="?attr/selectableItemBackgroundBorderless"
                             android:src="@drawable/ic_browser_voice"
-                            android:tint="#00E5FF"
+                            android:tint="@color/caspian_accent_cyan"
                             android:contentDescription="Voice Search" />
                     </LinearLayout>
 
@@ -577,11 +579,12 @@
 
                         <ImageButton
                             android:id="@+id/omnibox_finder_close"
-                            android:layout_width="18dp"
-                            android:layout_height="18dp"
+                            android:layout_width="26dp"
+                            android:layout_height="match_parent"
+                            android:padding="4dp"
                             android:background="?attr/selectableItemBackgroundBorderless"
                             android:src="@drawable/ic_pod_close"
-                            android:tint="#A2A9A9"
+                            android:tint="@color/caspian_icon_subdued"
                             android:contentDescription="Close Finder" />
 
                         <EditText
@@ -592,9 +595,9 @@
                             android:layout_marginStart="4dp"
                             android:background="@android:color/transparent"
                             android:hint="Find in page..."
-                            android:textColorHint="#88A2A9A9"
+                            android:textColorHint="@color/caspian_icon_subdued"
                             android:textColor="#FFFFFF"
-                            android:textSize="11sp"
+                            android:textSize="12sp"
                             android:singleLine="true"
                             android:imeOptions="actionSearch"
                             android:inputType="text"
@@ -607,14 +610,15 @@
                             android:layout_marginStart="3dp"
                             android:layout_marginEnd="4dp"
                             android:text="0/0"
-                            android:textColor="#FFCC00"
-                            android:textSize="10sp"
+                            android:textColor="@color/caspian_warning_gold"
+                            android:textSize="11sp"
                             android:textStyle="bold" />
 
                         <ImageButton
                             android:id="@+id/omnibox_finder_prev"
-                            android:layout_width="18dp"
-                            android:layout_height="18dp"
+                            android:layout_width="26dp"
+                            android:layout_height="match_parent"
+                            android:padding="4dp"
                             android:background="?attr/selectableItemBackgroundBorderless"
                             android:src="@drawable/ic_pod_arrow_up"
                             android:tint="#FFFFFF"
@@ -622,9 +626,10 @@
 
                         <ImageButton
                             android:id="@+id/omnibox_finder_next"
-                            android:layout_width="18dp"
-                            android:layout_height="18dp"
+                            android:layout_width="26dp"
+                            android:layout_height="match_parent"
                             android:layout_marginStart="2dp"
+                            android:padding="4dp"
                             android:background="?attr/selectableItemBackgroundBorderless"
                             android:src="@drawable/ic_pod_arrow_down"
                             android:tint="#FFFFFF"
@@ -638,36 +643,36 @@
                     android:layout_height="14dp"
                     android:layout_marginStart="3dp"
                     android:layout_marginEnd="4dp"
-                    android:background="#33FFFFFF" />
+                    android:background="@color/caspian_divider_subtle" />
 
                 <!-- Quick Toolbars Manager Popup Button -->
                 <ImageButton
                     android:id="@+id/omnibox_toolbars_btn"
-                    android:layout_width="24dp"
-                    android:layout_height="24dp"
-                    android:padding="2.5dp"
+                    android:layout_width="28dp"
+                    android:layout_height="32dp"
+                    android:padding="4dp"
                     android:background="?attr/selectableItemBackgroundBorderless"
                     android:src="@drawable/ic_shrink_bubble"
-                    android:tint="#A2A9A9"
+                    android:tint="@color/caspian_icon_subdued"
                     android:contentDescription="Quick Toolbars" />
 
                 <!-- AI Split Screen Button -->
                 <ImageButton
                     android:id="@+id/omnibox_split_btn"
-                    android:layout_width="24dp"
-                    android:layout_height="24dp"
+                    android:layout_width="28dp"
+                    android:layout_height="32dp"
                     android:layout_marginStart="2dp"
-                    android:padding="2.5dp"
+                    android:padding="4dp"
                     android:background="?attr/selectableItemBackgroundBorderless"
                     android:src="@drawable/ic_browser_split"
-                    android:tint="#A2A9A9"
+                    android:tint="@color/caspian_icon_subdued"
                     android:contentDescription="AI Split Mode" />
 
                 <!-- Chrome Rounded Square Tab Counter Box -->
                 <FrameLayout
                     android:id="@+id/omnibox_tabs_btn"
-                    android:layout_width="22dp"
-                    android:layout_height="22dp"
+                    android:layout_width="26dp"
+                    android:layout_height="26dp"
                     android:layout_marginStart="4dp"
                     android:layout_marginEnd="2dp"
                     android:background="@drawable/bg_chrome_tab_box"
@@ -687,10 +692,10 @@
                 <!-- Chrome 3-Dot Overflow Menu Button -->
                 <ImageButton
                     android:id="@+id/omnibox_menu_btn"
-                    android:layout_width="24dp"
-                    android:layout_height="24dp"
+                    android:layout_width="28dp"
+                    android:layout_height="32dp"
                     android:layout_marginStart="2dp"
-                    android:padding="2.5dp"
+                    android:padding="4dp"
                     android:background="?attr/selectableItemBackgroundBorderless"
                     android:src="@drawable/ic_browser_menu"
                     android:tint="#FFFFFF"
@@ -699,13 +704,13 @@
                 <!-- Collapse to Edge Semicircle Handle Button (">") -->
                 <ImageButton
                     android:id="@+id/omnibox_btn_collapse_orb"
-                    android:layout_width="24dp"
-                    android:layout_height="24dp"
+                    android:layout_width="28dp"
+                    android:layout_height="32dp"
                     android:layout_marginStart="2dp"
-                    android:padding="2.5dp"
+                    android:padding="4dp"
                     android:background="?attr/selectableItemBackgroundBorderless"
                     android:src="@drawable/ic_chevron_right"
-                    android:tint="#A2A9A9"
+                    android:tint="@color/caspian_icon_subdued"
                     android:visibility="gone"
                     android:contentDescription="Collapse to Edge Handle" />
             </LinearLayout>
@@ -718,7 +723,7 @@
         android:id="@+id/tab_grid_overlay"
         android:layout_width="match_parent"
         android:layout_height="match_parent"
-        android:background="#050811"
+        android:background="@color/caspian_surface_void"
         android:elevation="70dp"
         android:clickable="true"
         android:focusable="true"

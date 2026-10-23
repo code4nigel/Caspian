@@ -362,7 +362,7 @@ body {
   padding: 12px 14px 24px 14px;
   transform: translate3d(0, 0, 0) !important;
   contain: paint layout;
-  will-change: transform, opacity;
+  will-change: transform, opacity, scroll-position;
   display: block !important;
   visibility: visible !important;
   opacity: 1 !important;
@@ -378,6 +378,8 @@ body {
   contain: layout;
   transform: translateZ(0);
   will-change: transform;
+  content-visibility: auto;
+  contain-intrinsic-size: auto 64px;
 }
 
 /* Top Specular Drag Handle */

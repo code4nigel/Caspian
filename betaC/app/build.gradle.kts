@@ -10,8 +10,8 @@ android {
         applicationId = "com.caspian.betac"
         minSdk = 24
         targetSdk = 34
-        versionCode = 256
-        versionName = "1.3.45-BetaC"
+        versionCode = 257
+        versionName = "1.3.46-BetaC"
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
     }
 

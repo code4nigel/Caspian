@@ -2509,36 +2509,43 @@ public class MainActivity extends AppCompatActivity {
 
     private void captureTabSnapshot(TabItem tab) {
         if (tab == null || tab.webView == null) return;
-        try {
-            if (tab.url != null && tab.url.contains("pdf_viewer.html")) return;
-            int w = tab.webView.getWidth();
-            int h = tab.webView.getHeight();
-            if (w > 0 && h > 0) {
-                Bitmap bmp = Bitmap.createBitmap(w / 2, h / 2, Bitmap.Config.RGB_565);
-                Canvas canvas = new Canvas(bmp);
-                canvas.scale(0.5f, 0.5f);
-                tab.webView.draw(canvas);
-                tab.snapshotBitmap = bmp;
-                saveTabSnapshotToDisk(tab.id, bmp);
-                return;
-            }
-        } catch (Exception ignored) {}
+        if (tab.url != null && tab.url.contains("pdf_viewer.html")) return;
 
-        tab.webView.post(() -> {
+        int w = tab.webView.getWidth();
+        int h = tab.webView.getHeight();
+        if (w <= 0 || h <= 0) return;
+
+        // On Android 8.0+ (API 26+), use hardware GPU PixelCopy for the active tab to capture WebGL/Canvas/video with 100% fidelity
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O && getWindow() != null && tab.id == activeTabId && tab.webView.isShown()) {
             try {
-                if (tab.url != null && tab.url.contains("pdf_viewer.html")) return;
-                int w = tab.webView.getWidth();
-                int h = tab.webView.getHeight();
-                if (w > 0 && h > 0) {
-                    Bitmap bmp = Bitmap.createBitmap(w / 2, h / 2, Bitmap.Config.RGB_565);
-                    Canvas canvas = new Canvas(bmp);
-                    canvas.scale(0.5f, 0.5f);
-                    tab.webView.draw(canvas);
-                    tab.snapshotBitmap = bmp;
-                    saveTabSnapshotToDisk(tab.id, bmp);
-                }
-            } catch (Exception ignored) {}
-        });
+                Bitmap destBitmap = Bitmap.createBitmap(w / 2, h / 2, Bitmap.Config.ARGB_8888);
+                int[] loc = new int[2];
+                tab.webView.getLocationInWindow(loc);
+                Rect srcRect = new Rect(loc[0], loc[1], loc[0] + w, loc[1] + h);
+                PixelCopy.request(getWindow(), srcRect, destBitmap, copyResult -> {
+                    if (copyResult == PixelCopy.SUCCESS) {
+                        tab.snapshotBitmap = destBitmap;
+                        saveTabSnapshotToDisk(tab.id, destBitmap);
+                    } else {
+                        fallbackSoftwareTabCapture(tab, w, h);
+                    }
+                }, new Handler(Looper.getMainLooper()));
+                return;
+            } catch (Throwable ignored) {}
+        }
+
+        fallbackSoftwareTabCapture(tab, w, h);
+    }
+
+    private void fallbackSoftwareTabCapture(TabItem tab, int w, int h) {
+        try {
+            Bitmap bmp = Bitmap.createBitmap(w / 2, h / 2, Bitmap.Config.RGB_565);
+            Canvas canvas = new Canvas(bmp);
+            canvas.scale(0.5f, 0.5f);
+            tab.webView.draw(canvas);
+            tab.snapshotBitmap = bmp;
+            saveTabSnapshotToDisk(tab.id, bmp);
+        } catch (Throwable ignored) {}
     }
 
     private void setupModernTabGridOverlay() {
@@ -3361,23 +3368,18 @@ public class MainActivity extends AppCompatActivity {
 
             tabGridOverlay.animate().cancel();
             tabGridOverlay.animate()
-                    .scaleX(1.0f)
-                    .scaleY(1.0f)
                     .alpha(1.0f)
-                    .translationY(0f)
-                    .setDuration(240)
-                    .setInterpolator(new DecelerateInterpolator(2.0f))
+                    .setDuration(200)
                     .start();
+            CaspianPhysics.animateSpring(tabGridOverlay, DynamicAnimation.SCALE_X, 1.0f, CaspianPhysics.DAMPING_BOUNCY, CaspianPhysics.STIFFNESS_RESPONSIVE);
+            CaspianPhysics.animateSpring(tabGridOverlay, DynamicAnimation.SCALE_Y, 1.0f, CaspianPhysics.DAMPING_BOUNCY, CaspianPhysics.STIFFNESS_RESPONSIVE);
+            CaspianPhysics.animateSpring(tabGridOverlay, DynamicAnimation.TRANSLATION_Y, 0f, CaspianPhysics.DAMPING_SMOOTH, CaspianPhysics.STIFFNESS_RESPONSIVE);
 
             if (browserContentLayout != null) {
                 browserContentLayout.animate().cancel();
-                browserContentLayout.animate()
-                        .scaleX(0.92f)
-                        .scaleY(0.92f)
-                        .translationY(dpToPx(16))
-                        .setDuration(240)
-                        .setInterpolator(new DecelerateInterpolator(2.0f))
-                        .start();
+                CaspianPhysics.animateSpring(browserContentLayout, DynamicAnimation.SCALE_X, 0.92f, CaspianPhysics.DAMPING_SMOOTH, CaspianPhysics.STIFFNESS_RESPONSIVE);
+                CaspianPhysics.animateSpring(browserContentLayout, DynamicAnimation.SCALE_Y, 0.92f, CaspianPhysics.DAMPING_SMOOTH, CaspianPhysics.STIFFNESS_RESPONSIVE);
+                CaspianPhysics.animateSpring(browserContentLayout, DynamicAnimation.TRANSLATION_Y, dpToPx(16), CaspianPhysics.DAMPING_SMOOTH, CaspianPhysics.STIFFNESS_RESPONSIVE);
             }
         }
 
@@ -3436,10 +3438,16 @@ public class MainActivity extends AppCompatActivity {
                 tabGridOverlay.setPivotX(pivotX);
                 tabGridOverlay.setPivotY(pivotY);
             }
+            if (browserContentLayout != null) {
+                browserContentLayout.animate().cancel();
+                CaspianPhysics.animateSpring(browserContentLayout, DynamicAnimation.SCALE_X, 1.0f, CaspianPhysics.DAMPING_BOUNCY, CaspianPhysics.STIFFNESS_RESPONSIVE);
+                CaspianPhysics.animateSpring(browserContentLayout, DynamicAnimation.SCALE_Y, 1.0f, CaspianPhysics.DAMPING_BOUNCY, CaspianPhysics.STIFFNESS_RESPONSIVE);
+                CaspianPhysics.animateSpring(browserContentLayout, DynamicAnimation.TRANSLATION_Y, 0f, CaspianPhysics.DAMPING_SMOOTH, CaspianPhysics.STIFFNESS_RESPONSIVE);
+            }
             tabGridOverlay.animate().cancel();
+            CaspianPhysics.animateSpring(tabGridOverlay, DynamicAnimation.SCALE_X, 0.86f, CaspianPhysics.DAMPING_SMOOTH, CaspianPhysics.STIFFNESS_RESPONSIVE);
+            CaspianPhysics.animateSpring(tabGridOverlay, DynamicAnimation.SCALE_Y, 0.86f, CaspianPhysics.DAMPING_SMOOTH, CaspianPhysics.STIFFNESS_RESPONSIVE);
             tabGridOverlay.animate()
-                    .scaleX(0.86f)
-                    .scaleY(0.86f)
                     .alpha(0.0f)
                     .translationY(dpToPx(24))
                     .setDuration(190)
@@ -9787,6 +9795,78 @@ public class MainActivity extends AppCompatActivity {
         return (int) (dp * getResources().getDisplayMetrics().density + 0.5f);
     }
 
+    /**
+     * Smoothly animate view visibility changes with alpha and scale springs.
+     */
+    private void animateViewVisibility(final View view, final boolean visible, final boolean useSpring) {
+        if (view == null) return;
+        view.animate().cancel();
+        if (visible) {
+            if (view.getVisibility() == View.VISIBLE && view.getAlpha() >= 0.99f && view.getScaleX() >= 0.99f) return;
+            view.setVisibility(View.VISIBLE);
+            view.setAlpha(0.0f);
+            view.setScaleX(0.82f);
+            view.setScaleY(0.82f);
+            view.animate()
+                    .alpha(1.0f)
+                    .setDuration(160)
+                    .setInterpolator(new DecelerateInterpolator(1.8f))
+                    .start();
+            if (useSpring) {
+                CaspianPhysics.animateSpring(view, DynamicAnimation.SCALE_X, 1.0f, CaspianPhysics.DAMPING_BOUNCY, CaspianPhysics.STIFFNESS_RESPONSIVE);
+                CaspianPhysics.animateSpring(view, DynamicAnimation.SCALE_Y, 1.0f, CaspianPhysics.DAMPING_BOUNCY, CaspianPhysics.STIFFNESS_RESPONSIVE);
+            } else {
+                view.animate().scaleX(1.0f).scaleY(1.0f).setDuration(160).start();
+            }
+        } else {
+            if (view.getVisibility() == View.GONE) return;
+            view.animate()
+                    .alpha(0.0f)
+                    .scaleX(0.82f)
+                    .scaleY(0.82f)
+                    .setDuration(120)
+                    .setInterpolator(new AccelerateDecelerateInterpolator())
+                    .withEndAction(() -> {
+                        view.setVisibility(View.GONE);
+                        view.setAlpha(1.0f);
+                        view.setScaleX(1.0f);
+                        view.setScaleY(1.0f);
+                    })
+                    .start();
+        }
+    }
+
+    /**
+     * Fluid cross-fade & spring morph between Omnibox URL container and Finder container.
+     */
+    private void morphOmniboxContainers(final View outgoing, final View incoming) {
+        if (outgoing != null) {
+            outgoing.animate().cancel();
+            outgoing.animate()
+                    .alpha(0.0f)
+                    .scaleX(0.92f)
+                    .scaleY(0.92f)
+                    .setDuration(140)
+                    .withEndAction(() -> {
+                        outgoing.setVisibility(View.GONE);
+                        outgoing.setAlpha(1.0f);
+                        outgoing.setScaleX(1.0f);
+                        outgoing.setScaleY(1.0f);
+                    })
+                    .start();
+        }
+        if (incoming != null) {
+            incoming.animate().cancel();
+            incoming.setVisibility(View.VISIBLE);
+            incoming.setAlpha(0.0f);
+            incoming.setScaleX(0.92f);
+            incoming.setScaleY(0.92f);
+            incoming.animate().alpha(1.0f).setDuration(180).start();
+            CaspianPhysics.animateSpring(incoming, DynamicAnimation.SCALE_X, 1.0f, CaspianPhysics.DAMPING_BOUNCY, CaspianPhysics.STIFFNESS_RESPONSIVE);
+            CaspianPhysics.animateSpring(incoming, DynamicAnimation.SCALE_Y, 1.0f, CaspianPhysics.DAMPING_BOUNCY, CaspianPhysics.STIFFNESS_RESPONSIVE);
+        }
+    }
+
     private void expandOmniboxUrl() {
         if (omniboxEditText == null) return;
         boolean isBottom = "applepie".equalsIgnoreCase(omniboxScrollMode) || "bottom".equalsIgnoreCase(omniboxPosition);
@@ -9808,19 +9888,27 @@ public class MainActivity extends AppCompatActivity {
             omniboxHeaderWrapper.setTranslationY(0f);
             omniboxHeaderWrapper.bringToFront();
         }
-        if (omniboxBackBtn != null) omniboxBackBtn.setVisibility(View.GONE);
-        if (omniboxForwardBtn != null) omniboxForwardBtn.setVisibility(View.GONE);
-        if (omniboxReloadBtn != null) omniboxReloadBtn.setVisibility(View.GONE);
-        if (omniboxDividerLeft != null) omniboxDividerLeft.setVisibility(View.GONE);
-        if (omniboxDividerRight != null) omniboxDividerRight.setVisibility(View.GONE);
-        if (omniboxToolbarsBtn != null) omniboxToolbarsBtn.setVisibility(View.GONE);
-        if (omniboxSplitBtn != null) omniboxSplitBtn.setVisibility(View.GONE);
-        if (omniboxTabsBtn != null) omniboxTabsBtn.setVisibility(View.GONE);
-        if (omniboxMenuBtn != null) omniboxMenuBtn.setVisibility(View.GONE);
-        if (omniboxBtnCollapseOrb != null) omniboxBtnCollapseOrb.setVisibility(View.GONE);
-        if (omniboxCopyBtn != null) omniboxCopyBtn.setVisibility(View.VISIBLE);
-        if (omniboxPasteBtn != null) omniboxPasteBtn.setVisibility(View.VISIBLE);
-        if (omniboxClearBtn != null) omniboxClearBtn.setVisibility(View.VISIBLE);
+        animateViewVisibility(omniboxBackBtn, false, false);
+        animateViewVisibility(omniboxForwardBtn, false, false);
+        animateViewVisibility(omniboxReloadBtn, false, false);
+        animateViewVisibility(omniboxDividerLeft, false, false);
+        animateViewVisibility(omniboxDividerRight, false, false);
+        animateViewVisibility(omniboxToolbarsBtn, false, false);
+        animateViewVisibility(omniboxSplitBtn, false, false);
+        animateViewVisibility(omniboxTabsBtn, false, false);
+        animateViewVisibility(omniboxMenuBtn, false, false);
+        animateViewVisibility(omniboxBtnCollapseOrb, false, false);
+        animateViewVisibility(omniboxCopyBtn, true, true);
+        animateViewVisibility(omniboxPasteBtn, true, true);
+        animateViewVisibility(omniboxClearBtn, true, true);
+        if (omniboxCapsule != null) {
+            CaspianPhysics.animateSpring(omniboxCapsule, DynamicAnimation.SCALE_X, 1.015f, CaspianPhysics.DAMPING_BOUNCY, CaspianPhysics.STIFFNESS_RESPONSIVE);
+            omniboxCapsule.postDelayed(() -> {
+                if (omniboxCapsule != null) {
+                    CaspianPhysics.animateSpring(omniboxCapsule, DynamicAnimation.SCALE_X, 1.0f, CaspianPhysics.DAMPING_BOUNCY, CaspianPhysics.STIFFNESS_PLAYFUL);
+                }
+            }, 120);
+        }
         updateOmniboxPasteButton();
 
         TabItem currentTab = getActiveOrDominantTab();
@@ -10061,16 +10149,16 @@ public class MainActivity extends AppCompatActivity {
                     omniboxHeaderWrapper.bringToFront();
                 }
                 // 1. Expand Omnibox URL section across toolbar by hiding other icon buttons
-                if (omniboxBackBtn != null) omniboxBackBtn.setVisibility(View.GONE);
-                if (omniboxForwardBtn != null) omniboxForwardBtn.setVisibility(View.GONE);
-                if (omniboxReloadBtn != null) omniboxReloadBtn.setVisibility(View.GONE);
-                if (omniboxDividerLeft != null) omniboxDividerLeft.setVisibility(View.GONE);
-                if (omniboxDividerRight != null) omniboxDividerRight.setVisibility(View.GONE);
-                if (omniboxToolbarsBtn != null) omniboxToolbarsBtn.setVisibility(View.GONE);
-                if (omniboxSplitBtn != null) omniboxSplitBtn.setVisibility(View.GONE);
-                if (omniboxTabsBtn != null) omniboxTabsBtn.setVisibility(View.GONE);
-                if (omniboxMenuBtn != null) omniboxMenuBtn.setVisibility(View.GONE);
-                if (omniboxBtnCollapseOrb != null) omniboxBtnCollapseOrb.setVisibility(View.GONE);
+                animateViewVisibility(omniboxBackBtn, false, false);
+                animateViewVisibility(omniboxForwardBtn, false, false);
+                animateViewVisibility(omniboxReloadBtn, false, false);
+                animateViewVisibility(omniboxDividerLeft, false, false);
+                animateViewVisibility(omniboxDividerRight, false, false);
+                animateViewVisibility(omniboxToolbarsBtn, false, false);
+                animateViewVisibility(omniboxSplitBtn, false, false);
+                animateViewVisibility(omniboxTabsBtn, false, false);
+                animateViewVisibility(omniboxMenuBtn, false, false);
+                animateViewVisibility(omniboxBtnCollapseOrb, false, false);
 
                 // 2. Show full actual URL (including query parameters like ?v=...)
                 TabItem currentTab = getActiveOrDominantTab();
@@ -10084,10 +10172,10 @@ public class MainActivity extends AppCompatActivity {
                     }
                 }
 
-                // 3. Show 3 action icon buttons: Copy, Paste, Cross
-                if (omniboxCopyBtn != null) omniboxCopyBtn.setVisibility(View.VISIBLE);
-                if (omniboxPasteBtn != null) omniboxPasteBtn.setVisibility(View.VISIBLE);
-                if (omniboxClearBtn != null) omniboxClearBtn.setVisibility(View.VISIBLE);
+                // 3. Show 3 action icon buttons with fluid spring pop
+                animateViewVisibility(omniboxCopyBtn, true, true);
+                animateViewVisibility(omniboxPasteBtn, true, true);
+                animateViewVisibility(omniboxClearBtn, true, true);
                 updateOmniboxPasteButton();
 
                 // 4. Suppress floating suggestions dropdown
@@ -10108,21 +10196,23 @@ public class MainActivity extends AppCompatActivity {
                     }
                 }, 240);
             } else {
-                // Restore toolbar icon buttons when focus is lost
-                if (omniboxBackBtn != null) omniboxBackBtn.setVisibility(View.GONE);
-                if (omniboxForwardBtn != null) omniboxForwardBtn.setVisibility(View.GONE);
-                if (omniboxReloadBtn != null) omniboxReloadBtn.setVisibility(View.VISIBLE);
-                if (omniboxDividerLeft != null) omniboxDividerLeft.setVisibility(View.VISIBLE);
-                if (omniboxDividerRight != null) omniboxDividerRight.setVisibility(View.VISIBLE);
-                if (omniboxToolbarsBtn != null) omniboxToolbarsBtn.setVisibility(View.VISIBLE);
-                if (omniboxSplitBtn != null) omniboxSplitBtn.setVisibility(View.VISIBLE);
-                if (omniboxTabsBtn != null) omniboxTabsBtn.setVisibility(View.VISIBLE);
-                if (omniboxMenuBtn != null) omniboxMenuBtn.setVisibility(View.VISIBLE);
-                if (omniboxBtnCollapseOrb != null) omniboxBtnCollapseOrb.setVisibility(isOrbOrApplePieMode() ? View.VISIBLE : View.GONE);
+                // Restore toolbar icon buttons smoothly when focus is lost
+                animateViewVisibility(omniboxBackBtn, false, false);
+                animateViewVisibility(omniboxForwardBtn, false, false);
+                animateViewVisibility(omniboxReloadBtn, true, true);
+                animateViewVisibility(omniboxDividerLeft, true, false);
+                animateViewVisibility(omniboxDividerRight, true, false);
+                animateViewVisibility(omniboxToolbarsBtn, true, true);
+                animateViewVisibility(omniboxSplitBtn, true, true);
+                animateViewVisibility(omniboxTabsBtn, true, true);
+                animateViewVisibility(omniboxMenuBtn, true, true);
+                if (omniboxBtnCollapseOrb != null) {
+                    animateViewVisibility(omniboxBtnCollapseOrb, isOrbOrApplePieMode(), true);
+                }
 
-                if (omniboxCopyBtn != null) omniboxCopyBtn.setVisibility(View.GONE);
-                if (omniboxPasteBtn != null) omniboxPasteBtn.setVisibility(View.GONE);
-                if (omniboxClearBtn != null) omniboxClearBtn.setVisibility(View.GONE);
+                animateViewVisibility(omniboxCopyBtn, false, false);
+                animateViewVisibility(omniboxPasteBtn, false, false);
+                animateViewVisibility(omniboxClearBtn, false, false);
                 if (omniboxSuggestionsContainer != null) omniboxSuggestionsContainer.setVisibility(View.GONE);
 
                 updateOmniboxState();
@@ -10214,9 +10304,8 @@ public class MainActivity extends AppCompatActivity {
         if (omniboxPasteBtn != null) omniboxPasteBtn.setVisibility(View.GONE);
         if (omniboxClearBtn != null) omniboxClearBtn.setVisibility(View.GONE);
 
-        // 3. Switch URL container to Finder container
-        if (omniboxUrlContainer != null) omniboxUrlContainer.setVisibility(View.GONE);
-        omniboxFinderContainer.setVisibility(View.VISIBLE);
+        // 3. Fluidly morph URL container to Finder container
+        morphOmniboxContainers(omniboxUrlContainer, omniboxFinderContainer);
 
         // 4. Focus input and open soft keyboard
         if (omniboxFinderInput != null) {
@@ -10234,12 +10323,8 @@ public class MainActivity extends AppCompatActivity {
     }
 
     private void hideOmniboxFinder() {
-        if (omniboxFinderContainer != null) {
-            omniboxFinderContainer.setVisibility(View.GONE);
-        }
-        if (omniboxUrlContainer != null) {
-            omniboxUrlContainer.setVisibility(View.VISIBLE);
-        }
+        // Fluidly morph Finder container back to URL container
+        morphOmniboxContainers(omniboxFinderContainer, omniboxUrlContainer);
         TabItem currentTab = getActiveOrDominantTab();
         if (currentTab != null && currentTab.webView != null) {
             currentTab.webView.clearMatches();
@@ -14455,13 +14540,22 @@ public class MainActivity extends AppCompatActivity {
     }
 
     public void handleWebViewScroll(CaspianWebView webView, int scrollX, int scrollY, int oldScrollX, int oldScrollY) {
+        int deltaY = scrollY - oldScrollY;
+
         if ("applepie".equalsIgnoreCase(omniboxScrollMode)) {
-            // Apple Pie: The pill is the steady, non-intrusive bottom resting hub.
-            // Scrolling does NOT pop open the 110dp full omnibox, leaving chatboxes and web inputs 100% visible!
-            // When full omnibox was explicitly opened by the user, scrolling down smoothly docks back into the pill.
-            int deltaY = scrollY - oldScrollY;
-            if (deltaY > 15 && currentOrbState == ORB_STATE_FULL_TOP) {
-                transitionToOrbState(ORB_STATE_BOTTOM_PILL, true);
+            // Apple Pie: Spring auto-hide pill on scroll down, spring restore on scroll up
+            if (currentOrbState == ORB_STATE_FULL_TOP) {
+                if (deltaY > 15) {
+                    transitionToOrbState(ORB_STATE_BOTTOM_PILL, true);
+                }
+            } else if (caspianFloatingPill != null && caspianFloatingPill.getVisibility() == View.VISIBLE) {
+                if (scrollY <= dpToPx(10)) {
+                    CaspianPhysics.animateSpring(caspianFloatingPill, DynamicAnimation.TRANSLATION_Y, 0f, CaspianPhysics.DAMPING_BOUNCY, CaspianPhysics.STIFFNESS_RESPONSIVE);
+                } else if (deltaY > 14 && scrollY > dpToPx(36)) {
+                    CaspianPhysics.animateSpring(caspianFloatingPill, DynamicAnimation.TRANSLATION_Y, dpToPx(95), CaspianPhysics.DAMPING_SMOOTH, CaspianPhysics.STIFFNESS_RESPONSIVE);
+                } else if (deltaY < -14) {
+                    CaspianPhysics.animateSpring(caspianFloatingPill, DynamicAnimation.TRANSLATION_Y, 0f, CaspianPhysics.DAMPING_BOUNCY, CaspianPhysics.STIFFNESS_RESPONSIVE);
+                }
             }
             return;
         }
@@ -17623,6 +17717,9 @@ public class MainActivity extends AppCompatActivity {
         splitDivider.setOnTouchListener(new View.OnTouchListener() {
             private float downX, downY;
             private boolean isDraggingDivider = false;
+            private long lastTapTimestamp = 0;
+            private float lastSnapRatio = -1f;
+            private VelocityTracker dividerVelocityTracker = null;
 
             @Override
             public boolean onTouch(View v, MotionEvent event) {
@@ -17631,9 +17728,17 @@ public class MainActivity extends AppCompatActivity {
                         downX = event.getRawX();
                         downY = event.getRawY();
                         isDraggingDivider = false;
+                        lastSnapRatio = -1f;
+                        if (dividerVelocityTracker != null) {
+                            try { dividerVelocityTracker.recycle(); } catch (Throwable ignored) {}
+                        }
+                        dividerVelocityTracker = VelocityTracker.obtain();
+                        if (dividerVelocityTracker != null) dividerVelocityTracker.addMovement(event);
+                        CaspianPhysics.applyPressSquish(splitDividerHandle != null ? splitDividerHandle : v);
                         return true;
 
                     case MotionEvent.ACTION_MOVE:
+                        if (dividerVelocityTracker != null) dividerVelocityTracker.addMovement(event);
                         float dx = Math.abs(event.getRawX() - downX);
                         float dy = Math.abs(event.getRawY() - downY);
                         if (dx > 10 || dy > 10) {
@@ -17643,9 +17748,27 @@ public class MainActivity extends AppCompatActivity {
                             if (splitModeState == 1) {
                                 float totalWidth = splitViewContainer.getWidth();
                                 if (totalWidth > 0) {
-                                    float newRatio = event.getRawX() / totalWidth;
-                                    newRatio = Math.max(0.15f, Math.min(0.85f, newRatio));
-                                    splitRatio = newRatio;
+                                    float rawRatio = event.getRawX() / totalWidth;
+                                    rawRatio = Math.max(0.15f, Math.min(0.85f, rawRatio));
+
+                                    // Magnetic Snap Zones: 30%, 50%, 70%
+                                    float snappedRatio = rawRatio;
+                                    if (Math.abs(rawRatio - 0.50f) < 0.035f) {
+                                        snappedRatio = 0.50f;
+                                    } else if (Math.abs(rawRatio - 0.30f) < 0.030f) {
+                                        snappedRatio = 0.30f;
+                                    } else if (Math.abs(rawRatio - 0.70f) < 0.030f) {
+                                        snappedRatio = 0.70f;
+                                    }
+
+                                    if (snappedRatio != rawRatio && snappedRatio != lastSnapRatio) {
+                                        lastSnapRatio = snappedRatio;
+                                        v.performHapticFeedback(HapticFeedbackConstants.KEYBOARD_TAP);
+                                    } else if (snappedRatio == rawRatio) {
+                                        lastSnapRatio = -1f;
+                                    }
+
+                                    splitRatio = snappedRatio;
                                     LinearLayout.LayoutParams leftLp = (LinearLayout.LayoutParams) splitLeftContainer.getLayoutParams();
                                     LinearLayout.LayoutParams rightLp = (LinearLayout.LayoutParams) splitRightContainer.getLayoutParams();
                                     leftLp.weight = splitRatio;
@@ -17660,9 +17783,27 @@ public class MainActivity extends AppCompatActivity {
                                 splitViewContainer.getLocationOnScreen(loc);
                                 float relativeY = event.getRawY() - loc[1];
                                 if (totalHeight > 0) {
-                                    float newRatio = relativeY / totalHeight;
-                                    newRatio = Math.max(0.15f, Math.min(0.85f, newRatio));
-                                    splitRatio = newRatio;
+                                    float rawRatio = relativeY / totalHeight;
+                                    rawRatio = Math.max(0.15f, Math.min(0.85f, rawRatio));
+
+                                    // Magnetic Snap Zones: 30%, 50%, 70%
+                                    float snappedRatio = rawRatio;
+                                    if (Math.abs(rawRatio - 0.50f) < 0.035f) {
+                                        snappedRatio = 0.50f;
+                                    } else if (Math.abs(rawRatio - 0.30f) < 0.030f) {
+                                        snappedRatio = 0.30f;
+                                    } else if (Math.abs(rawRatio - 0.70f) < 0.030f) {
+                                        snappedRatio = 0.70f;
+                                    }
+
+                                    if (snappedRatio != rawRatio && snappedRatio != lastSnapRatio) {
+                                        lastSnapRatio = snappedRatio;
+                                        v.performHapticFeedback(HapticFeedbackConstants.KEYBOARD_TAP);
+                                    } else if (snappedRatio == rawRatio) {
+                                        lastSnapRatio = -1f;
+                                    }
+
+                                    splitRatio = snappedRatio;
                                     LinearLayout.LayoutParams leftLp = (LinearLayout.LayoutParams) splitLeftContainer.getLayoutParams();
                                     LinearLayout.LayoutParams rightLp = (LinearLayout.LayoutParams) splitRightContainer.getLayoutParams();
                                     leftLp.weight = splitRatio;
@@ -17676,10 +17817,63 @@ public class MainActivity extends AppCompatActivity {
                         return true;
 
                     case MotionEvent.ACTION_UP:
+                        float flingVelocityX = 0f;
+                        float flingVelocityY = 0f;
+                        if (dividerVelocityTracker != null) {
+                            try {
+                                dividerVelocityTracker.addMovement(event);
+                                dividerVelocityTracker.computeCurrentVelocity(1000);
+                                flingVelocityX = dividerVelocityTracker.getXVelocity();
+                                flingVelocityY = dividerVelocityTracker.getYVelocity();
+                                dividerVelocityTracker.recycle();
+                            } catch (Throwable ignored) {}
+                            dividerVelocityTracker = null;
+                        }
+                        CaspianPhysics.applyReleasePop(splitDividerHandle != null ? splitDividerHandle : v);
                         if (!isDraggingDivider) {
-                            playUiFeedbackSound("tap");
-                            toggleSplitArenaBroadcast(splitArenaBroadcastContainer != null && splitArenaBroadcastContainer.getVisibility() != View.VISIBLE);
+                            long now = System.currentTimeMillis();
+                            if (now - lastTapTimestamp < 320) {
+                                // Double-tap detected: swap split panes!
+                                lastTapTimestamp = 0;
+                                v.performHapticFeedback(HapticFeedbackConstants.KEYBOARD_TAP);
+                                playUiFeedbackSound("pop");
+                                swapSplitTabs();
+                                updateOmniboxTabStrip();
+                            } else {
+                                lastTapTimestamp = now;
+                                playUiFeedbackSound("tap");
+                                toggleSplitArenaBroadcast(splitArenaBroadcastContainer != null && splitArenaBroadcastContainer.getVisibility() != View.VISIBLE);
+                            }
                         } else {
+                            // Momentum Fling snap physics based on release velocity
+                            if (splitModeState == 1 && Math.abs(flingVelocityX) > 950) {
+                                float momentumTarget = flingVelocityX > 0 ? 0.70f : 0.30f;
+                                if (splitRatio != momentumTarget) {
+                                    splitRatio = momentumTarget;
+                                    v.performHapticFeedback(HapticFeedbackConstants.KEYBOARD_TAP);
+                                    LinearLayout.LayoutParams leftLp = (LinearLayout.LayoutParams) splitLeftContainer.getLayoutParams();
+                                    LinearLayout.LayoutParams rightLp = (LinearLayout.LayoutParams) splitRightContainer.getLayoutParams();
+                                    leftLp.weight = splitRatio;
+                                    rightLp.weight = 1.0f - splitRatio;
+                                    splitLeftContainer.setLayoutParams(leftLp);
+                                    splitRightContainer.setLayoutParams(rightLp);
+                                    splitViewContainer.requestLayout();
+                                }
+                            } else if (splitModeState == 2 && Math.abs(flingVelocityY) > 950) {
+                                float momentumTarget = flingVelocityY > 0 ? 0.70f : 0.30f;
+                                if (splitRatio != momentumTarget) {
+                                    splitRatio = momentumTarget;
+                                    v.performHapticFeedback(HapticFeedbackConstants.KEYBOARD_TAP);
+                                    LinearLayout.LayoutParams leftLp = (LinearLayout.LayoutParams) splitLeftContainer.getLayoutParams();
+                                    LinearLayout.LayoutParams rightLp = (LinearLayout.LayoutParams) splitRightContainer.getLayoutParams();
+                                    leftLp.weight = splitRatio;
+                                    rightLp.weight = 1.0f - splitRatio;
+                                    splitLeftContainer.setLayoutParams(leftLp);
+                                    splitRightContainer.setLayoutParams(rightLp);
+                                    splitViewContainer.requestLayout();
+                                }
+                            }
+
                             if (splitLeftTapMask != null && splitRightTapMask != null) {
                                 if (Math.abs(splitRatio - 0.5f) < 0.05f) {
                                     splitLeftTapMask.setVisibility(View.GONE);
@@ -17698,6 +17892,7 @@ public class MainActivity extends AppCompatActivity {
                         return true;
 
                     case MotionEvent.ACTION_CANCEL:
+                        CaspianPhysics.applyReleasePop(splitDividerHandle != null ? splitDividerHandle : v);
                         saveOpenTabsState();
                         return true;
                 }
@@ -24155,7 +24350,20 @@ public class MainActivity extends AppCompatActivity {
         }
 
         if (omniboxTabsCount != null) {
-            omniboxTabsCount.setText(String.valueOf(tabsList.size()));
+            String newCountStr = String.valueOf(tabsList.size());
+            if (!newCountStr.equals(omniboxTabsCount.getText().toString())) {
+                omniboxTabsCount.setText(newCountStr);
+                if (omniboxTabsBtn != null) {
+                    CaspianPhysics.animateSpring(omniboxTabsBtn, DynamicAnimation.SCALE_X, 1.25f, CaspianPhysics.DAMPING_BOUNCY, CaspianPhysics.STIFFNESS_PLAYFUL);
+                    CaspianPhysics.animateSpring(omniboxTabsBtn, DynamicAnimation.SCALE_Y, 1.25f, CaspianPhysics.DAMPING_BOUNCY, CaspianPhysics.STIFFNESS_PLAYFUL);
+                    omniboxTabsBtn.postDelayed(() -> {
+                        if (omniboxTabsBtn != null) {
+                            CaspianPhysics.animateSpring(omniboxTabsBtn, DynamicAnimation.SCALE_X, 1.0f, CaspianPhysics.DAMPING_BOUNCY, CaspianPhysics.STIFFNESS_PLAYFUL);
+                            CaspianPhysics.animateSpring(omniboxTabsBtn, DynamicAnimation.SCALE_Y, 1.0f, CaspianPhysics.DAMPING_BOUNCY, CaspianPhysics.STIFFNESS_PLAYFUL);
+                        }
+                    }, 140);
+                }
+            }
             omniboxTabsCount.setTextColor(themeAccent);
         }
         if (caspianPillTabCount != null) {
@@ -24203,6 +24411,15 @@ public class MainActivity extends AppCompatActivity {
                         ring.setColor(0x1810B981);
                         ring.setStroke(dpToPx(1), 0x8010B981);
                         omniboxShieldBtn.setBackground(ring);
+                        // Spring pulse micro-interaction when actively blocking
+                        CaspianPhysics.animateSpring(omniboxShieldIcon, DynamicAnimation.SCALE_X, 1.25f, CaspianPhysics.DAMPING_BOUNCY, CaspianPhysics.STIFFNESS_PLAYFUL);
+                        CaspianPhysics.animateSpring(omniboxShieldIcon, DynamicAnimation.SCALE_Y, 1.25f, CaspianPhysics.DAMPING_BOUNCY, CaspianPhysics.STIFFNESS_PLAYFUL);
+                        omniboxShieldIcon.postDelayed(() -> {
+                            if (omniboxShieldIcon != null) {
+                                CaspianPhysics.animateSpring(omniboxShieldIcon, DynamicAnimation.SCALE_X, 1.0f, CaspianPhysics.DAMPING_BOUNCY, CaspianPhysics.STIFFNESS_PLAYFUL);
+                                CaspianPhysics.animateSpring(omniboxShieldIcon, DynamicAnimation.SCALE_Y, 1.0f, CaspianPhysics.DAMPING_BOUNCY, CaspianPhysics.STIFFNESS_PLAYFUL);
+                            }
+                        }, 140);
                     } else {
                         omniboxShieldBtn.setBackground(null);
                     }

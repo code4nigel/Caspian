@@ -182,13 +182,15 @@
        ========================================================================== */
     #ambient-aurora-canvas {
       position: fixed;
-      inset: 0;
-      width: 100vw;
-      height: 100vh;
+      inset: -30px;
+      width: calc(100vw + 60px);
+      height: calc(100vh + 60px);
       overflow: hidden;
       z-index: 0;
       pointer-events: none;
       background: var(--caspian-void);
+      transition: transform 0.18s cubic-bezier(0.16, 1, 0.3, 1);
+      will-change: transform;
     }
 
     .aurora-orb {
@@ -1210,6 +1212,57 @@
       z-index: 100;
       pointer-events: none;
     }
+
+    /* Recent Tabs Carousel & Chips */
+    .bento-recent-tabs-card {
+      margin-bottom: 14px;
+      padding: 10px 12px;
+      animation: fadeInScale 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+    }
+    .recent-tabs-strip {
+      display: flex;
+      gap: 8px;
+      overflow-x: auto;
+      scrollbar-width: none;
+      padding: 4px 2px 4px 2px;
+      -webkit-overflow-scrolling: touch;
+    }
+    .recent-tabs-strip::-webkit-scrollbar { display: none; }
+    .recent-tab-chip {
+      flex: 0 0 auto;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      max-width: 175px;
+      padding: 8px 13px;
+      border-radius: var(--radius-squircle);
+      background: var(--caspian-glass);
+      border: var(--caspian-border);
+      backdrop-filter: var(--caspian-blur);
+      -webkit-backdrop-filter: var(--caspian-blur);
+      cursor: pointer;
+      transition: transform 0.2s cubic-bezier(0.16, 1, 0.3, 1), background 0.15s ease;
+      will-change: transform;
+    }
+    .recent-tab-chip:active {
+      transform: scale(0.93);
+    }
+    .recent-tab-chip-icon {
+      width: 16px;
+      height: 16px;
+      flex-shrink: 0;
+      border-radius: 4px;
+      object-fit: contain;
+    }
+    .recent-tab-chip-title {
+      font-size: 11.5px;
+      font-weight: 600;
+      color: var(--text-main);
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+
   </style>
 </head>
 <body>
@@ -1302,6 +1355,16 @@
           </button>
         </div>
       </form>
+    </div>
+
+
+    <!-- 2.5 RECENT TABS CAROUSEL -->
+    <div id="recent-tabs-bento-tile" class="bento-recent-tabs-card liquid-island" style="display: none;">
+      <div class="bento-card-header" style="padding: 2px 4px 6px 4px; display: flex; justify-content: space-between; align-items: center;">
+        <span class="bento-card-tag" style="color: var(--caspian-cyan); font-weight: 700; font-size: 11px;">⏱️ Recent Tabs</span>
+        <span id="recent-tabs-count" style="font-size: 10px; color: var(--text-muted); font-weight: 600;">0 open</span>
+      </div>
+      <div id="recent-tabs-strip" class="recent-tabs-strip"></div>
     </div>
 
     <!-- 3. SHORTCUTS BENTO TILE -->
@@ -1576,12 +1639,49 @@
       if (greetingEl) greetingEl.textContent = greeting;
 
       if (clockEl) {
-        const timeStr = now.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', hour12: false });
+        const timeStr = now.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit', hour12: false });
         clockEl.textContent = `${timeStr} • CASPIAN FLOW`;
       }
     }
     updateAmbientGreetingAndClock();
-    setInterval(updateAmbientGreetingAndClock, 30000);
+    setInterval(updateAmbientGreetingAndClock, 1000);
+
+    // 1.5 Ambient Aurora Gyroscope & Touch Parallax
+    (function initAuroraParallax() {
+      const canvas = document.getElementById('ambient-aurora-canvas');
+      if (!canvas) return;
+
+      let ticking = false;
+      if (window.DeviceOrientationEvent) {
+        window.addEventListener('deviceorientation', (e) => {
+          if (document.hidden) return;
+          if (!ticking) {
+            requestAnimationFrame(() => {
+              const gamma = Math.max(-25, Math.min(25, e.gamma || 0)); // tilt X (-25 to 25 deg)
+              const beta = Math.max(-25, Math.min(25, (e.beta || 0) - 45)); // tilt Y relative to standard holding angle
+              canvas.style.transform = `translate3d(${gamma * 0.7}px, ${beta * 0.7}px, 0)`;
+              ticking = false;
+            });
+            ticking = true;
+          }
+        }, { passive: true });
+      }
+
+      window.addEventListener('touchmove', (e) => {
+        if (document.hidden) return;
+        if (e.touches && e.touches[0] && !ticking) {
+          requestAnimationFrame(() => {
+            const touch = e.touches[0];
+            const offsetX = (touch.clientX / window.innerWidth - 0.5) * 28;
+            const offsetY = (touch.clientY / window.innerHeight - 0.5) * 28;
+            canvas.style.transform = `translate3d(${offsetX}px, ${offsetY}px, 0)`;
+            ticking = false;
+          });
+          ticking = true;
+        }
+      }, { passive: true });
+    })();
+
 
     // 2. Battery-saving Aurora Pause on Tab Inactive (Samsung Doze compliance)
     document.addEventListener('visibilitychange', () => {
@@ -1590,8 +1690,65 @@
       } else {
         document.body.classList.remove('aurora-paused');
         updateWaveguardStats();
+        loadRecentTabs();
       }
     });
+
+    // 2.7 Recent Tabs Dynamic Loader
+    function loadRecentTabs() {
+      try {
+        if (!window.CaspianBridge || typeof window.CaspianBridge.getOpenTabs !== 'function') return;
+        const tabsJson = window.CaspianBridge.getOpenTabs();
+        const tabs = JSON.parse(tabsJson || '[]');
+        const container = document.getElementById('recent-tabs-strip');
+        const tile = document.getElementById('recent-tabs-bento-tile');
+        const countEl = document.getElementById('recent-tabs-count');
+        if (!container || !tile) return;
+
+        // Filter out launch_hub itself
+        const validTabs = tabs.filter(t => t.url && !t.url.includes('launch_hub.html') && !t.url.startsWith('caspian://hub'));
+        if (validTabs.length === 0) {
+          tile.style.display = 'none';
+          return;
+        }
+
+        tile.style.display = 'block';
+        if (countEl) countEl.textContent = `${validTabs.length} open`;
+        container.innerHTML = '';
+
+        validTabs.forEach(t => {
+          const chip = document.createElement('div');
+          chip.className = 'recent-tab-chip';
+          chip.onclick = () => {
+            playTapSFX();
+            if (window.CaspianBridge && typeof window.CaspianBridge.switchToTab === 'function') {
+              window.CaspianBridge.switchToTab(t.id);
+            }
+          };
+
+          const icon = document.createElement('img');
+          icon.className = 'recent-tab-chip-icon';
+          if (t.faviconB64 && t.faviconB64.length > 20) {
+            icon.src = t.faviconB64.startsWith('data:') ? t.faviconB64 : `data:image/png;base64,${t.faviconB64}`;
+          } else {
+            icon.src = 'data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="%2322D3EE" stroke-width="2"><circle cx="12" cy="12" r="10"/><line x1="2" y1="12" x2="22" y2="12"/><path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"/></svg>';
+          }
+
+          const span = document.createElement('span');
+          span.className = 'recent-tab-chip-title';
+          span.textContent = t.title || t.url || `Tab ${t.id}`;
+
+          chip.appendChild(icon);
+          chip.appendChild(span);
+          container.appendChild(chip);
+        });
+      } catch (e) {
+        console.warn('loadRecentTabs error:', e);
+      }
+    }
+    setTimeout(loadRecentTabs, 120);
+    window.addEventListener('focus', loadRecentTabs);
+
 
     // 2.5 Hub WebMessage Channel Helper
     function postHubMessage(msgObj) {

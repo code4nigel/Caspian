@@ -60,26 +60,22 @@
   };
 
   const sfxAudioPool = {};
-
-  function preloadAllSFX() {
-    try {
-      ALL_SFX_FILES.forEach(fileName => {
-        if (!sfxAudioPool[fileName]) {
-          const a = new Audio(`sfx/${fileName}`);
-          a.load();
-          sfxAudioPool[fileName] = a;
-        }
-      });
-    } catch (e) { }
-  }
-
-  // Preload all sounds on startup
-  setTimeout(preloadAllSFX, 100);
+  const sfxEnabledCache = {
+    tm_tabs: localStorage.getItem('sfx_enabled_tm_tabs') !== 'false',
+    ta: localStorage.getItem('sfx_enabled_ta') !== 'false',
+    tb_clicks: localStorage.getItem('sfx_enabled_tb_clicks') !== 'false',
+    tm_header: localStorage.getItem('sfx_enabled_tm_header') !== 'false',
+    tb_close: localStorage.getItem('sfx_enabled_tb_close') !== 'false',
+    tb_modal: localStorage.getItem('sfx_enabled_tb_modal') !== 'false'
+  };
 
   function getSFXFileForType(type) {
-    const saved = localStorage.getItem(`sfx_file_${type}`);
-    if (saved) return saved;
     if (sfxConfig[type]) return sfxConfig[type];
+    const saved = localStorage.getItem(`sfx_file_${type}`);
+    if (saved) {
+      sfxConfig[type] = saved;
+      return saved;
+    }
     if (type === 'tm_tabs') return 'pop_button.mp3';
     if (type === 'tm_header') return 'tap_main.mp3';
     if (type === 'ta') return 'pop_click.mp3';
@@ -87,22 +83,27 @@
     return 'pop_click.mp3';
   }
 
+  let lastSfxPlayTime = 0;
   function playSFX(type) {
     try {
       if (masterSFXMuted) return;
-      let enabled = true;
-      if (type === 'tm_tabs') enabled = localStorage.getItem('sfx_enabled_tm_tabs') !== 'false';
-      else if (type === 'ta') enabled = localStorage.getItem('sfx_enabled_ta') !== 'false';
-      else if (type === 'tb_clicks') enabled = localStorage.getItem('sfx_enabled_tb_clicks') !== 'false';
-      else if (type === 'tm_header') enabled = localStorage.getItem('sfx_enabled_tm_header') !== 'false';
-      else if (type === 'tb_close') enabled = localStorage.getItem('sfx_enabled_tb_close') !== 'false';
-      else if (type === 'tb_modal') enabled = localStorage.getItem('sfx_enabled_tb_modal') !== 'false';
+      if (sfxEnabledCache[type] === false) return;
 
-      if (!enabled) return;
+      const now = performance.now();
+      if (now - lastSfxPlayTime < 35) return; // Debounce rapid multi-tap triggers
+      lastSfxPlayTime = now;
 
       const fileName = getSFXFileForType(type);
       if (window.CaspianBridge && typeof window.CaspianBridge.playAssetSound === 'function') {
         window.CaspianBridge.playAssetSound(`sfx/${fileName}`);
+      } else {
+        // Fallback lazy loader for desktop browser preview without native bridge
+        if (!sfxAudioPool[fileName]) {
+          sfxAudioPool[fileName] = new Audio(`sfx/${fileName}`);
+        }
+        const a = sfxAudioPool[fileName];
+        a.currentTime = 0;
+        a.play().catch(() => {});
       }
     } catch (e) { }
   }
@@ -2452,9 +2453,13 @@
     try { localStorage.setItem('colorMode', activeTheme); } catch(e){}
   };
 
+  let themeRotationDeg = 0;
   if (themeToggleBtn) {
     themeToggleBtn.addEventListener('click', () => {
       playSFX('tm_header');
+      themeRotationDeg += 360;
+      themeToggleBtn.style.transition = 'transform 0.45s cubic-bezier(0.16, 1, 0.3, 1)';
+      themeToggleBtn.style.transform = `rotate(${themeRotationDeg}deg)`;
       setTheme(activeTheme === 'light' ? 'dark' : 'light');
     });
   }
@@ -4234,6 +4239,7 @@
       el.addEventListener('change', () => {
         const checkedStr = el.checked ? 'true' : 'false';
         localStorage.setItem(item.key, checkedStr);
+        sfxEnabledCache[item.key.replace('sfx_enabled_', '')] = el.checked;
         if (window.CaspianBridge && typeof window.CaspianBridge.saveSetting === 'function') {
           window.CaspianBridge.saveSetting(item.key, checkedStr);
         }

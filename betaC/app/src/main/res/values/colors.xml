@@ -10,6 +10,14 @@
     <color name="caspian_violet">#A855F7</color>
     <color name="caspian_emerald">#10B981</color>
     <color name="caspian_coral">#FB7185</color>
+    <color name="caspian_text_primary">#DFE2F0</color>
+    <color name="caspian_text_secondary">#849396</color>
+    <color name="caspian_icon_subdued">#A2A9A9</color>
+    <color name="caspian_accent_cyan">#00E5FF</color>
+    <color name="caspian_surface_void">#050811</color>
+    <color name="caspian_surface_card">#151E2E</color>
+    <color name="caspian_warning_gold">#FFCC00</color>
+    <color name="caspian_divider_subtle">#33FFFFFF</color>
 
     <!-- Liquid Island (HyperGlass) Canonical Design Tokens - Light / Pearl Mode -->
     <color name="caspian_void_light">#F8FAFC</color>
@@ -21,4 +29,10 @@
     <color name="caspian_violet_light">#7C3AED</color>
     <color name="caspian_emerald_light">#059669</color>
     <color name="caspian_coral_light">#E11D48</color>
+    <color name="caspian_text_primary_light">#0F172A</color>
+    <color name="caspian_text_secondary_light">#64748B</color>
+    <color name="caspian_icon_subdued_light">#64748B</color>
+    <color name="caspian_surface_void_light">#F8FAFC</color>
+    <color name="caspian_surface_card_light">#F1F5F9</color>
+    <color name="caspian_divider_subtle_light">#22000000</color>
 </resources>
