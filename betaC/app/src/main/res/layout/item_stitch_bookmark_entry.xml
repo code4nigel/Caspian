@@ -64,7 +64,7 @@
                 android:layout_height="wrap_content"
                 android:layout_weight="1"
                 android:text="Bookmark Title"
-                android:textColor="#DFE2F0"
+                android:textColor="@color/caspian_text_primary"
                 android:textSize="14sp"
                 android:textStyle="bold"
                 android:singleLine="true"
@@ -81,7 +81,7 @@
                 android:paddingTop="1dp"
                 android:paddingBottom="1dp"
                 android:text="DEV"
-                android:textColor="#00E5FF"
+                android:textColor="@color/caspian_accent_cyan"
                 android:textSize="10sp"
                 android:textStyle="bold"
                 android:visibility="gone" />
@@ -100,7 +100,7 @@
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
                 android:text="notion.so/caspian"
-                android:textColor="#849396"
+                android:textColor="@color/caspian_text_secondary"
                 android:textSize="11sp"
                 android:singleLine="true"
                 android:ellipsize="end" />

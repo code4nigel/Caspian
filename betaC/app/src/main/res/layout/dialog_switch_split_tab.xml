@@ -18,7 +18,7 @@
             android:layout_width="24dp"
             android:layout_height="24dp"
             android:src="@drawable/ic_browser_split"
-            android:tint="#00E5FF"
+            android:tint="@color/caspian_accent_cyan"
             android:layout_marginEnd="10dp" />
 
         <LinearLayout
@@ -32,7 +32,7 @@
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
                 android:text="Switch Tab in Pane"
-                android:textColor="#FFFFFF"
+                android:textColor="@color/caspian_text_primary"
                 android:textSize="16sp"
                 android:textStyle="bold" />
 
@@ -41,7 +41,7 @@
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
                 android:text="Select an open tab"
-                android:textColor="#849396"
+                android:textColor="@color/caspian_text_secondary"
                 android:textSize="11sp" />
         </LinearLayout>
 
@@ -82,7 +82,7 @@
             android:background="@android:color/transparent"
             android:hint="Search open tabs..."
             android:textColorHint="#849396"
-            android:textColor="#DFE2F0"
+            android:textColor="@color/caspian_text_primary"
             android:textSize="13sp"
             android:singleLine="true" />
     </LinearLayout>
@@ -108,7 +108,7 @@
         android:layout_height="80dp"
         android:gravity="center"
         android:text="No open tabs found"
-        android:textColor="#849396"
+        android:textColor="@color/caspian_text_secondary"
         android:textSize="13sp"
         android:visibility="gone" />
 
@@ -120,7 +120,7 @@
         android:layout_marginTop="10dp"
         android:background="@drawable/bg_liquid_glass_pill"
         android:text="Cancel"
-        android:textColor="#A2A9A9"
+        android:textColor="@color/caspian_icon_subdued"
         android:textSize="12sp" />
 
 </LinearLayout>

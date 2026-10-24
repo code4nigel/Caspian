@@ -54,7 +54,7 @@
                             android:layout_height="22dp"
                             android:layout_gravity="center"
                             android:src="@drawable/ic_browser_shield"
-                            app:tint="#00E5FF" />
+                            app:tint="@color/caspian_accent_cyan" />
                     </FrameLayout>
 
                     <LinearLayout
@@ -68,7 +68,7 @@
                             android:layout_height="wrap_content"
                             android:fontFamily="sans-serif-medium"
                             android:text="WAVEGUARD"
-                            android:textColor="#FFFFFF"
+                            android:textColor="@color/caspian_text_primary"
                             android:textSize="14.5sp"
                             android:textStyle="bold"
                             android:letterSpacing="0.06" />
@@ -78,7 +78,7 @@
                             android:layout_width="wrap_content"
                             android:layout_height="wrap_content"
                             android:text="Caspian AI Privacy Engine"
-                            android:textColor="#75879B"
+                            android:textColor="@color/caspian_text_secondary"
                             android:textSize="10.5sp"
                             android:letterSpacing="0.01" />
                     </LinearLayout>
@@ -116,7 +116,7 @@
                             android:layout_width="wrap_content"
                             android:layout_height="wrap_content"
                             android:text="PROTECTED"
-                            android:textColor="#00E5FF"
+                            android:textColor="@color/caspian_accent_cyan"
                             android:textSize="9.5sp"
                             android:textStyle="bold"
                             android:letterSpacing="0.06" />
@@ -137,7 +137,7 @@
                             android:layout_height="14dp"
                             android:layout_gravity="center"
                             android:src="@drawable/ic_pod_close"
-                            app:tint="#94A3B8"
+                            app:tint="@color/caspian_text_secondary"
                             android:contentDescription="Close Waveguard" />
                     </FrameLayout>
                 </LinearLayout>
@@ -156,7 +156,7 @@
                     android:layout_alignParentStart="true"
                     android:layout_centerVertical="true"
                     android:text="Active Tab"
-                    android:textColor="#94A3B8"
+                    android:textColor="@color/caspian_text_secondary"
                     android:textSize="12sp"
                     android:textStyle="bold" />
 
@@ -180,7 +180,7 @@
                         android:layout_height="11dp"
                         android:layout_marginEnd="6dp"
                         android:src="@drawable/ic_pod_lock"
-                        app:tint="#00E5FF" />
+                        app:tint="@color/caspian_accent_cyan" />
 
                     <TextView
                         android:id="@+id/current_site_domain"
@@ -190,7 +190,7 @@
                         android:singleLine="true"
                         android:ellipsize="middle"
                         android:text="example.com"
-                        android:textColor="#E2E8F0"
+                        android:textColor="@color/caspian_text_primary"
                         android:textSize="11sp"
                         android:textStyle="bold" />
                 </LinearLayout>
@@ -218,7 +218,7 @@
                         android:layout_width="wrap_content"
                         android:layout_height="wrap_content"
                         android:text="Shields UP on this site"
-                        android:textColor="#FFFFFF"
+                        android:textColor="@color/caspian_text_primary"
                         android:textSize="13.5sp"
                         android:textStyle="bold" />
 
@@ -228,7 +228,7 @@
                         android:layout_height="wrap_content"
                         android:layout_marginTop="2dp"
                         android:text="Block tracking, ads, and telemetry"
-                        android:textColor="#64748B"
+                        android:textColor="@color/caspian_icon_subdued"
                         android:textSize="11sp" />
                 </LinearLayout>
 
@@ -269,7 +269,7 @@
                         android:layout_height="wrap_content"
                         android:layout_gravity="center"
                         android:text="0"
-                        android:textColor="#00E5FF"
+                        android:textColor="@color/caspian_accent_cyan"
                         android:textSize="15sp"
                         android:textStyle="bold" />
                 </FrameLayout>
@@ -286,7 +286,7 @@
                         android:layout_width="wrap_content"
                         android:layout_height="wrap_content"
                         android:text="Threats &amp; Ads Blocked"
-                        android:textColor="#FFFFFF"
+                        android:textColor="@color/caspian_text_primary"
                         android:textSize="13sp"
                         android:textStyle="bold" />
 
@@ -296,7 +296,7 @@
                         android:layout_height="wrap_content"
                         android:layout_marginTop="2dp"
                         android:text="0 blocked all-time across tabs"
-                        android:textColor="#64748B"
+                        android:textColor="@color/caspian_icon_subdued"
                         android:textSize="10.5sp" />
                 </LinearLayout>
             </LinearLayout>
@@ -320,7 +320,7 @@
                     android:layout_height="wrap_content"
                     android:layout_weight="1"
                     android:text="ADVANCED SETTINGS"
-                    android:textColor="#6B7F96"
+                    android:textColor="@color/caspian_text_secondary"
                     android:textSize="11sp"
                     android:textStyle="bold"
                     android:letterSpacing="0.08" />
@@ -330,7 +330,7 @@
                     android:layout_width="16dp"
                     android:layout_height="16dp"
                     android:src="@drawable/ic_menu_chevron_down"
-                    app:tint="#6B7F96" />
+                    app:tint="@color/caspian_text_secondary" />
             </LinearLayout>
 
             <!-- 6. Collapsible Advanced Settings Card Container -->
@@ -362,7 +362,7 @@
                             android:layout_width="wrap_content"
                             android:layout_height="wrap_content"
                             android:text="Cross-Site Trackers &amp; Ads"
-                            android:textColor="#E2E8F0"
+                            android:textColor="@color/caspian_text_primary"
                             android:textSize="12.5sp"
                             android:textStyle="bold" />
 
@@ -371,7 +371,7 @@
                             android:layout_height="wrap_content"
                             android:layout_marginTop="2dp"
                             android:text="Stops 3rd-party behavioral beacons"
-                            android:textColor="#64748B"
+                            android:textColor="@color/caspian_icon_subdued"
                             android:textSize="10.5sp" />
                     </LinearLayout>
 
@@ -392,7 +392,7 @@
                 <View
                     android:layout_width="match_parent"
                     android:layout_height="1dp"
-                    android:background="#162232" />
+                    android:background="@color/caspian_divider_subtle" />
 
                 <!-- Advanced Switch 2: Cosmetic Element Hiding -->
                 <RelativeLayout
@@ -413,7 +413,7 @@
                             android:layout_width="wrap_content"
                             android:layout_height="wrap_content"
                             android:text="Cosmetic Element Hiding"
-                            android:textColor="#E2E8F0"
+                            android:textColor="@color/caspian_text_primary"
                             android:textSize="12.5sp"
                             android:textStyle="bold" />
 
@@ -422,7 +422,7 @@
                             android:layout_height="wrap_content"
                             android:layout_marginTop="2dp"
                             android:text="Collapses empty space and banners"
-                            android:textColor="#64748B"
+                            android:textColor="@color/caspian_icon_subdued"
                             android:textSize="10.5sp" />
                     </LinearLayout>
 
@@ -443,7 +443,7 @@
                 <View
                     android:layout_width="match_parent"
                     android:layout_height="1dp"
-                    android:background="#162232" />
+                    android:background="@color/caspian_divider_subtle" />
 
                 <!-- Advanced Switch 3: Anti-Adblock Defuser -->
                 <RelativeLayout
@@ -464,7 +464,7 @@
                             android:layout_width="wrap_content"
                             android:layout_height="wrap_content"
                             android:text="Anti-Adblock Defuser"
-                            android:textColor="#E2E8F0"
+                            android:textColor="@color/caspian_text_primary"
                             android:textSize="12.5sp"
                             android:textStyle="bold" />
 
@@ -473,7 +473,7 @@
                             android:layout_height="wrap_content"
                             android:layout_marginTop="2dp"
                             android:text="Bypasses blocker detection scripts"
-                            android:textColor="#64748B"
+                            android:textColor="@color/caspian_icon_subdued"
                             android:textSize="10.5sp" />
                     </LinearLayout>
 
@@ -494,7 +494,7 @@
                 <View
                     android:layout_width="match_parent"
                     android:layout_height="1dp"
-                    android:background="#162232" />
+                    android:background="@color/caspian_divider_subtle" />
 
                 <!-- Advanced Switch 4: Block Popups & Redirects -->
                 <RelativeLayout
@@ -515,7 +515,7 @@
                             android:layout_width="wrap_content"
                             android:layout_height="wrap_content"
                             android:text="Block Popups &amp; Redirects"
-                            android:textColor="#E2E8F0"
+                            android:textColor="@color/caspian_text_primary"
                             android:textSize="12.5sp"
                             android:textStyle="bold" />
 
@@ -524,7 +524,7 @@
                             android:layout_height="wrap_content"
                             android:layout_marginTop="2dp"
                             android:text="Suppresses background tab spawning"
-                            android:textColor="#64748B"
+                            android:textColor="@color/caspian_icon_subdued"
                             android:textSize="10.5sp" />
                     </LinearLayout>
 
@@ -545,7 +545,7 @@
                 <View
                     android:layout_width="match_parent"
                     android:layout_height="1dp"
-                    android:background="#162232" />
+                    android:background="@color/caspian_divider_subtle" />
 
                 <!-- Advanced Switch 5: Block Fingerprinting Probes -->
                 <RelativeLayout
@@ -566,7 +566,7 @@
                             android:layout_width="wrap_content"
                             android:layout_height="wrap_content"
                             android:text="Block Fingerprinting Probes"
-                            android:textColor="#E2E8F0"
+                            android:textColor="@color/caspian_text_primary"
                             android:textSize="12.5sp"
                             android:textStyle="bold" />
 
@@ -575,7 +575,7 @@
                             android:layout_height="wrap_content"
                             android:layout_marginTop="2dp"
                             android:text="Randomizes HTML5 canvas &amp; audio IDs"
-                            android:textColor="#64748B"
+                            android:textColor="@color/caspian_icon_subdued"
                             android:textSize="10.5sp" />
                     </LinearLayout>
 
@@ -621,7 +621,7 @@
                         android:layout_width="wrap_content"
                         android:layout_height="wrap_content"
                         android:text="Waveguard Active (645 filters)"
-                        android:textColor="#8295A8"
+                        android:textColor="@color/caspian_text_secondary"
                         android:textSize="11sp"
                         android:textStyle="bold" />
                 </LinearLayout>
@@ -638,7 +638,7 @@
                     android:paddingEnd="14dp"
                     android:paddingBottom="7dp"
                     android:text="Update Lists"
-                    android:textColor="#38BDF8"
+                    android:textColor="@color/caspian_cyan"
                     android:textSize="11.5sp"
                     android:textStyle="bold" />
             </RelativeLayout>

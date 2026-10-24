@@ -49,7 +49,7 @@
                     android:layout_height="20dp"
                     android:layout_gravity="center"
                     android:src="@drawable/ic_arena_plus"
-                    android:tint="#DFE2F0" />
+                    android:tint="@color/caspian_text_primary" />
             </FrameLayout>
             <TextView
                 android:id="@+id/text_list_new_tab"
@@ -57,7 +57,7 @@
                 android:layout_height="wrap_content"
                 android:layout_marginTop="5dp"
                 android:text="New Tab"
-                android:textColor="#DFE2F0"
+                android:textColor="@color/caspian_text_primary"
                 android:textSize="10.5sp"
                 android:singleLine="true" />
         </LinearLayout>
@@ -91,7 +91,7 @@
                 android:layout_height="wrap_content"
                 android:layout_marginTop="5dp"
                 android:text="Dual AI"
-                android:textColor="#00E5FF"
+                android:textColor="@color/caspian_accent_cyan"
                 android:textSize="10.5sp"
                 android:textStyle="bold"
                 android:singleLine="true" />
@@ -118,7 +118,7 @@
                     android:layout_height="20dp"
                     android:layout_gravity="center"
                     android:src="@drawable/ic_menu_moon"
-                    android:tint="#DFE2F0" />
+                    android:tint="@color/caspian_text_primary" />
             </FrameLayout>
             <TextView
                 android:id="@+id/text_list_theme"
@@ -126,7 +126,7 @@
                 android:layout_height="wrap_content"
                 android:layout_marginTop="5dp"
                 android:text="Night"
-                android:textColor="#DFE2F0"
+                android:textColor="@color/caspian_text_primary"
                 android:textSize="10.5sp"
                 android:singleLine="true" />
         </LinearLayout>
@@ -152,7 +152,7 @@
                     android:layout_height="20dp"
                     android:layout_gravity="center"
                     android:src="@drawable/ic_browser_split"
-                    android:tint="#DFE2F0" />
+                    android:tint="@color/caspian_text_primary" />
             </FrameLayout>
             <TextView
                 android:id="@+id/text_list_split"
@@ -160,7 +160,7 @@
                 android:layout_height="wrap_content"
                 android:layout_marginTop="5dp"
                 android:text="Split"
-                android:textColor="#DFE2F0"
+                android:textColor="@color/caspian_text_primary"
                 android:textSize="10.5sp"
                 android:singleLine="true" />
         </LinearLayout>
@@ -186,7 +186,7 @@
                     android:layout_height="20dp"
                     android:layout_gravity="center"
                     android:src="@drawable/ic_browser_desktop"
-                    android:tint="#DFE2F0" />
+                    android:tint="@color/caspian_text_primary" />
             </FrameLayout>
             <TextView
                 android:id="@+id/text_list_desktop"
@@ -194,7 +194,7 @@
                 android:layout_height="wrap_content"
                 android:layout_marginTop="5dp"
                 android:text="Desktop"
-                android:textColor="#DFE2F0"
+                android:textColor="@color/caspian_text_primary"
                 android:textSize="10.5sp"
                 android:singleLine="true" />
         </LinearLayout>
@@ -235,7 +235,7 @@
                 android:layout_height="wrap_content"
                 android:layout_weight="1"
                 android:text="Zoom"
-                android:textColor="#DFE2F0"
+                android:textColor="@color/caspian_text_primary"
                 android:textSize="11.5sp"
                 android:textStyle="bold" />
 
@@ -256,7 +256,7 @@
                     android:layout_height="match_parent"
                     android:gravity="center"
                     android:text="－"
-                    android:textColor="#DFE2F0"
+                    android:textColor="@color/caspian_text_primary"
                     android:textSize="13sp"
                     android:textStyle="bold"
                     android:clickable="true"
@@ -269,7 +269,7 @@
                     android:paddingStart="4dp"
                     android:paddingEnd="4dp"
                     android:text="100%"
-                    android:textColor="#00E5FF"
+                    android:textColor="@color/caspian_accent_cyan"
                     android:textSize="11sp"
                     android:textStyle="bold" />
 
@@ -279,7 +279,7 @@
                     android:layout_height="match_parent"
                     android:gravity="center"
                     android:text="＋"
-                    android:textColor="#DFE2F0"
+                    android:textColor="@color/caspian_text_primary"
                     android:textSize="13sp"
                     android:textStyle="bold"
                     android:clickable="true"
@@ -315,7 +315,7 @@
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
                 android:text="Open PDF"
-                android:textColor="#DFE2F0"
+                android:textColor="@color/caspian_text_primary"
                 android:textSize="11.5sp"
                 android:textStyle="bold" />
         </LinearLayout>
@@ -359,7 +359,7 @@
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
                     android:text="Find in page"
-                    android:textColor="#DFE2F0"
+                    android:textColor="@color/caspian_text_primary"
                     android:textSize="12.5sp" />
             </LinearLayout>
 
@@ -375,7 +375,7 @@
                 android:paddingTop="2dp"
                 android:paddingBottom="2dp"
                 android:text="⌘F"
-                android:textColor="#94A3B8"
+                android:textColor="@color/caspian_text_secondary"
                 android:textSize="10.5sp"
                 android:textStyle="bold" />
         </RelativeLayout>
@@ -418,7 +418,7 @@
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
                     android:text="History &amp; Timeline"
-                    android:textColor="#DFE2F0"
+                    android:textColor="@color/caspian_text_primary"
                     android:textSize="12.5sp" />
             </LinearLayout>
 
@@ -429,7 +429,7 @@
                 android:layout_alignParentEnd="true"
                 android:layout_centerVertical="true"
                 android:text="Recent"
-                android:textColor="#64748B"
+                android:textColor="@color/caspian_icon_subdued"
                 android:textSize="11.5sp" />
         </RelativeLayout>
 
@@ -471,7 +471,7 @@
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
                     android:text="Downloads"
-                    android:textColor="#DFE2F0"
+                    android:textColor="@color/caspian_text_primary"
                     android:textSize="12.5sp" />
             </LinearLayout>
 
@@ -503,7 +503,7 @@
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
                     android:text="Active"
-                    android:textColor="#10B981"
+                    android:textColor="@color/caspian_emerald"
                     android:textSize="10.5sp"
                     android:textStyle="bold" />
             </LinearLayout>
@@ -545,7 +545,7 @@
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
                     android:text="Share &amp; Export"
-                    android:textColor="#DFE2F0"
+                    android:textColor="@color/caspian_text_primary"
                     android:textSize="12.5sp" />
             </LinearLayout>
 
@@ -568,7 +568,7 @@
                     android:paddingTop="3dp"
                     android:paddingBottom="3dp"
                     android:text="PDF"
-                    android:textColor="#DFE2F0"
+                    android:textColor="@color/caspian_text_primary"
                     android:textSize="10.5sp"
                     android:textStyle="bold"
                     android:clickable="true"
@@ -585,7 +585,7 @@
                     android:paddingTop="3dp"
                     android:paddingBottom="3dp"
                     android:text="TXT"
-                    android:textColor="#DFE2F0"
+                    android:textColor="@color/caspian_text_primary"
                     android:textSize="10.5sp"
                     android:textStyle="bold"
                     android:clickable="true"
@@ -602,7 +602,7 @@
                     android:paddingTop="3dp"
                     android:paddingBottom="3dp"
                     android:text="DOC"
-                    android:textColor="#DFE2F0"
+                    android:textColor="@color/caspian_text_primary"
                     android:textSize="10.5sp"
                     android:textStyle="bold"
                     android:clickable="true"
@@ -618,7 +618,7 @@
                     android:paddingTop="3dp"
                     android:paddingBottom="3dp"
                     android:text="MD"
-                    android:textColor="#DFE2F0"
+                    android:textColor="@color/caspian_text_primary"
                     android:textSize="10.5sp"
                     android:textStyle="bold"
                     android:clickable="true"
@@ -664,7 +664,7 @@
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
                     android:text="Settings &amp; Preferences"
-                    android:textColor="#DFE2F0"
+                    android:textColor="@color/caspian_text_primary"
                     android:textSize="12.5sp" />
             </LinearLayout>
 
@@ -675,7 +675,7 @@
                 android:layout_alignParentEnd="true"
                 android:layout_centerVertical="true"
                 android:text="Caspian"
-                android:textColor="#64748B"
+                android:textColor="@color/caspian_icon_subdued"
                 android:textSize="11.5sp" />
         </RelativeLayout>
     </LinearLayout>
@@ -732,7 +732,7 @@
                         android:layout_height="wrap_content"
                         android:layout_marginEnd="6dp"
                         android:text="Caspian Waveguard"
-                        android:textColor="#FFFFFF"
+                        android:textColor="@color/caspian_text_primary"
                         android:textSize="12sp"
                         android:textStyle="bold" />
 
@@ -747,7 +747,7 @@
                         android:paddingTop="1dp"
                         android:paddingBottom="1dp"
                         android:text="ACTIVE"
-                        android:textColor="#10B981"
+                        android:textColor="@color/caspian_emerald"
                         android:textSize="8.5sp"
                         android:textStyle="bold" />
                 </LinearLayout>
@@ -758,7 +758,7 @@
                     android:layout_height="wrap_content"
                     android:layout_marginTop="2dp"
                     android:text="142 trackers &amp; ads blocked"
-                    android:textColor="#94A3B8"
+                    android:textColor="@color/caspian_text_secondary"
                     android:textSize="10.5sp" />
             </LinearLayout>
         </LinearLayout>
@@ -775,7 +775,7 @@
             android:paddingTop="6dp"
             android:paddingBottom="6dp"
             android:text="Settings"
-            android:textColor="#DFE2F0"
+            android:textColor="@color/caspian_text_primary"
             android:textSize="11.5sp"
             android:textStyle="bold"
             android:clickable="true"

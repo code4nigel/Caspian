@@ -51,7 +51,7 @@
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
                 android:text="ACTIVE DOCKS &amp; TOOLBARS"
-                android:textColor="#94A3B8"
+                android:textColor="@color/caspian_text_secondary"
                 android:textSize="11.5sp"
                 android:textStyle="bold"
                 android:letterSpacing="0.08" />
@@ -117,7 +117,7 @@
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
                     android:text="ChatGPT Dock"
-                    android:textColor="#DFE2F0"
+                    android:textColor="@color/caspian_text_primary"
                     android:textSize="13.5sp"
                     android:textStyle="bold" />
 
@@ -126,7 +126,7 @@
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
                     android:text="Dedicated AI sidecar dock"
-                    android:textColor="#849396"
+                    android:textColor="@color/caspian_text_secondary"
                     android:textSize="10.5sp" />
             </LinearLayout>
 
@@ -182,7 +182,7 @@
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
                     android:text="Gemini Dock"
-                    android:textColor="#DFE2F0"
+                    android:textColor="@color/caspian_text_primary"
                     android:textSize="13.5sp"
                     android:textStyle="bold" />
 
@@ -191,7 +191,7 @@
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
                     android:text="Google AI workspace dock"
-                    android:textColor="#849396"
+                    android:textColor="@color/caspian_text_secondary"
                     android:textSize="10.5sp" />
             </LinearLayout>
 
@@ -247,7 +247,7 @@
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
                     android:text="YouTube Remote"
-                    android:textColor="#DFE2F0"
+                    android:textColor="@color/caspian_text_primary"
                     android:textSize="13.5sp"
                     android:textStyle="bold" />
 
@@ -256,7 +256,7 @@
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
                     android:text="Floating media &amp; playback controls"
-                    android:textColor="#849396"
+                    android:textColor="@color/caspian_text_secondary"
                     android:textSize="10.5sp" />
             </LinearLayout>
 
@@ -312,7 +312,7 @@
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
                     android:text="Google Dock"
-                    android:textColor="#DFE2F0"
+                    android:textColor="@color/caspian_text_primary"
                     android:textSize="13.5sp"
                     android:textStyle="bold" />
 
@@ -321,7 +321,7 @@
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
                     android:text="Quick search &amp; navigation bar"
-                    android:textColor="#849396"
+                    android:textColor="@color/caspian_text_secondary"
                     android:textSize="10.5sp" />
             </LinearLayout>
 
@@ -377,7 +377,7 @@
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
                     android:text="Waveguard Shield"
-                    android:textColor="#DFE2F0"
+                    android:textColor="@color/caspian_text_primary"
                     android:textSize="13.5sp"
                     android:textStyle="bold" />
 
@@ -386,7 +386,7 @@
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
                     android:text="Tracking, ads &amp; telemetry shield"
-                    android:textColor="#849396"
+                    android:textColor="@color/caspian_text_secondary"
                     android:textSize="10.5sp" />
             </LinearLayout>
 

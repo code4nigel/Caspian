@@ -30,7 +30,7 @@
         android:ellipsize="end"
         android:textSize="11.5sp"
         android:textStyle="bold"
-        android:textColor="#E2E8F0"
+        android:textColor="@color/caspian_text_primary"
         android:text="Group" />
 
     <!-- Group Count Badge -->
@@ -41,7 +41,7 @@
         android:layout_marginStart="5dp"
         android:textSize="10sp"
         android:textStyle="bold"
-        android:textColor="#94A3B8"
+        android:textColor="@color/caspian_text_secondary"
         android:text="(0)" />
 
     <!-- Chevron Expand/Collapse Indicator -->
@@ -51,6 +51,6 @@
         android:layout_height="wrap_content"
         android:layout_marginStart="4dp"
         android:textSize="10sp"
-        android:textColor="#94A3B8"
+        android:textColor="@color/caspian_text_secondary"
         android:text="▾" />
 </LinearLayout>

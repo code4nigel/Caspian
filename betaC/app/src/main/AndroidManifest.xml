@@ -31,7 +31,7 @@
 
         <activity
             android:name=".MainActivity"
-            android:configChanges="orientation|screenSize|keyboardHidden|smallestScreenSize|screenLayout"
+            android:configChanges="orientation|screenSize|keyboardHidden|smallestScreenSize|screenLayout|uiMode"
             android:supportsPictureInPicture="true"
             android:hardwareAccelerated="true"
             android:launchMode="singleTask"

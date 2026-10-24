@@ -36,7 +36,7 @@
                 android:layout_height="18dp"
                 android:layout_gravity="center"
                 android:src="@drawable/ic_stitch_globe"
-                android:tint="#00E5FF"
+                android:tint="@color/caspian_accent_cyan"
                 android:contentDescription="Tab Icon" />
         </FrameLayout>
 
@@ -51,7 +51,7 @@
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
                 android:text="Tab Title"
-                android:textColor="#FFFFFF"
+                android:textColor="@color/caspian_text_primary"
                 android:textSize="13.5sp"
                 android:textStyle="bold"
                 android:singleLine="true"
@@ -63,7 +63,7 @@
                 android:layout_height="wrap_content"
                 android:layout_marginTop="2dp"
                 android:text="https://example.com"
-                android:textColor="#64748B"
+                android:textColor="@color/caspian_icon_subdued"
                 android:textSize="11sp"
                 android:singleLine="true"
                 android:ellipsize="end" />
@@ -134,7 +134,7 @@
             android:layout_height="wrap_content"
             android:layout_weight="1"
             android:text="Close Other Tabs"
-            android:textColor="#E2E8F0"
+            android:textColor="@color/caspian_text_primary"
             android:textSize="13sp" />
     </LinearLayout>
 
@@ -164,7 +164,7 @@
             android:layout_height="wrap_content"
             android:layout_weight="1"
             android:text="Duplicate Tab"
-            android:textColor="#E2E8F0"
+            android:textColor="@color/caspian_text_primary"
             android:textSize="13sp" />
     </LinearLayout>
 
@@ -185,7 +185,7 @@
             android:layout_width="18dp"
             android:layout_height="18dp"
             android:src="@drawable/ic_browser_split"
-            android:tint="#00E5FF"
+            android:tint="@color/caspian_accent_cyan"
             android:layout_marginEnd="14dp"
             android:contentDescription="Split Screen" />
 
@@ -194,7 +194,7 @@
             android:layout_height="wrap_content"
             android:layout_weight="1"
             android:text="Open in Split Screen"
-            android:textColor="#E2E8F0"
+            android:textColor="@color/caspian_text_primary"
             android:textSize="13sp" />
     </LinearLayout>
 
@@ -257,7 +257,7 @@
             android:layout_height="wrap_content"
             android:layout_weight="1"
             android:text="Swap Split Sides"
-            android:textColor="#E2E8F0"
+            android:textColor="@color/caspian_text_primary"
             android:textSize="13sp" />
     </LinearLayout>
 
@@ -287,7 +287,7 @@
             android:layout_height="wrap_content"
             android:layout_weight="1"
             android:text="Move to Container / Cask"
-            android:textColor="#E2E8F0"
+            android:textColor="@color/caspian_text_primary"
             android:textSize="13sp" />
     </LinearLayout>
 
@@ -317,7 +317,7 @@
             android:layout_height="wrap_content"
             android:layout_weight="1"
             android:text="Move to Tab Group"
-            android:textColor="#E2E8F0"
+            android:textColor="@color/caspian_text_primary"
             android:textSize="13sp" />
     </LinearLayout>
 
@@ -338,7 +338,7 @@
             android:layout_width="18dp"
             android:layout_height="18dp"
             android:src="@drawable/ic_arena_plus"
-            android:tint="#00E5FF"
+            android:tint="@color/caspian_accent_cyan"
             android:layout_marginEnd="14dp"
             android:contentDescription="Make Tab Group" />
 
@@ -347,7 +347,7 @@
             android:layout_height="wrap_content"
             android:layout_weight="1"
             android:text="Make a Tab Group"
-            android:textColor="#E2E8F0"
+            android:textColor="@color/caspian_text_primary"
             android:textSize="13sp" />
     </LinearLayout>
 
@@ -377,7 +377,7 @@
             android:layout_height="wrap_content"
             android:layout_weight="1"
             android:text="Share Link"
-            android:textColor="#E2E8F0"
+            android:textColor="@color/caspian_text_primary"
             android:textSize="13sp" />
     </LinearLayout>
 
@@ -407,7 +407,7 @@
             android:layout_height="wrap_content"
             android:layout_weight="1"
             android:text="Copy Tab URL"
-            android:textColor="#E2E8F0"
+            android:textColor="@color/caspian_text_primary"
             android:textSize="13sp" />
     </LinearLayout>
 

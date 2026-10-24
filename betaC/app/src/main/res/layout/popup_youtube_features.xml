@@ -43,7 +43,7 @@
             android:layout_weight="1"
             android:layout_marginStart="8dp"
             android:text="Captions (CC)"
-            android:textColor="#FFFFFF"
+            android:textColor="@color/caspian_text_primary"
             android:textSize="12sp"
             android:textStyle="bold" />
 
@@ -52,7 +52,7 @@
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
             android:text="Toggle"
-            android:textColor="#00E5FF"
+            android:textColor="@color/caspian_accent_cyan"
             android:textSize="11sp" />
     </LinearLayout>
 
@@ -79,7 +79,7 @@
             android:layout_weight="1"
             android:layout_marginStart="8dp"
             android:text="Loop Video"
-            android:textColor="#FFFFFF"
+            android:textColor="@color/caspian_text_primary"
             android:textSize="12sp"
             android:textStyle="bold" />
 
@@ -88,7 +88,7 @@
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
             android:text="Toggle"
-            android:textColor="#00E5FF"
+            android:textColor="@color/caspian_accent_cyan"
             android:textSize="11sp" />
     </LinearLayout>
 
@@ -115,7 +115,7 @@
             android:layout_weight="1"
             android:layout_marginStart="8dp"
             android:text="Ambient / Cinema"
-            android:textColor="#FFFFFF"
+            android:textColor="@color/caspian_text_primary"
             android:textSize="12sp"
             android:textStyle="bold" />
 
@@ -124,7 +124,7 @@
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
             android:text="Toggle"
-            android:textColor="#00E5FF"
+            android:textColor="@color/caspian_accent_cyan"
             android:textSize="11sp" />
     </LinearLayout>
 
@@ -151,7 +151,7 @@
             android:layout_weight="1"
             android:layout_marginStart="8dp"
             android:text="Autoplay Next"
-            android:textColor="#FFFFFF"
+            android:textColor="@color/caspian_text_primary"
             android:textSize="12sp"
             android:textStyle="bold" />
 
@@ -160,7 +160,7 @@
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
             android:text="Toggle"
-            android:textColor="#00E5FF"
+            android:textColor="@color/caspian_accent_cyan"
             android:textSize="11sp" />
     </LinearLayout>
 
@@ -187,7 +187,7 @@
             android:layout_weight="1"
             android:layout_marginStart="8dp"
             android:text="Picture-in-Picture"
-            android:textColor="#FFFFFF"
+            android:textColor="@color/caspian_text_primary"
             android:textSize="12sp"
             android:textStyle="bold" />
 
@@ -195,7 +195,7 @@
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
             android:text="Pop out"
-            android:textColor="#00E5FF"
+            android:textColor="@color/caspian_accent_cyan"
             android:textSize="11sp" />
     </LinearLayout>
 

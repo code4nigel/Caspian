@@ -42,7 +42,7 @@
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
                 android:text="Open in New Tab"
-                android:textColor="#FFFFFF"
+                android:textColor="@color/caspian_text_primary"
                 android:textSize="13sp"
                 android:textStyle="bold" />
 
@@ -50,7 +50,7 @@
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
                 android:text="Open this page in a separate tab"
-                android:textColor="#849396"
+                android:textColor="@color/caspian_text_secondary"
                 android:textSize="10sp" />
         </LinearLayout>
     </LinearLayout>
@@ -90,7 +90,7 @@
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
                 android:text="Switch Tab..."
-                android:textColor="#FFFFFF"
+                android:textColor="@color/caspian_text_primary"
                 android:textSize="13sp"
                 android:textStyle="bold" />
 
@@ -98,7 +98,7 @@
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
                 android:text="Choose from open tabs"
-                android:textColor="#849396"
+                android:textColor="@color/caspian_text_secondary"
                 android:textSize="10sp" />
         </LinearLayout>
     </LinearLayout>
@@ -125,7 +125,7 @@
             android:layout_height="wrap_content"
             android:text="⎘"
             android:textSize="15sp"
-            android:textColor="#00E5FF"
+            android:textColor="@color/caspian_accent_cyan"
             android:gravity="center" />
 
         <LinearLayout
@@ -139,7 +139,7 @@
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
                 android:text="Separate Tabs"
-                android:textColor="#FFFFFF"
+                android:textColor="@color/caspian_text_primary"
                 android:textSize="13sp"
                 android:textStyle="bold" />
 
@@ -147,7 +147,7 @@
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
                 android:text="Exit split screen mode"
-                android:textColor="#849396"
+                android:textColor="@color/caspian_text_secondary"
                 android:textSize="10sp" />
         </LinearLayout>
     </LinearLayout>
@@ -174,7 +174,7 @@
             android:layout_height="wrap_content"
             android:text="⇄"
             android:textSize="16sp"
-            android:textColor="#00E5FF"
+            android:textColor="@color/caspian_accent_cyan"
             android:gravity="center" />
 
         <LinearLayout
@@ -189,7 +189,7 @@
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
                 android:text="Swap Panes"
-                android:textColor="#FFFFFF"
+                android:textColor="@color/caspian_text_primary"
                 android:textSize="13sp"
                 android:textStyle="bold" />
 
@@ -198,7 +198,7 @@
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
                 android:text="Invert left and right tabs"
-                android:textColor="#849396"
+                android:textColor="@color/caspian_text_secondary"
                 android:textSize="10sp" />
         </LinearLayout>
     </LinearLayout>
@@ -225,7 +225,7 @@
             android:layout_height="wrap_content"
             android:text="▤"
             android:textSize="15sp"
-            android:textColor="#00E5FF"
+            android:textColor="@color/caspian_accent_cyan"
             android:gravity="center" />
 
         <LinearLayout
@@ -240,7 +240,7 @@
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
                 android:text="Switch to Vertical"
-                android:textColor="#FFFFFF"
+                android:textColor="@color/caspian_text_primary"
                 android:textSize="13sp"
                 android:textStyle="bold" />
 
@@ -249,7 +249,7 @@
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
                 android:text="Top and bottom layout"
-                android:textColor="#849396"
+                android:textColor="@color/caspian_text_secondary"
                 android:textSize="10sp" />
         </LinearLayout>
     </LinearLayout>
@@ -288,7 +288,7 @@
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
                 android:text="Open Left Links in Right"
-                android:textColor="#FFFFFF"
+                android:textColor="@color/caspian_text_primary"
                 android:textSize="13sp"
                 android:textStyle="bold" />
 
@@ -296,7 +296,7 @@
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
                 android:text="Route clicked links to right pane"
-                android:textColor="#849396"
+                android:textColor="@color/caspian_text_secondary"
                 android:textSize="10sp" />
         </LinearLayout>
 
@@ -311,7 +311,7 @@
             android:paddingBottom="2dp"
             android:background="@drawable/bg_liquid_glass_pill"
             android:text="OFF"
-            android:textColor="#849396"
+            android:textColor="@color/caspian_text_secondary"
             android:textSize="10sp"
             android:textStyle="bold" />
     </LinearLayout>

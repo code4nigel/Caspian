@@ -22,7 +22,7 @@
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
         android:text="TIME RANGE"
-        android:textColor="#94A3B8"
+        android:textColor="@color/caspian_text_secondary"
         android:textSize="11sp"
         android:textStyle="bold"
         android:fontFamily="monospace"
@@ -32,7 +32,7 @@
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
         android:text="Filter history records &amp; data clearance window"
-        android:textColor="#64748B"
+        android:textColor="@color/caspian_icon_subdued"
         android:textSize="11.5sp"
         android:layout_marginTop="2dp" />
 
@@ -82,7 +82,7 @@
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
                 android:text="Entries from the past 60 minutes"
-                android:textColor="#64748B"
+                android:textColor="@color/caspian_icon_subdued"
                 android:textSize="10.5sp" />
         </LinearLayout>
 
@@ -91,7 +91,7 @@
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
             android:text="✓"
-            android:textColor="#00E5FF"
+            android:textColor="@color/caspian_accent_cyan"
             android:textSize="16sp"
             android:textStyle="bold"
             android:visibility="gone" />
@@ -136,7 +136,7 @@
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
                 android:text="Entries from yesterday and today"
-                android:textColor="#64748B"
+                android:textColor="@color/caspian_icon_subdued"
                 android:textSize="10.5sp" />
         </LinearLayout>
 
@@ -145,7 +145,7 @@
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
             android:text="✓"
-            android:textColor="#00E5FF"
+            android:textColor="@color/caspian_accent_cyan"
             android:textSize="16sp"
             android:textStyle="bold"
             android:visibility="gone" />
@@ -190,7 +190,7 @@
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
                 android:text="Entries from the past 7 days"
-                android:textColor="#64748B"
+                android:textColor="@color/caspian_icon_subdued"
                 android:textSize="10.5sp" />
         </LinearLayout>
 
@@ -199,7 +199,7 @@
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
             android:text="✓"
-            android:textColor="#00E5FF"
+            android:textColor="@color/caspian_accent_cyan"
             android:textSize="16sp"
             android:textStyle="bold"
             android:visibility="gone" />
@@ -244,7 +244,7 @@
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
                 android:text="View and manage entire history log"
-                android:textColor="#64748B"
+                android:textColor="@color/caspian_icon_subdued"
                 android:textSize="10.5sp" />
         </LinearLayout>
 
@@ -253,7 +253,7 @@
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
             android:text="✓"
-            android:textColor="#00E5FF"
+            android:textColor="@color/caspian_accent_cyan"
             android:textSize="16sp"
             android:textStyle="bold"
             android:visibility="gone" />

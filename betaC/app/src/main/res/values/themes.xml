@@ -1,6 +1,6 @@
 <resources>
-    <style name="Theme.CaspianFlow" parent="Theme.AppCompat.NoActionBar">
-        <item name="android:statusBarColor">#0D1524</item>
+    <style name="Theme.CaspianFlow" parent="Theme.AppCompat.DayNight.NoActionBar">
+        <item name="android:statusBarColor">@color/caspian_surface_void</item>
         <item name="android:navigationBarColor">@color/caspian_surface_void</item>
         <item name="android:windowBackground">@color/caspian_surface_void</item>
     </style>

@@ -184,6 +184,7 @@ public class MainActivity extends AppCompatActivity {
         public String url;
         public String service;
         public WebView webView;
+        public boolean isLoading = false;
         public boolean isDesktop = false;
         public boolean isReaderMode = false;
         public boolean isMuted = false;
@@ -938,6 +939,11 @@ public class MainActivity extends AppCompatActivity {
             isChatgptDockAutoCollapse = appPrefs.getBoolean("chatgpt_dock_autocollapse", false);
             isGeminiDockAutoCollapse = appPrefs.getBoolean("gemini_dock_autocollapse", false);
             isDarkTheme = !"light".equalsIgnoreCase(appPrefs.getString("theme", "dark"));
+            try {
+                androidx.appcompat.app.AppCompatDelegate.setDefaultNightMode(
+                    isDarkTheme ? androidx.appcompat.app.AppCompatDelegate.MODE_NIGHT_YES : androidx.appcompat.app.AppCompatDelegate.MODE_NIGHT_NO
+                );
+            } catch (Throwable ignored) {}
         } catch (Throwable ignored) {}
 
         try { updateThemeStyling(); } catch (Throwable ignored) {}
@@ -7615,6 +7621,11 @@ public class MainActivity extends AppCompatActivity {
     public void toggleHostTheme(boolean isDark) {
         this.isDarkTheme = isDark;
         try {
+            androidx.appcompat.app.AppCompatDelegate.setDefaultNightMode(
+                isDark ? androidx.appcompat.app.AppCompatDelegate.MODE_NIGHT_YES : androidx.appcompat.app.AppCompatDelegate.MODE_NIGHT_NO
+            );
+        } catch (Throwable ignored) {}
+        try {
             SharedPreferences prefs = getSharedPreferences(PREFS_NAME, MODE_PRIVATE);
             prefs.edit().putString("theme", isDark ? "dark" : "light").apply();
         } catch (Exception ignored) {}
@@ -9633,9 +9644,7 @@ public class MainActivity extends AppCompatActivity {
             }
         });
 
-        omniboxReloadBtn.setOnClickListener(v -> {
-            reloadActiveTab();
-        });
+        omniboxReloadBtn.setOnClickListener(this::handleReloadOrStopClicked);
 
         if (omniboxShieldBtn != null) {
             omniboxShieldBtn.setOnClickListener(this::showWaveguardFlyout);
@@ -19672,14 +19681,7 @@ public class MainActivity extends AppCompatActivity {
     @SuppressLint("ClickableViewAccessibility")
     private void setupCaspianOrbListeners() {
         if (caspianPillBtnReload != null) {
-            caspianPillBtnReload.setOnClickListener(v -> {
-                playUiFeedbackSound("tap");
-                v.performHapticFeedback(HapticFeedbackConstants.KEYBOARD_TAP);
-                TabItem cur = getActiveOrDominantTab();
-                if (cur != null && cur.webView != null) {
-                    cur.webView.reload();
-                }
-            });
+            caspianPillBtnReload.setOnClickListener(this::handleReloadOrStopClicked);
         }
 
         if (caspianPillBtnNewTab != null) {
@@ -22886,6 +22888,14 @@ public class MainActivity extends AppCompatActivity {
                         }
                     }
                 }
+                if (request != null && request.isForMainFrame()) {
+                    tabItem.isLoading = false;
+                    if (tabItem.id == activeTabId) {
+                        updateReloadButtonState(false);
+                        if (browserProgressBar != null) browserProgressBar.setVisibility(View.GONE);
+                    }
+                    updateOmniboxTabStrip();
+                }
             }
 
             @Override
@@ -22904,6 +22914,7 @@ public class MainActivity extends AppCompatActivity {
 
             @Override
             public void onPageStarted(WebView view, String pageUrl, Bitmap favicon) {
+                tabItem.isLoading = true;
                 if (pageUrl != null && pageUrl.contains("lastfm-callback")) {
                     try {
                         Uri uri = Uri.parse(pageUrl);
@@ -22944,6 +22955,7 @@ public class MainActivity extends AppCompatActivity {
                 if (tabItem.id == activeTabId) {
                     browserProgressBar.setVisibility(View.VISIBLE);
                     browserProgressBar.setProgress(15);
+                    updateReloadButtonState(true);
                     updateOmniboxState();
                     accumulatedScrollDelta = 0;
                     if (isOrbOrApplePieMode()) {
@@ -22954,6 +22966,7 @@ public class MainActivity extends AppCompatActivity {
                         dockToolbarAtTop(false);
                     }
                 }
+                updateOmniboxTabStrip();
             }
 
             @Override
@@ -22969,10 +22982,12 @@ public class MainActivity extends AppCompatActivity {
 
             @Override
             public void onPageFinished(WebView view, String pageUrl) {
+                tabItem.isLoading = false;
                 tabItem.url = pageUrl;
                 tabItem.title = view.getTitle() != null ? view.getTitle() : "Caspian Flow";
                 if (tabItem.id == activeTabId) {
                     browserProgressBar.setVisibility(View.GONE);
+                    updateReloadButtonState(false);
                     updateOmniboxState();
                     if ("orb".equalsIgnoreCase(omniboxScrollMode) && isAiChatUrl(pageUrl, tabItem.service)) {
                         if (!tabItem.userExplicitFullOmnibox) {
@@ -22984,6 +22999,7 @@ public class MainActivity extends AppCompatActivity {
                         }
                     }
                 }
+                updateOmniboxTabStrip();
 
                 applyWebViewTheme(view, isDarkTheme);
                 CaskManager.flushCookies(tabItem.caskId);
@@ -23155,7 +23171,18 @@ public class MainActivity extends AppCompatActivity {
             public void onProgressChanged(WebView view, int newProgress) {
                 if (tabItem.id == activeTabId) {
                     browserProgressBar.setProgress(newProgress);
-                    if (newProgress == 100) browserProgressBar.setVisibility(View.GONE);
+                    if (newProgress == 100) {
+                        browserProgressBar.setVisibility(View.GONE);
+                        tabItem.isLoading = false;
+                        updateReloadButtonState(false);
+                        updateOmniboxTabStrip();
+                    } else if (newProgress > 0 && newProgress < 100) {
+                        if (!tabItem.isLoading) {
+                            tabItem.isLoading = true;
+                            updateReloadButtonState(true);
+                            updateOmniboxTabStrip();
+                        }
+                    }
                 }
                 if (newProgress >= 25 && newProgress <= 80) {
                     if (waveguardShield != null && waveguardShield.isGlobalEnabled() && waveguardShield.isCosmeticEnabled()) {
@@ -23672,6 +23699,10 @@ public class MainActivity extends AppCompatActivity {
             }
         }
         updateOmniboxState();
+        updateReloadButtonState(tab.isLoading);
+        if (browserProgressBar != null) {
+            browserProgressBar.setVisibility(tab.isLoading ? View.VISIBLE : View.GONE);
+        }
         accumulatedScrollDelta = 0;
         TabItem curSwitchedTab = getTabById(tabId);
         if ("applepie".equalsIgnoreCase(omniboxScrollMode)) {
@@ -24116,6 +24147,42 @@ public class MainActivity extends AppCompatActivity {
                 try { tab.webView.reload(); } catch (Exception ignored) {}
             }
         }
+    }
+
+    public void handleReloadOrStopClicked(View v) {
+        playUiFeedbackSound("tap");
+        if (v != null) v.performHapticFeedback(HapticFeedbackConstants.KEYBOARD_TAP);
+        TabItem cur = getActiveOrDominantTab();
+        if (cur != null && cur.webView != null) {
+            if (cur.isLoading) {
+                try { cur.webView.stopLoading(); } catch (Exception ignored) {}
+                cur.isLoading = false;
+                updateReloadButtonState(false);
+                updateOmniboxTabStrip();
+                if (browserProgressBar != null) browserProgressBar.setVisibility(View.GONE);
+            } else {
+                reloadActiveTab();
+            }
+        }
+    }
+
+    public void updateReloadButtonState(boolean isLoading) {
+        runOnUiThread(() -> {
+            if (omniboxReloadBtn != null) {
+                omniboxReloadBtn.animate().rotationBy(180f).setDuration(220).withEndAction(() -> {
+                    omniboxReloadBtn.setRotation(0f);
+                }).start();
+                omniboxReloadBtn.setImageResource(isLoading ? R.drawable.ic_pod_close : R.drawable.ic_pod_reload);
+                omniboxReloadBtn.setContentDescription(isLoading ? "Stop Loading" : "Reload Page");
+            }
+            if (caspianPillBtnReload != null) {
+                caspianPillBtnReload.animate().rotationBy(180f).setDuration(220).withEndAction(() -> {
+                    caspianPillBtnReload.setRotation(0f);
+                }).start();
+                caspianPillBtnReload.setImageResource(isLoading ? R.drawable.ic_pod_close : R.drawable.ic_pod_reload);
+                caspianPillBtnReload.setContentDescription(isLoading ? "Stop Loading" : "Reload");
+            }
+        });
     }
 
     public void reloadActiveTab() {
@@ -24580,6 +24647,7 @@ public class MainActivity extends AppCompatActivity {
                             boolean isActive = (tab.id == activeId);
                             View tabView = LayoutInflater.from(this).inflate(R.layout.item_omnibox_tab_chip, omniboxTabStripTabs, false);
                             ImageView iconView = tabView.findViewById(R.id.omnibox_tab_icon);
+                            View spinnerView = tabView.findViewById(R.id.omnibox_tab_spinner);
                             TextView titleView = tabView.findViewById(R.id.omnibox_tab_title);
                             View closeBtn = tabView.findViewById(R.id.omnibox_tab_close_btn);
                             ImageView closeIcon = tabView.findViewById(R.id.omnibox_tab_close_icon);
@@ -24609,6 +24677,15 @@ public class MainActivity extends AppCompatActivity {
                             tabView.setBackground(bg);
 
                             // Favicon
+                            if (spinnerView != null && iconView != null) {
+                                if (tab.isLoading) {
+                                    spinnerView.setVisibility(View.VISIBLE);
+                                    iconView.setVisibility(View.INVISIBLE);
+                                } else {
+                                    spinnerView.setVisibility(View.GONE);
+                                    iconView.setVisibility(View.VISIBLE);
+                                }
+                            }
                             if (iconView != null) {
                                 Bitmap favBmp = getTabFaviconBitmap(tab);
                                 if (favBmp != null) {
@@ -24678,6 +24755,7 @@ public class MainActivity extends AppCompatActivity {
                         LinearLayout splitRoot = splitView.findViewById(R.id.omnibox_split_tab_root);
                         View leftHalf = splitView.findViewById(R.id.omnibox_split_left_root);
                         ImageView leftIcon = splitView.findViewById(R.id.omnibox_split_left_icon);
+                        View leftSpinner = splitView.findViewById(R.id.omnibox_split_left_spinner);
                         TextView leftTitle = splitView.findViewById(R.id.omnibox_split_left_title);
                         View leftClose = splitView.findViewById(R.id.omnibox_split_left_close);
                         ImageView leftCloseIcon = splitView.findViewById(R.id.omnibox_split_left_close_icon);
@@ -24686,6 +24764,7 @@ public class MainActivity extends AppCompatActivity {
 
                         View rightHalf = splitView.findViewById(R.id.omnibox_split_right_root);
                         ImageView rightIcon = splitView.findViewById(R.id.omnibox_split_right_icon);
+                        View rightSpinner = splitView.findViewById(R.id.omnibox_split_right_spinner);
                         TextView rightTitle = splitView.findViewById(R.id.omnibox_split_right_title);
                         View rightClose = splitView.findViewById(R.id.omnibox_split_right_close);
                         ImageView rightCloseIcon = splitView.findViewById(R.id.omnibox_split_right_close_icon);
@@ -24712,6 +24791,15 @@ public class MainActivity extends AppCompatActivity {
                             lBg.setCornerRadii(new float[]{dpToPx(15), dpToPx(15), 0, 0, 0, 0, dpToPx(15), dpToPx(15)});
                             lBg.setColor(isDarkTheme ? 0xFF1E2838 : 0xFFFFFFFF);
                             leftHalf.setBackground(lBg);
+                        }
+                        if (leftSpinner != null && leftIcon != null) {
+                            if (sLeft.isLoading) {
+                                leftSpinner.setVisibility(View.VISIBLE);
+                                leftIcon.setVisibility(View.INVISIBLE);
+                            } else {
+                                leftSpinner.setVisibility(View.GONE);
+                                leftIcon.setVisibility(View.VISIBLE);
+                            }
                         }
                         if (leftIcon != null) {
                             Bitmap fav = getTabFaviconBitmap(sLeft);
@@ -24758,6 +24846,15 @@ public class MainActivity extends AppCompatActivity {
                             rBg.setCornerRadii(new float[]{0, 0, dpToPx(15), dpToPx(15), dpToPx(15), dpToPx(15), 0, 0});
                             rBg.setColor(isDarkTheme ? 0xFF162030 : 0xFFF8FAFC);
                             rightHalf.setBackground(rBg);
+                        }
+                        if (rightSpinner != null && rightIcon != null) {
+                            if (sRight.isLoading) {
+                                rightSpinner.setVisibility(View.VISIBLE);
+                                rightIcon.setVisibility(View.INVISIBLE);
+                            } else {
+                                rightSpinner.setVisibility(View.GONE);
+                                rightIcon.setVisibility(View.VISIBLE);
+                            }
                         }
                         if (rightIcon != null) {
                             Bitmap fav = getTabFaviconBitmap(sRight);
@@ -24811,6 +24908,7 @@ public class MainActivity extends AppCompatActivity {
 
                     View tabView = LayoutInflater.from(this).inflate(R.layout.item_omnibox_tab_chip, omniboxTabStripTabs, false);
                     ImageView iconView = tabView.findViewById(R.id.omnibox_tab_icon);
+                    View spinnerView = tabView.findViewById(R.id.omnibox_tab_spinner);
                     TextView titleView = tabView.findViewById(R.id.omnibox_tab_title);
                     View closeBtn = tabView.findViewById(R.id.omnibox_tab_close_btn);
                     ImageView closeIcon = tabView.findViewById(R.id.omnibox_tab_close_icon);
@@ -24851,6 +24949,15 @@ public class MainActivity extends AppCompatActivity {
                     tabView.setBackground(bg);
 
                     // Real Favicons with fallback to platform service icon
+                    if (spinnerView != null && iconView != null) {
+                        if (tab.isLoading) {
+                            spinnerView.setVisibility(View.VISIBLE);
+                            iconView.setVisibility(View.INVISIBLE);
+                        } else {
+                            spinnerView.setVisibility(View.GONE);
+                            iconView.setVisibility(View.VISIBLE);
+                        }
+                    }
                     if (iconView != null) {
                         Bitmap favBmp = getTabFaviconBitmap(tab);
                         if (favBmp != null) {

@@ -25,7 +25,7 @@
                 android:layout_marginStart="14dp"
                 android:background="?attr/selectableItemBackgroundBorderless"
                 android:src="@drawable/ic_pod_back"
-                android:tint="#BAC9CC"
+                android:tint="@color/caspian_text_secondary"
                 android:padding="8dp"
                 android:scaleType="fitCenter" />
 
@@ -56,7 +56,7 @@
                         android:layout_width="15dp"
                         android:layout_height="15dp"
                         android:src="@drawable/ic_menu_bookmark"
-                        android:tint="#00E5FF"
+                        android:tint="@color/caspian_accent_cyan"
                         android:scaleType="fitCenter" />
 
                     <TextView
@@ -65,7 +65,7 @@
                         android:layout_height="wrap_content"
                         android:layout_marginStart="6dp"
                         android:text="Bookmarks"
-                        android:textColor="#FFFFFF"
+                        android:textColor="@color/caspian_text_primary"
                         android:textSize="12sp"
                         android:textStyle="bold" />
 
@@ -80,7 +80,7 @@
                         android:paddingTop="1dp"
                         android:paddingBottom="1dp"
                         android:text="0"
-                        android:textColor="#CBD5E1"
+                        android:textColor="@color/caspian_text_secondary"
                         android:textSize="10sp"
                         android:textStyle="bold" />
                 </LinearLayout>
@@ -92,7 +92,7 @@
                     android:layout_height="wrap_content"
                     android:layout_marginStart="14dp"
                     android:text="History"
-                    android:textColor="#64748B"
+                    android:textColor="@color/caspian_icon_subdued"
                     android:textSize="12sp"
                     android:textStyle="bold"
                     android:paddingStart="12dp"
@@ -110,7 +110,7 @@
                     android:layout_height="wrap_content"
                     android:layout_marginStart="14dp"
                     android:text="Settings"
-                    android:textColor="#64748B"
+                    android:textColor="@color/caspian_icon_subdued"
                     android:textSize="12sp"
                     android:textStyle="bold"
                     android:paddingStart="12dp"
@@ -152,7 +152,7 @@
                         android:layout_width="wrap_content"
                         android:layout_height="wrap_content"
                         android:text="Vault"
-                        android:textColor="#DFE2F0"
+                        android:textColor="@color/caspian_text_primary"
                         android:textSize="20sp"
                         android:textStyle="bold" />
 
@@ -167,7 +167,7 @@
                         android:paddingTop="2dp"
                         android:paddingBottom="2dp"
                         android:text="0 SAVED"
-                        android:textColor="#00E5FF"
+                        android:textColor="@color/caspian_accent_cyan"
                         android:textSize="10sp"
                         android:textStyle="bold" />
 
@@ -239,7 +239,7 @@
                         android:background="@android:color/transparent"
                         android:hint="Search keywords, domains, tags..."
                         android:textColorHint="#64748B"
-                        android:textColor="#DFE2F0"
+                        android:textColor="@color/caspian_text_primary"
                         android:textSize="13sp"
                         android:singleLine="true"
                         android:paddingStart="8dp"
@@ -262,7 +262,7 @@
                             android:layout_width="wrap_content"
                             android:layout_height="wrap_content"
                             android:text="Sort"
-                            android:textColor="#00E5FF"
+                            android:textColor="@color/caspian_accent_cyan"
                             android:textSize="11sp"
                             android:textStyle="bold" />
 
@@ -271,7 +271,7 @@
                             android:layout_height="wrap_content"
                             android:layout_marginStart="2dp"
                             android:text="▼"
-                            android:textColor="#849396"
+                            android:textColor="@color/caspian_text_secondary"
                             android:textSize="8sp" />
                     </LinearLayout>
                 </LinearLayout>
@@ -312,7 +312,7 @@
                             android:paddingStart="12dp"
                             android:paddingEnd="12dp"
                             android:text="⭐ FAVORITES"
-                            android:textColor="#DFE2F0"
+                            android:textColor="@color/caspian_text_primary"
                             android:textSize="11sp"
                             android:textStyle="bold" />
                     </LinearLayout>
@@ -347,7 +347,7 @@
                         android:layout_height="wrap_content"
                         android:layout_marginTop="8dp"
                         android:text="No bookmarks found"
-                        android:textColor="#849396"
+                        android:textColor="@color/caspian_text_secondary"
                         android:textSize="13sp" />
                 </LinearLayout>
             </LinearLayout>
@@ -386,7 +386,7 @@
                 android:layout_width="16dp"
                 android:layout_height="16dp"
                 android:src="@drawable/ic_menu_share"
-                android:tint="#00E5FF"
+                android:tint="@color/caspian_accent_cyan"
                 android:scaleType="fitCenter" />
 
             <TextView
@@ -395,7 +395,7 @@
                 android:layout_height="wrap_content"
                 android:layout_marginStart="6dp"
                 android:text="EXPORT"
-                android:textColor="#DFE2F0"
+                android:textColor="@color/caspian_text_primary"
                 android:textSize="11sp"
                 android:textStyle="bold" />
         </LinearLayout>
@@ -417,7 +417,7 @@
                 android:layout_height="match_parent"
                 android:gravity="center"
                 android:text="+"
-                android:textColor="#FFFFFF"
+                android:textColor="@color/caspian_text_primary"
                 android:textSize="24sp"
                 android:textStyle="bold" />
         </FrameLayout>
@@ -440,7 +440,7 @@
                 android:layout_width="16dp"
                 android:layout_height="16dp"
                 android:src="@drawable/ic_menu_download"
-                android:tint="#00E5FF"
+                android:tint="@color/caspian_accent_cyan"
                 android:scaleType="fitCenter" />
 
             <TextView
@@ -449,7 +449,7 @@
                 android:layout_height="wrap_content"
                 android:layout_marginStart="6dp"
                 android:text="IMPORT"
-                android:textColor="#DFE2F0"
+                android:textColor="@color/caspian_text_primary"
                 android:textSize="11sp"
                 android:textStyle="bold" />
         </LinearLayout>

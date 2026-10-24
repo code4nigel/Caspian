@@ -4,7 +4,7 @@
     android:id="@+id/root_container"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
-    android:background="#050811">
+    android:background="@color/caspian_surface_void">
 
     <!-- 1. Main Browser Content Column -->
     <!-- 1. Main Browser Content Viewport (Floating Overlays Architecture) -->
@@ -184,8 +184,8 @@
                     android:layout_weight="1"
                     android:background="@android:color/transparent"
                     android:hint="Message both models..."
-                    android:textColorHint="#849396"
-                    android:textColor="#DFE2F0"
+                    android:textColorHint="@color/caspian_text_secondary"
+                    android:textColor="@color/caspian_text_primary"
                     android:textSize="14sp"
                     android:singleLine="true"
                     android:imeOptions="actionSend"
@@ -213,7 +213,7 @@
                     android:layout_marginStart="4dp"
                     android:background="?attr/selectableItemBackgroundBorderless"
                     android:src="@drawable/ic_pod_close"
-                    android:tint="#BAC9CC"
+                    android:tint="@color/caspian_text_secondary"
                     android:padding="8dp"
                     android:scaleType="fitCenter"
                     android:contentDescription="Close Capsule" />
@@ -228,7 +228,7 @@
             android:paddingEnd="10dp"
             android:paddingTop="2dp"
             android:paddingBottom="6dp"
-            android:background="#151E2E"
+            android:background="@color/caspian_surface_card"
             android:visibility="gone"
             android:elevation="355dp"
             android:layout_gravity="top"
@@ -256,7 +256,7 @@
                         android:layout_width="16dp"
                         android:layout_height="16dp"
                         android:src="@drawable/ic_browser_lock"
-                        android:tint="#00E5FF" />
+                        android:tint="@color/caspian_accent_cyan" />
 
                     <TextView
                         android:id="@+id/omnibox_clipboard_text"
@@ -265,7 +265,7 @@
                         android:layout_weight="1"
                         android:layout_marginStart="8dp"
                         android:text="Link you copied"
-                        android:textColor="#E0E6ED"
+                        android:textColor="@color/caspian_text_primary"
                         android:textSize="11sp"
                         android:singleLine="true"
                         android:ellipsize="end" />
@@ -274,7 +274,7 @@
                         android:layout_width="wrap_content"
                         android:layout_height="wrap_content"
                         android:text="Paste"
-                        android:textColor="#00E5FF"
+                        android:textColor="@color/caspian_accent_cyan"
                         android:textSize="11sp"
                         android:textStyle="bold" />
                 </LinearLayout>
@@ -363,7 +363,7 @@
                             android:layout_height="match_parent"
                             android:gravity="center"
                             android:text="↶"
-                            android:textColor="#00E5FF"
+                            android:textColor="@color/caspian_accent_cyan"
                             android:textSize="15sp"
                             android:textStyle="bold" />
 
@@ -391,7 +391,7 @@
                             android:layout_height="14dp"
                             android:layout_gravity="center"
                             android:src="@drawable/ic_arena_plus"
-                            android:tint="#CBD5E1"
+                            android:tint="@color/caspian_text_secondary"
                             android:contentDescription="New Tab" />
                     </FrameLayout>
                 </LinearLayout>
@@ -753,7 +753,7 @@
                     android:layout_marginEnd="8dp"
                     android:gravity="center"
                     android:text="☆"
-                    android:textColor="#A2A9A9"
+                    android:textColor="@color/caspian_icon_subdued"
                     android:textSize="22sp"
                     android:includeFontPadding="false"
                     android:background="@drawable/bg_liquid_glass_ball"
@@ -784,7 +784,7 @@
                             android:layout_width="16dp"
                             android:layout_height="16dp"
                             android:src="@drawable/ic_pod_search"
-                            android:tint="#88A2A9A9" />
+                            android:tint="@color/caspian_icon_subdued" />
 
                         <EditText
                             android:id="@+id/tab_grid_search_input"
@@ -808,7 +808,7 @@
                             android:paddingEnd="10dp"
                             android:gravity="center"
                             android:text="↩ Undo"
-                            android:textColor="#00E5FF"
+                            android:textColor="@color/caspian_accent_cyan"
                             android:textSize="11.5sp"
                             android:textStyle="bold"
                             android:background="@drawable/bg_liquid_glass_pill"
@@ -839,7 +839,7 @@
                             android:layout_marginEnd="6dp"
                             android:background="@drawable/bg_liquid_glass_pill"
                             android:text="Split"
-                            android:textColor="#00E5FF"
+                            android:textColor="@color/caspian_accent_cyan"
                             android:textSize="11sp"
                             android:textStyle="bold"
                             android:gravity="center"
@@ -855,7 +855,7 @@
                             android:layout_height="30dp"
                             android:background="@drawable/bg_liquid_glass_pill"
                             android:text="Deselect"
-                            android:textColor="#A2A9A9"
+                            android:textColor="@color/caspian_icon_subdued"
                             android:textSize="11sp"
                             android:textStyle="bold"
                             android:gravity="center"
@@ -900,7 +900,7 @@
                         android:layout_height="18dp"
                         android:layout_gravity="center"
                         android:src="@drawable/ic_tab_filter"
-                        android:tint="#DFE2F0" />
+                        android:tint="@color/caspian_text_primary" />
                 </FrameLayout>
             </LinearLayout>
 
@@ -954,7 +954,7 @@
                         android:paddingStart="8dp"
                         android:paddingEnd="8dp"
                         android:text="3 Tabs"
-                        android:textColor="#38BDF8"
+                        android:textColor="@color/caspian_cyan"
                         android:textSize="10.5sp"
                         android:textStyle="bold"
                         android:background="@drawable/bg_liquid_glass_pill" />
@@ -965,7 +965,7 @@
                         android:layout_height="24dp"
                         android:gravity="center"
                         android:text="✕"
-                        android:textColor="#A2A9A9"
+                        android:textColor="@color/caspian_icon_subdued"
                         android:textSize="12sp"
                         android:textStyle="bold"
                         android:background="?attr/selectableItemBackgroundBorderless"
@@ -986,7 +986,7 @@
                         android:layout_height="26dp"
                         android:background="@drawable/bg_liquid_glass_pill"
                         android:text="Edit"
-                        android:textColor="#DFE2F0"
+                        android:textColor="@color/caspian_text_primary"
                         android:textSize="10.5sp"
                         android:textStyle="bold"
                         android:paddingStart="12dp"
@@ -999,7 +999,7 @@
                         android:layout_marginStart="6dp"
                         android:background="@drawable/bg_liquid_glass_pill"
                         android:text="Ungroup"
-                        android:textColor="#DFE2F0"
+                        android:textColor="@color/caspian_text_primary"
                         android:textSize="10.5sp"
                         android:textStyle="bold"
                         android:paddingStart="12dp"
@@ -1108,7 +1108,7 @@
                     android:layout_height="16dp"
                     android:layout_gravity="center"
                     android:src="@drawable/ic_pod_close"
-                    android:tint="#CBD5E1"
+                    android:tint="@color/caspian_text_secondary"
                     android:contentDescription="Close" />
             </FrameLayout>
 
@@ -1134,7 +1134,7 @@
                     android:layout_height="match_parent"
                     android:gravity="center"
                     android:text="Group"
-                    android:textColor="#DFE2F0"
+                    android:textColor="@color/caspian_text_primary"
                     android:textSize="13sp"
                     android:textStyle="bold"
                     android:paddingStart="6dp"
@@ -1172,7 +1172,7 @@
                     android:layout_height="match_parent"
                     android:gravity="center"
                     android:text="Select"
-                    android:textColor="#DFE2F0"
+                    android:textColor="@color/caspian_text_primary"
                     android:textSize="13sp"
                     android:textStyle="bold"
                     android:paddingStart="8dp"
@@ -1199,7 +1199,7 @@
                     android:layout_height="20dp"
                     android:layout_gravity="center"
                     android:src="@drawable/ic_arena_plus"
-                    android:tint="#CBD5E1"
+                    android:tint="@color/caspian_text_secondary"
                     android:contentDescription="New Tab" />
             </FrameLayout>
 
@@ -1223,7 +1223,7 @@
                 android:layout_marginStart="20dp"
                 android:layout_marginEnd="20dp"
                 app:cardCornerRadius="22dp"
-                app:cardBackgroundColor="#0D1524"
+                app:cardBackgroundColor="@color/caspian_surface_card"
                 app:cardElevation="24dp">
 
                 <LinearLayout
@@ -1566,7 +1566,7 @@
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
                     android:text="00:00"
-                    android:textColor="#00E5FF"
+                    android:textColor="@color/caspian_accent_cyan"
                     android:textSize="11sp"
                     android:fontFamily="monospace"
                     android:textStyle="bold" />
@@ -1580,8 +1580,8 @@
                     android:layout_marginEnd="6dp"
                     android:max="1000"
                     android:progress="0"
-                    android:thumbTint="#00E5FF"
-                    android:progressTint="#00E5FF"
+                    android:thumbTint="@color/caspian_accent_cyan"
+                    android:progressTint="@color/caspian_accent_cyan"
                     android:progressBackgroundTint="#44FFFFFF"
                     android:splitTrack="false" />
 
@@ -1590,7 +1590,7 @@
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
                     android:text="00:00"
-                    android:textColor="#DFE2F0"
+                    android:textColor="@color/caspian_text_primary"
                     android:textSize="11sp"
                     android:fontFamily="monospace" />
 
@@ -1639,7 +1639,7 @@
                         android:layout_height="16dp"
                         android:layout_marginStart="3dp"
                         android:layout_marginEnd="3dp"
-                        android:background="#33FFFFFF" />
+                        android:background="@color/caspian_divider_subtle" />
 
                     <ImageButton
                         android:id="@+id/yt_remote_reload"
@@ -1708,7 +1708,7 @@
                         android:gravity="center"
                         android:background="@drawable/bg_liquid_glass_pill"
                         android:text="100%"
-                        android:textColor="#00E5FF"
+                        android:textColor="@color/caspian_accent_cyan"
                         android:textSize="11sp"
                         android:textStyle="bold"
                         android:contentDescription="Volume Level Slider" />
@@ -1809,7 +1809,7 @@
                         android:layout_height="16dp"
                         android:layout_marginStart="4dp"
                         android:layout_marginEnd="2dp"
-                        android:background="#33FFFFFF" />
+                        android:background="@color/caspian_divider_subtle" />
 
                     <TextView
                         android:id="@+id/yt_remote_drag_handle"
@@ -1902,7 +1902,7 @@
                     android:layout_height="16dp"
                     android:layout_marginStart="3dp"
                     android:layout_marginEnd="3dp"
-                    android:background="#33FFFFFF" />
+                    android:background="@color/caspian_divider_subtle" />
 
                 <ImageButton
                     android:id="@+id/nav_dock_reload"
@@ -1938,7 +1938,7 @@
                     android:layout_height="16dp"
                     android:layout_marginStart="3dp"
                     android:layout_marginEnd="3dp"
-                    android:background="#33FFFFFF" />
+                    android:background="@color/caspian_divider_subtle" />
 
                 <!-- URL / Host Pill -->
                 <TextView
@@ -2058,7 +2058,7 @@
                     android:layout_height="16dp"
                     android:layout_marginStart="4dp"
                     android:layout_marginEnd="2dp"
-                    android:background="#33FFFFFF" />
+                    android:background="@color/caspian_divider_subtle" />
 
                 <TextView
                     android:id="@+id/nav_dock_drag_handle"
@@ -2148,7 +2148,7 @@
                     android:layout_height="16dp"
                     android:layout_marginStart="3dp"
                     android:layout_marginEnd="3dp"
-                    android:background="#33FFFFFF" />
+                    android:background="@color/caspian_divider_subtle" />
 
                 <ImageButton
                     android:id="@+id/chatgpt_dock_reload"
@@ -2169,7 +2169,7 @@
                     android:paddingEnd="8dp"
                     android:gravity="center"
                     android:text="✂️ Limit: ON"
-                    android:textColor="#00E5FF"
+                    android:textColor="@color/caspian_accent_cyan"
                     android:textSize="11sp"
                     android:textStyle="bold"
                     android:background="@drawable/bg_liquid_glass_pill" />
@@ -2209,7 +2209,7 @@
                     android:layout_height="16dp"
                     android:layout_marginStart="3dp"
                     android:layout_marginEnd="3dp"
-                    android:background="#33FFFFFF" />
+                    android:background="@color/caspian_divider_subtle" />
 
                 <!-- In-Page Word Finder Input Box -->
                 <LinearLayout
@@ -2288,7 +2288,7 @@
                     android:layout_height="16dp"
                     android:layout_marginStart="3dp"
                     android:layout_marginEnd="3dp"
-                    android:background="#33FFFFFF" />
+                    android:background="@color/caspian_divider_subtle" />
 
                 <!-- Step Message Above (1 Turn Up) -->
                 <ImageButton
@@ -2317,7 +2317,7 @@
                     android:layout_height="16dp"
                     android:layout_marginStart="4dp"
                     android:layout_marginEnd="2dp"
-                    android:background="#33FFFFFF" />
+                    android:background="@color/caspian_divider_subtle" />
 
                 <TextView
                     android:id="@+id/chatgpt_dock_drag_handle"
@@ -2407,7 +2407,7 @@
                     android:layout_height="16dp"
                     android:layout_marginStart="3dp"
                     android:layout_marginEnd="3dp"
-                    android:background="#33FFFFFF" />
+                    android:background="@color/caspian_divider_subtle" />
 
                 <ImageButton
                     android:id="@+id/gemini_dock_reload"
@@ -2453,7 +2453,7 @@
                     android:layout_height="16dp"
                     android:layout_marginStart="3dp"
                     android:layout_marginEnd="3dp"
-                    android:background="#33FFFFFF" />
+                    android:background="@color/caspian_divider_subtle" />
 
                 <!-- In-Page Word Finder Input Box -->
                 <LinearLayout
@@ -2532,7 +2532,7 @@
                     android:layout_height="16dp"
                     android:layout_marginStart="3dp"
                     android:layout_marginEnd="3dp"
-                    android:background="#33FFFFFF" />
+                    android:background="@color/caspian_divider_subtle" />
 
                 <!-- Step Message Above (1-2 Turns Up) -->
                 <ImageButton
@@ -2561,7 +2561,7 @@
                     android:layout_height="16dp"
                     android:layout_marginStart="4dp"
                     android:layout_marginEnd="2dp"
-                    android:background="#33FFFFFF" />
+                    android:background="@color/caspian_divider_subtle" />
 
                 <TextView
                     android:id="@+id/gemini_dock_drag_handle"
@@ -2668,7 +2668,7 @@
                 android:layout_marginEnd="2dp"
                 android:background="?attr/selectableItemBackgroundBorderless"
                 android:src="@drawable/ic_pod_reload"
-                android:tint="#38BDF8"
+                android:tint="@color/caspian_cyan"
                 android:contentDescription="Reload" />
 
             <!-- Center Domain Capsule (Fixed-Width Responsive Fill) -->
@@ -2692,7 +2692,7 @@
                     android:layout_width="14dp"
                     android:layout_height="14dp"
                     android:src="@drawable/ic_browser_lock"
-                    android:tint="#38BDF8"
+                    android:tint="@color/caspian_cyan"
                     android:layout_marginEnd="6dp"
                     android:visibility="gone"
                     android:contentDescription="SSL" />
@@ -2720,7 +2720,7 @@
                 android:layout_marginEnd="2dp"
                 android:background="?attr/selectableItemBackgroundBorderless"
                 android:src="@drawable/ic_arena_plus"
-                android:tint="#38BDF8"
+                android:tint="@color/caspian_cyan"
                 android:contentDescription="New Tab" />
 
             <!-- Quick Toolbars Button -->
@@ -2732,7 +2732,7 @@
                 android:layout_marginEnd="2dp"
                 android:background="?attr/selectableItemBackgroundBorderless"
                 android:src="@drawable/ic_shrink_bubble"
-                android:tint="#00E5FF"
+                android:tint="@color/caspian_accent_cyan"
                 android:contentDescription="Quick Toolbars" />
 
             <!-- Active Tab Counter Badge Pill -->
@@ -2751,7 +2751,7 @@
                     android:layout_height="wrap_content"
                     android:layout_gravity="center"
                     android:text="1"
-                    android:textColor="#38BDF8"
+                    android:textColor="@color/caspian_cyan"
                     android:textSize="11sp"
                     android:textStyle="bold" />
             </FrameLayout>
@@ -2764,7 +2764,7 @@
                 android:padding="6dp"
                 android:background="?attr/selectableItemBackgroundBorderless"
                 android:src="@drawable/ic_stitch_more_vert"
-                android:tint="#94A3B8"
+                android:tint="@color/caspian_text_secondary"
                 android:contentDescription="Menu" />
 
             <!-- Collapse to Edge Handle Button (">") -->
@@ -2775,7 +2775,7 @@
                 android:padding="6dp"
                 android:background="?attr/selectableItemBackgroundBorderless"
                 android:src="@drawable/ic_chevron_right"
-                android:tint="#94A3B8"
+                android:tint="@color/caspian_text_secondary"
                 android:contentDescription="Collapse to Edge Handle" />
         </LinearLayout>
     </FrameLayout>
@@ -2812,7 +2812,7 @@
         android:id="@+id/splash_overlay"
         android:layout_width="match_parent"
         android:layout_height="match_parent"
-        android:background="#050811"
+        android:background="@color/caspian_surface_void"
         android:elevation="1200dp"
         android:visibility="visible">
 
