@@ -28,7 +28,7 @@ public class CaskManager {
     private static final String KEY_ACTIVE_CASK = "active_cask_id";
     private static final String KEY_CASKS_JSON = "casks_metadata_json";
 
-    public static final String DEFAULT_CASK_ID = "cask_caspian";
+    public static final String DEFAULT_CASK_ID = com.caspian.betac.tabs.TabState.DEFAULT_CASK_ID;
 
     public static boolean isMultiProfileSupported() {
         try {
@@ -285,8 +285,9 @@ public class CaskManager {
 
     public CaskItem getCaskById(String caskId) {
         if (caskId == null) return getActiveCask();
+        String accountSpaceId = com.caspian.betac.tabs.TabState.accountSpaceId(caskId);
         for (CaskItem item : getAllCasks()) {
-            if (item.id.equals(caskId)) return item;
+            if (item.id.equals(accountSpaceId)) return item;
         }
         return getActiveCask();
     }

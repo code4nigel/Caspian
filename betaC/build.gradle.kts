@@ -1,15 +1,5 @@
-buildscript {
-    repositories {
-        google()
-        mavenCentral()
-    }
-    dependencies {
-        classpath("com.android.tools.build:gradle:8.5.2")
-    }
-}
-
 plugins {
-    id("com.android.application") version "8.5.2" apply false
+    id("com.android.application") version "9.4.1" apply false
 }
 
 tasks.register<Delete>("clean") {

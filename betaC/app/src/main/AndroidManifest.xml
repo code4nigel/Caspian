@@ -30,6 +30,12 @@
         android:theme="@style/Theme.CaspianFlow">
 
         <activity
+            android:name=".browser.gecko.FirefoxBrowserActivity"
+            android:configChanges="orientation|screenSize|keyboardHidden|smallestScreenSize|screenLayout|uiMode"
+            android:windowSoftInputMode="adjustResize"
+            android:exported="false" />
+
+        <activity
             android:name=".MainActivity"
             android:configChanges="orientation|screenSize|keyboardHidden|smallestScreenSize|screenLayout|uiMode"
             android:supportsPictureInPicture="true"

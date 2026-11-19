@@ -15,6 +15,7 @@ public class TabStateRepositoryTest {
         t1.nickname = "Search";
         t1.isFavorite = true;
         t1.caskId = "work";
+        t1.lastActivatedAt = 12;
 
         TabState t2 = new TabState(2, "ChatGPT", "https://chatgpt.com", "ai", false);
         t2.isDesktop = true;
@@ -37,6 +38,7 @@ public class TabStateRepositoryTest {
         assertEquals("https://google.com", r1.url);
         assertTrue(r1.isFavorite);
         assertEquals("work", r1.caskId);
+        assertEquals(12, r1.lastActivatedAt);
         assertFalse(r1.isIncognito);
 
         TabState r2 = restored.get(1);
@@ -79,5 +81,14 @@ public class TabStateRepositoryTest {
         assertEquals(1, snapshot.activeTabId);
         assertEquals(-1, snapshot.secondarySplitId);
         assertEquals("file:///android_asset/launch_hub.html", snapshot.tabs.get(0).url);
+        assertEquals(TabState.DEFAULT_CASK_ID, snapshot.tabs.get(0).caskId);
+    }
+
+    @Test
+    public void legacyDefaultProfileBelongsToTheDefaultAccountSpace() {
+        TabState legacy = TabStateRepository.deserializeTabsFromJson("[{\"caskId\":\"default\"}]").get(0);
+        assertEquals("default", legacy.caskId);
+        assertEquals(TabState.DEFAULT_CASK_ID, TabState.accountSpaceId(legacy.caskId));
+        assertEquals("work", TabState.accountSpaceId("work"));
     }
 }

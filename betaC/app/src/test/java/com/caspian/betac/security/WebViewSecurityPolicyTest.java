@@ -3,7 +3,9 @@ package com.caspian.betac.security;
 import org.junit.Test;
 import java.io.File;
 import java.nio.file.Files;
-import java.util.List;
+import java.nio.file.Path;
+import java.util.stream.Collectors;
+import java.util.stream.Stream;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
@@ -36,27 +38,27 @@ public class WebViewSecurityPolicyTest {
 
     @Test
     public void testOnlyControlWebViewHostsJavascriptInterface() throws Exception {
-        // Scans MainActivity.java to enforce that addJavascriptInterface is ONLY called on controlWebView
-        File mainActivityFile = new File("src/main/java/com/caspian/betac/MainActivity.java");
-        if (!mainActivityFile.exists()) {
-            mainActivityFile = new File("app/src/main/java/com/caspian/betac/MainActivity.java");
-        }
-        if (mainActivityFile.exists()) {
-            List<String> lines = Files.readAllLines(mainActivityFile.toPath());
-            Pattern pattern = Pattern.compile("(\\w+)\\.addJavascriptInterface\\(");
-            int occurrences = 0;
-            for (String line : lines) {
-                String trimmed = line.trim();
-                if (trimmed.startsWith("//") || trimmed.startsWith("*")) continue;
-                Matcher matcher = pattern.matcher(line);
-                while (matcher.find()) {
-                    occurrences++;
-                    String receiver = matcher.group(1);
-                    assertEquals("addJavascriptInterface must ONLY be called on controlWebView", "controlWebView", receiver);
+        Path sources = Path.of("src/main/java");
+        if (!Files.isDirectory(sources)) sources = Path.of("app/src/main/java");
+        assertTrue("App source directory must exist", Files.isDirectory(sources));
+        Path control = sources.resolve("com/caspian/betac/browser/BrowserPanels.java");
+        Pattern pattern = Pattern.compile("(\\w+)\\.addJavascriptInterface\\s*\\(");
+        int occurrences = 0;
+        try (Stream<Path> paths = Files.walk(sources)) {
+            for (Path source : paths.filter(path -> path.toString().endsWith(".java")).collect(Collectors.toList())) {
+                for (String line : Files.readAllLines(source)) {
+                    String trimmed = line.trim();
+                    if (trimmed.startsWith("//") || trimmed.startsWith("*")) continue;
+                    Matcher matcher = pattern.matcher(line);
+                    while (matcher.find()) {
+                        occurrences++;
+                        assertEquals("Only the local browser panel may attach a JavaScript interface", control, source);
+                        assertEquals("Only the panel WebView may receive the interface", "web", matcher.group(1));
+                    }
                 }
             }
-            assertEquals("Expected exactly one addJavascriptInterface call across MainActivity", 1, occurrences);
         }
+        assertEquals("Expected exactly one addJavascriptInterface call in the app", 1, occurrences);
     }
 
     @Test

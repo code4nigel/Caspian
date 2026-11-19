@@ -1,0 +1,180 @@
+:root {
+  --browser-background: #10191f;
+  --browser-surface: #19262c;
+  --browser-raised: #24343a;
+  --browser-outline: #3b5156;
+  --browser-text: #ecf8f3;
+  --browser-muted: #a5bdb9;
+  --browser-accent: #8ce3cd;
+}
+
+:root[data-theme="light"] {
+  --browser-background: #edf5f3;
+  --browser-surface: #f8fcfa;
+  --browser-raised: #e6f1ed;
+  --browser-outline: #b9cec7;
+  --browser-text: #192d2a;
+  --browser-muted: #48635e;
+  --browser-accent: #08705e;
+}
+
+#bottom-sheet, #caspian-downloads-modal, .browser-page-header {
+  font-family: system-ui, sans-serif;
+  --text-main: var(--browser-text);
+  --text-muted: var(--browser-muted);
+  --text-sub: var(--browser-muted);
+  --border-glass: var(--browser-outline);
+  --bg-deep: var(--browser-background);
+  --bg-card: var(--browser-surface);
+  --accent: var(--browser-accent);
+  color: var(--browser-text);
+}
+
+#bottom-sheet {
+  border: 1px solid var(--browser-outline);
+  border-radius: 24px;
+  background: var(--browser-surface);
+  box-shadow: 0 12px 34px #0004;
+}
+
+#bottom-sheet .brand-logo-box,
+#bottom-sheet .tab-nav-btn.active {
+  background: var(--browser-raised);
+  color: var(--browser-accent);
+  border-color: var(--browser-outline);
+  box-shadow: none;
+}
+
+#bottom-sheet .brand-logo-box svg { stroke: var(--browser-accent); }
+#bottom-sheet .sheet-brand-name { letter-spacing: 0; text-transform: none; }
+#bottom-sheet .sheet-drag-handle { background: var(--browser-outline); }
+
+#bottom-sheet .m3-card, #bottom-sheet .browser-settings-group {
+  border: 1px solid var(--browser-outline);
+  border-radius: 18px;
+  background: var(--browser-surface);
+  box-shadow: none;
+}
+
+.browser-page-header {
+  position: fixed;
+  inset: 0 0 auto;
+  height: 64px;
+  padding: 8px max(16px, calc((100vw - 680px) / 2));
+  z-index: 1000000;
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  background: var(--browser-surface);
+  border-bottom: 1px solid var(--browser-outline);
+}
+
+.browser-page-header h1 { font-size: 21px; margin: 0; }
+.browser-page-header h1:focus { outline: none; }
+
+.browser-icon-button {
+  width: 44px;
+  height: 44px;
+  border: 1px solid var(--browser-outline);
+  display: inline-grid;
+  place-items: center;
+  border-radius: 14px;
+  background: var(--browser-raised);
+  color: var(--browser-accent);
+  cursor: pointer;
+}
+
+body[data-browser-destination="settings"], body[data-browser-destination="downloads"] {
+  background: var(--browser-background) !important;
+}
+
+body[data-browser-destination="settings"] #bottom-sheet {
+  inset: 64px 0 0 !important;
+    width: 100vw !important;
+  height: auto !important;
+  max-width: none;
+  max-height: none !important;
+  border: 0;
+  border-radius: 0;
+  box-shadow: none;
+  background: var(--browser-background);
+  padding: 16px max(16px, calc((100vw - 680px) / 2)) 32px;
+  backdrop-filter: none;
+  -webkit-backdrop-filter: none;
+    transition: none !important;
+}
+
+body[data-browser-destination="settings"] #bottom-sheet > .sheet-header,
+body[data-browser-destination="settings"] #bottom-sheet > .mobile-tab-nav,
+body[data-browser-destination="settings"] #sheet-drag-area,
+body[data-browser-destination="downloads"] #bottom-sheet,
+.browser-page-header[hidden], #tab-pane-settings [hidden] { display: none !important; }
+
+.browser-settings-group { margin: 16px 0; padding: 5px 14px; }
+.browser-settings-group h2 { font-size: 15px; margin: 10px 0 2px; color: var(--browser-accent); }
+.browser-setting-row {
+  width: 100%;
+  min-height: 54px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 11px 0;
+  border: 0;
+  background: transparent;
+  color: var(--browser-text);
+  font: inherit;
+  text-align: start;
+}
+.browser-setting-row + .browser-setting-row { border-top: 1px solid var(--browser-outline); }
+button.browser-setting-row, label.browser-setting-row { cursor: pointer; }
+.browser-setting-row strong { font-size: 14px; font-weight: 650; }
+.browser-setting-row small { display: block; margin-top: 4px; color: var(--browser-muted); font-size: 12px; line-height: 1.4; }
+.browser-setting-row > span:last-child:not(:first-child) { color: var(--browser-accent); font-size: 24px; }
+.browser-setting-row select {
+  min-height: 40px;
+  max-width: 42%;
+  background: var(--browser-raised);
+  color: var(--browser-text);
+  border: 1px solid var(--browser-outline);
+  border-radius: 10px;
+  padding: 0 8px;
+}
+.browser-setting-row input[type="checkbox"] { width: 22px; height: 22px; flex-shrink: 0; accent-color: var(--browser-accent); }
+#tab-pane-settings .settings-shortcut { padding: 11px 14px; border: 1px solid var(--browser-outline); background: var(--browser-surface); border-radius: 18px; }
+#tab-pane-settings .settings-search input { background: var(--browser-surface); color: var(--browser-text); }
+
+body[data-browser-destination="downloads"] #caspian-downloads-modal {
+  inset: 64px 0 0 !important;
+  padding: 16px max(16px, calc((100vw - 680px) / 2)) 20px !important;
+  background: var(--browser-background) !important;
+  backdrop-filter: none !important;
+  z-index: 999999 !important;
+}
+
+body[data-browser-destination="downloads"] #caspian-downloads-modal .modal-card {
+  max-width: none !important;
+  height: 100%;
+  max-height: none !important;
+  animation: none !important;
+  padding: 14px !important;
+  border-radius: 18px !important;
+  box-shadow: none !important;
+}
+body[data-browser-destination="downloads"] #downloads-tab-content { max-height: none !important; }
+.browser-download-summary { margin: 0 0 12px; color: var(--browser-muted); font-size: 13px; }
+.browser-download-summary:empty { display: none; }
+
+.browser-reduce-motion #bottom-sheet *, .browser-reduce-motion #caspian-downloads-modal * {
+  animation-duration: 0s !important;
+  transition-duration: 0s !important;
+  scroll-behavior: auto !important;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  #bottom-sheet *, #caspian-downloads-modal * {
+    animation-duration: 0s !important;
+    transition-duration: 0s !important;
+    scroll-behavior: auto !important;
+  }
+}

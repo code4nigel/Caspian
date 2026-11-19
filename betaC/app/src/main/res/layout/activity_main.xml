@@ -552,6 +552,20 @@
                             android:visibility="gone"
                             android:contentDescription="Shrink URL Bar" />
 
+                        <TextView
+                            android:id="@+id/omnibox_cask_label"
+                            android:layout_width="wrap_content"
+                            android:layout_height="match_parent"
+                            android:maxWidth="64dp"
+                            android:layout_marginEnd="4dp"
+                            android:gravity="center_vertical"
+                            android:textColor="@color/caspian_text_secondary"
+                            android:textSize="10sp"
+                            android:textStyle="bold"
+                            android:singleLine="true"
+                            android:ellipsize="end"
+                            android:visibility="gone" />
+
                         <!-- Voice Dictation Button -->
                         <ImageButton
                             android:id="@+id/omnibox_voice_btn"
@@ -799,22 +813,7 @@
                             android:textSize="13sp"
                             android:singleLine="true" />
 
-                        <TextView
-                            android:id="@+id/btn_tab_grid_undo"
-                            android:layout_width="wrap_content"
-                            android:layout_height="28dp"
-                            android:layout_marginStart="6dp"
-                            android:paddingStart="10dp"
-                            android:paddingEnd="10dp"
-                            android:gravity="center"
-                            android:text="↩ Undo"
-                            android:textColor="@color/caspian_accent_cyan"
-                            android:textSize="11.5sp"
-                            android:textStyle="bold"
-                            android:background="@drawable/bg_liquid_glass_pill"
-                            android:clickable="true"
-                            android:focusable="true"
-                            android:visibility="gone" />
+
                     </LinearLayout>
 
                     <!-- Multi-Select Action Pills Overlay (Floating cleanly over right side of search bar) -->
@@ -1077,6 +1076,24 @@
             </com.caspian.betac.RecentsHorizontalScrollView>
         </LinearLayout>
 
+        <TextView
+            android:id="@+id/btn_tab_grid_undo"
+            android:layout_width="wrap_content"
+            android:layout_height="48dp"
+            android:layout_gravity="bottom|center_horizontal"
+            android:layout_marginBottom="92dp"
+            android:minWidth="108dp"
+            android:gravity="center"
+            android:text="Undo close"
+            android:textColor="@color/caspian_accent_cyan"
+            android:textSize="13sp"
+            android:textStyle="bold"
+            android:background="@drawable/bg_liquid_glass_pill"
+            android:clickable="true"
+            android:focusable="true"
+            android:elevation="65dp"
+            android:visibility="gone" />
+
         <!-- Bottom Tab Dock Row: [New Tab (+)] [Capsule: Group | Dial | Select] [Close (✕)] -->
         <LinearLayout
             android:id="@+id/tab_grid_bottom_bar_row"
@@ -1180,6 +1197,19 @@
                     android:clickable="true"
                     android:focusable="true" />
             </LinearLayout>
+
+            <ImageButton
+                android:id="@+id/btn_tab_dock_previous"
+                android:layout_width="48dp"
+                android:layout_height="48dp"
+                android:layout_marginStart="8dp"
+                android:background="@drawable/bg_liquid_glass_ball"
+                android:padding="13dp"
+                android:scaleType="fitCenter"
+                android:src="@drawable/ic_browser_split"
+                android:tint="@color/caspian_text_primary"
+                android:contentDescription="Switch to previous tab"
+                android:visibility="gone" />
 
             <!-- 3. Bottom Right: New Tab Button (+) -->
             <FrameLayout
@@ -2675,7 +2705,7 @@
             <LinearLayout
                 android:id="@+id/caspian_pill_center"
                 android:layout_width="0dp"
-                android:layout_height="34dp"
+                android:layout_height="48dp"
                 android:layout_weight="1"
                 android:orientation="horizontal"
                 android:gravity="center"
@@ -2697,17 +2727,36 @@
                     android:visibility="gone"
                     android:contentDescription="SSL" />
 
-                <TextView
-                    android:id="@+id/caspian_pill_host"
-                    android:layout_width="wrap_content"
+                <LinearLayout
+                    android:layout_width="0dp"
+                    android:layout_weight="1"
                     android:layout_height="wrap_content"
-                    android:gravity="center"
-                    android:text="caspian"
-                    android:textColor="#FFFFFF"
-                    android:textSize="13sp"
-                    android:textStyle="bold"
-                    android:singleLine="true"
-                    android:ellipsize="end" />
+                    android:orientation="vertical"
+                    android:gravity="center">
+
+                    <TextView
+                        android:id="@+id/caspian_pill_host"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:gravity="center"
+                        android:textColor="@color/caspian_text_primary"
+                        android:textSize="13sp"
+                        android:textStyle="bold"
+                        android:includeFontPadding="false"
+                        android:singleLine="true"
+                        android:ellipsize="end" />
+
+                    <TextView
+                        android:id="@+id/caspian_pill_cask_label"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:gravity="center"
+                        android:textColor="@color/caspian_text_secondary"
+                        android:textSize="10sp"
+                        android:includeFontPadding="false"
+                        android:singleLine="true"
+                        android:ellipsize="end" />
+                </LinearLayout>
             </LinearLayout>
 
             <!-- Quick New Tab Button (Right side of URL) -->
@@ -2806,21 +2855,5 @@
 
     <!-- 15. Horizon Peek Glass Modal -->
     <include layout="@layout/dialog_horizon_peek" />
-
-    <!-- 9. Caspian BetaA Video Splash Screen Overlay (Top-most z-order) -->
-    <FrameLayout
-        android:id="@+id/splash_overlay"
-        android:layout_width="match_parent"
-        android:layout_height="match_parent"
-        android:background="@color/caspian_surface_void"
-        android:elevation="1200dp"
-        android:visibility="visible">
-
-        <TextureView
-            android:id="@+id/splash_textureview"
-            android:layout_width="match_parent"
-            android:layout_height="match_parent"
-            android:layout_gravity="center" />
-    </FrameLayout>
 
 </FrameLayout>

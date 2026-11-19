@@ -12,10 +12,8 @@ import android.graphics.Paint;
 import android.graphics.Path;
 import android.graphics.PorterDuff;
 import android.graphics.PorterDuffXfermode;
-import android.graphics.RadialGradient;
 import android.graphics.Rect;
 import android.graphics.RectF;
-import android.graphics.Shader;
 import android.graphics.Typeface;
 import android.util.Base64;
 import android.util.LruCache;
@@ -24,23 +22,39 @@ import android.view.View;
 import android.view.ViewGroup;
 import android.view.animation.OvershootInterpolator;
 
+import com.caspian.betac.browser.BrowserChrome;
+
 import java.io.InputStream;
 import java.net.HttpURLConnection;
 import java.net.URL;
 import java.util.ArrayList;
 import java.util.List;
 
-/**
- * CabRadialMenuView - Vertical Left-Side Semicircular "Outer Space Liquid Glass" Radial Planetarium
- * 
- * Specifically optimized for Caspian Action Button (CAB) docked at bottom-right corner:
- * - Vertical left-side semicircle (90° to 270°): 100% of controls are in open screen space to the left of CAB.
- * - Zero items to the right: Drift mic and Whirlpool never go off-screen.
- * - Celestial Planetary Orbit: Shortcuts look like luminous planets orbiting the core star (CAB) with atmospheric coronas and planetary rings.
- * - Outer Space Liquid Glass: Cosmic obsidian glass with nebula gradient, specular starlight rim, and radiant Caspian Cyan (#22D3EE) accents.
- * - Dynamic shortcut sync with Hub and integrated "⚙️ Configure Orbit" manager.
- */
+/** Hold-and-slide shortcuts around the browser Pod. */
 public class CabRadialMenuView extends View {
+    private BrowserChrome chrome = new BrowserChrome(true);
+    private boolean motion = true;
+    private boolean opensRight;
+    private float displayScale = 1f;
+
+    public void setPresentation(BrowserChrome chrome, boolean motion) {
+        this.chrome = chrome;
+        this.motion = motion;
+        dialBorderPaint.setColor(chrome.outline);
+        dialGlowPaint.setColor(androidx.core.graphics.ColorUtils.setAlphaComponent(chrome.accent, 24));
+        chordLinePaint.setColor(chrome.outline);
+        orbitalTrackPaint.setColor(chrome.outline);
+        sectorHighlightPaint.setColor(chrome.raised);
+        sectorBorderPaint.setColor(chrome.accent);
+        dividerLinePaint.setColor(chrome.outline);
+        reticleRingPaint.setColor(chrome.outline);
+        reticleDotPaint.setColor(chrome.accent);
+        planetRingPaint.setColor(chrome.outline);
+        tooltipBgPaint.setColor(chrome.surface);
+        tooltipBorderPaint.setColor(chrome.outline);
+        tooltipTextPaint.setColor(chrome.text);
+        subTextPaint.setColor(chrome.muted);
+    }
 
     public interface OnRadialActionSelectedListener {
         void onActionSelected(int action);
@@ -188,7 +202,6 @@ public class CabRadialMenuView extends View {
     private final Paint reticleDotPaint = new Paint(Paint.ANTI_ALIAS_FLAG);
 
     // Planet Paints
-    private final Paint planetAtmospherePaint = new Paint(Paint.ANTI_ALIAS_FLAG);
     private final Paint planetSpherePaint = new Paint(Paint.ANTI_ALIAS_FLAG);
     private final Paint planetRingPaint = new Paint(Paint.ANTI_ALIAS_FLAG);
     private final Paint planetHighlightPaint = new Paint(Paint.ANTI_ALIAS_FLAG);
@@ -272,7 +285,6 @@ public class CabRadialMenuView extends View {
         reticleDotPaint.setColor(Color.parseColor("#22D3EE"));
 
         // 4. Celestial Planets Paints
-        planetAtmospherePaint.setStyle(Paint.Style.FILL);
         planetSpherePaint.setStyle(Paint.Style.FILL);
 
         planetRingPaint.setStyle(Paint.Style.STROKE);
@@ -383,6 +395,14 @@ public class CabRadialMenuView extends View {
     }
 
     public void showAt(float cx, float cy, ViewGroup parent) {
+        opensRight = parent != null && cx < parent.getWidth() / 2f;
+        float outer = outerOrbitRadius + 24f * density;
+        if (parent != null && parent.getHeight() > 0 && parent.getWidth() > 0) {
+            displayScale = Math.min(1f, Math.min(parent.getHeight() / (outer * 2f),
+                    parent.getWidth() / (outer * 1.65f)));
+            float inset = outer * displayScale;
+            cy = Math.max(inset, Math.min(parent.getHeight() - inset, cy));
+        }
         this.centerX = cx;
         this.centerY = cy;
         this.selectedAction = ACTION_NONE;
@@ -398,7 +418,13 @@ public class CabRadialMenuView extends View {
             setElevation(300f);
         }
 
-        ValueAnimator animator = ValueAnimator.ofFloat(0f, 1f);
+        if (!motion) {
+            animScale = 1f;
+            invalidate();
+            performHapticFeedback(HapticFeedbackConstants.LONG_PRESS);
+            return;
+        }
+        ValueAnimator animator = ValueAnimator.ofFloat(.75f, 1f);
         animator.setDuration(220);
         animator.setInterpolator(new OvershootInterpolator(1.2f));
         animator.addUpdateListener(animation -> {
@@ -410,8 +436,8 @@ public class CabRadialMenuView extends View {
     }
 
     public void updateTouch(float touchX, float touchY) {
-        float dx = touchX - centerX;
-        float dy = touchY - centerY;
+        float dx = (opensRight ? centerX - touchX : touchX - centerX) / displayScale;
+        float dy = (touchY - centerY) / displayScale;
         float dist = (float) Math.hypot(dx, dy);
 
         int newAction = ACTION_NONE;
@@ -468,35 +494,37 @@ public class CabRadialMenuView extends View {
         final int finalAction = selectedAction;
         final int finalShortcut = selectedShortcutIndex;
 
+        if (!motion) {
+            dispatchSelection(listener, finalAction, finalShortcut);
+            return;
+        }
         ValueAnimator animator = ValueAnimator.ofFloat(animScale, 0f);
-        animator.setDuration(160);
+        animator.setDuration(130);
         animator.addUpdateListener(animation -> {
             animScale = (float) animation.getAnimatedValue();
             invalidate();
         });
         animator.addListener(new AnimatorListenerAdapter() {
-            @Override
-            public void onAnimationEnd(Animator animation) {
-                dismiss();
-                if (listener != null) {
-                    if (finalShortcut >= 0 && finalShortcut < shortcutsList.size()) {
-                        ShortcutItem item = shortcutsList.get(finalShortcut);
-                        if (item.isConfigureOrbit) {
-                            listener.onActionSelected(ACTION_CONFIGURE_ORBIT);
-                        } else if (item.isTabsOverview) {
-                            listener.onActionSelected(ACTION_TABS_OVERVIEW);
-                        } else {
-                            listener.onShortcutSelected(item.title, item.url);
-                        }
-                    } else if (finalAction != ACTION_NONE) {
-                        listener.onActionSelected(finalAction);
-                    } else {
-                        listener.onCancelled();
-                    }
-                }
+            @Override public void onAnimationEnd(Animator animation) {
+                dispatchSelection(listener, finalAction, finalShortcut);
             }
         });
         animator.start();
+    }
+
+    private void dispatchSelection(OnRadialActionSelectedListener listener, int action, int shortcut) {
+        dismiss();
+        if (listener == null) return;
+        if (shortcut >= 0 && shortcut < shortcutsList.size()) {
+            ShortcutItem item = shortcutsList.get(shortcut);
+            if (item.isConfigureOrbit) listener.onActionSelected(ACTION_CONFIGURE_ORBIT);
+            else if (item.isTabsOverview) listener.onActionSelected(ACTION_TABS_OVERVIEW);
+            else listener.onShortcutSelected(item.title, item.url);
+        } else if (action != ACTION_NONE) {
+            listener.onActionSelected(action);
+        } else {
+            listener.onCancelled();
+        }
     }
 
     public void dismiss() {
@@ -511,7 +539,7 @@ public class CabRadialMenuView extends View {
         if (animScale <= 0.01f) return;
 
         canvas.save();
-        canvas.scale(animScale, animScale, centerX, centerY);
+        canvas.scale((opensRight ? -1f : 1f) * animScale * displayScale, animScale * displayScale, centerX, centerY);
 
         float rOuter = actionOuterRadius;
         float rInner = actionInnerRadius;
@@ -523,18 +551,8 @@ public class CabRadialMenuView extends View {
         outerOrbitRect.set(centerX - outerOrbitRadius, centerY - outerOrbitRadius,
                 centerX + outerOrbitRadius, centerY + outerOrbitRadius);
 
-        // 1. Cosmic Outer Space Liquid Glass Semicircle (90° to 270°, Sweeping Strictly Left)
-        RadialGradient cosmicGradient = new RadialGradient(
-                centerX, centerY, rOuter,
-                new int[] {
-                        Color.parseColor("#EE050811"), // Deep space void
-                        Color.parseColor("#F00A1526"), // Celestial cyan nebula dust
-                        Color.parseColor("#FA03060C")  // Luminous starlight edge
-                },
-                new float[] { 0f, 0.6f, 1.0f },
-                Shader.TileMode.CLAMP
-        );
-        dialBgPaint.setShader(cosmicGradient);
+        dialBgPaint.setShader(null);
+        dialBgPaint.setColor(chrome.surface);
 
         semicircularPath.reset();
         semicircularPath.arcTo(outerDialRect, 90f, 180f);
@@ -589,8 +607,8 @@ public class CabRadialMenuView extends View {
             float iconY = centerY + iconDist * (float) Math.sin(midRad);
 
             actionIconPaint.setTextSize((isSelected ? 20f : 16f) * density);
-            actionIconPaint.setColor(isSelected ? Color.parseColor("#22D3EE") : Color.WHITE);
-            canvas.drawText(INNER_ACTION_ICONS[i], iconX, iconY + 5.5f * density, actionIconPaint);
+            actionIconPaint.setColor(isSelected ? chrome.accent : chrome.text);
+            drawLabel(canvas, INNER_ACTION_ICONS[i], iconX, iconY + 5.5f * density, actionIconPaint);
 
             if (isSelected) {
                 // Floating cosmic tooltip pill next to active sector
@@ -604,7 +622,7 @@ public class CabRadialMenuView extends View {
                         labelX + textW / 2f + 10f * density, labelY + 6f * density);
                 canvas.drawRoundRect(tooltipRect, 10f * density, 10f * density, tooltipBgPaint);
                 canvas.drawRoundRect(tooltipRect, 10f * density, 10f * density, tooltipBorderPaint);
-                canvas.drawText(labelText, labelX, labelY, tooltipTextPaint);
+                drawLabel(canvas, labelText, labelX, labelY, tooltipTextPaint);
             }
         }
 
@@ -625,28 +643,12 @@ public class CabRadialMenuView extends View {
                 float px = centerX + outerOrbitRadius * (float) Math.cos(pRad);
                 float py = centerY + outerOrbitRadius * (float) Math.sin(pRad);
 
-                // a) Atmospheric Corona Glow
-                planetAtmospherePaint.setColor(isSelected ? Color.parseColor("#4422D3EE") : Color.parseColor("#2022D3EE"));
-                canvas.drawCircle(px, py, curPlanetRadius + 5f * density, planetAtmospherePaint);
-
-                // b) 3D Spherical Planet Body
-                RadialGradient sphereGradient = new RadialGradient(
-                        px - curPlanetRadius * 0.35f,
-                        py - curPlanetRadius * 0.35f,
-                        curPlanetRadius * 1.4f,
-                        new int[] {
-                                isSelected ? Color.parseColor("#2A374A") : Color.parseColor("#1E293B"),
-                                Color.parseColor("#0F172A"),
-                                Color.parseColor("#050811")
-                        },
-                        new float[] { 0f, 0.6f, 1f },
-                        Shader.TileMode.CLAMP
-                );
-                planetSpherePaint.setShader(sphereGradient);
+                planetSpherePaint.setShader(null);
+                planetSpherePaint.setColor(isSelected ? chrome.raised : chrome.surface);
                 canvas.drawCircle(px, py, curPlanetRadius, planetSpherePaint);
 
                 // c) Specular Planet Rim & Planetary Ring
-                planetHighlightPaint.setColor(isSelected ? Color.parseColor("#22D3EE") : Color.parseColor("#44FFFFFF"));
+                planetHighlightPaint.setColor(isSelected ? chrome.accent : chrome.outline);
                 planetHighlightPaint.setStrokeWidth(isSelected ? 2.2f * density : 1.4f * density);
                 canvas.drawCircle(px, py, curPlanetRadius, planetHighlightPaint);
 
@@ -656,25 +658,28 @@ public class CabRadialMenuView extends View {
                 // d) Planetary Core Content
                 if (item.isConfigureOrbit) {
                     actionIconPaint.setTextSize(14f * density);
-                    actionIconPaint.setColor(isSelected ? Color.parseColor("#22D3EE") : Color.WHITE);
-                    canvas.drawText("⚙️", px, py + 4.5f * density, actionIconPaint);
+                    actionIconPaint.setColor(isSelected ? chrome.accent : chrome.text);
+                    drawLabel(canvas, "⚙️", px, py + 4.5f * density, actionIconPaint);
                 } else if (item.isTabsOverview) {
                     actionIconPaint.setTextSize(12f * density);
-                    actionIconPaint.setColor(Color.parseColor("#22D3EE"));
-                    canvas.drawText("🪐", px, py - 2f * density, actionIconPaint);
+                    actionIconPaint.setColor(chrome.accent);
+                    drawLabel(canvas, "🪐", px, py - 2f * density, actionIconPaint);
 
                     actionLabelPaint.setTextSize(10f * density);
-                    actionLabelPaint.setColor(Color.WHITE);
-                    canvas.drawText(String.valueOf(item.tabCount), px, py + 9f * density, actionLabelPaint);
+                    actionLabelPaint.setColor(chrome.text);
+                    drawLabel(canvas, String.valueOf(item.tabCount), px, py + 9f * density, actionLabelPaint);
                 } else if (item.bitmap != null) {
                     float bw = item.bitmap.getWidth();
                     float bh = item.bitmap.getHeight();
+                    canvas.save();
+                    if (opensRight) canvas.scale(-1f, 1f, px, py);
                     canvas.drawBitmap(item.bitmap, px - bw / 2f, py - bh / 2f, bitmapPaint);
+                    canvas.restore();
                 } else {
                     String glyph = item.getFallbackDisplayGlyph();
                     actionIconPaint.setTextSize((isSelected ? 17f : 14.5f) * density);
-                    actionIconPaint.setColor(isSelected ? Color.parseColor("#22D3EE") : Color.WHITE);
-                    canvas.drawText(glyph, px, py + 5f * density, actionIconPaint);
+                    actionIconPaint.setColor(isSelected ? chrome.accent : chrome.text);
+                    drawLabel(canvas, glyph, px, py + 5f * density, actionIconPaint);
                 }
 
                 // e) Floating Cosmic Tooltip Pill
@@ -687,7 +692,7 @@ public class CabRadialMenuView extends View {
                             px + tw / 2f + 10f * density, tipY + 6f * density);
                     canvas.drawRoundRect(tooltipRect, 10f * density, 10f * density, tooltipBgPaint);
                     canvas.drawRoundRect(tooltipRect, 10f * density, 10f * density, tooltipBorderPaint);
-                    canvas.drawText(titleText, px, tipY, tooltipTextPaint);
+                    drawLabel(canvas, titleText, px, tipY, tooltipTextPaint);
                 }
             }
         }
@@ -699,10 +704,18 @@ public class CabRadialMenuView extends View {
         canvas.drawCircle(centerX, centerY, 5f * density, reticleDotPaint);
 
         if (selectedAction == ACTION_NONE && selectedShortcutIndex == -1) {
-            canvas.drawText("Release to", centerX - 18f * density, centerY - 8f * density, subTextPaint);
-            canvas.drawText("Cancel", centerX - 18f * density, centerY + 4f * density, subTextPaint);
+            drawLabel(canvas, "Release to", centerX - 18f * density, centerY - 8f * density, subTextPaint);
+            drawLabel(canvas, "Cancel", centerX - 18f * density, centerY + 4f * density, subTextPaint);
         }
 
         canvas.restore();
     }
+
+    private void drawLabel(Canvas canvas, String label, float x, float y, Paint paint) {
+        canvas.save();
+        if (opensRight) canvas.scale(-1f, 1f, x, y);
+        canvas.drawText(label, x, y, paint);
+        canvas.restore();
+    }
+
 }

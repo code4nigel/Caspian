@@ -1,0 +1,61 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:id="@+id/firefox_root"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:orientation="vertical">
+
+    <LinearLayout
+        android:id="@+id/firefox_header"
+        android:layout_width="match_parent"
+        android:layout_height="56dp"
+        android:gravity="center_vertical"
+        android:paddingStart="8dp"
+        android:paddingEnd="12dp">
+
+        <ImageButton android:id="@+id/firefox_exit" android:layout_width="48dp" android:layout_height="48dp"
+            android:src="@drawable/ic_pod_back" android:background="?android:attr/selectableItemBackgroundBorderless"
+            android:contentDescription="Return to Android WebView" />
+
+        <TextView android:id="@+id/firefox_title" android:layout_width="0dp" android:layout_height="wrap_content"
+            android:layout_weight="1" android:text="Firefox engine" android:textSize="20sp" android:textStyle="bold" />
+    </LinearLayout>
+
+    <FrameLayout android:layout_width="match_parent" android:layout_height="0dp" android:layout_weight="1">
+        <org.mozilla.geckoview.GeckoView android:id="@+id/firefox_renderer"
+            android:layout_width="match_parent" android:layout_height="match_parent" />
+
+        <TextView android:id="@+id/firefox_empty" android:layout_width="wrap_content" android:layout_height="wrap_content"
+            android:layout_gravity="center" android:padding="24dp" android:text="Search or enter an address"
+            android:textSize="18sp" />
+    </FrameLayout>
+
+    <ProgressBar android:id="@+id/firefox_progress" style="?android:attr/progressBarStyleHorizontal"
+        android:layout_width="match_parent" android:layout_height="3dp" android:max="100" android:visibility="invisible" />
+
+    <LinearLayout android:id="@+id/firefox_rail" android:layout_width="match_parent" android:layout_height="wrap_content"
+        android:orientation="vertical" android:padding="8dp" android:focusableInTouchMode="true">
+
+        <EditText android:id="@+id/firefox_address" android:layout_width="match_parent" android:layout_height="48dp"
+            android:paddingStart="14dp" android:paddingEnd="14dp" android:textSize="15sp" android:singleLine="true"
+            android:inputType="textUri" android:imeOptions="actionGo" android:hint="Search or enter address" />
+
+        <LinearLayout android:layout_width="match_parent" android:layout_height="48dp" android:gravity="center">
+            <ImageButton android:id="@+id/firefox_back" android:layout_width="48dp" android:layout_height="48dp"
+                android:src="@drawable/ic_pod_back" android:background="?android:attr/selectableItemBackgroundBorderless"
+                android:contentDescription="Previous page" />
+            <ImageButton android:id="@+id/firefox_forward" android:layout_width="48dp" android:layout_height="48dp"
+                android:src="@drawable/ic_pod_fwd" android:background="?android:attr/selectableItemBackgroundBorderless"
+                android:contentDescription="Next page" />
+            <ImageButton android:id="@+id/firefox_reload" android:layout_width="48dp" android:layout_height="48dp"
+                android:src="@drawable/ic_pod_reload" android:background="?android:attr/selectableItemBackgroundBorderless"
+                android:contentDescription="Reload" />
+            <Button android:id="@+id/firefox_tabs" android:layout_width="wrap_content" android:minWidth="48dp"
+                android:layout_height="48dp" android:background="?android:attr/selectableItemBackgroundBorderless"
+                android:text="1" android:contentDescription="Firefox tabs" />
+            <ImageButton android:id="@+id/firefox_new_tab" android:layout_width="48dp" android:layout_height="48dp"
+                android:src="@android:drawable/ic_input_add" android:background="?android:attr/selectableItemBackgroundBorderless"
+                android:contentDescription="New Firefox tab" />
+        </LinearLayout>
+    </LinearLayout>
+</LinearLayout>

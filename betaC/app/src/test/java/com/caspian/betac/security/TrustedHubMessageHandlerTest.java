@@ -15,6 +15,7 @@ public class TrustedHubMessageHandlerTest {
     private final AtomicReference<String> lastSound = new AtomicReference<>("");
     private final AtomicReference<String> lastWallpaper = new AtomicReference<>("");
     private final AtomicReference<String> lastCask = new AtomicReference<>("");
+    private final AtomicReference<Integer> resumedTab = new AtomicReference<>();
 
     private final TrustedHubMessageHandler.HubActionCallback callback = new TrustedHubMessageHandler.HubActionCallback() {
         @Override
@@ -55,6 +56,16 @@ public class TrustedHubMessageHandlerTest {
         public void onSwitchCask(String caskId) {
             lastCask.set(caskId);
         }
+
+        @Override
+        public String onGetRecentTabs() {
+            return "{\"type\":\"recentTabs\",\"tabs\":[]}";
+        }
+
+        @Override
+        public void onResumeTab(int tabId) {
+            resumedTab.set(tabId);
+        }
     };
 
     private TrustedHubMessageHandler handler;
@@ -67,6 +78,7 @@ public class TrustedHubMessageHandlerTest {
         lastSound.set("");
         lastWallpaper.set("");
         lastCask.set("");
+        resumedTab.set(null);
         handler = new TrustedHubMessageHandler(callback);
     }
 
@@ -236,5 +248,29 @@ public class TrustedHubMessageHandlerTest {
         boolean handled = handler.handleMessage("file:///android_asset/launch_hub.html", msg, "file://", true);
         assertTrue("Message is processed, but payload rejected", handled);
         assertEquals("", lastUrl.get());
+    }
+
+    @Test
+    public void recentTabsReplyOnlyReachesTheMainRegularHub() {
+        String request = "{\"action\":\"getRecentTabs\"}";
+        AtomicReference<String> response = new AtomicReference<>();
+        handler.handleMessage(OriginVerifier.LAUNCH_HUB_URL, request, "file://", false, response::set);
+        handler.handleMessage(OriginVerifier.LAUNCH_HUB_URL, request, "https://example.com", true, response::set);
+        handler.handleMessage(OriginVerifier.INCOGNITO_HUB_URL, request, "file://", true, response::set);
+        assertNull(response.get());
+
+        assertTrue(handler.handleMessage(OriginVerifier.LAUNCH_HUB_URL, request, "file://", true, response::set));
+        assertEquals("{\"type\":\"recentTabs\",\"tabs\":[]}", response.get());
+    }
+
+    @Test
+    public void resumeRequiresARegularHubAndValidTabId() {
+        String request = "{\"action\":\"resumeTab\",\"tabId\":12}";
+        handler.handleMessage(OriginVerifier.INCOGNITO_HUB_URL, request, "file://", true);
+        handler.handleMessage(OriginVerifier.LAUNCH_HUB_URL, "{\"action\":\"resumeTab\"}", "file://", true);
+        assertNull(resumedTab.get());
+
+        assertTrue(handler.handleMessage(OriginVerifier.LAUNCH_HUB_URL, request, "file://", true));
+        assertEquals(Integer.valueOf(12), resumedTab.get());
     }
 }

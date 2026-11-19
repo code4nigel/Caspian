@@ -38,6 +38,70 @@
   --label-font-size: 11px;
 }
 
+#tab-pane-settings > [hidden] { display: none !important; }
+
+.settings-search {
+  display: grid;
+  gap: 7px;
+  margin-bottom: 12px;
+  color: var(--text-main);
+  font-size: 13px;
+  font-weight: 600;
+}
+
+.settings-search input {
+  appearance: none;
+  box-sizing: border-box;
+  min-height: 48px;
+  width: 100%;
+  padding: 0 14px;
+  border: 1px solid var(--border-glass);
+  border-radius: 14px;
+  background: var(--bg-card);
+  color: var(--text-main);
+  font: inherit;
+}
+
+.settings-search input::placeholder { color: var(--text-sub); }
+
+#settings-search-empty { color: var(--text-sub); }
+#card-chat-limit { scroll-margin-top: 56px; }
+
+.settings-shortcut, .chat-limit-tuning {
+  display: grid;
+  gap: 4px;
+  box-sizing: border-box;
+  width: 100%;
+  min-height: 48px;
+  margin: 0 0 12px;
+  padding: 10px 14px;
+  color: var(--text-main);
+  background: var(--bg-card);
+  border: 1px solid var(--border-glass);
+  border-radius: 14px;
+  text-align: start;
+  font: inherit;
+  cursor: pointer;
+}
+
+.settings-shortcut span { color: var(--text-sub); font-size: 12px; }
+
+.chat-limit-tuning {
+  width: auto;
+  margin: 6px 0 0;
+  padding-inline: 10px;
+  color: var(--text-sub);
+  background: transparent;
+  border: 0;
+  align-items: center;
+  font-size: 12px;
+}
+
+.settings-search :focus-visible, .settings-shortcut:focus-visible, .chat-limit-tuning:focus-visible {
+  outline: 2px solid var(--caspian-cyan);
+  outline-offset: 2px;
+}
+
 [data-density="compact"] {
   --ui-density-scale: 0.88;
   --card-padding-v: 7px;
@@ -742,6 +806,24 @@ body {
   border: 1px solid rgba(15, 23, 42, 0.08) !important;
   border-top: 1.5px solid rgba(255, 255, 255, 0.95) !important;
   box-shadow: 0 6px 20px rgba(15, 23, 42, 0.06), inset 0 1px 0 rgba(255, 255, 255, 0.8) !important;
+}
+
+#tab-pane-settings > .m3-card,
+#tab-pane-sites .chrome-tab-card:not(.active) {
+  background: var(--bg-card) !important;
+  border: 1px solid var(--border-glass) !important;
+  border-radius: 16px;
+  box-shadow: none !important;
+  backdrop-filter: none;
+  -webkit-backdrop-filter: none;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after {
+    animation-duration: 0.01ms !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
 }
 
 .engine-card {

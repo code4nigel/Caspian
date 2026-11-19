@@ -116,14 +116,13 @@
     localStorage.setItem('chat_pruning_mode', mode);
 
     const statusDot = document.getElementById('status-dot');
-    const statusTitle = document.getElementById('status-title');
     const toggleBtn = document.getElementById('toggle-chat-limit-btn');
     const activeBadge = document.getElementById('active-limit-badge');
 
     if (statusDot) statusDot.classList.toggle('active', enabled);
-    if (statusTitle) statusTitle.textContent = enabled ? 'Chat Message Limit: ON' : 'Chat Message Limit: OFF';
     if (toggleBtn) {
       toggleBtn.textContent = enabled ? 'ON' : 'OFF';
+      toggleBtn.setAttribute('aria-pressed', String(enabled));
       toggleBtn.className = enabled ? 'oneui-pill-btn primary' : 'oneui-pill-btn secondary';
     }
     if (activeBadge) {
@@ -1501,12 +1500,11 @@
           const limitEnabled = prefs.chat_limit_enabled !== undefined ? (prefs.chat_limit_enabled === true || prefs.chat_limit_enabled === 'true') : (localStorage.getItem('chat_limit_enabled') === 'true');
           globalActive = limitEnabled;
           const statusDot = document.getElementById('status-dot');
-          const statusTitle = document.getElementById('status-title');
           const toggleLimitBtn = document.getElementById('toggle-chat-limit-btn');
           if (statusDot) statusDot.classList.toggle('active', limitEnabled);
-          if (statusTitle) statusTitle.textContent = limitEnabled ? 'Chat Message Limit: ON' : 'Chat Message Limit: OFF';
           if (toggleLimitBtn) {
             toggleLimitBtn.textContent = limitEnabled ? 'ON' : 'OFF';
+            toggleLimitBtn.setAttribute('aria-pressed', String(limitEnabled));
             toggleLimitBtn.className = limitEnabled ? 'oneui-pill-btn primary' : 'oneui-pill-btn secondary';
           }
 
@@ -2530,9 +2528,7 @@
   const omniboxPosTop = document.getElementById('omnibox-pos-top');
   const omniboxPosBottom = document.getElementById('omnibox-pos-bottom');
   const omniboxModeApplePie = document.getElementById('omnibox-mode-applepie');
-  const omniboxModeOverlay = document.getElementById('omnibox-mode-overlay');
   const omniboxModeSeparate = document.getElementById('omnibox-mode-separate');
-  const omniboxModeOrb = document.getElementById('omnibox-mode-orb');
   const menuStyleList = document.getElementById('menu-style-list');
   const menuStyleGrid = document.getElementById('menu-style-grid');
   const tabViewNormal = document.getElementById('tab-view-normal');
@@ -2540,7 +2536,7 @@
 
   function updateOmniboxCustomizationUI() {
     let currentPos = 'top';
-    let currentScrollMode = 'overlay';
+    let currentScrollMode = 'applepie';
     let currentStyle = 'grid';
     let currentTabView = 'normal';
 
@@ -2551,9 +2547,9 @@
     }
 
     if (window.CaspianBridge && typeof window.CaspianBridge.getOmniboxScrollMode === 'function') {
-      try { currentScrollMode = window.CaspianBridge.getOmniboxScrollMode() || 'overlay'; } catch (e) {}
+      try { currentScrollMode = window.CaspianBridge.getOmniboxScrollMode() || 'applepie'; } catch (e) {}
     } else {
-      currentScrollMode = localStorage.getItem('omnibox_scroll_mode') || 'overlay';
+      currentScrollMode = localStorage.getItem('omnibox_scroll_mode') || 'applepie';
     }
 
     if (window.CaspianBridge && typeof window.CaspianBridge.getOmniboxMenuStyle === 'function') {
@@ -2568,17 +2564,23 @@
       currentTabView = localStorage.getItem('tab_switcher_view_style') || 'normal';
     }
 
-    if (omniboxPosTop) omniboxPosTop.classList.toggle('active', currentPos === 'top');
-    if (omniboxPosBottom) omniboxPosBottom.classList.toggle('active', currentPos === 'bottom');
-    if (omniboxModeApplePie) omniboxModeApplePie.classList.toggle('active', currentScrollMode === 'applepie');
-    if (omniboxModeOverlay) omniboxModeOverlay.classList.toggle('active', currentScrollMode === 'overlay');
-    if (omniboxModeSeparate) omniboxModeSeparate.classList.toggle('active', currentScrollMode === 'separate');
-    if (omniboxModeOrb) omniboxModeOrb.classList.toggle('active', currentScrollMode === 'orb');
+    const dedicated = currentScrollMode === 'separate' || currentScrollMode === 'overlay';
+    if (omniboxPosTop) {
+      omniboxPosTop.disabled = !dedicated;
+      omniboxPosTop.classList.toggle('active', dedicated && currentPos === 'top');
+    }
+    if (omniboxPosBottom) {
+      omniboxPosBottom.disabled = !dedicated;
+      omniboxPosBottom.classList.toggle('active', !dedicated || currentPos === 'bottom');
+    }
+    if (omniboxModeApplePie) omniboxModeApplePie.classList.toggle('active', !dedicated);
+    if (omniboxModeSeparate) omniboxModeSeparate.classList.toggle('active', dedicated);
     if (menuStyleList) menuStyleList.classList.toggle('active', currentStyle === 'list');
     if (menuStyleGrid) menuStyleGrid.classList.toggle('active', currentStyle === 'grid');
     if (tabViewNormal) tabViewNormal.classList.toggle('active', currentTabView === 'normal');
     if (tabViewRecents) tabViewRecents.classList.toggle('active', currentTabView === 'recents');
   }
+  window.refreshOmniboxSettings = updateOmniboxCustomizationUI;
 
   function setTabSwitcherViewStyle(style) {
     try { playSFX('tm_header'); } catch (e) {}
@@ -2597,8 +2599,9 @@
     localStorage.setItem('omnibox_position', pos);
     if (window.CaspianBridge && typeof window.CaspianBridge.setOmniboxPosition === 'function') {
       window.CaspianBridge.setOmniboxPosition(pos);
+    } else {
+      updateOmniboxCustomizationUI();
     }
-    updateOmniboxCustomizationUI();
     if (window.CaspianBridge && typeof window.CaspianBridge.showToast === 'function') {
       window.CaspianBridge.showToast('Omnibox set to ' + (pos === 'bottom' ? 'Bottom Bar' : 'Top Bar'));
     }
@@ -2609,14 +2612,11 @@
     localStorage.setItem('omnibox_scroll_mode', mode);
     if (window.CaspianBridge && typeof window.CaspianBridge.setOmniboxScrollMode === 'function') {
       window.CaspianBridge.setOmniboxScrollMode(mode);
+    } else {
+      updateOmniboxCustomizationUI();
     }
-    updateOmniboxCustomizationUI();
     if (window.CaspianBridge && typeof window.CaspianBridge.showToast === 'function') {
-      let toastMsg = 'Omnibox: Dynamic Overlay Mode';
-      if (mode === 'applepie') toastMsg = 'Omnibox: Apple Pie 🥧 (Fluid Gesture Rail)';
-      else if (mode === 'orb') toastMsg = 'Omnibox: Caspian Orb 🔮 (3-Stage Morph)';
-      else if (mode === 'separate') toastMsg = 'Omnibox: Always Dedicated Mode';
-      window.CaspianBridge.showToast(toastMsg);
+      window.CaspianBridge.showToast('Omnibox: ' + (mode === 'separate' ? 'Dedicated' : 'Apple Pie'));
     }
   }
 
@@ -2635,9 +2635,7 @@
   if (omniboxPosTop) omniboxPosTop.addEventListener('click', () => setOmniboxPlacement('top'));
   if (omniboxPosBottom) omniboxPosBottom.addEventListener('click', () => setOmniboxPlacement('bottom'));
   if (omniboxModeApplePie) omniboxModeApplePie.addEventListener('click', () => setOmniboxScrollMode('applepie'));
-  if (omniboxModeOverlay) omniboxModeOverlay.addEventListener('click', () => setOmniboxScrollMode('overlay'));
   if (omniboxModeSeparate) omniboxModeSeparate.addEventListener('click', () => setOmniboxScrollMode('separate'));
-  if (omniboxModeOrb) omniboxModeOrb.addEventListener('click', () => setOmniboxScrollMode('orb'));
   if (menuStyleList) menuStyleList.addEventListener('click', () => setOmniboxMenuStyle('list'));
   if (menuStyleGrid) menuStyleGrid.addEventListener('click', () => setOmniboxMenuStyle('grid'));
   if (tabViewNormal) tabViewNormal.addEventListener('click', () => setTabSwitcherViewStyle('normal'));
@@ -3881,59 +3879,70 @@
     }
   };
 
-  document.querySelectorAll('.tab-nav-btn').forEach(btn => {
-    btn.addEventListener('click', () => {
-      const targetTab = btn.dataset.tab;
-      const isAlreadyActive = btn.classList.contains('active');
-      const pane = document.getElementById(`tab-pane-${targetTab}`);
+  function selectSheetTab(btn, keepCurrentScroll) {
+    const targetTab = btn.dataset.tab;
+    const isAlreadyActive = btn.classList.contains('active');
+    const pane = document.getElementById(`tab-pane-${targetTab}`);
 
-      if (isAlreadyActive && pane) {
-        playSFX('tm_tabs');
-        const currentY = getSheetScroll();
-        if (currentY > 30) {
-          tabSavedScrollPos[targetTab] = currentY;
-          setSheetScroll(0);
-        } else if (tabSavedScrollPos[targetTab] > 30) {
-          const targetY = tabSavedScrollPos[targetTab];
-          setSheetScroll(targetY);
-          tabSavedScrollPos[targetTab] = 0;
-        } else {
-          setSheetScroll(0);
-        }
-        return;
-      }
-
+    if (isAlreadyActive && pane) {
+      if (keepCurrentScroll) return;
       playSFX('tm_tabs');
-      document.querySelectorAll('.tab-nav-btn').forEach(b => b.classList.remove('active'));
-      document.querySelectorAll('.tab-pane').forEach(p => {
-        p.classList.remove('active');
-        p.style.display = 'none';
+      const currentY = getSheetScroll();
+      if (currentY > 30) {
+        tabSavedScrollPos[targetTab] = currentY;
+        setSheetScroll(0);
+      } else if (tabSavedScrollPos[targetTab] > 30) {
+        const targetY = tabSavedScrollPos[targetTab];
+        setSheetScroll(targetY);
+        tabSavedScrollPos[targetTab] = 0;
+      } else {
+        setSheetScroll(0);
+      }
+      return;
+    }
+
+    playSFX('tm_tabs');
+    document.querySelectorAll('.tab-nav-btn').forEach(b => b.classList.remove('active'));
+    document.querySelectorAll('.tab-pane').forEach(p => {
+      p.classList.remove('active');
+      p.style.display = 'none';
+    });
+
+    btn.classList.add('active');
+    if (pane) {
+      pane.style.display = 'block';
+      requestAnimationFrame(() => {
+        pane.classList.add('active');
       });
+    }
 
-      btn.classList.add('active');
-      if (pane) {
-        pane.style.display = 'block';
-        requestAnimationFrame(() => {
-          pane.classList.add('active');
-        });
-      }
+    if (targetTab === 'sites') {
+      requestAnimationFrame(() => {
+        renderOpenTabs();
+      });
+    } else if (targetTab === 'engine') {
+      if (typeof window.syncWaveguardUI === 'function') window.syncWaveguardUI();
+    }
+  }
 
-      if (targetTab === 'sites') {
-        requestAnimationFrame(() => {
-          renderOpenTabs();
-        });
-      } else if (targetTab === 'engine') {
-        if (typeof window.syncWaveguardUI === 'function') window.syncWaveguardUI();
-      }
+  window.switchToTab = function(targetTab, keepCurrentScroll = false) {
+    const btn = ['engine', 'sites', 'settings'].includes(targetTab) && document.getElementById(`tab-btn-${targetTab}`);
+    if (btn) selectSheetTab(btn, keepCurrentScroll);
+  };
+
+  document.querySelectorAll('.tab-nav-btn').forEach(button => {
+    button.addEventListener('click', () => {
+      if (button.dataset.tab === 'settings') window.openBrowserSettingsPage();
+      else selectSheetTab(button, false);
     });
   });
 
-  window.switchToTab = function(targetTab) {
-    if (!targetTab) return;
-    const btn = document.querySelector(`.tab-nav-btn[data-tab="${targetTab}"]`);
-    if (btn) {
-      btn.click();
-    }
+  window.refreshBrowserSheet = function () {
+    renderOpenTabs();
+    restoreSavedSettings();
+    window.updateDevHudCounters?.();
+    applyInterfaceDensity(localStorage.getItem('caspian_interface_density') || 'default');
+    updateOmniboxCustomizationUI();
   };
 
   // Master Power Switch
@@ -3942,12 +3951,10 @@
       playSFX('tm_header');
       globalActive = !globalActive;
       const statusDot = document.getElementById('status-dot');
-      const statusTitle = document.getElementById('status-title');
       const statusSub = document.getElementById('status-sub');
 
       if (statusDot) statusDot.classList.toggle('active', globalActive);
-      if (statusTitle) statusTitle.textContent = globalActive ? 'Chat Message Limit: ON' : 'Chat Message Limit: OFF';
-      if (statusSub) statusSub.textContent = globalActive ? 'it limites the amout of message shown from below so all message above it will get prune or cut out this is done to improve performance and reduce lagging.' : 'Message Limit paused via Master Power Switch';
+      if (statusSub) statusSub.textContent = globalActive ? 'Keep long conversations responsive by limiting the messages shown.' : 'Message limiting is paused.';
 
       const activePill = document.querySelector('.limit-pill[data-val].active');
       const limitVal = activePill ? parseInt(activePill.dataset.val) : 6;
@@ -4024,11 +4031,9 @@
     if (enabled !== undefined && enabled !== null) {
       globalActive = (enabled === true || enabled === 'true');
       const statusDot = document.getElementById('status-dot');
-      const statusTitle = document.getElementById('status-title');
       const statusSub = document.getElementById('status-sub');
       if (statusDot) statusDot.classList.toggle('active', globalActive);
-      if (statusTitle) statusTitle.textContent = globalActive ? 'Chat Message Limit: ON' : 'Chat Message Limit: OFF';
-      if (statusSub) statusSub.textContent = globalActive ? 'it limites the amout of message shown from below so all message above it will get prune or cut out this is done to improve performance and reduce lagging.' : 'Message Limit paused via Master Power Switch';
+      if (statusSub) statusSub.textContent = globalActive ? 'Keep long conversations responsive by limiting the messages shown.' : 'Message limiting is paused.';
     }
   };
 
@@ -4805,7 +4810,7 @@
     const toggleYTBtn = document.getElementById('toggle-yt-engine-btn');
     const toggleAllToolbarsBtn = document.getElementById('toggle-all-toolbars-btn');
 
-    const chatLimitHeader = document.getElementById('chat-limit-header');
+    const chatLimitHeader = document.getElementById('chat-limit-tuning');
     const chatLimitBody = document.getElementById('chat-limit-body');
     const ccHeader = document.getElementById('caspian-current-header');
     const ccBody = document.getElementById('caspian-current-body');
@@ -4844,7 +4849,7 @@
       const isEnabled = (key === 'google_dock_enabled' || key === 'chat_limit_enabled')
         ? (localStorage.getItem(key) === 'true')
         : (localStorage.getItem(key) !== 'false');
-      if (card) {
+      if (card && key !== 'chat_limit_enabled') {
         card.classList.toggle('disabled', !isEnabled);
         card.style.opacity = isEnabled ? '1' : '0.45';
         card.style.filter = isEnabled ? 'none' : 'grayscale(0.6)';
@@ -4855,9 +4860,8 @@
         toggleBtn.textContent = isEnabled ? 'ON' : 'OFF';
         toggleBtn.className = isEnabled ? 'oneui-pill-btn primary' : 'oneui-pill-btn secondary';
       }
-      if (key === 'chat_limit_enabled') {
-        const statusTitle = document.getElementById('status-title');
-        if (statusTitle) statusTitle.textContent = 'Chat Message Limit: ' + (isEnabled ? 'ON' : 'OFF');
+      if (key === 'chat_limit_enabled' && toggleBtn) {
+        toggleBtn.setAttribute('aria-pressed', String(isEnabled));
       }
     }
 
@@ -4890,7 +4894,7 @@
 
     // Initial Sync
     updateEngineCardUI(cardTS, toggleTSBtn, null, document.getElementById('ts-status-dot'), 'temp_saver_enabled');
-    updateEngineCardUI(cardCL, toggleCLBtn, chatLimitBody, document.getElementById('status-dot'), 'chat_limit_enabled');
+    updateEngineCardUI(cardCL, toggleCLBtn, null, document.getElementById('status-dot'), 'chat_limit_enabled');
     updateEngineCardUI(cardCC, toggleCCBtn, ccBody, document.getElementById('cc-status-dot'), 'caspian_current_enabled');
     updateEngineCardUI(cardAB, toggleAdblockBtn, adblockBody, document.getElementById('adblock-dot'), 'adblock_enabled');
     updateEngineCardUI(cardYT, toggleYTBtn, ytControlBody, ytStatusDot, 'yt_engine_enabled');
@@ -4913,10 +4917,10 @@
 
     // 2. Chat Limit Accordion & Toggle
     if (chatLimitHeader && chatLimitBody) {
-      chatLimitHeader.addEventListener('click', (e) => {
-        if (e.target === toggleCLBtn || (toggleCLBtn && toggleCLBtn.contains(e.target))) return;
+      chatLimitHeader.addEventListener('click', () => {
         const isOpen = chatLimitBody.style.display !== 'none';
         chatLimitBody.style.display = isOpen ? 'none' : 'block';
+        chatLimitHeader.setAttribute('aria-expanded', String(!isOpen));
       });
     }
     if (toggleCLBtn) {
@@ -4929,7 +4933,7 @@
         if (window.CaspianBridge && typeof window.CaspianBridge.saveSetting === 'function') {
           window.CaspianBridge.saveSetting('chat_limit_enabled', next ? 'true' : 'false');
         }
-        updateEngineCardUI(cardCL, toggleCLBtn, chatLimitBody, document.getElementById('status-dot'), 'chat_limit_enabled');
+        updateEngineCardUI(cardCL, toggleCLBtn, null, document.getElementById('status-dot'), 'chat_limit_enabled');
         if (window.CaspianBridge && typeof window.CaspianBridge.applyPruningSettings === 'function') {
           window.CaspianBridge.applyPruningSettings(parseInt(limitVal, 10), currentPrunerMode, next);
         }
@@ -6007,7 +6011,7 @@
         });
 
         updateEngineCardUI(cardTS, toggleTSBtn, null, document.getElementById('ts-status-dot'), 'temp_saver_enabled');
-        updateEngineCardUI(cardCL, toggleCLBtn, chatLimitBody, document.getElementById('status-dot'), 'chat_limit_enabled');
+        updateEngineCardUI(cardCL, toggleCLBtn, null, document.getElementById('status-dot'), 'chat_limit_enabled');
         updateEngineCardUI(cardCC, toggleCCBtn, ccBody, document.getElementById('cc-status-dot'), 'caspian_current_enabled');
         updateEngineCardUI(cardAB, toggleAdblockBtn, adblockBody, document.getElementById('adblock-dot'), 'adblock_enabled');
         updateEngineCardUI(cardYT, toggleYTBtn, ytControlBody, ytStatusDot, 'yt_engine_enabled');
@@ -6730,524 +6734,3 @@ window.onTabFaviconReceived = function (tabId, faviconB64) {
     }
   }
 };
-
-
-// ==========================================================================
-// CASPIAN DOWNLOAD MANAGER JAVASCRIPT CONTROLLER
-// ==========================================================================
-
-(function () {
-  let currentDownloadsTab = 'active'; // 'active' | 'completed'
-  let cachedDownloads = [];
-  let expandedDownloadIds = new Set();
-
-  function formatDownloadBytes(bytes) {
-    if (!bytes || bytes <= 0) return '0 B';
-    if (bytes < 1024) return bytes + ' B';
-    if (bytes < 1024 * 1024) return (bytes / 1024).toFixed(1) + ' KB';
-    if (bytes < 1024 * 1024 * 1024) return (bytes / (1024 * 1024)).toFixed(1) + ' MB';
-    return (bytes / (1024 * 1024 * 1024)).toFixed(2) + ' GB';
-  }
-
-  function getFileCategoryInfo(fileName, mimeType) {
-    const ext = fileName ? fileName.split('.').pop().toLowerCase() : '';
-    if (ext === 'apk' || (mimeType && mimeType.includes('vnd.android.package-archive'))) {
-      return { icon: '📦', class: 'apk', label: 'APK', title: 'Android App Package (APK)' };
-    }
-    if (ext === 'pdf' || (mimeType && mimeType.includes('pdf'))) {
-      return { icon: '📄', class: 'pdf', label: 'PDF', title: 'PDF Document' };
-    }
-    if (['jpg', 'jpeg', 'png', 'gif', 'webp', 'svg'].includes(ext) || (mimeType && mimeType.startsWith('image/'))) {
-      return { icon: '🖼️', class: 'media', label: 'IMG', title: 'Image Graphic' };
-    }
-    if (['mp4', 'mkv', 'webm', 'mov', 'avi'].includes(ext) || (mimeType && mimeType.startsWith('video/'))) {
-      return { icon: '🎬', class: 'media', label: 'VID', title: 'Video Recording' };
-    }
-    if (['mp3', 'wav', 'ogg', 'm4a', 'flac'].includes(ext) || (mimeType && mimeType.startsWith('audio/'))) {
-      return { icon: '🎵', class: 'media', label: 'AUD', title: 'Audio Music Track' };
-    }
-    if (['zip', 'rar', '7z', 'tar', 'gz'].includes(ext) || (mimeType && (mimeType.includes('zip') || mimeType.includes('compressed')))) {
-      return { icon: '🗜️', class: 'archive', label: 'ZIP', title: 'Compressed Zip Archive' };
-    }
-    if (['html', 'js', 'json', 'css', 'py', 'java', 'xml', 'txt', 'md'].includes(ext)) {
-      return { icon: '💻', class: 'code', label: ext.toUpperCase(), title: ext.toUpperCase() + ' Source File' };
-    }
-    return { icon: '📁', class: 'doc', label: ext ? ext.toUpperCase() : 'FILE', title: (ext ? ext.toUpperCase() + ' ' : '') + 'File' };
-  }
-
-  window.openDownloadsModalStandalone = function () {
-    try { if (window.playSFX) window.playSFX('tb_clicks'); } catch (e) { }
-    document.body.classList.add('downloads-standalone-mode');
-    document.body.classList.remove('menu-revealed');
-    const bottomSheet = document.getElementById('bottom-sheet');
-    if (bottomSheet) bottomSheet.style.display = 'none';
-    const modal = document.getElementById('caspian-downloads-modal');
-    if (modal) modal.style.display = 'flex';
-    refreshDownloadsList();
-  };
-
-  window.revealCaspianMenu = function () {
-    document.body.classList.remove('downloads-standalone-mode');
-    document.body.classList.add('menu-revealed');
-    const bottomSheet = document.getElementById('bottom-sheet');
-    if (bottomSheet) bottomSheet.style.display = '';
-    if (typeof renderOpenTabs === 'function') renderOpenTabs();
-    if (typeof syncAppVersion === 'function') syncAppVersion();
-    if (typeof restoreSavedSettings === 'function') restoreSavedSettings();
-    if (typeof updateDevHudCounters === 'function') updateDevHudCounters();
-  };
-
-  window.unrevealCaspianMenu = function () {
-    document.body.classList.remove('menu-revealed');
-  };
-
-  window.onDownloadsStandaloneClosed = function () {
-    document.body.classList.remove('downloads-standalone-mode');
-    document.body.classList.remove('menu-revealed');
-    const bottomSheet = document.getElementById('bottom-sheet');
-    if (bottomSheet) bottomSheet.style.display = '';
-    const modal = document.getElementById('caspian-downloads-modal');
-    if (modal) modal.style.display = 'none';
-  };
-
-  window.openDownloadsModal = function (fromOmnibox) {
-    if (fromOmnibox) {
-      window.openDownloadsModalStandalone();
-      return;
-    }
-    try { if (window.playSFX) window.playSFX('tb_clicks'); } catch (e) { }
-    const modal = document.getElementById('caspian-downloads-modal');
-    if (!modal) return;
-    refreshDownloadsList();
-    modal.style.display = 'flex';
-  };
-
-  window.closeDownloadsModal = function () {
-    try { if (window.playSFX) window.playSFX('tb_clicks'); } catch (e) { }
-    if (document.body.classList.contains('downloads-standalone-mode')) {
-      if (window.CaspianBridge && typeof window.CaspianBridge.hideDownloadsManagerModal === 'function') {
-        window.CaspianBridge.hideDownloadsManagerModal();
-        return;
-      }
-    }
-    const modal = document.getElementById('caspian-downloads-modal');
-    if (modal) modal.style.display = 'none';
-  };
-
-  function switchDownloadsTab(tab) {
-    try { if (window.playSFX) window.playSFX('tb_clicks'); } catch (e) { }
-    currentDownloadsTab = tab;
-    const activeBtn = document.getElementById('downloads-tab-active-btn');
-    const completedBtn = document.getElementById('downloads-tab-completed-btn');
-    const activeList = document.getElementById('downloads-active-list');
-    const completedList = document.getElementById('downloads-completed-list');
-
-    if (tab === 'active') {
-      if (activeBtn) activeBtn.className = 'oneui-pill-btn primary';
-      if (completedBtn) completedBtn.className = 'oneui-pill-btn secondary';
-      if (activeList) activeList.style.display = 'flex';
-      if (completedList) completedList.style.display = 'none';
-    } else {
-      if (activeBtn) activeBtn.className = 'oneui-pill-btn secondary';
-      if (completedBtn) completedBtn.className = 'oneui-pill-btn primary';
-      if (activeList) activeList.style.display = 'none';
-      if (completedList) completedList.style.display = 'flex';
-    }
-    renderDownloadsUI();
-  }
-
-  function refreshDownloadsList() {
-    if (window.CaspianBridge && typeof window.CaspianBridge.getDownloadsJson === 'function') {
-      try {
-        const jsonStr = window.CaspianBridge.getDownloadsJson();
-        cachedDownloads = JSON.parse(jsonStr || '[]');
-      } catch (e) {
-        console.error('Failed to parse downloads JSON', e);
-      }
-    }
-    renderDownloadsUI();
-  }
-
-  function updateDownloadsBadge(activeCount) {
-    const badge = document.getElementById('downloads-badge');
-    if (!badge) return;
-    if (activeCount > 0) {
-      badge.textContent = activeCount;
-      badge.style.display = 'flex';
-    } else {
-      badge.style.display = 'none';
-    }
-  }
-
-  window.toggleExpandDownloadCard = function (id) {
-    try { if (window.playSFX) window.playSFX('tb_clicks'); } catch (e) { }
-    if (expandedDownloadIds.has(id)) {
-      expandedDownloadIds.delete(id);
-    } else {
-      expandedDownloadIds.add(id);
-    }
-    renderDownloadsUI();
-  };
-
-  function renderDownloadsUI() {
-    const activeListEl = document.getElementById('downloads-active-list');
-    const completedListEl = document.getElementById('downloads-completed-list');
-    const activeEmptyEl = document.getElementById('downloads-active-empty');
-    const completedEmptyEl = document.getElementById('downloads-completed-empty');
-    const activeCountEl = document.getElementById('downloads-tab-active-count');
-    const completedCountEl = document.getElementById('downloads-tab-completed-count');
-
-    if (!activeListEl || !completedListEl) return;
-
-    const activeItems = cachedDownloads.filter(d => d.status === 'DOWNLOADING' || d.status === 'PENDING' || d.status === 'PAUSED');
-    const completedItems = cachedDownloads.filter(d => d.status === 'COMPLETED' || d.status === 'FAILED' || d.status === 'CANCELLED');
-
-    if (activeCountEl) activeCountEl.textContent = '(' + activeItems.length + ')';
-    if (completedCountEl) completedCountEl.textContent = '(' + completedItems.length + ')';
-    updateDownloadsBadge(activeItems.length);
-
-    // Render Active
-    activeListEl.innerHTML = '';
-    if (activeItems.length === 0) {
-      activeListEl.innerHTML = `
-        <div id="downloads-active-empty" style="padding: 30px 10px; text-align: center; color: var(--text-muted); font-size: 12px;">
-          <div style="font-size: 28px; margin-bottom: 8px;">⚡</div>
-          No active downloads right now
-        </div>`;
-    } else {
-      activeItems.forEach(item => {
-        const cat = getFileCategoryInfo(item.fileName, item.mimeType);
-        const percent = item.totalBytes > 0 ? Math.min(100, Math.round((item.downloadedBytes * 100) / item.totalBytes)) : 0;
-        const isIndeterminate = item.totalBytes <= 0;
-        const isPaused = item.status === 'PAUSED';
-        const isExpanded = expandedDownloadIds.has(item.id);
-
-        let statsText = formatDownloadBytes(item.downloadedBytes);
-        if (item.totalBytes > 0) statsText += ' / ' + formatDownloadBytes(item.totalBytes) + ' (' + percent + '%)';
-        if (item.speedBytesPerSec > 0 && !isPaused) statsText += ' • ' + (item.speedBytesPerSec / (1024 * 1024)).toFixed(1) + ' MB/s';
-        if (item.etaSeconds > 0 && !isPaused) statsText += ' • ' + Math.round(item.etaSeconds) + 's left';
-        if (isPaused) statsText += ' • Paused';
-
-        const card = document.createElement('div');
-        card.className = 'download-item-card' + (isExpanded ? ' expanded' : '');
-        card.onclick = function () { window.toggleExpandDownloadCard(item.id); };
-
-        if (!isExpanded) {
-          card.innerHTML = `
-            <div style="display: flex; align-items: center; gap: 10px;">
-              <div class="download-file-icon-box ` + cat.class + `">` + cat.icon + `</div>
-              <div style="flex: 1; min-width: 0;">
-                <div style="font-size: 12.5px; font-weight: 700; color: var(--text-main); overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">` + (item.fileName || 'Download') + `</div>
-                <div style="font-size: 10.5px; color: var(--text-muted); margin-top: 2px;">` + statsText + `</div>
-              </div>
-              <div style="display: flex; gap: 4px; align-items: center;">
-                <button class="download-action-btn ` + (isPaused ? 'primary' : '') + `" onclick="event.stopPropagation(); window.toggleDownloadPause('` + item.id + `', ` + isPaused + `);" title="` + (isPaused ? 'Resume' : 'Pause') + `">
-                  ` + (isPaused ? '▶️' : '⏸️') + `
-                </button>
-                <button class="download-action-btn danger" onclick="event.stopPropagation(); window.cancelDownloadItem('` + item.id + `');" title="Cancel">
-                  ✕
-                </button>
-              </div>
-            </div>
-            <div class="download-progress-track">
-              <div class="download-progress-fill ` + (isIndeterminate ? 'indeterminate' : '') + `" style="width: ` + percent + `%;"></div>
-            </div>`;
-        } else {
-          // Expanded view: Full filename visible without truncation, emoji + text explanation, expanded buttons!
-          card.innerHTML = `
-            <div style="display: flex; align-items: flex-start; gap: 10px;">
-              <div class="download-file-icon-box ` + cat.class + `" style="margin-top: 2px;">` + cat.icon + `</div>
-              <div style="flex: 1; min-width: 0;">
-                <div style="font-size: 13.5px; font-weight: 800; color: var(--text-main); word-break: break-all; line-height: 1.35;">` + (item.fileName || 'Download') + `</div>
-                <div style="margin-top: 6px;">
-                  <div class="download-type-pill ` + cat.class + `">
-                    <span>` + cat.icon + `</span> <span>` + cat.title + `</span>
-                  </div>
-                </div>
-                <div style="font-size: 11px; color: var(--text-muted); margin-top: 6px;">` + statsText + `</div>
-              </div>
-            </div>
-            <div class="download-progress-track" style="margin-top: 6px;">
-              <div class="download-progress-fill ` + (isIndeterminate ? 'indeterminate' : '') + `" style="width: ` + percent + `%;"></div>
-            </div>
-            <div class="download-expanded-actions">
-              <button class="download-action-btn ` + (isPaused ? 'primary' : '') + `" style="flex: 1; justify-content: center; padding: 7px 12px; font-size: 11.5px;" onclick="event.stopPropagation(); window.toggleDownloadPause('` + item.id + `', ` + isPaused + `);">
-                ` + (isPaused ? '▶️ Resume Download' : '⏸️ Pause Download') + `
-              </button>
-              <button class="download-action-btn danger" style="padding: 7px 12px; font-size: 11.5px;" onclick="event.stopPropagation(); window.cancelDownloadItem('` + item.id + `');">
-                ✕ Cancel
-              </button>
-            </div>`;
-        }
-        activeListEl.appendChild(card);
-      });
-    }
-
-    // Render Completed
-    completedListEl.innerHTML = '';
-    if (completedItems.length === 0) {
-      completedListEl.innerHTML = `
-        <div id="downloads-completed-empty" style="padding: 30px 10px; text-align: center; color: var(--text-muted); font-size: 12px;">
-          <div style="font-size: 28px; margin-bottom: 8px;">📂</div>
-          No downloaded files yet
-        </div>`;
-    } else {
-      completedItems.forEach(item => {
-        const cat = getFileCategoryInfo(item.fileName, item.mimeType);
-        const isFailed = item.status === 'FAILED';
-        const isCancelled = item.status === 'CANCELLED';
-        const isApk = cat.class === 'apk';
-        const isExpanded = expandedDownloadIds.has(item.id);
-
-        let subText = formatDownloadBytes(item.totalBytes > 0 ? item.totalBytes : item.downloadedBytes);
-        let statusBadge = '';
-        if (isFailed) {
-          statusBadge = '<span style="color: #ef4444; font-weight: 700; margin-left: 4px;">Failed</span>';
-        } else if (isCancelled) {
-          statusBadge = '<span style="color: #f59e0b; font-weight: 700; margin-left: 4px;">Cancelled</span>';
-        }
-
-        const card = document.createElement('div');
-        card.className = 'download-item-card' + (isExpanded ? ' expanded' : '');
-        card.onclick = function () { window.toggleExpandDownloadCard(item.id); };
-
-        if (!isExpanded) {
-          card.innerHTML = `
-            <div style="display: flex; align-items: center; gap: 10px;">
-              <div class="download-file-icon-box ` + cat.class + `">` + cat.icon + `</div>
-              <div style="flex: 1; min-width: 0;">
-                <div style="font-size: 12.5px; font-weight: 700; color: var(--text-main); overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">` + (item.fileName || 'File') + `</div>
-                <div style="font-size: 10.5px; color: var(--text-muted); margin-top: 2px;">
-                  ` + subText + ` ` + statusBadge + `
-                </div>
-              </div>
-              <div style="display: flex; gap: 4px; align-items: center;">
-                ` + (!isFailed && !isCancelled ? `
-                  <button class="download-action-btn primary" onclick="event.stopPropagation(); window.openDownloadedItem('` + item.id + `');" title="` + (isApk ? 'Install' : 'Open') + `">
-                    ` + (isApk ? '🚀 Install' : '📂 Open') + `
-                  </button>
-                  <button class="download-action-btn" onclick="event.stopPropagation(); window.shareDownloadedItem('` + item.id + `');" title="Share">
-                    📤
-                  </button>
-                ` : `
-                  <button class="download-action-btn primary" onclick="event.stopPropagation(); window.retryDownloadItem('` + item.id + `');" title="Retry">
-                    🔄
-                  </button>
-                `) + `
-                <button class="download-action-btn danger" onclick="event.stopPropagation(); window.deleteDownloadItem('` + item.id + `');" title="Delete">
-                  🗑️
-                </button>
-              </div>
-            </div>`;
-        } else {
-          // Expanded view: Full filename visible without truncation, emoji + text explanation, expanded buttons!
-          card.innerHTML = `
-            <div style="display: flex; align-items: flex-start; gap: 10px;">
-              <div class="download-file-icon-box ` + cat.class + `" style="margin-top: 2px;">` + cat.icon + `</div>
-              <div style="flex: 1; min-width: 0;">
-                <div style="font-size: 13.5px; font-weight: 800; color: var(--text-main); word-break: break-all; line-height: 1.35;">` + (item.fileName || 'File') + `</div>
-                <div style="margin-top: 6px;">
-                  <div class="download-type-pill ` + cat.class + `">
-                    <span>` + cat.icon + `</span> <span>` + cat.title + `</span>
-                  </div>
-                </div>
-                <div style="font-size: 11px; color: var(--text-muted); margin-top: 6px;">
-                  Size: ` + subText + ` ` + statusBadge + ` • Saved in Downloads
-                </div>
-              </div>
-            </div>
-            <div class="download-expanded-actions">
-              ` + (!isFailed && !isCancelled ? `
-                <button class="download-action-btn primary" style="flex: 1; justify-content: center; padding: 7px 12px; font-size: 11.5px;" onclick="event.stopPropagation(); window.openDownloadedItem('` + item.id + `');">
-                  ` + (isApk ? '🚀 Install APK' : '📂 Open File') + `
-                </button>
-                <button class="download-action-btn" style="flex: 1; justify-content: center; padding: 7px 12px; font-size: 11.5px;" onclick="event.stopPropagation(); window.shareDownloadedItem('` + item.id + `');">
-                  📤 Share File
-                </button>
-              ` : `
-                <button class="download-action-btn primary" style="flex: 1; justify-content: center; padding: 7px 12px; font-size: 11.5px;" onclick="event.stopPropagation(); window.retryDownloadItem('` + item.id + `');">
-                  🔄 Retry Download
-                </button>
-              `) + `
-              <button class="download-action-btn danger" style="padding: 7px 12px; font-size: 11.5px;" onclick="event.stopPropagation(); window.deleteDownloadItem('` + item.id + `');">
-                🗑️ Delete
-              </button>
-            </div>`;
-        }
-        completedListEl.appendChild(card);
-      });
-    }
-  }
-
-  window.toggleDownloadPause = function (id, isPaused) {
-    try { if (window.playSFX) window.playSFX('tb_clicks'); } catch (e) { }
-    if (window.CaspianBridge) {
-      if (isPaused) {
-        window.CaspianBridge.resumeDownload(id);
-      } else {
-        window.CaspianBridge.pauseDownload(id);
-      }
-      setTimeout(refreshDownloadsList, 150);
-    }
-  };
-
-  window.cancelDownloadItem = function (id) {
-    try { if (window.playSFX) window.playSFX('tb_clicks'); } catch (e) { }
-    if (window.CaspianBridge) {
-      if (typeof window.CaspianBridge.deleteDownload === 'function') {
-        window.CaspianBridge.deleteDownload(id, true);
-      } else {
-        window.CaspianBridge.cancelDownload(id);
-      }
-      setTimeout(refreshDownloadsList, 150);
-    }
-  };
-
-  window.openDownloadedItem = function (id) {
-    try { if (window.playSFX) window.playSFX('tb_clicks'); } catch (e) { }
-    if (window.CaspianBridge) {
-      window.CaspianBridge.openDownloadedFile(id);
-    }
-  };
-
-  window.shareDownloadedItem = function (id) {
-    try { if (window.playSFX) window.playSFX('tb_clicks'); } catch (e) { }
-    if (window.CaspianBridge) {
-      window.CaspianBridge.shareDownloadedFile(id);
-    }
-  };
-
-  window.retryDownloadItem = function (id) {
-    try { if (window.playSFX) window.playSFX('tb_clicks'); } catch (e) { }
-    if (window.CaspianBridge) {
-      window.CaspianBridge.resumeDownload(id);
-      setTimeout(refreshDownloadsList, 150);
-    }
-  };
-
-  window.deleteDownloadItem = function (id) {
-    try { if (window.playSFX) window.playSFX('tb_clicks'); } catch (e) { }
-    if (window.CaspianBridge) {
-      window.CaspianBridge.deleteDownload(id, true);
-      setTimeout(refreshDownloadsList, 150);
-    }
-  };
-
-  // Android callbacks
-  window.onDownloadStarted = function (item) {
-    console.log('Download started:', item);
-    refreshDownloadsList();
-    if (window.CaspianBridge && typeof window.CaspianBridge.showToast === 'function') {
-      window.CaspianBridge.showToast('📥 Downloading ' + (item.fileName || 'file') + '...');
-    }
-  };
-
-  window.onDownloadProgress = function (item) {
-    let found = false;
-    for (let i = 0; i < cachedDownloads.length; i++) {
-      if (cachedDownloads[i].id === item.id) {
-        cachedDownloads[i] = item;
-        found = true;
-        break;
-      }
-    }
-    if (!found) cachedDownloads.unshift(item);
-
-    const modal = document.getElementById('caspian-downloads-modal');
-    if (modal && modal.style.display === 'flex') {
-      renderDownloadsUI();
-    } else {
-      const activeItems = cachedDownloads.filter(d => d.status === 'DOWNLOADING' || d.status === 'PENDING' || d.status === 'PAUSED');
-      updateDownloadsBadge(activeItems.length);
-    }
-  };
-
-  window.onDownloadCompleted = function (item) {
-    console.log('Download completed:', item);
-    try { if (window.playSFX) window.playSFX('tb_clicks'); } catch (e) { }
-    refreshDownloadsList();
-    if (window.CaspianBridge && typeof window.CaspianBridge.showToast === 'function') {
-      window.CaspianBridge.showToast('✅ Download complete: ' + item.fileName);
-    }
-  };
-
-  window.onDownloadFailed = function (item, error) {
-    console.error('Download failed:', item, error);
-    refreshDownloadsList();
-    if (window.CaspianBridge && typeof window.CaspianBridge.showToast === 'function') {
-      window.CaspianBridge.showToast('❌ Download failed: ' + item.fileName);
-    }
-  };
-
-  window.onDownloadCancelled = function (item) {
-    refreshDownloadsList();
-  };
-
-  // Setup UI Listeners when DOM is ready
-  function initDownloadManagerUI() {
-    const modal = document.getElementById('caspian-downloads-modal');
-    if (modal) {
-      modal.addEventListener('click', (e) => {
-        if (e.target === modal) {
-          window.closeDownloadsModal();
-        }
-      });
-    }
-
-    const closeDownloadsBtn = document.getElementById('downloads-modal-close-btn');
-    if (closeDownloadsBtn) {
-      closeDownloadsBtn.addEventListener('click', (e) => {
-        e.stopPropagation();
-        window.closeDownloadsModal();
-      });
-    }
-
-    const tabActiveBtn = document.getElementById('downloads-tab-active-btn');
-    if (tabActiveBtn) {
-      tabActiveBtn.addEventListener('click', (e) => {
-        e.stopPropagation();
-        switchDownloadsTab('active');
-      });
-    }
-
-    const tabCompletedBtn = document.getElementById('downloads-tab-completed-btn');
-    if (tabCompletedBtn) {
-      tabCompletedBtn.addEventListener('click', (e) => {
-        e.stopPropagation();
-        switchDownloadsTab('completed');
-      });
-    }
-
-    const openFolderBtn = document.getElementById('downloads-open-folder-btn');
-    if (openFolderBtn) {
-      openFolderBtn.addEventListener('click', (e) => {
-        e.stopPropagation();
-        try { if (window.playSFX) window.playSFX('tb_clicks'); } catch (err) { }
-        if (window.CaspianBridge && typeof window.CaspianBridge.openDownloadsFolder === 'function') {
-          window.CaspianBridge.openDownloadsFolder();
-        }
-      });
-    }
-
-    const clearHistoryBtn = document.getElementById('downloads-clear-btn');
-    if (clearHistoryBtn) {
-      clearHistoryBtn.addEventListener('click', (e) => {
-        e.stopPropagation();
-        try { if (window.playSFX) window.playSFX('tb_clicks'); } catch (err) { }
-        if (window.CaspianBridge && typeof window.CaspianBridge.clearCompletedDownloads === 'function') {
-          window.CaspianBridge.clearCompletedDownloads();
-          refreshDownloadsList();
-        }
-      });
-    }
-
-    refreshDownloadsList();
-    setTimeout(refreshDownloadsList, 250);
-  }
-
-  if (document.readyState === 'loading') {
-    document.addEventListener('DOMContentLoaded', initDownloadManagerUI);
-  } else {
-    initDownloadManagerUI();
-  }
-})();

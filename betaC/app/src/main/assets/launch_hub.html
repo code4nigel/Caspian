@@ -76,14 +76,10 @@
       --sc-card-border: var(--sc-card-border-light, rgba(15, 23, 42, 0.08));
     }
 
-    [data-theme="light"] .greeting-title,
     [data-theme="light"] .waveguard-meta-title,
     [data-theme="light"] .cask-pill-title,
     [data-theme="light"] .hub-modal-title {
       color: #0F172A !important;
-    }
-    [data-theme="light"] .greeting-clock {
-      color: #0284C7 !important;
     }
     [data-theme="light"] .active-cask-capsule {
       background: rgba(15, 23, 42, 0.04) !important;
@@ -292,44 +288,11 @@
       margin: 0 auto;
     }
 
-    /* Bento Header */
     .bento-header-card {
-      border-radius: var(--radius-squircle);
-      padding: 16px 18px 14px 18px;
-      display: flex;
-      flex-direction: column;
-      gap: 12px;
-    }
-
-    .header-top-row {
       display: flex;
       align-items: center;
       justify-content: space-between;
-    }
-
-    .greeting-wrap {
-      display: flex;
-      flex-direction: column;
-      gap: 2px;
-      text-align: left;
-    }
-
-    .greeting-title {
-      font-size: 18px;
-      font-weight: 800;
-      letter-spacing: -0.02em;
-      color: var(--text-main);
-      display: flex;
-      align-items: center;
-      gap: 6px;
-    }
-
-    .greeting-clock {
-      font-family: 'JetBrains Mono', monospace;
-      font-size: 11px;
-      font-weight: 700;
-      color: var(--caspian-cyan);
-      letter-spacing: 0.05em;
+      gap: 8px;
     }
 
     .header-action-btns {
@@ -1223,7 +1186,7 @@
 
     /* Recent Tabs Carousel & Chips */
     .bento-recent-tabs-card {
-      margin-bottom: 14px;
+      border-radius: var(--radius-squircle);
       padding: 10px 12px;
       animation: fadeInScale 0.3s cubic-bezier(0.16, 1, 0.3, 1);
     }
@@ -1255,13 +1218,6 @@
     .recent-tab-chip:active {
       transform: scale(0.93);
     }
-    .recent-tab-chip-icon {
-      width: 16px;
-      height: 16px;
-      flex-shrink: 0;
-      border-radius: 4px;
-      object-fit: contain;
-    }
     .recent-tab-chip-title {
       font-size: 11.5px;
       font-weight: 600;
@@ -1271,6 +1227,51 @@
       text-overflow: ellipsis;
     }
 
+    [hidden] { display: none !important; }
+    #active-cask-selector { min-width: 0; min-height: 48px; gap: 10px; text-align: start; }
+    .cask-pill-left { min-width: 0; }
+    .cask-pill-title { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+    .hub-icon-btn { width: 48px; height: 48px; }
+    #continue-tab {
+      display: grid;
+      grid-template-columns: minmax(0, 1fr) auto;
+      gap: 3px 12px;
+      width: 100%;
+      min-height: 64px;
+      padding: 8px 10px;
+      text-align: start;
+      color: var(--text-main);
+      border: 0;
+      border-radius: 12px;
+      background: transparent;
+      cursor: pointer;
+    }
+    #continue-tab::after {
+      content: '→';
+      grid-area: 1 / 2 / 4 / 3;
+      align-self: center;
+      color: var(--caspian-cyan);
+      font-size: 20px;
+    }
+    .continue-tab-label { color: var(--caspian-cyan); font-size: 12px; }
+    #continue-tab-title, #continue-tab-host {
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+    }
+    #continue-tab-host { color: var(--text-muted); font-size: 12px; }
+    .recent-tab-chip { min-height: 48px; font: inherit; }
+    #continue-tab:focus-visible, .recent-tab-chip:focus-visible {
+      outline: 2px solid var(--caspian-cyan);
+      outline-offset: -2px;
+    }
+    @media (prefers-reduced-motion: reduce) {
+      *, *::before, *::after {
+        animation-duration: 0.01ms !important;
+        transition-duration: 0.01ms !important;
+        scroll-behavior: auto !important;
+      }
+    }
   </style>
 </head>
 <body>
@@ -1288,49 +1289,36 @@
   <!-- Main Bento Grid Container -->
   <div class="bento-container">
 
-    <!-- 1. BENTO HEADER: Greeting, Clock, Actions, Active Cask -->
-    <div class="bento-header-card liquid-island">
-      <div class="header-top-row">
-        <div class="greeting-wrap">
-          <div class="greeting-title">
-            <span id="hub-greeting-text">Good Evening</span>
-            <span>✨</span>
-          </div>
-          <div id="hub-clock-text" class="greeting-clock">20:45 • CASPIAN FLOW</div>
-        </div>
-
-        <div class="header-action-btns">
-          <!-- Wallpaper Customizer Button -->
-          <button id="hub-wallpaper-btn" class="hub-icon-btn" title="Change Wallpaper & Background">
-            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
-              <circle cx="13.5" cy="6.5" r=".5" fill="currentColor"></circle>
-              <circle cx="17.5" cy="10.5" r=".5" fill="currentColor"></circle>
-              <circle cx="8.5" cy="7.5" r=".5" fill="currentColor"></circle>
-              <circle cx="6.5" cy="12.5" r=".5" fill="currentColor"></circle>
-              <path d="M12 2C6.5 2 2 6.5 2 12s4.5 10 10 10c.926 0 1.648-.746 1.648-1.688 0-.437-.18-.835-.437-1.125-.29-.289-.438-.652-.438-1.125a1.64 1.64 0 0 1 1.668-1.668h1.996c3.051 0 5.555-2.503 5.555-5.554C21.965 6.012 17.461 2 12 2z"></path>
-            </svg>
-          </button>
-
-          <!-- Edit Shortcuts Button -->
-          <button id="hub-manage-shortcuts-btn" class="hub-icon-btn" title="Edit & Rearrange Shortcuts">
-            <svg id="hub-pencil-icon" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
-              <path d="M12 20h9"></path>
-              <path d="M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4L16.5 3.5z"></path>
-            </svg>
-            <svg id="hub-check-icon" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#22D3EE" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round" style="display:none;">
-              <polyline points="20 6 9 17 4 12"></polyline>
-            </svg>
-          </button>
-        </div>
-      </div>
-
-      <!-- Active Cask Capsule -->
-      <div id="active-cask-selector" class="active-cask-capsule">
-        <div class="cask-pill-left">
-          <span id="active-cask-icon" class="cask-pill-icon">🌊</span>
+    <div class="bento-header-card">
+      <button type="button" id="active-cask-selector" class="active-cask-capsule" aria-label="Switch account space">
+        <span class="cask-pill-left">
+          <span id="active-cask-icon" class="cask-pill-icon" aria-hidden="true">🌊</span>
           <span id="active-cask-name" class="cask-pill-title">Caspian Cask</span>
-        </div>
-        <span class="cask-pill-badge">ACTIVE CASK</span>
+        </span>
+        <span class="cask-pill-badge" aria-hidden="true">▾</span>
+      </button>
+      <div class="header-action-btns">
+        <!-- Wallpaper Customizer Button -->
+        <button id="hub-wallpaper-btn" class="hub-icon-btn" title="Change Wallpaper & Background">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+            <circle cx="13.5" cy="6.5" r=".5" fill="currentColor"></circle>
+            <circle cx="17.5" cy="10.5" r=".5" fill="currentColor"></circle>
+            <circle cx="8.5" cy="7.5" r=".5" fill="currentColor"></circle>
+            <circle cx="6.5" cy="12.5" r=".5" fill="currentColor"></circle>
+            <path d="M12 2C6.5 2 2 6.5 2 12s4.5 10 10 10c.926 0 1.648-.746 1.648-1.688 0-.437-.18-.835-.437-1.125-.29-.289-.438-.652-.438-1.125a1.64 1.64 0 0 1 1.668-1.668h1.996c3.051 0 5.555-2.503 5.555-5.554C21.965 6.012 17.461 2 12 2z"></path>
+          </svg>
+        </button>
+
+        <!-- Edit Shortcuts Button -->
+        <button id="hub-manage-shortcuts-btn" class="hub-icon-btn" title="Edit & Rearrange Shortcuts">
+          <svg id="hub-pencil-icon" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M12 20h9"></path>
+            <path d="M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4L16.5 3.5z"></path>
+          </svg>
+          <svg id="hub-check-icon" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#22D3EE" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round" style="display:none;">
+            <polyline points="20 6 9 17 4 12"></polyline>
+          </svg>
+        </button>
       </div>
     </div>
 
@@ -1366,14 +1354,14 @@
     </div>
 
 
-    <!-- 2.5 RECENT TABS CAROUSEL -->
-    <div id="recent-tabs-bento-tile" class="bento-recent-tabs-card liquid-island" style="display: none;">
-      <div class="bento-card-header" style="padding: 2px 4px 6px 4px; display: flex; justify-content: space-between; align-items: center;">
-        <span class="bento-card-tag" style="color: var(--caspian-cyan); font-weight: 700; font-size: 11px;">⏱️ Recent Tabs</span>
-        <span id="recent-tabs-count" style="font-size: 10px; color: var(--text-muted); font-weight: 600;">0 open</span>
-      </div>
+    <section id="recent-tabs-bento-tile" class="bento-recent-tabs-card liquid-island" hidden aria-label="Continue browsing">
+      <button type="button" id="continue-tab">
+        <span class="continue-tab-label">Continue</span>
+        <strong id="continue-tab-title"></strong>
+        <span id="continue-tab-host"></span>
+      </button>
       <div id="recent-tabs-strip" class="recent-tabs-strip"></div>
-    </div>
+    </section>
 
     <!-- 3. SHORTCUTS BENTO TILE -->
     <div class="bento-sites-card liquid-island">
@@ -1416,7 +1404,7 @@
             <span>Waveguard Shield</span>
             <span style="font-size: 10px; color: var(--caspian-emerald); font-weight: 800;">ACTIVE</span>
           </div>
-          <div class="waveguard-meta-sub">Real-Time O(1) Tracker Defense</div>
+          <div class="waveguard-meta-sub">Blocks trackers while you browse</div>
         </div>
       </div>
       <div class="waveguard-count-capsule">
@@ -1627,33 +1615,10 @@
        JAVASCRIPT ENGINE
        ========================================================================== -->
   <script>
-    // 1. Ambient Greeting & Live Clock
-    function updateAmbientGreetingAndClock() {
-      const greetingEl = document.getElementById('hub-greeting-text');
-      const clockEl = document.getElementById('hub-clock-text');
-      const now = new Date();
-      const hour = now.getHours();
-
-      let greeting = 'Good Evening';
-      if (hour >= 5 && hour < 12) greeting = 'Good Morning';
-      else if (hour >= 12 && hour < 17) greeting = 'Good Afternoon';
-      else if (hour >= 17 && hour < 22) greeting = 'Good Evening';
-      else greeting = 'Good Night';
-
-      if (greetingEl) greetingEl.textContent = greeting;
-
-      if (clockEl) {
-        const timeStr = now.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit', hour12: false });
-        clockEl.textContent = `${timeStr} • CASPIAN FLOW`;
-      }
-    }
-    updateAmbientGreetingAndClock();
-    setInterval(updateAmbientGreetingAndClock, 1000);
-
     // 1.5 Ambient Aurora Gyroscope & Touch Parallax
     (function initAuroraParallax() {
       const canvas = document.getElementById('ambient-aurora-canvas');
-      if (!canvas) return;
+      if (!canvas || window.matchMedia('(prefers-reduced-motion: reduce)').matches) return;
 
       let ticking = false;
       if (window.DeviceOrientationEvent) {
@@ -1698,61 +1663,38 @@
       }
     });
 
-    // 2.7 Recent Tabs Dynamic Loader
     function loadRecentTabs() {
-      try {
-        if (!window.CaspianBridge || typeof window.CaspianBridge.getOpenTabs !== 'function') return;
-        const tabsJson = window.CaspianBridge.getOpenTabs();
-        const tabs = JSON.parse(tabsJson || '[]');
-        const container = document.getElementById('recent-tabs-strip');
-        const tile = document.getElementById('recent-tabs-bento-tile');
-        const countEl = document.getElementById('recent-tabs-count');
-        if (!container || !tile) return;
-
-        // Filter out launch_hub itself
-        const validTabs = tabs.filter(t => t.url && !t.url.includes('launch_hub.html') && !t.url.startsWith('caspian://hub'));
-        if (validTabs.length === 0) {
-          tile.style.display = 'none';
-          return;
-        }
-
-        tile.style.display = 'block';
-        if (countEl) countEl.textContent = `${validTabs.length} open`;
-        container.innerHTML = '';
-
-        validTabs.forEach(t => {
-          const chip = document.createElement('div');
-          chip.className = 'recent-tab-chip';
-          chip.onclick = () => {
-            playTapSFX();
-            if (window.CaspianBridge && typeof window.CaspianBridge.switchToTab === 'function') {
-              window.CaspianBridge.switchToTab(t.id);
-            }
-          };
-
-          const icon = document.createElement('img');
-          icon.className = 'recent-tab-chip-icon';
-          if (t.faviconB64 && t.faviconB64.length > 20) {
-            icon.src = t.faviconB64.startsWith('data:') ? t.faviconB64 : `data:image/png;base64,${t.faviconB64}`;
-          } else {
-            icon.src = 'data:image/svg+xml;charset=utf-8,%3Csvg%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%20width%3D%2216%22%20height%3D%2216%22%20viewBox%3D%220%200%2024%2024%22%20fill%3D%22none%22%20stroke%3D%22%2322D3EE%22%20stroke-width%3D%222%22%3E%3Ccircle%20cx%3D%2212%22%20cy%3D%2212%22%20r%3D%2210%22%2F%3E%3Cline%20x1%3D%222%22%20y1%3D%2212%22%20x2%3D%2222%22%20y2%3D%2212%22%2F%3E%3Cpath%20d%3D%22M12%202a15.3%2015.3%200%200%201%204%2010%2015.3%2015.3%200%200%201-4%2010%2015.3%2015.3%200%200%201-4-10%2015.3%2015.3%200%200%201%204-10z%22%2F%3E%3C%2Fsvg%3E';
-          }
-
-          const span = document.createElement('span');
-          span.className = 'recent-tab-chip-title';
-          span.textContent = t.title || t.url || `Tab ${t.id}`;
-
-          chip.appendChild(icon);
-          chip.appendChild(span);
-          container.appendChild(chip);
-        });
-      } catch (e) {
-        console.warn('loadRecentTabs error:', e);
-      }
+      postHubMessage({ action: 'getRecentTabs' });
     }
-    setTimeout(loadRecentTabs, 120);
-    window.addEventListener('focus', loadRecentTabs);
 
+    function renderRecentTabs(data) {
+      document.getElementById('active-cask-name').textContent = data.caskName;
+      document.getElementById('active-cask-selector').setAttribute('aria-label', 'Switch account space. Current: ' + data.caskName);
+      document.getElementById('active-cask-icon').textContent = data.caskIcon;
+      const [latest, ...others] = data.tabs || [];
+      const tile = document.getElementById('recent-tabs-bento-tile');
+      const strip = document.getElementById('recent-tabs-strip');
+      tile.hidden = !latest;
+      strip.textContent = '';
+      strip.hidden = others.length === 0;
+      if (!latest) return;
+
+      const resume = tab => postHubMessage({ action: 'resumeTab', tabId: tab.id });
+      document.getElementById('continue-tab-title').textContent = latest.title || latest.host;
+      document.getElementById('continue-tab-host').textContent = latest.host;
+      document.getElementById('continue-tab').onclick = () => resume(latest);
+      others.forEach(tab => {
+        const chip = document.createElement('button');
+        chip.type = 'button';
+        chip.className = 'recent-tab-chip';
+        chip.onclick = () => resume(tab);
+        const title = document.createElement('span');
+        title.className = 'recent-tab-chip-title';
+        title.textContent = tab.title || tab.host;
+        chip.append(title);
+        strip.append(chip);
+      });
+    }
 
     // 2.5 Hub WebMessage Channel Helper
     function postHubMessage(msgObj) {
@@ -2464,12 +2406,12 @@
       return 'data:image/svg+xml;charset=utf-8,' + encodeURIComponent(svgString.trim());
     }
 
-    const KNOWN_BRAND_SVGS = {
-      'youtube.com': svgToDataUri('<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64"><rect width="64" height="64" rx="16" fill="#FF0000"/><polygon points="26,20 44,32 26,44" fill="#FFFFFF"/></svg>'),
-      'chatgpt.com': svgToDataUri('<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 48 48"><rect width="48" height="48" rx="12" fill="#10A37F"/><path fill="#FFFFFF" transform="translate(4.8, 4.8) scale(1.6)" d="M22.282,9.821a5.985,5.985 0,0 0,-0.516,-4.91 6.046,6.046 0,0 0,-6.51,-2.9A6.065,6.065 0,0 0,10.68,0.3a6.046,6.046 0,0 0,-5.764,4.09A6.05,6.05 0,0 0,1.3,7.18a6.046,6.046 0,0 0,0.754,7.097 5.98,5.98 0,0 0,0.516,4.911 6.051,6.051 0,0 0,6.515,2.9A5.985,5.985 0,0 0,13.66,23.7a6.046,6.046 0,0 0,5.764,-4.09 6.05,6.05 0,0 0,3.615,-2.79 6.05,6.05 0,0 0,-0.757,-6.999zM12,14.65a2.65,2.65 0,1 1,2.65,-2.65A2.653,2.653 0,0 1,12,14.65z"/></svg>'),
+    const KNOWN_BRAND_ICONS = {
+      'youtube.com': 'shortcut_icons/youtube.png',
+      'chatgpt.com': 'shortcut_icons/chatgpt.png',
       'openai.com': svgToDataUri('<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 48 48"><rect width="48" height="48" rx="12" fill="#10A37F"/><path fill="#FFFFFF" transform="translate(4.8, 4.8) scale(1.6)" d="M22.282,9.821a5.985,5.985 0,0 0,-0.516,-4.91 6.046,6.046 0,0 0,-6.51,-2.9A6.065,6.065 0,0 0,10.68,0.3a6.046,6.046 0,0 0,-5.764,4.09A6.05,6.05 0,0 0,1.3,7.18a6.046,6.046 0,0 0,0.754,7.097 5.98,5.98 0,0 0,0.516,4.911 6.051,6.051 0,0 0,6.515,2.9A5.985,5.985 0,0 0,13.66,23.7a6.046,6.046 0,0 0,5.764,-4.09 6.05,6.05 0,0 0,3.615,-2.79 6.05,6.05 0,0 0,-0.757,-6.999zM12,14.65a2.65,2.65 0,1 1,2.65,-2.65A2.653,2.653 0,0 1,12,14.65z"/></svg>'),
-      'gemini.google.com': svgToDataUri('<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 48 48"><defs><linearGradient id="gem" x1="0%" y1="0%" x2="100%" y2="100%"><stop offset="0%" stop-color="#1BA1E3"/><stop offset="50%" stop-color="#545BE8"/><stop offset="100%" stop-color="#A855F7"/></linearGradient></defs><rect width="48" height="48" rx="12" fill="#0F172A"/><path fill="url(#gem)" transform="translate(4.8, 4.8) scale(1.6)" d="M12,0 C12,6.627 6.627,12 0,12 C6.627,12 12,17.373 12,24 C12,17.373 17.373,12 24,12 C17.373,12 12,6.627 12,0 Z"/></svg>'),
-      'reddit.com': svgToDataUri('<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 48 48"><rect width="48" height="48" rx="12" fill="#FF4500"/><circle cx="24" cy="24" r="15" fill="#FFFFFF"/><circle cx="19" cy="23" r="2.4" fill="#FF4500"/><circle cx="29" cy="23" r="2.4" fill="#FF4500"/><path d="M20 29c1.6 1.6 4.4 1.6 8 0" stroke="#FF4500" stroke-width="2.4" stroke-linecap="round" fill="none"/></svg>'),
+      'gemini.google.com': 'shortcut_icons/gemini.png',
+      'reddit.com': 'shortcut_icons/reddit.png',
       'github.com': svgToDataUri('<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 48 48"><rect width="48" height="48" rx="12" fill="#181717"/><path fill="#FFFFFF" transform="translate(4.8, 4.8) scale(1.6)" d="M12 2C6.477 2 2 6.484 2 12.017c0 4.425 2.865 8.18 6.839 9.504.5.092.682-.217.682-.483 0-.237-.008-.868-.013-1.703-2.782.605-3.369-1.343-3.369-1.343-.454-1.158-1.11-1.466-1.11-1.466-.908-.62.069-.608.069-.608 1.003.07 1.53 1.032 1.53 1.032.892 1.53 2.341 1.088 2.91.832.092-.647.35-1.088.636-1.338-2.22-.253-4.555-1.113-4.555-4.951 0-1.093.39-1.988 1.029-2.688-.103-.253-.446-1.272.098-2.65 0 0 .84-.27 2.75 1.026A9.564 9.564 0 0 1 12 6.844c.85.004 1.705.115 2.504.337 1.909-1.296 2.747-1.027 2.747-1.027.546 1.379.202 2.398.1 2.651.64.7 1.028 1.595 1.028 2.688 0 3.848-2.339 4.695-4.566 4.943.359.309.678.92.678 1.855 0 1.338-.012 2.419-.012 2.747 0 .268.18.58.688.482A10.019 10.019 0 0 0 22 12.017C22 6.484 17.522 2 12 2z"/></svg>'),
       'claude.ai': svgToDataUri('<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 48 48"><rect width="48" height="48" rx="12" fill="#D97706"/><path fill="#FFFFFF" transform="translate(4.8, 4.8) scale(1.6)" d="M12 2L14.2 8.8L21.4 9L15.8 13.4L17.8 20.2L12 16.2L6.2 20.2L8.2 13.4L2.6 9L9.8 8.8L12 2Z"/></svg>'),
       'wikipedia.org': svgToDataUri('<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 48 48"><rect width="48" height="48" rx="12" fill="#FFFFFF"/><text x="24" y="34" font-family="serif" font-size="28" font-weight="bold" fill="#111827" text-anchor="middle">W</text></svg>'),
@@ -2501,21 +2443,21 @@
 
     function getBestFaviconUrl(domain, service) {
       const cDomain = cleanDomain(domain);
-      if (KNOWN_BRAND_SVGS[cDomain]) return KNOWN_BRAND_SVGS[cDomain];
-      if (service && KNOWN_BRAND_SVGS[service + '.com']) return KNOWN_BRAND_SVGS[service + '.com'];
+      if (KNOWN_BRAND_ICONS[cDomain]) return KNOWN_BRAND_ICONS[cDomain];
+      if (service && KNOWN_BRAND_ICONS[service + '.com']) return KNOWN_BRAND_ICONS[service + '.com'];
       if (!cDomain) return generateLetterAvatar('Web', 'web');
       return `https://www.google.com/s2/favicons?sz=128&domain=${encodeURIComponent(cDomain)}`;
     }
 
     const DEFAULT_SHORTCUTS = [
-      { id: "sc_youtube", title: "YouTube", url: "https://www.youtube.com/", domain: "youtube.com", service: "youtube", icon: KNOWN_BRAND_SVGS["youtube.com"] },
-      { id: "sc_chatgpt", title: "ChatGPT", url: "https://chatgpt.com/", domain: "chatgpt.com", service: "chatgpt", icon: KNOWN_BRAND_SVGS["chatgpt.com"] },
-      { id: "sc_gemini", title: "Google Gemini", url: "https://gemini.google.com/", domain: "gemini.google.com", service: "gemini", icon: KNOWN_BRAND_SVGS["gemini.google.com"] },
-      { id: "sc_reddit", title: "Reddit", url: "https://www.reddit.com/", domain: "reddit.com", service: "", icon: KNOWN_BRAND_SVGS["reddit.com"] },
-      { id: "sc_github", title: "GitHub", url: "https://github.com/", domain: "github.com", service: "", icon: KNOWN_BRAND_SVGS["github.com"] },
-      { id: "sc_wikipedia", title: "Wikipedia", url: "https://www.wikipedia.org/", domain: "wikipedia.org", service: "", icon: KNOWN_BRAND_SVGS["wikipedia.org"] },
-      { id: "sc_claude", title: "Claude AI", url: "https://claude.ai/", domain: "claude.ai", service: "claude", icon: KNOWN_BRAND_SVGS["claude.ai"] },
-      { id: "sc_x", title: "X (Twitter)", url: "https://x.com/", domain: "x.com", service: "", icon: KNOWN_BRAND_SVGS["x.com"] }
+      { id: "sc_youtube", title: "YouTube", url: "https://www.youtube.com/", domain: "youtube.com", service: "youtube", icon: KNOWN_BRAND_ICONS["youtube.com"] },
+      { id: "sc_chatgpt", title: "ChatGPT", url: "https://chatgpt.com/", domain: "chatgpt.com", service: "chatgpt", icon: KNOWN_BRAND_ICONS["chatgpt.com"] },
+      { id: "sc_gemini", title: "Google Gemini", url: "https://gemini.google.com/", domain: "gemini.google.com", service: "gemini", icon: KNOWN_BRAND_ICONS["gemini.google.com"] },
+      { id: "sc_reddit", title: "Reddit", url: "https://www.reddit.com/", domain: "reddit.com", service: "", icon: KNOWN_BRAND_ICONS["reddit.com"] },
+      { id: "sc_github", title: "GitHub", url: "https://github.com/", domain: "github.com", service: "", icon: KNOWN_BRAND_ICONS["github.com"] },
+      { id: "sc_wikipedia", title: "Wikipedia", url: "https://www.wikipedia.org/", domain: "wikipedia.org", service: "", icon: KNOWN_BRAND_ICONS["wikipedia.org"] },
+      { id: "sc_claude", title: "Claude AI", url: "https://claude.ai/", domain: "claude.ai", service: "claude", icon: KNOWN_BRAND_ICONS["claude.ai"] },
+      { id: "sc_x", title: "X (Twitter)", url: "https://x.com/", domain: "x.com", service: "", icon: KNOWN_BRAND_ICONS["x.com"] }
     ];
 
     function loadShortcuts() {
@@ -2536,7 +2478,7 @@
       list.forEach(item => {
         const domain = cleanDomain(item.domain || item.url);
         item.domain = domain;
-        const brandIcon = KNOWN_BRAND_SVGS[domain] || (item.service && KNOWN_BRAND_SVGS[item.service + '.com']);
+        const brandIcon = KNOWN_BRAND_ICONS[domain] || (item.service && KNOWN_BRAND_ICONS[item.service + '.com']);
         if (brandIcon) {
           if (item.icon !== brandIcon) {
             item.icon = brandIcon;
@@ -2623,13 +2565,14 @@
             card.className = 'app-icon-card';
             card.setAttribute('data-id', item.id);
 
-            let finalIconUrl = item.icon;
             const cDomain = cleanDomain(item.domain || item.url);
-            const isInvalidOrEmoji = !finalIconUrl || 
+            const brandIcon = KNOWN_BRAND_ICONS[cDomain] || KNOWN_BRAND_ICONS[item.service + '.com'];
+            let finalIconUrl = brandIcon || item.icon;
+            const isInvalidOrEmoji = !brandIcon && (!finalIconUrl ||
               (!finalIconUrl.startsWith('data:image') && !finalIconUrl.startsWith('http')) ||
               finalIconUrl.length <= 4 ||
               finalIconUrl.includes('<svg') ||
-              finalIconUrl.includes('width="48"');
+              finalIconUrl.includes('width="48"'));
             
             if (isInvalidOrEmoji) {
               finalIconUrl = getBestFaviconUrl(cDomain, item.service);
@@ -2948,6 +2891,7 @@
       if (isUrl) {
         targetUrl = /^https?:\/\//i.test(query) ? query : 'https://' + query;
       } else {
+        if (postHubMessage({ action: 'searchWeb', query })) return;
         targetUrl = 'https://www.google.com/search?q=' + encodeURIComponent(query);
       }
 
@@ -3305,11 +3249,29 @@
 
     initHubPresetDropdown();
 
-    document.getElementById('active-cask-selector').addEventListener('click', openCasksModal);
+    document.getElementById('active-cask-selector').addEventListener('click', () => {
+      if (!postHubMessage({ action: 'showCaskSwitcher' })) openCasksModal();
+    });
     document.getElementById('close-casks-modal').addEventListener('click', closeCasksModal);
     document.getElementById('btn-show-new-cask').addEventListener('click', showNewCaskForm);
     document.getElementById('btn-cancel-create-cask').addEventListener('click', hideNewCaskForm);
     document.getElementById('btn-confirm-create-cask').addEventListener('click', confirmCreateCask);
+
+    if (window.CaspianHubChannel) {
+      window.CaspianHubChannel.onmessage = event => {
+        try {
+          const data = JSON.parse(event.data);
+          if (data.type === 'recentTabs') renderRecentTabs(data);
+        } catch (error) {
+          console.warn('Unable to display recent tabs', error);
+        }
+      };
+      loadRecentTabs();
+      window.addEventListener('focus', loadRecentTabs);
+      document.addEventListener('visibilitychange', () => {
+        if (!document.hidden) loadRecentTabs();
+      });
+    }
 
     // Initial setup
     applyWallpaperSettings();

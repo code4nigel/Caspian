@@ -11,6 +11,7 @@
     href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@500;700&family=Outfit:wght@400;500;600;700;800&display=swap"
     rel="stylesheet">
   <link rel="stylesheet" href="browser_control.css">
+  <link rel="stylesheet" href="browser_surfaces.css">
   <script>
     (function () {
       try {
@@ -43,6 +44,13 @@
 
 <body>
 
+  <header id="browser-page-header" class="browser-page-header" hidden>
+    <button id="browser-page-back" class="browser-icon-button" type="button" aria-label="Back">
+      <svg width="22" height="22" viewBox="0 0 24 24" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m12 19-7-7 7-7M5 12h14"/></svg>
+    </button>
+    <h1 id="browser-page-title" tabindex="-1">Settings</h1>
+  </header>
+
   <!-- Slide-Up Bottom Sheet (Samsung One UI + Native Overlay) -->
   <div id="bottom-sheet" class="caspian-bottom-sheet active" style="transform: translateY(0);">
     <div id="sheet-drag-area" class="sheet-drag-area" title="Drag to Resize Sheet Height">
@@ -61,11 +69,14 @@
           </svg>
         </div>
         <div style="display: flex; flex-direction: column;">
-          <span class="sheet-brand-name">CASPIAN FLOW</span>
-          <span class="sheet-brand-tag">V1.3.50-BetaC</span>
+          <span class="sheet-brand-name">Caspian Sheet</span>
+          <span class="sheet-brand-tag">V1.3.53-BetaC</span>
         </div>
       </div>
       <div class="header-icon-actions">
+        <button id="browser-sheet-downloads" class="icon-btn" type="button" aria-label="Downloads" title="Downloads">
+          <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 3v12m-4-4 4 4 4-4M5 17v4h14v-4"/></svg>
+        </button>
         <button id="header-cask-pill" class="icon-btn" title="Caspian Casks - Tap to switch container vault">
           <span id="header-cask-icon" style="font-size: 16px; line-height: 1;">🌊</span>
         </button>
@@ -204,26 +215,27 @@
 
       <!-- 2. Expandable Chat Message Limit Card -->
       <div id="card-chat-limit" class="m3-card engine-card expandable" style="margin-top: 14px;">
-        <div id="chat-limit-header" class="m3-card-row" style="cursor: pointer;">
+        <div id="chat-limit-header" class="m3-card-row">
           <div class="m3-card-left">
             <div id="status-dot" class="status-dot active"></div>
             <div>
-              <div id="status-title" class="m3-card-title">Chat Message Limit: ON</div>
-              <div id="status-sub" class="m3-card-sub">Limits message count to improve performance and prevent lagging.
-                Tap to expand.</div>
+              <div id="status-title" class="m3-card-title">Chat performance</div>
+              <div id="status-sub" class="m3-card-sub">Keep long conversations responsive by limiting the messages shown.</div>
             </div>
           </div>
           <div style="display: flex; align-items: center; gap: 8px;">
             <span id="active-limit-badge" class="m3-badge">5 Messages</span>
-            <button id="toggle-chat-limit-btn" class="oneui-pill-btn primary"
+            <button id="toggle-chat-limit-btn" aria-label="Limit the messages shown" aria-pressed="true" class="oneui-pill-btn primary"
               style="font-size: 11px; padding: 4px 10px;">ON</button>
           </div>
         </div>
 
-        <!-- Accordion Body: Contains Virtualization Mode & Visible Messages Limit selector -->
+        <button type="button" id="chat-limit-tuning" class="chat-limit-tuning"
+          aria-expanded="false" aria-controls="chat-limit-body">Message limit and display mode</button>
+        <!-- Message limit and display mode -->
         <div id="chat-limit-body"
-          style="display: block; margin-top: 12px; border-top: 1px solid var(--border-glass); padding-top: 10px;">
-          <div class="limit-section-title" style="margin-bottom: 6px;">VIRTUALIZATION PRUNING MODE</div>
+          style="display: none; margin-top: 12px; border-top: 1px solid var(--border-glass); padding-top: 10px;">
+          <div class="limit-section-title" style="margin-bottom: 6px;">MESSAGE DISPLAY MODE</div>
           <div class="pill-grid" style="grid-template-columns: 1fr 1fr; gap: 6px; margin-bottom: 12px;">
             <button class="pruner-mode-pill active" data-mode="sliding_window" id="btn-mode-sliding"
               style="font-size: 10px; padding: 6px 4px;">🪟 Sliding Window</button>
@@ -233,7 +245,7 @@
 
           <div class="limit-section-title" style="margin-bottom: 6px;">
             <span>VISIBLE MESSAGES LIMIT</span>
-            <span>AUTO-PRUNE OLDER</span>
+            <span>VISIBLE IN THIS TAB</span>
           </div>
           <div class="pill-grid" style="grid-template-columns: repeat(6, 1fr); gap: 4px;">
             <button class="limit-pill" data-val="2">2</button>
@@ -1086,6 +1098,58 @@
     <!-- TAB 3: SETTINGS TAB -->
     <div id="tab-pane-settings" class="tab-pane" style="display: none;">
 
+      <div class="settings-search">
+        <label for="settings-search-input">Search settings</label>
+        <input type="search" id="settings-search-input" class="m3-text-input"
+          placeholder="Search, privacy, gestures, appearance…" autocomplete="off" />
+      </div>
+      <p id="settings-search-empty" role="status" hidden>No settings match your search.</p>
+      <section class="browser-settings-group" id="browser-settings-browsing" aria-labelledby="browsing-title">
+        <h2 id="browsing-title">Browsing</h2>
+        <label class="browser-setting-row" for="browser-search-engine">
+          <span><strong>Search engine</strong><small>Used for searches from the address bar and New Tab.</small></span>
+          <select id="browser-search-engine">
+            <option value="Google">Google</option><option value="DuckDuckGo">DuckDuckGo</option>
+            <option value="Brave">Brave</option><option value="Bing">Bing</option>
+          </select>
+        </label>
+        <button class="browser-setting-row" id="browser-open-firefox" type="button">
+          <span><strong>Firefox engine</strong><small>Open a separate browsing session with GeckoView.</small></span><span aria-hidden="true">›</span>
+        </button>
+        <button class="browser-setting-row" id="browser-settings-downloads" type="button">
+          <span><strong>Downloads</strong><small>See active transfers and downloaded files.</small></span><span aria-hidden="true">›</span>
+        </button>
+      </section>
+
+      <section class="browser-settings-group" id="browser-settings-gestures" aria-labelledby="gestures-title">
+        <h2 id="gestures-title">Gestures &amp; motion</h2>
+        <label class="browser-setting-row" for="browser-gestures">
+          <span><strong>Address bar gestures</strong><small>Swipe toward the page for Recents. Swipe sideways to switch tabs. In Apple Pie, swipe down to expand or collapse.</small></span>
+          <input type="checkbox" id="browser-gestures">
+        </label>
+        <label class="browser-setting-row" for="browser-reduce-motion">
+          <span><strong>Reduce motion</strong><small>Use immediate browser transitions. Caspian also follows Android’s animation setting.</small></span>
+          <input type="checkbox" id="browser-reduce-motion">
+        </label>
+        <div class="browser-setting-row">
+          <span><strong>Pod shortcuts</strong><small>Tap for page actions. Touch and hold, then drag toward a shortcut and release.</small></span>
+        </div>
+      </section>
+
+      <section class="browser-settings-group" id="browser-settings-privacy" aria-labelledby="privacy-title">
+        <h2 id="privacy-title">Privacy &amp; account spaces</h2>
+        <button class="browser-setting-row" id="browser-settings-shield" type="button">
+          <span><strong>Waveguard protection</strong><small>Manage tracking protection and per-site controls.</small></span><span aria-hidden="true">›</span>
+        </button>
+        <button class="browser-setting-row" id="browser-settings-casks" type="button">
+          <span><strong>Caspian Casks</strong><small>Switch and manage isolated WebView account spaces.</small></span><span aria-hidden="true">›</span>
+        </button>
+      </section>
+
+      <button type="button" id="settings-chat-performance" class="settings-shortcut browser-setting-row">
+        <span><strong>Chat performance</strong><small>Manage the messages shown in long conversations.</small></span><span aria-hidden="true">›</span>
+      </button>
+
       <!-- Liquid Island: Quick Action Pods Grid (In Settings) -->
       <div class="quick-toggles-island-grid" id="quick-toggles-island-grid">
         <div class="quick-toggle-pod" id="pod-desktop-mode" title="Toggle Desktop Mode">
@@ -1210,11 +1274,11 @@
           <div class="setting-row" style="margin-bottom: 12px;">
             <div>
               <div class="setting-label">Omnibox Placement</div>
-              <div class="setting-desc" style="font-size: 10.5px; color: var(--text-muted);">Anchor address bar at top or bottom</div>
+              <div class="setting-desc" style="font-size: 10.5px; color: var(--text-muted);">Choose the top or bottom bar in Dedicated mode</div>
             </div>
             <div class="mode-pill-toggle">
-              <button id="omnibox-pos-top" class="mode-pill active" data-pos="top">Top Bar</button>
-              <button id="omnibox-pos-bottom" class="mode-pill" data-pos="bottom">Bottom Bar</button>
+              <button id="omnibox-pos-top" class="mode-pill" disabled data-pos="top">Top Bar</button>
+              <button id="omnibox-pos-bottom" class="mode-pill active" disabled data-pos="bottom">Bottom Bar</button>
             </div>
           </div>
 
@@ -1222,13 +1286,11 @@
           <div class="setting-row" style="margin-bottom: 12px;">
             <div>
               <div class="setting-label">Scroll Behavior</div>
-              <div class="setting-desc" style="font-size: 10.5px; color: var(--text-muted);">Apple Pie gesture rail, Dynamic overlay, dedicated space, or Caspian Orb</div>
+              <div class="setting-desc" style="font-size: 10.5px; color: var(--text-muted);">Apple Pie keeps the gesture rail visible. Dedicated gives the address bar its own space.</div>
             </div>
             <div class="mode-pill-toggle" style="display: flex; flex-wrap: wrap; gap: 4px;">
-              <button id="omnibox-mode-applepie" class="mode-pill" data-mode="applepie">Apple Pie 🥧</button>
-              <button id="omnibox-mode-overlay" class="mode-pill active" data-mode="overlay">Dynamic Overlay</button>
+              <button id="omnibox-mode-applepie" class="mode-pill active" data-mode="applepie">Apple Pie</button>
               <button id="omnibox-mode-separate" class="mode-pill" data-mode="separate">Dedicated</button>
-              <button id="omnibox-mode-orb" class="mode-pill" data-mode="orb">Caspian Orb 🔮</button>
             </div>
           </div>
 
@@ -1886,7 +1948,7 @@
             <div id="updater-status-dot" class="status-dot active"></div>
             <div>
               <div class="m3-card-title">Caspian Flow Updates</div>
-              <div id="updater-status-sub" class="m3-card-sub">Current: V1.3.50-BetaC • Direct in-app GitHub updater.
+              <div id="updater-status-sub" class="m3-card-sub">Current: V1.3.53-BetaC • Direct in-app GitHub updater.
               </div>
             </div>
           </div>
@@ -2447,20 +2509,7 @@
     <div class="modal-card"
       style="width: 100%; max-width: 440px; max-height: 85vh; display: flex; flex-direction: column; background: var(--bg-card); border: 1px solid var(--border-glass); border-radius: 26px; padding: 20px; box-shadow: 0 24px 60px rgba(0,0,0,0.5); pointer-events: auto !important; animation: caskModalIn 0.25s cubic-bezier(0.16, 1, 0.3, 1);">
       
-      <!-- Header -->
-      <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 14px;">
-        <div style="display: flex; align-items: center; gap: 10px;">
-          <div style="width: 38px; height: 38px; border-radius: 12px; background: rgba(0,229,255,0.12); border: 1px solid var(--accent, #00e5ff); display: flex; align-items: center; justify-content: center; font-size: 18px;">
-            📥
-          </div>
-          <div>
-            <div style="font-size: 15px; font-weight: 800; color: var(--text-main); letter-spacing: -0.2px;">Downloads</div>
-            <div id="downloads-summary-text" style="font-size: 11px; color: var(--text-muted);">Manage and track file downloads</div>
-          </div>
-        </div>
-        <button id="downloads-modal-close-btn"
-          style="background: rgba(128,128,128,0.15); border: none; color: var(--text-muted); width: 30px; height: 30px; border-radius: 50%; cursor: pointer; font-size: 14px; font-weight: 700; display: flex; align-items: center; justify-content: center;">✕</button>
-      </div>
+      <p id="downloads-summary-text" class="browser-download-summary" role="status"></p>
 
       <!-- Segmented Tabs: Active vs Completed -->
       <div style="display: flex; background: var(--bg-deep); padding: 3px; border-radius: 12px; border: 1px solid var(--border-glass); margin-bottom: 12px;">
@@ -2482,7 +2531,6 @@
         <div id="downloads-active-list" style="display: flex; flex-direction: column; gap: 8px;">
           <!-- Empty State -->
           <div id="downloads-active-empty" style="padding: 30px 10px; text-align: center; color: var(--text-muted); font-size: 12px;">
-            <div style="font-size: 28px; margin-bottom: 8px;">⚡</div>
             No active downloads right now
           </div>
         </div>
@@ -2491,7 +2539,6 @@
         <div id="downloads-completed-list" style="display: none; flex-direction: column; gap: 8px;">
           <!-- Empty State -->
           <div id="downloads-completed-empty" style="padding: 30px 10px; text-align: center; color: var(--text-muted); font-size: 12px;">
-            <div style="font-size: 28px; margin-bottom: 8px;">📂</div>
             No downloaded files yet
           </div>
         </div>
@@ -2501,11 +2548,11 @@
       <div style="display: flex; gap: 8px; margin-top: 14px; padding-top: 12px; border-top: 1px solid var(--border-glass);">
         <button id="downloads-open-folder-btn" class="oneui-pill-btn secondary"
           style="flex: 1; justify-content: center; font-size: 11.5px; padding: 8px 10px;">
-          <span>📁 Open Folder</span>
+          <span>Open folder</span>
         </button>
         <button id="downloads-clear-btn" class="oneui-pill-btn secondary"
           style="flex: 1; justify-content: center; font-size: 11.5px; padding: 8px 10px; color: #ef4444;">
-          <span>🗑️ Clear History</span>
+          <span>Clear history</span>
         </button>
       </div>
 
@@ -2759,6 +2806,8 @@
   </script>
   <script src="scrobby_engine.js"></script>
   <script src="browser_control.js"></script>
+  <script src="browser_downloads.js"></script>
+  <script src="browser_settings.js"></script>
   <script>
     (function() {
       function initScrobbyUI() {

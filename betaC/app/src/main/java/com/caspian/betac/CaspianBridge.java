@@ -563,9 +563,59 @@ public class CaspianBridge {
 
     @JavascriptInterface
     public void setSearchEngine(String engineName) {
-        if (activity != null) {
+        if (activity != null && boundTabId == null) {
             activity.runOnUiThread(() -> activity.setDefaultSearchEngine(engineName));
         }
+    }
+
+    @JavascriptInterface
+    public String getDefaultSearchEngine() {
+        return activity != null && boundTabId == null ? activity.browserPreferences().searchEngine().name : "Google";
+    }
+
+    @JavascriptInterface
+    public boolean getBrowserGesturesEnabled() {
+        return activity != null && boundTabId == null && activity.browserPreferences().gesturesEnabled();
+    }
+
+    @JavascriptInterface
+    public void setBrowserGesturesEnabled(boolean enabled) {
+        if (activity != null && boundTabId == null) activity.browserPreferences().setGesturesEnabled(enabled);
+    }
+
+    @JavascriptInterface
+    public boolean getBrowserReduceMotion() {
+        return activity != null && boundTabId == null && activity.browserPreferences().reduceMotion();
+    }
+
+    @JavascriptInterface
+    public void setBrowserReduceMotion(boolean enabled) {
+        if (activity != null && boundTabId == null) activity.browserPreferences().setReduceMotion(enabled);
+    }
+
+    @JavascriptInterface
+    public void openBrowserSettings() {
+        if (activity != null && boundTabId == null) activity.openBrowserSettings();
+    }
+
+    @JavascriptInterface
+    public void openBrowserDownloads() {
+        if (activity != null && boundTabId == null) activity.openDownloadsManagerModal();
+    }
+
+    @JavascriptInterface
+    public void openBrowserTool(String tool) {
+        if (activity != null && boundTabId == null) activity.openBrowserTool(tool);
+    }
+
+    @JavascriptInterface
+    public void backFromBrowserPanel() {
+        if (activity != null && boundTabId == null) activity.runOnUiThread(activity::backFromBrowserPanel);
+    }
+
+    @JavascriptInterface
+    public void openFirefoxBrowser() {
+        if (activity != null && boundTabId == null) activity.runOnUiThread(activity::openFirefoxBrowser);
     }
 
     @JavascriptInterface
@@ -1381,7 +1431,7 @@ public class CaspianBridge {
         if (activity != null) {
             return activity.getOmniboxScrollMode();
         }
-        return "overlay";
+        return "applepie";
     }
 
     @JavascriptInterface

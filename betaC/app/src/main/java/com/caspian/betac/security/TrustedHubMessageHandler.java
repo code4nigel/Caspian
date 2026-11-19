@@ -17,6 +17,7 @@ import java.util.Collections;
 import java.util.HashSet;
 import java.util.Locale;
 import java.util.Set;
+import java.util.function.Consumer;
 import java.util.regex.Pattern;
 
 /**
@@ -125,6 +126,7 @@ public class TrustedHubMessageHandler implements WebViewCompat.WebMessageListene
 
     public interface HubActionCallback {
         void onOpenUrl(String url);
+        default void onSearchWeb(String query) {}
         void onSwitchService(String service);
         void onAddNewTab(String service, String url);
         void onPlayAssetSound(String sound);
@@ -132,6 +134,9 @@ public class TrustedHubMessageHandler implements WebViewCompat.WebMessageListene
         void onShowKeyboard();
         void onSaveWallpaper(String wallpaper);
         void onSwitchCask(String caskId);
+        default String onGetRecentTabs() { return null; }
+        default void onResumeTab(int tabId) {}
+        default void onShowCaskSwitcher() {}
     }
 
     private final HubActionCallback callback;
@@ -161,10 +166,15 @@ public class TrustedHubMessageHandler implements WebViewCompat.WebMessageListene
             sourceOriginStr = sourceOrigin.toString();
         } catch (Throwable ignored) {}
 
-        handleMessage(currentUrl, data, sourceOriginStr, isMainFrame);
+        handleMessage(currentUrl, data, sourceOriginStr, isMainFrame, replyProxy::postMessage);
     }
 
     public boolean handleMessage(String currentUrl, String data, String sourceOriginStr, boolean isMainFrame) {
+        return handleMessage(currentUrl, data, sourceOriginStr, isMainFrame, null);
+    }
+
+    boolean handleMessage(String currentUrl, String data, String sourceOriginStr, boolean isMainFrame,
+                          Consumer<String> reply) {
         // 1. Enforce main frame execution only (reject remote iframe message injection)
         if (!isMainFrame) {
             Log.w(TAG, "Hub message rejected: message not from main frame");
@@ -197,6 +207,24 @@ public class TrustedHubMessageHandler implements WebViewCompat.WebMessageListene
             if (callback == null) return true;
 
             switch (action) {
+                case "getRecentTabs": {
+                    if (OriginVerifier.LAUNCH_HUB_URL.equals(currentUrl) && reply != null) {
+                        String recentTabs = callback.onGetRecentTabs();
+                        if (recentTabs != null) reply.accept(recentTabs);
+                    }
+                    break;
+                }
+                case "resumeTab": {
+                    int tabId = json.optInt("tabId", -1);
+                    if (OriginVerifier.LAUNCH_HUB_URL.equals(currentUrl) && tabId >= 0) {
+                        callback.onResumeTab(tabId);
+                    }
+                    break;
+                }
+                case "showCaskSwitcher": {
+                    if (OriginVerifier.LAUNCH_HUB_URL.equals(currentUrl)) callback.onShowCaskSwitcher();
+                    break;
+                }
                 case "openUrl": {
                     String url = json.optString("url", "").trim();
                     if (isValidHttpsUrl(url) || OriginVerifier.isPermittedHubDocument(url)) {
@@ -204,6 +232,11 @@ public class TrustedHubMessageHandler implements WebViewCompat.WebMessageListene
                     } else {
                         Log.w(TAG, "openUrl rejected non-HTTPS or invalid URL: " + url);
                     }
+                    break;
+                }
+                case "searchWeb": {
+                    String query = json.optString("query", "").trim();
+                    if (!query.isEmpty() && query.length() <= 2048) callback.onSearchWeb(query);
                     break;
                 }
                 case "switchService": {

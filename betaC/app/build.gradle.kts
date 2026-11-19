@@ -4,14 +4,18 @@ plugins {
 
 android {
     namespace = "com.caspian.betac"
-    compileSdk = 34
+    compileSdk {
+        version = release(37) { minorApiLevel = 2 }
+    }
 
     defaultConfig {
         applicationId = "com.caspian.betac"
-        minSdk = 24
+        minSdk = 26
         targetSdk = 34
-        versionCode = 261
-        versionName = "1.3.50-BetaC"
+        versionCode = 264
+        versionName = "1.3.53-BetaC"
+        providers.gradleProperty("caspianVersionCode").orNull?.let { versionCode = it.toInt() }
+        providers.gradleProperty("caspianVersionName").orNull?.let { versionName = it }
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
     }
 
@@ -50,6 +54,7 @@ dependencies {
     implementation("androidx.media:media:1.7.0")
     implementation("com.google.android.gms:play-services-mlkit-text-recognition:19.0.0")
     implementation("androidx.dynamicanimation:dynamicanimation:1.0.0")
+    implementation("org.mozilla.geckoview:geckoview:160.0.20261116130455")
 
     testImplementation("junit:junit:4.13.2")
     testImplementation("org.json:json:20231013")

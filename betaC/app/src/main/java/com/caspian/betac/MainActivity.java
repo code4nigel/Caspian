@@ -35,8 +35,8 @@ import android.graphics.Color;
 import android.graphics.Typeface;
 import android.content.pm.ActivityInfo;
 import android.graphics.Rect;
-import android.graphics.SurfaceTexture;
 import android.graphics.drawable.ColorDrawable;
+import android.graphics.drawable.Drawable;
 import android.graphics.drawable.GradientDrawable;
 import android.view.LayoutInflater;
 import android.view.PixelCopy;
@@ -52,7 +52,6 @@ import android.widget.ScrollView;
 import android.media.AudioAttributes;
 import android.media.AudioFormat;
 import android.media.AudioRecord;
-import android.media.MediaPlayer;
 import android.media.MediaRecorder;
 import android.media.SoundPool;
 import android.net.Uri;
@@ -80,9 +79,7 @@ import android.view.Gravity;
 import android.view.HapticFeedbackConstants;
 import android.view.KeyEvent;
 import android.view.MotionEvent;
-import android.view.Surface;
 import android.view.SurfaceView;
-import android.view.TextureView;
 import android.view.View;
 import android.view.ViewGroup;
 import android.view.ViewConfiguration;
@@ -141,8 +138,18 @@ import androidx.core.content.FileProvider;
 import android.provider.MediaStore;
 import android.webkit.PermissionRequest;
 
+import com.caspian.betac.tabs.TabState;
+
 import org.json.JSONArray;
 import org.json.JSONObject;
+import com.caspian.betac.browser.BrowserPanels;
+import com.caspian.betac.browser.BrowserChrome;
+import com.caspian.betac.browser.BrowserGestures;
+import com.caspian.betac.browser.BrowserLibrary;
+import com.caspian.betac.browser.PodGestures;
+import com.caspian.betac.browser.PodMenu;
+import com.caspian.betac.browser.gecko.FirefoxBrowserActivity;
+import com.caspian.betac.browser.BrowserPreferences;
 
 import java.io.BufferedReader;
 import java.io.ByteArrayInputStream;
@@ -193,6 +200,7 @@ public class MainActivity extends AppCompatActivity {
         public boolean isIncognito = false;
         public String pendingPrompt = null;
         public Bitmap snapshotBitmap = null;
+        long lastActivatedAt;
         public String faviconB64 = null;
         public String favicon64 = null;
         public String touchIconUrl = null;
@@ -242,6 +250,7 @@ public class MainActivity extends AppCompatActivity {
             state.caskName = caskName != null ? caskName : "Caspian Cask";
             state.caskIcon = caskIcon != null ? caskIcon : "🌊";
             state.caskColor = caskColor != null ? caskColor : "#1B4264";
+            state.lastActivatedAt = lastActivatedAt;
         }
 
         public void syncFromState() {
@@ -263,6 +272,7 @@ public class MainActivity extends AppCompatActivity {
             this.caskName = state.caskName;
             this.caskIcon = state.caskIcon;
             this.caskColor = state.caskColor;
+            this.lastActivatedAt = state.lastActivatedAt;
         }
     }
 
@@ -366,6 +376,7 @@ public class MainActivity extends AppCompatActivity {
 
     private final List<List<ClosedTabRecord>> closedTabBatches = new ArrayList<>();
     private int activeTabId = 1;
+    private long tabActivationSequence;
     private int secondarySplitTabId = -1;
     private int nextTabId = 2;
     private String currentGridGroupId = null;
@@ -373,8 +384,6 @@ public class MainActivity extends AppCompatActivity {
     private int splitModeState = 0; // 0 = single, 1 = horizontal, 2 = vertical
     private boolean openLeftLinksToRight = false;
     private float splitRatio = 0.5f;
-    private boolean isSheetOpen = false;
-    private boolean isDownloadsModalOpen = false;
     private boolean isMasterSfxMuted = false;
 
     private WaveguardShield waveguardShield;
@@ -399,7 +408,7 @@ public class MainActivity extends AppCompatActivity {
     private View btnOmniboxUndoCloseTab;
     private TextView iconOmniboxUndoClose;
     private TextView textOmniboxUndoClose;
-    private BookmarkManager bookmarkManager;
+    private BrowserLibrary browserLibrary;
     private final Handler undoExpiryHandler = new Handler(Looper.getMainLooper());
     private final Runnable undoExpiryRunnable = () -> {
         closedTabBatches.clear();
@@ -410,7 +419,23 @@ public class MainActivity extends AppCompatActivity {
         undoExpiryHandler.removeCallbacks(undoExpiryRunnable);
         if (hasClosedTabsToUndo()) {
             undoExpiryHandler.postDelayed(undoExpiryRunnable, 15000);
+            showBrowserTabUndo();
         }
+    }
+
+    private com.google.android.material.snackbar.Snackbar browserTabUndo;
+
+    private void showBrowserTabUndo() {
+        if (rootContainer == null || isBrowserPanelOpen() || (tabGridOverlay != null && tabGridOverlay.isShown())) return;
+        if (browserTabUndo != null) browserTabUndo.dismiss();
+        List<ClosedTabRecord> batch = closedTabBatches.get(closedTabBatches.size() - 1);
+        String message = batch.size() == 1 ? "Tab closed" : batch.size() + " tabs closed";
+        browserTabUndo = com.google.android.material.snackbar.Snackbar.make(rootContainer, message, 15000);
+        if (caspianFloatingPill != null && caspianFloatingPill.isShown()) {
+            browserTabUndo.setAnchorView(caspianFloatingPill);
+        }
+        browserTabUndo.getView().setElevation(dpToPx(610));
+        browserTabUndo.setAction("Undo", view -> restoreLastClosedBatch()).show();
     }
     
     private LinearLayout omniboxUrlContainer;
@@ -471,7 +496,6 @@ public class MainActivity extends AppCompatActivity {
     private ImageButton splitRightCloseBtn;
 
     private FrameLayout tabGridOverlay;
-    private View tabGridHeaderRow;
     private View tabGridHeaderCapsule;
     private TextView tabGridCountBadge;
     private ImageButton tabGridIncognitoBtn;
@@ -522,18 +546,7 @@ public class MainActivity extends AppCompatActivity {
     private boolean isGridSelectionMode = false;
 
     // Dynamic Toolbar Auto-Hide & Docking States
-    private static final int TOOLBAR_STATE_DOCKED_TOP = 0;
-    private static final int TOOLBAR_STATE_FULLSCREEN_HIDDEN = 1;
-    private static final int TOOLBAR_STATE_OVERLAY_VISIBLE = 2;
-    private static final int TOOLBAR_STATE_DOCKED_BOTTOM = 3;
-
-    private int currentToolbarState = TOOLBAR_STATE_DOCKED_TOP;
-    private int accumulatedScrollDelta = 0;
-    private boolean isToolbarScrollLocked = false;
-    private boolean isToolbarInDedicatedSection = true;
-    private float currentDedicatedScrollOffset = 0f;
-    private long lastToolbarDedicatedHideTime = 0L;
-    private String omniboxScrollMode = "applepie"; // "applepie" (floating pill), "orb", "overlay" or "separate"
+    private String omniboxScrollMode = "applepie";
 
     private FrameLayout modalNewTabPlatform;
     private ImageButton btnClosePlatformModal;
@@ -544,18 +557,14 @@ public class MainActivity extends AppCompatActivity {
     private LinearLayout tileNewTabYoutube;
     private LinearLayout tileNewTabClaude;
 
-    private FrameLayout splashOverlay;
-    private TextureView splashTextureView;
-    private MediaPlayer splashPlayer;
 
     private CardView floatingCaspianCard;
-    private VelocityTracker cabVelocityTracker;
     private ImageView floatingCaspianIcon;
-    private CabRadialMenuView cabRadialMenu;
     private WhirlpoolOverlayView currentWhirlpoolOverlay;
-    private FrameLayout sheetOverlayContainer;
-    private View sheetBackdrop;
     private WebView controlWebView;
+    private BrowserPanels browserPanels;
+    private BrowserPreferences browserPreferences;
+    private boolean podHiddenForBrowserPage;
 
     // Horizon Peek
     private FrameLayout horizonPeekRoot;
@@ -596,11 +605,8 @@ public class MainActivity extends AppCompatActivity {
     private ImageButton caspianPillBtnMenu;
     private FrameLayout caspianFloatingOrb;
     private ImageView caspianOrbIcon;
-    private String preOrbOmniboxPosition = null;
     private float orbDownX = 0f, orbDownY = 0f;
     private float orbStartX = 0f, orbStartY = 0f;
-    private float omniDownX = 0f, omniDownY = 0f;
-    private boolean omniTouchStartedInHeader = false;
     private boolean isOrbDragging = false;
     private VelocityTracker orbVelocityTracker = null;
 
@@ -764,13 +770,7 @@ public class MainActivity extends AppCompatActivity {
     private String podEndColor = "#0077B6";
     private float podOpacity = 1.0f;
 
-    private float dX, dY;
-    private float startRawX, startRawY;
-    private boolean isDragging = false;
-    private boolean isLongPressed = false;
-    private boolean isLongPressedInThisGesture = false;
-    private final Handler longPressHandler = new Handler(Looper.getMainLooper());
-    private Runnable longPressRunnable;
+    private PodGestures podGestures;
 
     private AudioRecord audioRecord;
     private boolean isRecordingPcmAudio = false;
@@ -806,14 +806,11 @@ public class MainActivity extends AppCompatActivity {
     private ValueCallback<Uri[]> uploadMessage;
     private final static int FILECHOOSER_RESULTCODE = 1;
     private final static int REQUEST_CODE_PDF_PICKER = 9182;
-    private final static int REQUEST_CODE_EXPORT_BOOKMARKS_TREE = 9410;
-    private final static int REQUEST_CODE_IMPORT_BOOKMARKS_FILE = 9411;
     private final static int REQUEST_CODE_WALLPAPER_PICKER = 9412;
     private final static int REQUEST_CODE_CREATE_PDF_DOCUMENT = 9415;
     private File pendingExportPdfFile = null;
     private boolean pendingExportAutoShare = false;
     private boolean isHubSearchVoiceActive = false;
-    private Runnable currentBookmarksRefreshRunnable = null;
     private Uri cameraCapturedUri = null;
     private PermissionRequest pendingWebPermissionRequest = null;
     private static final int WEBVIEW_PERMISSION_REQUEST_CODE = 9021;
@@ -924,7 +921,8 @@ public class MainActivity extends AppCompatActivity {
         try { bindViews(); } catch (Throwable ignored) {}
         try { loadPodPreferences(); } catch (Throwable ignored) {}
         try { loadTabGroups(); } catch (Throwable ignored) {}
-        try { bookmarkManager = new BookmarkManager(this); } catch (Throwable ignored) {}
+        browserLibrary = new BrowserLibrary(this, () -> isDarkTheme, this::motionEnabled,
+                this::getActiveOrDominantTab, this::playUiFeedbackSound, this::cleanDisplayUrl);
         try { initDownloadManager(); } catch (Throwable ignored) {}
 
         try {
@@ -948,6 +946,8 @@ public class MainActivity extends AppCompatActivity {
 
         try { updateThemeStyling(); } catch (Throwable ignored) {}
         try { setupOmniboxListeners(); } catch (Throwable ignored) {}
+        browserPreferences = new BrowserPreferences(this);
+        currentSearchEngine = browserPreferences.searchEngine();
         try { setupFloatingPod(); } catch (Throwable ignored) {}
         try { setupControlSheet(); } catch (Throwable ignored) {}
         try { setupVoiceVisualizer(); } catch (Throwable ignored) {}
@@ -968,7 +968,6 @@ public class MainActivity extends AppCompatActivity {
         try { setupPlatformModal(); } catch (Throwable ignored) {}
         try { setupOmniboxSwipeTabSwitcher(); } catch (Throwable ignored) {}
         try { setupOmniboxSuggestions(); } catch (Throwable ignored) {}
-        try { initCaspianBetaASplash(); } catch (Throwable ignored) {}
         try {
             CaskManager caskManager = new CaskManager(this);
             caskManager.restoreCaskCookiesFromVault(caskManager.getActiveCaskId());
@@ -1081,13 +1080,13 @@ public class MainActivity extends AppCompatActivity {
             return;
         }
 
-        if (requestCode == REQUEST_CODE_EXPORT_BOOKMARKS_TREE && resultCode == RESULT_OK && data != null && data.getData() != null) {
-            handleExportBookmarksToFolder(data.getData());
+        if (requestCode == BrowserLibrary.REQUEST_CODE_EXPORT_BOOKMARKS_TREE && resultCode == RESULT_OK && data != null && data.getData() != null) {
+            browserLibrary.handleExportBookmarksToFolder(data.getData());
             return;
         }
 
-        if (requestCode == REQUEST_CODE_IMPORT_BOOKMARKS_FILE && resultCode == RESULT_OK && data != null && data.getData() != null) {
-            handleImportBookmarksFromFile(data.getData());
+        if (requestCode == BrowserLibrary.REQUEST_CODE_IMPORT_BOOKMARKS_FILE && resultCode == RESULT_OK && data != null && data.getData() != null) {
+            browserLibrary.handleImportBookmarksFromFile(data.getData());
             return;
         }
 
@@ -1600,7 +1599,7 @@ public class MainActivity extends AppCompatActivity {
 
         // Hide CAB and radial dial during screen capture so they don't get stamped into the screenshot
         if (floatingCaspianCard != null) floatingCaspianCard.setVisibility(View.INVISIBLE);
-        if (cabRadialMenu != null) cabRadialMenu.setVisibility(View.INVISIBLE);
+        if (podGestures != null) podGestures.cancel();
 
         // Capture screen bitmap using PixelCopy for 100% hardware-accelerated GPU fidelity (PDF, Canvas, WebGL, Text)
         captureWindowBitmapForWhirlpool(bitmap -> {
@@ -1724,9 +1723,10 @@ public class MainActivity extends AppCompatActivity {
 
     public void saveOpenTabsState() {
         try {
+            // The controller keeps private tabs in memory. The repository filters them when writing to disk.
             List<com.caspian.betac.tabs.TabState> states = new ArrayList<>();
             for (TabItem tab : tabsList) {
-                if (tab == null || tab.isIncognito) continue;
+                if (tab == null) continue;
                 tab.syncToState();
                 states.add(tab.state);
             }
@@ -1750,6 +1750,7 @@ public class MainActivity extends AppCompatActivity {
                 TabItem item = createNewTabInstance(s.id, s.url, s.service, null, s.isIncognito, s.caskId, s);
                 item.isRestoredFromSavedState = true;
                 item.syncFromState();
+                tabActivationSequence = Math.max(tabActivationSequence, item.lastActivatedAt);
                 tabRuntimes.put(s.id, item);
                 tabsList.add(item);
             }
@@ -1839,120 +1840,6 @@ public class MainActivity extends AppCompatActivity {
         if (controlWebView != null) {
             controlWebView.post(() -> controlWebView.evaluateJavascript(
                     "if (typeof reloadTabGroups === 'function') reloadTabGroups(); else if (typeof renderOpenTabs === 'function') renderOpenTabs();", null));
-        }
-    }
-
-    private void initCaspianBetaASplash() {
-        if (splashOverlay == null || splashTextureView == null) return;
-
-        try {
-            splashOverlay.bringToFront();
-            splashOverlay.setElevation(dpToPx(1200));
-            if (floatingCaspianCard != null) floatingCaspianCard.setVisibility(View.GONE);
-            if (caspianFloatingPill != null) caspianFloatingPill.setVisibility(View.GONE);
-            if (caspianFloatingOrb != null) caspianFloatingOrb.setVisibility(View.GONE);
-            if (omniboxHeaderWrapper != null) omniboxHeaderWrapper.setVisibility(View.GONE);
-
-            final Runnable dismissSplash = () -> {
-                try {
-                    if (splashPlayer != null) {
-                        splashPlayer.stop();
-                        splashPlayer.release();
-                        splashPlayer = null;
-                    }
-                } catch (Exception ignored) {}
-                if (splashOverlay != null) {
-                    splashOverlay.animate()
-                            .alpha(0f)
-                            .setDuration(300)
-                            .withEndAction(() -> {
-                                if (splashOverlay != null) splashOverlay.setVisibility(View.GONE);
-                                if (floatingCaspianCard != null && customView == null) {
-                                    floatingCaspianCard.setVisibility(View.VISIBLE);
-                                }
-                                if (isOrbOrApplePieMode()) {
-                                    transitionToOrbState(currentOrbState, false);
-                                } else {
-                                    if (omniboxHeaderWrapper != null) {
-                                        omniboxHeaderWrapper.setVisibility(View.VISIBLE);
-                                        omniboxHeaderWrapper.setAlpha(1f);
-                                        omniboxHeaderWrapper.setTranslationY(0f);
-                                    }
-                                }
-                            })
-                            .start();
-                }
-            };
-
-            splashTextureView.setSurfaceTextureListener(new TextureView.SurfaceTextureListener() {
-                @Override
-                public void onSurfaceTextureAvailable(SurfaceTexture surfaceTexture, int width, int height) {
-                    try {
-                        Surface surface = new Surface(surfaceTexture);
-                        splashPlayer = new MediaPlayer();
-                        splashPlayer.setSurface(surface);
-
-                        AudioAttributes attr = new AudioAttributes.Builder()
-                                .setUsage(AudioAttributes.USAGE_MEDIA)
-                                .setContentType(AudioAttributes.CONTENT_TYPE_SONIFICATION)
-                                .build();
-                        splashPlayer.setAudioAttributes(attr);
-                        splashPlayer.setVolume(1.0f, 1.0f);
-
-                        Uri videoUri = Uri.parse("android.resource://" + getPackageName() + "/" + R.raw.caspian_splash_v22);
-                        splashPlayer.setDataSource(MainActivity.this, videoUri);
-
-                        splashPlayer.setOnVideoSizeChangedListener((mp, videoWidth, videoHeight) -> {
-                            if (videoWidth > 0 && videoHeight > 0 && splashOverlay != null) {
-                                int screenWidth = splashOverlay.getWidth();
-                                int screenHeight = splashOverlay.getHeight();
-                                if (screenWidth > 0 && screenHeight > 0) {
-                                    float scaleX = (float) screenWidth / videoWidth;
-                                    float scaleY = (float) screenHeight / videoHeight;
-                                    float maxScale = Math.max(scaleX, scaleY);
-
-                                    FrameLayout.LayoutParams lp = (FrameLayout.LayoutParams) splashTextureView.getLayoutParams();
-                                    lp.width = (int) (videoWidth * maxScale);
-                                    lp.height = (int) (videoHeight * maxScale);
-                                    lp.gravity = Gravity.CENTER;
-                                    splashTextureView.setLayoutParams(lp);
-                                }
-                            }
-                        });
-
-                        splashPlayer.setOnPreparedListener(mp -> splashPlayer.start());
-                        splashPlayer.setOnCompletionListener(mp -> dismissSplash.run());
-                        splashPlayer.setOnErrorListener((mp, what, extra) -> {
-                            dismissSplash.run();
-                            return true;
-                        });
-
-                        splashPlayer.prepareAsync();
-                    } catch (Exception e) {
-                        dismissSplash.run();
-                    }
-                }
-
-                @Override
-                public void onSurfaceTextureSizeChanged(SurfaceTexture surface, int width, int height) {}
-
-                @Override
-                public boolean onSurfaceTextureDestroyed(SurfaceTexture surface) {
-                    if (splashPlayer != null) {
-                        try { splashPlayer.release(); } catch (Exception ignored) {}
-                        splashPlayer = null;
-                    }
-                    return true;
-                }
-
-                @Override
-                public void onSurfaceTextureUpdated(SurfaceTexture surface) {}
-            });
-
-            splashOverlay.setOnClickListener(v -> dismissSplash.run());
-            splashOverlay.postDelayed(dismissSplash, 3200);
-        } catch (Exception e) {
-            if (splashOverlay != null) splashOverlay.setVisibility(View.GONE);
         }
     }
 
@@ -2096,8 +1983,12 @@ public class MainActivity extends AppCompatActivity {
             }
 
             omniboxPosition = getSharedPreferences(PREFS_NAME, MODE_PRIVATE).getString("omnibox_position", "top");
-            omniboxScrollMode = getSharedPreferences(PREFS_NAME, MODE_PRIVATE).getString("omnibox_scroll_mode", "applepie");
-            preOrbOmniboxPosition = getSharedPreferences(PREFS_NAME, MODE_PRIVATE).getString("pre_orb_omnibox_position", null);
+            SharedPreferences omniboxPrefs = getSharedPreferences(PREFS_NAME, MODE_PRIVATE);
+            String savedScrollMode = omniboxPrefs.getString("omnibox_scroll_mode", "applepie");
+            omniboxScrollMode = normalizeOmniboxScrollMode(savedScrollMode);
+            if (!omniboxScrollMode.equals(savedScrollMode)) {
+                omniboxPrefs.edit().putString("omnibox_scroll_mode", omniboxScrollMode).apply();
+            }
             omniboxMenuStyle = getSharedPreferences(PREFS_NAME, MODE_PRIVATE).getString("omnibox_menu_style", "grid");
             isTabStripEnabled = getSharedPreferences(PREFS_NAME, MODE_PRIVATE).getBoolean("tab_strip_enabled", true);
             tabSwitcherViewStyle = getSharedPreferences(PREFS_NAME, MODE_PRIVATE).getString("tab_switcher_view_style", "recents");
@@ -2210,33 +2101,9 @@ public class MainActivity extends AppCompatActivity {
             setupCaspianOrbListeners();
             setupKeyboardInsetsListener();
 
-            if (isOrbOrApplePieMode()) {
-                applyOmniboxPosition(isApplePieMode() ? "bottom" : "top");
-                isToolbarInDedicatedSection = false;
-                if (webviewsParentContainer != null) {
-                    webviewsParentContainer.setTranslationY(0f);
-                }
-                applyCaspianPillTheme();
-                if ("applepie".equalsIgnoreCase(omniboxScrollMode)) {
-                    transitionToOrbState(ORB_STATE_BOTTOM_PILL, false);
-                } else {
-                    transitionToOrbState(ORB_STATE_FULL_TOP, false);
-                }
-            } else {
-                applyOmniboxPosition(omniboxPosition);
-                if (omniboxHeaderWrapper != null) {
-                    omniboxHeaderWrapper.setVisibility(View.VISIBLE);
-                    omniboxHeaderWrapper.setAlpha(1f);
-                    omniboxHeaderWrapper.setTranslationY(0f);
-                }
-                if ("separate".equalsIgnoreCase(omniboxScrollMode)) {
-                    isToolbarInDedicatedSection = true;
-                }
-                if ("bottom".equalsIgnoreCase(omniboxPosition)) {
-                    dockToolbarAtBottom(false);
-                } else {
-                    dockToolbarAtTop(false);
-                }
+            applyOmniboxPosition(omniboxPosition);
+            if (isApplePieMode()) {
+                transitionToOrbState(ORB_STATE_BOTTOM_PILL, false);
             }
 
             splitArenaBroadcastContainer = findViewById(R.id.split_arena_broadcast_container);
@@ -2252,7 +2119,6 @@ public class MainActivity extends AppCompatActivity {
             splitRightCloseBtn = findViewById(R.id.split_right_close_btn);
 
             tabGridOverlay = findViewById(R.id.tab_grid_overlay);
-            tabGridHeaderRow = null;
             tabGridHeaderCapsule = null;
             tabGridCountBadge = null;
             tabGridCloseViewBtn = null;
@@ -2305,13 +2171,9 @@ public class MainActivity extends AppCompatActivity {
             tileNewTabYoutube = findViewById(R.id.tile_new_tab_youtube);
             tileNewTabClaude = findViewById(R.id.tile_new_tab_claude);
 
-            splashOverlay = findViewById(R.id.splash_overlay);
-            splashTextureView = findViewById(R.id.splash_textureview);
 
             floatingCaspianCard = findViewById(R.id.floating_caspian_card);
             floatingCaspianIcon = findViewById(R.id.floating_caspian_icon);
-            sheetOverlayContainer = findViewById(R.id.sheet_overlay_container);
-            sheetBackdrop = findViewById(R.id.sheet_backdrop);
             controlWebView = findViewById(R.id.control_webview);
 
             ytFloatingRemoteContainer = findViewById(R.id.yt_floating_remote_container);
@@ -2412,14 +2274,12 @@ public class MainActivity extends AppCompatActivity {
             if (omniboxHeaderWrapper != null) omniboxHeaderWrapper.setLayerType(View.LAYER_TYPE_HARDWARE, null);
             if (webviewsParentContainer != null) webviewsParentContainer.setLayerType(View.LAYER_TYPE_HARDWARE, null);
             if (browserProgressBar != null) browserProgressBar.setLayerType(View.LAYER_TYPE_HARDWARE, null);
-            if (sheetOverlayContainer != null) sheetOverlayContainer.setLayerType(View.LAYER_TYPE_HARDWARE, null);
 
             if (omniboxHeaderWrapper != null) {
-                omniboxHeaderWrapper.post(() -> {
-                    if ("bottom".equalsIgnoreCase(omniboxPosition)) {
-                        dockToolbarAtBottom(false);
-                    } else {
-                        dockToolbarAtTop(false);
+                omniboxHeaderWrapper.addOnLayoutChangeListener((view, left, top, right, bottom,
+                        oldLeft, oldTop, oldRight, oldBottom) -> {
+                    if (!isApplePieMode() && bottom - top != oldBottom - oldTop) {
+                        updateOmniboxViewportInsets();
                     }
                 });
             }
@@ -2458,104 +2318,149 @@ public class MainActivity extends AppCompatActivity {
         tileNewTabClaude.setOnClickListener(tileClick);
     }
 
+    private final java.util.concurrent.ExecutorService tabSnapshotExecutor =
+            java.util.concurrent.Executors.newSingleThreadExecutor();
+    private final Map<TabItem, Object> pendingTabPreviews = new HashMap<>();
+    private final Map<TabItem, List<java.lang.ref.WeakReference<ImageView>>> visibleTabPreviews = new HashMap<>();
+
     private File getTabSnapshotFile(int tabId) {
-        File dir = new File(getCacheDir(), "tab_snapshots");
-        if (!dir.exists()) dir.mkdirs();
-        return new File(dir, "tab_" + tabId + ".jpg");
+        return new File(new File(getCacheDir(), "tab_snapshots"), "tab_" + tabId + ".jpg");
     }
 
-    private void saveTabSnapshotToDisk(int tabId, Bitmap bmp) {
-        if (bmp == null || bmp.isRecycled()) return;
-        new Thread(() -> {
+    private void saveTabSnapshot(TabItem tab, Bitmap bitmap) {
+        tab.snapshotBitmap = bitmap;
+        showLoadedTabSnapshot(tab);
+        if (tab.isIncognito || tabSnapshotExecutor.isShutdown()) return;
+        File file = getTabSnapshotFile(tab.id);
+        tabSnapshotExecutor.execute(() -> {
+            android.util.AtomicFile snapshot = new android.util.AtomicFile(file);
+            java.io.FileOutputStream output = null;
             try {
-                File file = getTabSnapshotFile(tabId);
-                java.io.FileOutputStream fos = new java.io.FileOutputStream(file);
-                bmp.compress(Bitmap.CompressFormat.JPEG, 85, fos);
-                fos.flush();
-                fos.close();
-            } catch (Exception ignored) {}
-        }).start();
-    }
-
-    private Bitmap getOrLoadTabSnapshot(TabItem tab) {
-        if (tab == null) return null;
-        if (tab.snapshotBitmap != null && !tab.snapshotBitmap.isRecycled()) {
-            return tab.snapshotBitmap;
-        }
-        // Try loading from disk cache
-        try {
-            File file = getTabSnapshotFile(tab.id);
-            if (file.exists() && file.length() > 0) {
-                Bitmap diskBmp = BitmapFactory.decodeFile(file.getAbsolutePath());
-                if (diskBmp != null) {
-                    tab.snapshotBitmap = diskBmp;
-                    return diskBmp;
+                output = snapshot.startWrite();
+                if (bitmap.compress(Bitmap.CompressFormat.JPEG, 85, output)) {
+                    snapshot.finishWrite(output);
+                } else {
+                    snapshot.failWrite(output);
                 }
+            } catch (Exception e) {
+                if (output != null) snapshot.failWrite(output);
             }
-        } catch (Exception ignored) {}
+        });
+    }
 
-        // If WebView dimensions are measured, capture immediately!
-        if (tab.webView != null) {
-            try {
-                int w = tab.webView.getWidth();
-                int h = tab.webView.getHeight();
-                if (w > 0 && h > 0) {
-                    Bitmap bmp = Bitmap.createBitmap(w / 2, h / 2, Bitmap.Config.RGB_565);
-                    Canvas canvas = new Canvas(bmp);
-                    canvas.scale(0.5f, 0.5f);
-                    tab.webView.draw(canvas);
-                    tab.snapshotBitmap = bmp;
-                    saveTabSnapshotToDisk(tab.id, bmp);
-                    return bmp;
-                }
-            } catch (Exception ignored) {}
+    private void bindTabSnapshot(TabItem tab, ImageView image) {
+        if (tab == null || tabSnapshotExecutor.isShutdown()) return;
+        visibleTabPreviews.computeIfAbsent(tab, ignored -> new ArrayList<>())
+                .add(new java.lang.ref.WeakReference<>(image));
+        Bitmap cached = tab.snapshotBitmap;
+        if (cached != null && !cached.isRecycled()) {
+            image.setImageBitmap(cached);
+            return;
         }
-        return null;
+        if (tab.isIncognito || pendingTabPreviews.containsKey(tab)) return;
+
+        Object request = new Object();
+        pendingTabPreviews.put(tab, request);
+        File file = getTabSnapshotFile(tab.id);
+        tabSnapshotExecutor.execute(() -> {
+            Bitmap decoded = readTabSnapshot(file);
+            runOnUiThread(() -> {
+                if (pendingTabPreviews.get(tab) != request) return;
+                pendingTabPreviews.remove(tab);
+                if (getTabById(tab.id) != tab || tab.isIncognito || isDestroyed()) return;
+                if (tab.snapshotBitmap == null) tab.snapshotBitmap = decoded;
+                showLoadedTabSnapshot(tab);
+            });
+        });
+    }
+
+    private Bitmap readTabSnapshot(File file) {
+        try (java.io.FileInputStream input = new android.util.AtomicFile(file).openRead()) {
+            return BitmapFactory.decodeStream(input);
+        } catch (java.io.IOException e) {
+            return null;
+        }
+    }
+
+    private void showLoadedTabSnapshot(TabItem tab) {
+        List<java.lang.ref.WeakReference<ImageView>> previews = visibleTabPreviews.get(tab);
+        if (previews == null || tab.snapshotBitmap == null || tab.snapshotBitmap.isRecycled()) return;
+        for (java.lang.ref.WeakReference<ImageView> preview : previews) {
+            ImageView target = preview.get();
+            if (target != null) target.setImageBitmap(tab.snapshotBitmap);
+        }
+    }
+
+    private void addTabSnapshot(FrameLayout frame, TabItem tab) {
+        ImageView preview = new ImageView(this);
+        preview.setLayoutParams(new FrameLayout.LayoutParams(
+                ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.MATCH_PARENT));
+        preview.setScaleType(ImageView.ScaleType.CENTER_CROP);
+        preview.setImportantForAccessibility(View.IMPORTANT_FOR_ACCESSIBILITY_NO);
+        frame.addView(preview);
+        bindTabSnapshot(tab, preview);
     }
 
     private void captureTabSnapshot(TabItem tab) {
-        if (tab == null || tab.webView == null) return;
+        if (tab == null || tab.webView == null || !tab.webView.isShown()) return;
         if (tab.url != null && tab.url.contains("pdf_viewer.html")) return;
+        if (isBrowserPanelOpen() || (tabGridOverlay != null && tabGridOverlay.isShown())) return;
 
-        int w = tab.webView.getWidth();
-        int h = tab.webView.getHeight();
-        if (w <= 0 || h <= 0) return;
-
-        // On Android 8.0+ (API 26+), use hardware GPU PixelCopy for the active tab to capture WebGL/Canvas/video with 100% fidelity
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O && getWindow() != null && tab.id == activeTabId && tab.webView.isShown()) {
+        WebView source = tab.webView;
+        String caskId = tab.caskId;
+        int width = source.getWidth();
+        int height = source.getHeight();
+        if (width < 2 || height < 2) return;
+        float scale = Math.min(0.5f, 480f / Math.max(width, height));
+        int previewWidth = Math.max(1, Math.round(width * scale));
+        int previewHeight = Math.max(1, Math.round(height * scale));
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O && tab.id == activeTabId) {
             try {
-                Bitmap destBitmap = Bitmap.createBitmap(w / 2, h / 2, Bitmap.Config.ARGB_8888);
-                int[] loc = new int[2];
-                tab.webView.getLocationInWindow(loc);
-                Rect srcRect = new Rect(loc[0], loc[1], loc[0] + w, loc[1] + h);
-                PixelCopy.request(getWindow(), srcRect, destBitmap, copyResult -> {
-                    if (copyResult == PixelCopy.SUCCESS) {
-                        tab.snapshotBitmap = destBitmap;
-                        saveTabSnapshotToDisk(tab.id, destBitmap);
+                Bitmap destination = Bitmap.createBitmap(previewWidth, previewHeight, Bitmap.Config.ARGB_8888);
+                int[] location = new int[2];
+                source.getLocationInWindow(location);
+                Rect region = new Rect(location[0], location[1], location[0] + width, location[1] + height);
+                PixelCopy.request(getWindow(), region, destination, result -> {
+                    if (isDestroyed() || getTabById(tab.id) != tab || tab.webView != source
+                            || !java.util.Objects.equals(caskId, tab.caskId)) {
+                        destination.recycle();
+                        return;
+                    }
+                    if (result == PixelCopy.SUCCESS) {
+                        saveTabSnapshot(tab, destination);
                     } else {
-                        fallbackSoftwareTabCapture(tab, w, h);
+                        destination.recycle();
+                        captureSoftwareTabSnapshot(tab, scale, previewWidth, previewHeight);
                     }
                 }, new Handler(Looper.getMainLooper()));
                 return;
-            } catch (Throwable ignored) {}
+            } catch (RuntimeException e) {
+                Log.d(TAG, "Unable to request hardware tab preview", e);
+            }
         }
-
-        fallbackSoftwareTabCapture(tab, w, h);
+        captureSoftwareTabSnapshot(tab, scale, previewWidth, previewHeight);
     }
 
-    private void fallbackSoftwareTabCapture(TabItem tab, int w, int h) {
+    private void captureSoftwareTabSnapshot(TabItem tab, float scale, int width, int height) {
         try {
-            Bitmap bmp = Bitmap.createBitmap(w / 2, h / 2, Bitmap.Config.RGB_565);
-            Canvas canvas = new Canvas(bmp);
-            canvas.scale(0.5f, 0.5f);
+            Bitmap bitmap = Bitmap.createBitmap(width, height, Bitmap.Config.RGB_565);
+            Canvas canvas = new Canvas(bitmap);
+            canvas.scale(scale, scale);
             tab.webView.draw(canvas);
-            tab.snapshotBitmap = bmp;
-            saveTabSnapshotToDisk(tab.id, bmp);
-        } catch (Throwable ignored) {}
+            saveTabSnapshot(tab, bitmap);
+        } catch (RuntimeException e) {
+            Log.d(TAG, "Unable to capture tab preview", e);
+        }
     }
 
     private void setupModernTabGridOverlay() {
         if (tabGridOverlay == null) return;
+
+        View previous = findViewById(R.id.btn_tab_dock_previous);
+        previous.setOnClickListener(view -> {
+            if (switchToLastUsedTab()) hideTabGridView();
+        });
+        androidx.appcompat.widget.TooltipCompat.setTooltipText(previous, "Previous tab");
 
         if (tabGridCloseViewBtn != null) {
             tabGridCloseViewBtn.setOnClickListener(v -> {
@@ -3300,6 +3205,9 @@ public class MainActivity extends AppCompatActivity {
 
     public void showTabGridView() {
         if (tabGridOverlay == null) return;
+        resetTabGridTransition();
+        closeContextualPod(false);
+        if (browserTabUndo != null) browserTabUndo.dismiss();
         if (caspianFloatingPill != null) caspianFloatingPill.setVisibility(View.GONE);
         if (caspianFloatingOrb != null) caspianFloatingOrb.setVisibility(View.GONE);
         TabItem currentTab = getTabById(activeTabId);
@@ -3328,6 +3236,11 @@ public class MainActivity extends AppCompatActivity {
         updateTabGridFavoriteButton();
         updateTabGridUndoButton();
         renderTabGridCards("");
+        updatePreviousTabButton();
+        if (!motionEnabled()) {
+            resetTabGridTransition();
+            return;
+        }
 
         // Smooth Zoom & Scale Entrance Animation
         if ("recents".equals(tabSwitcherViewStyle)) {
@@ -3397,6 +3310,10 @@ public class MainActivity extends AppCompatActivity {
     }
 
     public void hideTabGridView(float customPivotX, float customPivotY) {
+        if (isRecentsTransitionAnimating || !motionEnabled()) {
+            finishTabGridClose();
+            return;
+        }
         if (tabGridOverlay != null) {
             if ("recents".equals(tabSwitcherViewStyle)) {
                 if (browserContentLayout != null) {
@@ -3414,24 +3331,7 @@ public class MainActivity extends AppCompatActivity {
                         .alpha(0.0f)
                         .setDuration(220)
                         .setInterpolator(new AccelerateDecelerateInterpolator())
-                        .withEndAction(() -> {
-                            tabGridOverlay.setVisibility(View.GONE);
-                            tabGridOverlay.setAlpha(1.0f);
-                            tabGridOverlay.setScaleX(1.0f);
-                            tabGridOverlay.setScaleY(1.0f);
-                            tabGridOverlay.setTranslationY(0f);
-                            if (floatingCaspianCard != null && customView == null) {
-                                floatingCaspianCard.setVisibility(View.VISIBLE);
-                            }
-                            if (isOrbOrApplePieMode()) {
-                                TabItem actTab = getActiveOrDominantTab();
-                                if ("applepie".equalsIgnoreCase(omniboxScrollMode) && (actTab == null || !actTab.userExplicitFullOmnibox)) {
-                                    transitionToOrbState(ORB_STATE_BOTTOM_PILL, false);
-                                } else {
-                                    transitionToOrbState(currentOrbState, false);
-                                }
-                            }
-                        }).start();
+                        .withEndAction(this::finishTabGridClose).start();
                 return;
             }
 
@@ -3458,24 +3358,7 @@ public class MainActivity extends AppCompatActivity {
                     .translationY(dpToPx(24))
                     .setDuration(190)
                     .setInterpolator(new PathInterpolator(0.3f, 0f, 0.8f, 0.15f))
-                    .withEndAction(() -> {
-                        tabGridOverlay.setVisibility(View.GONE);
-                        tabGridOverlay.setScaleX(1.0f);
-                        tabGridOverlay.setScaleY(1.0f);
-                        tabGridOverlay.setAlpha(1.0f);
-                        tabGridOverlay.setTranslationY(0f);
-                        if (floatingCaspianCard != null && customView == null) {
-                            floatingCaspianCard.setVisibility(View.VISIBLE);
-                        }
-                        if (isOrbOrApplePieMode()) {
-                            TabItem actTab = getActiveOrDominantTab();
-                            if ("applepie".equalsIgnoreCase(omniboxScrollMode) && (actTab == null || !actTab.userExplicitFullOmnibox)) {
-                                transitionToOrbState(ORB_STATE_BOTTOM_PILL, false);
-                            } else {
-                                transitionToOrbState(currentOrbState, false);
-                            }
-                        }
-                    })
+                    .withEndAction(this::finishTabGridClose)
                     .start();
 
             if (browserContentLayout != null) {
@@ -3530,6 +3413,7 @@ public class MainActivity extends AppCompatActivity {
     }
 
     private void renderTabGridCards(String filterQuery) {
+        visibleTabPreviews.clear();
         if ("recents".equalsIgnoreCase(tabSwitcherViewStyle)) {
             if (tabGridCardsScroll != null) tabGridCardsScroll.setVisibility(View.GONE);
             if (tabRecentsScroll != null) tabRecentsScroll.setVisibility(View.VISIBLE);
@@ -3824,91 +3708,124 @@ public class MainActivity extends AppCompatActivity {
         }
     }
 
+    private ImageView openingTabPreview;
+
     private void animateRecentsCardToFullscreen(View card, TabItem tab) {
         if (isRecentsTransitionAnimating) return;
-        isRecentsTransitionAnimating = true;
-
         playUiFeedbackSound("tap");
         switchToTab(tab.id, false);
-
-        if (tabGridBottomDock != null) {
-            tabGridBottomDock.animate().alpha(0f).translationY(dpToPx(40)).setDuration(180).start();
-        }
-        if (tabGridHeaderRow != null) {
-            tabGridHeaderRow.animate().alpha(0f).translationY(-dpToPx(20)).setDuration(180).start();
+        if (!motionEnabled()) {
+            finishTabGridClose();
+            return;
         }
 
-        int screenW = getResources().getDisplayMetrics().widthPixels;
-        int screenH = getResources().getDisplayMetrics().heightPixels;
+        isRecentsTransitionAnimating = true;
+        PathInterpolator easing = new PathInterpolator(0.2f, 0f, 0f, 1f);
+        if (tab.snapshotBitmap != null && !tab.snapshotBitmap.isRecycled()
+                && rootContainer != null && card.getWidth() > 0 && card.getHeight() > 0) {
+            int[] cardPosition = new int[2];
+            int[] rootPosition = new int[2];
+            card.getLocationInWindow(cardPosition);
+            rootContainer.getLocationInWindow(rootPosition);
+            int left = cardPosition[0] - rootPosition[0];
+            int top = cardPosition[1] - rootPosition[1];
 
-        int[] loc = new int[2];
-        card.getLocationOnScreen(loc);
-        float cardCenterX = loc[0] + (card.getWidth() / 2f);
-        float cardCenterY = loc[1] + (card.getHeight() / 2f);
-        float targetCenterX = screenW / 2f;
-        float targetCenterY = screenH / 2f;
-        float transX = targetCenterX - cardCenterX;
-        float transY = targetCenterY - cardCenterY;
-
-        float targetScaleX = (float) screenW / (float) Math.max(1, card.getWidth());
-        float targetScaleY = (float) screenH / (float) Math.max(1, card.getHeight());
-
-        card.bringToFront();
-        card.animate()
-            .translationX(card.getTranslationX() + transX)
-            .translationY(card.getTranslationY() + transY)
-            .scaleX(targetScaleX)
-            .scaleY(targetScaleY)
-            .setDuration(280)
-            .setInterpolator(new PathInterpolator(0.2f, 0f, 0f, 1f))
-            .start();
+            ImageView preview = new ImageView(this);
+            preview.setImageBitmap(tab.snapshotBitmap);
+            preview.setScaleType(ImageView.ScaleType.CENTER_CROP);
+            preview.setImportantForAccessibility(View.IMPORTANT_FOR_ACCESSIBILITY_NO);
+            GradientDrawable shape = new GradientDrawable();
+            shape.setColor(ContextCompat.getColor(this, R.color.caspian_surface_void));
+            shape.setCornerRadius(dpToPx(18));
+            preview.setBackground(shape);
+            preview.setClipToOutline(true);
+            preview.setElevation(tabGridOverlay.getElevation() + dpToPx(1));
+            FrameLayout.LayoutParams position = new FrameLayout.LayoutParams(
+                    card.getWidth(), card.getHeight(), Gravity.TOP | Gravity.LEFT);
+            position.leftMargin = left;
+            position.topMargin = top;
+            rootContainer.addView(preview, position);
+            openingTabPreview = preview;
+            preview.setPivotX(0f);
+            preview.setPivotY(0f);
+            preview.animate().translationX(-left).translationY(-top)
+                    .scaleX((float) rootContainer.getWidth() / card.getWidth())
+                    .scaleY((float) rootContainer.getHeight() / card.getHeight())
+                    .alpha(0f).setDuration(245).setInterpolator(easing).start();
+        }
 
         if (browserContentLayout != null) {
-            browserContentLayout.setScaleX(0.85f);
-            browserContentLayout.setScaleY(0.85f);
-            browserContentLayout.animate()
-                .scaleX(1.0f)
-                .scaleY(1.0f)
-                .setDuration(280)
-                .setInterpolator(new PathInterpolator(0.2f, 0f, 0f, 1f))
-                .start();
+            browserContentLayout.animate().cancel();
+            browserContentLayout.animate().scaleX(1f).scaleY(1f).translationY(0f)
+                    .setDuration(245).setInterpolator(easing).start();
         }
+        tabGridOverlay.animate().cancel();
+        tabGridOverlay.animate().alpha(0f).setDuration(245).setInterpolator(easing)
+                .withEndAction(this::finishTabGridClose).start();
+    }
 
-        if (tabGridOverlay != null) {
-            tabGridOverlay.animate()
-                .alpha(0f)
-                .setDuration(260)
-                .setStartDelay(40)
-                .setInterpolator(new AccelerateDecelerateInterpolator())
-                .withEndAction(() -> {
-                    tabGridOverlay.setVisibility(View.GONE);
-                    tabGridOverlay.setAlpha(1f);
-                    tabGridOverlay.setScaleX(1f);
-                    tabGridOverlay.setScaleY(1f);
-                    tabGridOverlay.setTranslationY(0f);
-                    card.setScaleX(1f);
-                    card.setScaleY(1f);
-                    card.setTranslationX(0f);
-                    card.setTranslationY(0f);
-                    if (tabGridBottomDock != null) {
-                        tabGridBottomDock.setAlpha(1f);
-                        tabGridBottomDock.setTranslationY(0f);
-                    }
-                    if (tabGridHeaderRow != null) {
-                        tabGridHeaderRow.setAlpha(1f);
-                        tabGridHeaderRow.setTranslationY(0f);
-                    }
-                    if (floatingCaspianCard != null && customView == null) {
-                        floatingCaspianCard.setVisibility(View.VISIBLE);
-                    }
-                    if (isOrbOrApplePieMode()) {
-                        transitionToOrbState(currentOrbState, false);
-                    }
-                    isRecentsTransitionAnimating = false;
-                }).start();
-        } else {
-            isRecentsTransitionAnimating = false;
+    private void resetTabGridTransition() {
+        if (openingTabPreview != null) {
+            openingTabPreview.animate().cancel();
+            rootContainer.removeView(openingTabPreview);
+            openingTabPreview = null;
         }
+        isRecentsTransitionAnimating = false;
+        resetTabGridMotion(tabGridOverlay);
+        resetTabGridMotion(browserContentLayout);
+    }
+
+    private void resetTabGridMotion(View view) {
+        if (view == null) return;
+        view.animate().cancel();
+        CaspianPhysics.cancelSpring(view, DynamicAnimation.SCALE_X);
+        CaspianPhysics.cancelSpring(view, DynamicAnimation.SCALE_Y);
+        CaspianPhysics.cancelSpring(view, DynamicAnimation.TRANSLATION_Y);
+        view.setScaleX(1f);
+        view.setScaleY(1f);
+        view.setTranslationY(0f);
+        view.setAlpha(1f);
+    }
+
+    private void finishTabGridClose() {
+        resetTabGridTransition();
+        visibleTabPreviews.clear();
+        if (tabGridOverlay != null) tabGridOverlay.setVisibility(View.GONE);
+        if (floatingCaspianCard != null && customView == null && !isSoftKeyboardVisible) {
+            floatingCaspianCard.setVisibility(View.VISIBLE);
+        } else if (customView == null && isSoftKeyboardVisible) {
+            podHiddenForKeyboard = true;
+        }
+        if (isApplePieMode()) {
+            TabItem tab = getActiveOrDominantTab();
+            boolean preferBottom = tab == null || !tab.userExplicitFullOmnibox;
+            transitionToOrbState(preferBottom ? ORB_STATE_BOTTOM_PILL : currentOrbState, false);
+        }
+    }
+
+    private TabItem getPreviousTab() {
+        TabItem current = getActiveOrDominantTab();
+        if (current == null) return null;
+        TabItem previous = null;
+        for (TabItem tab : tabsList) {
+            if (tab == current || tab.isIncognito != current.isIncognito
+                    || !TabState.accountSpaceId(tab.caskId).equals(TabState.accountSpaceId(current.caskId))
+                    || tab.lastActivatedAt == 0) continue;
+            if (previous == null || tab.lastActivatedAt > previous.lastActivatedAt) previous = tab;
+        }
+        return previous;
+    }
+
+    private boolean switchToLastUsedTab() {
+        TabItem previous = getPreviousTab();
+        if (previous == null) return false;
+        switchToTab(previous.id, false);
+        return true;
+    }
+
+    private void updatePreviousTabButton() {
+        View button = findViewById(R.id.btn_tab_dock_previous);
+        if (button != null) button.setVisibility(getPreviousTab() == null ? View.GONE : View.VISIBLE);
     }
 
     private void renderTabRecentsCards(String filterQuery) {
@@ -4129,39 +4046,30 @@ public class MainActivity extends AppCompatActivity {
         }
         card.setForeground(borderOverlay);
 
-        // Preview Snapshot
-        Bitmap previewBmp = getOrLoadTabSnapshot(tab);
-        if (previewBmp != null && !previewBmp.isRecycled()) {
-            ImageView previewImg = new ImageView(this);
-            previewImg.setLayoutParams(new FrameLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.MATCH_PARENT));
-            previewImg.setScaleType(ImageView.ScaleType.CENTER_CROP);
-            previewImg.setImageBitmap(previewBmp);
-            card.addView(previewImg);
-        } else {
-            LinearLayout placeholder = new LinearLayout(this);
-            placeholder.setLayoutParams(new FrameLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.MATCH_PARENT));
-            placeholder.setOrientation(LinearLayout.VERTICAL);
-            placeholder.setGravity(Gravity.CENTER);
-            placeholder.setPadding(dpToPx(20), dpToPx(20), dpToPx(20), dpToPx(20));
+        LinearLayout placeholder = new LinearLayout(this);
+        placeholder.setLayoutParams(new FrameLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.MATCH_PARENT));
+        placeholder.setOrientation(LinearLayout.VERTICAL);
+        placeholder.setGravity(Gravity.CENTER);
+        placeholder.setPadding(dpToPx(20), dpToPx(20), dpToPx(20), dpToPx(20));
 
-            TextView bigIcon = new TextView(this);
-            bigIcon.setText(tab.isIncognito ? "🕶️" : (url.contains("youtube.com") ? "🎬" : (url.contains("chatgpt.com") ? "🤖" : (url.contains("gemini.google.com") ? "♊" : "🌐"))));
-            bigIcon.setTextSize(36);
-            bigIcon.setGravity(Gravity.CENTER);
-            placeholder.addView(bigIcon);
+        TextView bigIcon = new TextView(this);
+        bigIcon.setText(tab.isIncognito ? "🕶️" : (url.contains("youtube.com") ? "🎬" : (url.contains("chatgpt.com") ? "🤖" : (url.contains("gemini.google.com") ? "♊" : "🌐"))));
+        bigIcon.setTextSize(36);
+        bigIcon.setGravity(Gravity.CENTER);
+        placeholder.addView(bigIcon);
 
-            TextView hostView = new TextView(this);
-            hostView.setText(cleanDisplayUrl(url));
-            hostView.setTextColor(isLight ? 0xFF334155 : 0xFFCBD5E1);
-            hostView.setTextSize(TypedValue.COMPLEX_UNIT_SP, 13);
-            hostView.setTypeface(null, android.graphics.Typeface.BOLD);
-            hostView.setSingleLine(true);
-            hostView.setEllipsize(android.text.TextUtils.TruncateAt.END);
-            hostView.setPadding(0, dpToPx(10), 0, 0);
-            placeholder.addView(hostView);
+        TextView hostView = new TextView(this);
+        hostView.setText(cleanDisplayUrl(url));
+        hostView.setTextColor(isLight ? 0xFF334155 : 0xFFCBD5E1);
+        hostView.setTextSize(TypedValue.COMPLEX_UNIT_SP, 13);
+        hostView.setTypeface(null, android.graphics.Typeface.BOLD);
+        hostView.setSingleLine(true);
+        hostView.setEllipsize(android.text.TextUtils.TruncateAt.END);
+        hostView.setPadding(0, dpToPx(10), 0, 0);
+        placeholder.addView(hostView);
 
-            card.addView(placeholder);
-        }
+        card.addView(placeholder);
+        addTabSnapshot(card, tab);
 
         // Vivid Yellow selection highlight tint & checkmark badge
         if (isSelected) {
@@ -4760,7 +4668,7 @@ public class MainActivity extends AppCompatActivity {
 
         TextView bottomPrompt = new TextView(this);
         bottomPrompt.setLayoutParams(new FrameLayout.LayoutParams(ViewGroup.LayoutParams.WRAP_CONTENT, ViewGroup.LayoutParams.WRAP_CONTENT, Gravity.CENTER));
-        bottomPrompt.setText("📂  Tap to view " + count + " tabs");
+        bottomPrompt.setText("Tab group · " + count + " tabs");
         bottomPrompt.setTextColor(isLight ? 0xFF334155 : 0xFFDFE2F0);
         bottomPrompt.setTextSize(TypedValue.COMPLEX_UNIT_SP, 11);
         bottomPrompt.setTypeface(null, android.graphics.Typeface.BOLD);
@@ -4865,25 +4773,17 @@ public class MainActivity extends AppCompatActivity {
         tile.setBackground(tileGd);
         tile.setClipToOutline(true);
 
-        Bitmap snap = getOrLoadTabSnapshot(tab);
-        if (snap != null && !snap.isRecycled()) {
-            ImageView img = new ImageView(this);
-            img.setLayoutParams(new FrameLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.MATCH_PARENT));
-            img.setScaleType(ImageView.ScaleType.CENTER_CROP);
-            img.setImageBitmap(snap);
-            tile.addView(img);
-        } else {
-            LinearLayout ph = new LinearLayout(this);
-            ph.setLayoutParams(new FrameLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.MATCH_PARENT));
-            ph.setOrientation(LinearLayout.VERTICAL);
-            ph.setGravity(Gravity.CENTER);
+        LinearLayout ph = new LinearLayout(this);
+        ph.setLayoutParams(new FrameLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.MATCH_PARENT));
+        ph.setOrientation(LinearLayout.VERTICAL);
+        ph.setGravity(Gravity.CENTER);
 
-            TextView ic = new TextView(this);
-            ic.setText(tab != null && tab.url != null && tab.url.contains("youtube.com") ? "🎬" : "🌐");
-            ic.setTextSize(18);
-            ph.addView(ic);
-            tile.addView(ph);
-        }
+        TextView ic = new TextView(this);
+        ic.setText(tab != null && tab.url != null && tab.url.contains("youtube.com") ? "🎬" : "🌐");
+        ic.setTextSize(18);
+        ph.addView(ic);
+        tile.addView(ph);
+        addTabSnapshot(tile, tab);
 
         // Mini bottom chip with favicon & title
         if (tab != null && !showOverflow) {
@@ -4979,12 +4879,11 @@ public class MainActivity extends AppCompatActivity {
         halves.setLayoutParams(new FrameLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.MATCH_PARENT));
         halves.setOrientation(LinearLayout.HORIZONTAL);
 
-        Bitmap leftBmp = getOrLoadTabSnapshot(leftTab);
         ImageView leftImg = new ImageView(this);
         leftImg.setLayoutParams(new LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.MATCH_PARENT, 1f));
         leftImg.setScaleType(ImageView.ScaleType.CENTER_CROP);
-        if (leftBmp != null && !leftBmp.isRecycled()) leftImg.setImageBitmap(leftBmp);
-        else leftImg.setBackgroundColor(isLight ? 0xFFF1F5F9 : 0xFF0F131D);
+        leftImg.setBackgroundColor(isLight ? 0xFFF1F5F9 : 0xFF0F131D);
+        bindTabSnapshot(leftTab, leftImg);
         halves.addView(leftImg);
 
         View splitLine = new View(this);
@@ -4992,12 +4891,11 @@ public class MainActivity extends AppCompatActivity {
         splitLine.setBackgroundColor(isLight ? 0xFFCBD5E1 : 0x44FFFFFF);
         halves.addView(splitLine);
 
-        Bitmap rightBmp = getOrLoadTabSnapshot(rightTab);
         ImageView rightImg = new ImageView(this);
         rightImg.setLayoutParams(new LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.MATCH_PARENT, 1f));
         rightImg.setScaleType(ImageView.ScaleType.CENTER_CROP);
-        if (rightBmp != null && !rightBmp.isRecycled()) rightImg.setImageBitmap(rightBmp);
-        else rightImg.setBackgroundColor(isLight ? 0xFFF8FAFC : 0xFF161E31);
+        rightImg.setBackgroundColor(isLight ? 0xFFF8FAFC : 0xFF161E31);
+        bindTabSnapshot(rightTab, rightImg);
         halves.addView(rightImg);
 
         card.addView(halves);
@@ -6082,31 +5980,23 @@ public class MainActivity extends AppCompatActivity {
         // Left Half
         FrameLayout leftFrame = new FrameLayout(this);
         leftFrame.setLayoutParams(new LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.MATCH_PARENT, 1f));
-        Bitmap lBmp = getOrLoadTabSnapshot(leftTab);
-        if (lBmp != null && !lBmp.isRecycled()) {
-            ImageView img = new ImageView(this);
-            img.setLayoutParams(new FrameLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.MATCH_PARENT));
-            img.setScaleType(ImageView.ScaleType.CENTER_CROP);
-            img.setImageBitmap(lBmp);
-            leftFrame.addView(img);
+        Bitmap lFav = getTabFaviconBitmap(leftTab);
+        if (lFav != null && !lFav.isRecycled()) {
+            ImageView favImg = new ImageView(this);
+            FrameLayout.LayoutParams favLp = new FrameLayout.LayoutParams(dpToPx(24), dpToPx(24), Gravity.CENTER);
+            favImg.setLayoutParams(favLp);
+            favImg.setScaleType(ImageView.ScaleType.FIT_CENTER);
+            favImg.setImageBitmap(lFav);
+            leftFrame.addView(favImg);
         } else {
-            Bitmap lFav = getTabFaviconBitmap(leftTab);
-            if (lFav != null && !lFav.isRecycled()) {
-                ImageView favImg = new ImageView(this);
-                FrameLayout.LayoutParams favLp = new FrameLayout.LayoutParams(dpToPx(24), dpToPx(24), Gravity.CENTER);
-                favImg.setLayoutParams(favLp);
-                favImg.setScaleType(ImageView.ScaleType.FIT_CENTER);
-                favImg.setImageBitmap(lFav);
-                leftFrame.addView(favImg);
-            } else {
-                TextView icon = new TextView(this);
-                icon.setLayoutParams(new FrameLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.MATCH_PARENT, Gravity.CENTER));
-                icon.setGravity(Gravity.CENTER);
-                icon.setText(leftTab.url != null && leftTab.url.contains("youtube.com") ? "🎬" : "🌐");
-                icon.setTextSize(14);
-                leftFrame.addView(icon);
-            }
+            TextView icon = new TextView(this);
+            icon.setLayoutParams(new FrameLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.MATCH_PARENT, Gravity.CENTER));
+            icon.setGravity(Gravity.CENTER);
+            icon.setText(leftTab.url != null && leftTab.url.contains("youtube.com") ? "🎬" : "🌐");
+            icon.setTextSize(14);
+            leftFrame.addView(icon);
         }
+        addTabSnapshot(leftFrame, leftTab);
 
         // Vertical Divider
         View vDivider = new View(this);
@@ -6116,31 +6006,23 @@ public class MainActivity extends AppCompatActivity {
         // Right Half
         FrameLayout rightFrame = new FrameLayout(this);
         rightFrame.setLayoutParams(new LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.MATCH_PARENT, 1f));
-        Bitmap rBmp = getOrLoadTabSnapshot(rightTab);
-        if (rBmp != null && !rBmp.isRecycled()) {
-            ImageView img = new ImageView(this);
-            img.setLayoutParams(new FrameLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.MATCH_PARENT));
-            img.setScaleType(ImageView.ScaleType.CENTER_CROP);
-            img.setImageBitmap(rBmp);
-            rightFrame.addView(img);
+        Bitmap rFav = getTabFaviconBitmap(rightTab);
+        if (rFav != null && !rFav.isRecycled()) {
+            ImageView favImg = new ImageView(this);
+            FrameLayout.LayoutParams favLp = new FrameLayout.LayoutParams(dpToPx(24), dpToPx(24), Gravity.CENTER);
+            favImg.setLayoutParams(favLp);
+            favImg.setScaleType(ImageView.ScaleType.FIT_CENTER);
+            favImg.setImageBitmap(rFav);
+            rightFrame.addView(favImg);
         } else {
-            Bitmap rFav = getTabFaviconBitmap(rightTab);
-            if (rFav != null && !rFav.isRecycled()) {
-                ImageView favImg = new ImageView(this);
-                FrameLayout.LayoutParams favLp = new FrameLayout.LayoutParams(dpToPx(24), dpToPx(24), Gravity.CENTER);
-                favImg.setLayoutParams(favLp);
-                favImg.setScaleType(ImageView.ScaleType.FIT_CENTER);
-                favImg.setImageBitmap(rFav);
-                rightFrame.addView(favImg);
-            } else {
-                TextView icon = new TextView(this);
-                icon.setLayoutParams(new FrameLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.MATCH_PARENT, Gravity.CENTER));
-                icon.setGravity(Gravity.CENTER);
-                icon.setText(rightTab.url != null && rightTab.url.contains("youtube.com") ? "🎬" : "🌐");
-                icon.setTextSize(14);
-                rightFrame.addView(icon);
-            }
+            TextView icon = new TextView(this);
+            icon.setLayoutParams(new FrameLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.MATCH_PARENT, Gravity.CENTER));
+            icon.setGravity(Gravity.CENTER);
+            icon.setText(rightTab.url != null && rightTab.url.contains("youtube.com") ? "🎬" : "🌐");
+            icon.setTextSize(14);
+            rightFrame.addView(icon);
         }
+        addTabSnapshot(rightFrame, rightTab);
 
         body.addView(leftFrame);
         body.addView(vDivider);
@@ -6666,39 +6548,31 @@ public class MainActivity extends AppCompatActivity {
         body.setBackground(bodyGd);
         body.setClipToOutline(true);
 
-        Bitmap previewBmp = getOrLoadTabSnapshot(tab);
-        if (previewBmp != null && !previewBmp.isRecycled()) {
-            ImageView previewImage = new ImageView(this);
-            previewImage.setLayoutParams(new FrameLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.MATCH_PARENT));
-            previewImage.setScaleType(ImageView.ScaleType.CENTER_CROP);
-            previewImage.setImageBitmap(previewBmp);
-            body.addView(previewImage);
-        } else {
-            LinearLayout placeholder = new LinearLayout(this);
-            placeholder.setLayoutParams(new FrameLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.MATCH_PARENT));
-            placeholder.setOrientation(LinearLayout.VERTICAL);
-            placeholder.setGravity(Gravity.CENTER);
-            placeholder.setPadding(dpToPx(12), dpToPx(14), dpToPx(12), dpToPx(14));
+        LinearLayout placeholder = new LinearLayout(this);
+        placeholder.setLayoutParams(new FrameLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.MATCH_PARENT));
+        placeholder.setOrientation(LinearLayout.VERTICAL);
+        placeholder.setGravity(Gravity.CENTER);
+        placeholder.setPadding(dpToPx(12), dpToPx(14), dpToPx(12), dpToPx(14));
 
-            TextView bigIcon = new TextView(this);
-            bigIcon.setText(tab.isIncognito ? "🕶️" : (url.contains("youtube.com") ? "🎬" : (url.contains("chatgpt.com") ? "🤖" : (url.contains("gemini.google.com") ? "♊" : "🌐"))));
-            bigIcon.setTextSize(26);
-            bigIcon.setGravity(Gravity.CENTER);
-            placeholder.addView(bigIcon);
+        TextView bigIcon = new TextView(this);
+        bigIcon.setText(tab.isIncognito ? "🕶️" : (url.contains("youtube.com") ? "🎬" : (url.contains("chatgpt.com") ? "🤖" : (url.contains("gemini.google.com") ? "♊" : "🌐"))));
+        bigIcon.setTextSize(26);
+        bigIcon.setGravity(Gravity.CENTER);
+        placeholder.addView(bigIcon);
 
-            TextView hostView = new TextView(this);
-            hostView.setLayoutParams(new LinearLayout.LayoutParams(ViewGroup.LayoutParams.WRAP_CONTENT, ViewGroup.LayoutParams.WRAP_CONTENT));
-            hostView.setText(cleanDisplayUrl(url));
-            hostView.setTextColor(isLight ? 0xFF334155 : 0xFFCBD5E1);
-            hostView.setTextSize(TypedValue.COMPLEX_UNIT_SP, 11);
-            hostView.setTypeface(null, android.graphics.Typeface.BOLD);
-            hostView.setSingleLine(true);
-            hostView.setEllipsize(android.text.TextUtils.TruncateAt.END);
-            hostView.setPadding(0, dpToPx(6), 0, 0);
-            placeholder.addView(hostView);
+        TextView hostView = new TextView(this);
+        hostView.setLayoutParams(new LinearLayout.LayoutParams(ViewGroup.LayoutParams.WRAP_CONTENT, ViewGroup.LayoutParams.WRAP_CONTENT));
+        hostView.setText(cleanDisplayUrl(url));
+        hostView.setTextColor(isLight ? 0xFF334155 : 0xFFCBD5E1);
+        hostView.setTextSize(TypedValue.COMPLEX_UNIT_SP, 11);
+        hostView.setTypeface(null, android.graphics.Typeface.BOLD);
+        hostView.setSingleLine(true);
+        hostView.setEllipsize(android.text.TextUtils.TruncateAt.END);
+        hostView.setPadding(0, dpToPx(6), 0, 0);
+        placeholder.addView(hostView);
 
-            body.addView(placeholder);
-        }
+        body.addView(placeholder);
+        addTabSnapshot(body, tab);
 
         // Bottom Row Container for Domain Badge & Cask Indicator (Guarantees zero overlap/collision)
         LinearLayout bottomRow = new LinearLayout(this);
@@ -7448,28 +7322,29 @@ public class MainActivity extends AppCompatActivity {
     }
 
     public void updateThemeStyling() {
+        BrowserChrome chrome = new BrowserChrome(isDarkTheme);
         if (rootContainer != null) {
-            rootContainer.setBackgroundColor(isDarkTheme ? 0xFF050811 : 0xFFF8FAFC);
+            rootContainer.setBackgroundColor(chrome.background);
         }
         if (omniboxHeaderWrapper != null) {
             updateOmniboxScrimBackground();
         }
         if (omniboxHeader != null) {
-            omniboxHeader.setBackgroundResource(isDarkTheme ? R.drawable.bg_liquid_glass : R.drawable.bg_liquid_glass_light);
+            omniboxHeader.setBackground(chrome.panel(this, 20));
         }
         if (omniboxCapsule != null) {
-            omniboxCapsule.setBackgroundResource(isDarkTheme ? R.drawable.bg_liquid_glass_pill : R.drawable.bg_liquid_glass_pill_light);
+            omniboxCapsule.setBackground(chrome.panel(this, 16));
         }
         if (omniboxEditText != null) {
-            omniboxEditText.setTextColor(isDarkTheme ? 0xFFFFFFFF : 0xFF111827);
-            omniboxEditText.setHintTextColor(isDarkTheme ? 0x88A2A9A9 : 0xFF9CA3AF);
+            omniboxEditText.setTextColor(chrome.text);
+            omniboxEditText.setHintTextColor(chrome.muted);
         }
         if (omniboxFinderInput != null) {
             omniboxFinderInput.setTextColor(isDarkTheme ? 0xFFFFFFFF : 0xFF111827);
             omniboxFinderInput.setHintTextColor(isDarkTheme ? 0x88A2A9A9 : 0xFF9CA3AF);
         }
 
-        int defaultIconTint = isDarkTheme ? 0xFFA2A9A9 : 0xFF4B5563;
+        int defaultIconTint = chrome.muted;
         if (omniboxBackBtn != null) omniboxBackBtn.setColorFilter(defaultIconTint);
         if (omniboxForwardBtn != null) omniboxForwardBtn.setColorFilter(defaultIconTint);
         if (omniboxReloadBtn != null) omniboxReloadBtn.setColorFilter(defaultIconTint);
@@ -7479,7 +7354,7 @@ public class MainActivity extends AppCompatActivity {
         if (omniboxFinderClose != null) omniboxFinderClose.setColorFilter(defaultIconTint);
         if (omniboxFinderPrev != null) omniboxFinderPrev.setColorFilter(defaultIconTint);
         if (omniboxFinderNext != null) omniboxFinderNext.setColorFilter(defaultIconTint);
-        int omniAccentTint = isDarkTheme ? 0xFF00E5FF : 0xFF0284C7;
+        int omniAccentTint = chrome.accent;
         if (omniboxCopyBtn != null) omniboxCopyBtn.setColorFilter(omniAccentTint);
         if (omniboxPasteBtn != null) omniboxPasteBtn.setColorFilter(omniAccentTint);
         if (omniboxClearBtn != null) omniboxClearBtn.setColorFilter(omniAccentTint);
@@ -7631,6 +7506,7 @@ public class MainActivity extends AppCompatActivity {
         } catch (Exception ignored) {}
 
         updateThemeStyling();
+        if (browserPanels != null) browserPanels.refreshTheme();
 
         for (TabItem tab : tabsList) {
             if (tab.webView != null) {
@@ -7972,7 +7848,7 @@ public class MainActivity extends AppCompatActivity {
             if (floatingCaspianCard != null) {
                 floatingCaspianCard.setVisibility(View.VISIBLE);
             }
-            if (isOrbOrApplePieMode()) {
+            if (isApplePieMode()) {
                 transitionToOrbState(currentOrbState, false);
             }
             applyScreenTouchLockState(false);
@@ -8046,6 +7922,7 @@ public class MainActivity extends AppCompatActivity {
     @Override
     public void onConfigurationChanged(Configuration newConfig) {
         super.onConfigurationChanged(newConfig);
+        closeContextualPod(false);
         syncTimelineBarWidth();
     }
 
@@ -8469,16 +8346,17 @@ public class MainActivity extends AppCompatActivity {
     }
 
     public void showYouTubeSpeedPopup(View anchor) {
+        showVideoSpeedPopup(anchor, this::setYouTubeSpeed);
+    }
+
+    private void showVideoSpeedPopup(View anchor, java.util.function.DoubleConsumer setSpeed) {
         playUiFeedbackSound("tap");
         List<CaspianMenuItem> speedItems = new ArrayList<>();
-        speedItems.add(new CaspianMenuItem("0.25x", () -> setYouTubeSpeed(0.25)));
-        speedItems.add(new CaspianMenuItem("0.5x", () -> setYouTubeSpeed(0.5)));
-        speedItems.add(new CaspianMenuItem("0.75x", () -> setYouTubeSpeed(0.75)));
-        speedItems.add(new CaspianMenuItem("1.0x (Normal)", () -> setYouTubeSpeed(1.0)));
-        speedItems.add(new CaspianMenuItem("1.25x", () -> setYouTubeSpeed(1.25)));
-        speedItems.add(new CaspianMenuItem("1.5x", () -> setYouTubeSpeed(1.5)));
-        speedItems.add(new CaspianMenuItem("1.75x", () -> setYouTubeSpeed(1.75)));
-        speedItems.add(new CaspianMenuItem("2.0x", () -> setYouTubeSpeed(2.0)));
+        double[] speeds = {0.25, 0.5, 0.75, 1.0, 1.25, 1.5, 1.75, 2.0};
+        for (double speed : speeds) {
+            String label = speed == 1.0 ? "1.0x (Normal)" : speed + "x";
+            speedItems.add(new CaspianMenuItem(label, () -> setSpeed.accept(speed)));
+        }
         showCaspianCustomPopup(anchor, speedItems);
     }
 
@@ -9786,12 +9664,7 @@ public class MainActivity extends AppCompatActivity {
                 v.performHapticFeedback(HapticFeedbackConstants.KEYBOARD_TAP);
                 TabItem cur = getTabById(activeTabId);
                 if (cur != null) cur.userExplicitFullOmnibox = false;
-                if ("applepie".equalsIgnoreCase(omniboxScrollMode)) {
-                    transitionToOrbState(ORB_STATE_BOTTOM_PILL, true);
-                } else {
-                    previousOrbStateBeforeHandle = ORB_STATE_FULL_TOP;
-                    transitionToOrbState(ORB_STATE_FLOATING_ORB, true);
-                }
+                transitionToOrbState(ORB_STATE_BOTTOM_PILL, true);
             });
         }
     }
@@ -9878,7 +9751,7 @@ public class MainActivity extends AppCompatActivity {
 
     private void expandOmniboxUrl() {
         if (omniboxEditText == null) return;
-        boolean isBottom = "applepie".equalsIgnoreCase(omniboxScrollMode) || "bottom".equalsIgnoreCase(omniboxPosition);
+        boolean isBottom = isApplePieMode() || "bottom".equalsIgnoreCase(omniboxPosition);
         int targetGravity = isBottom ? Gravity.BOTTOM : Gravity.TOP;
         if (omniboxHeaderWrapper != null) {
             FrameLayout.LayoutParams lp = (FrameLayout.LayoutParams) omniboxHeaderWrapper.getLayoutParams();
@@ -9957,101 +9830,13 @@ public class MainActivity extends AppCompatActivity {
     private void setupOmniboxUrlGestureListener() {
         if (omniboxEditText == null) return;
 
-        View.OnTouchListener urlGestureListener = new View.OnTouchListener() {
-            private float downRawX = 0f;
-            private float downRawY = 0f;
-            private long downTime = 0L;
-            private boolean hasMovedPastSlop = false;
-            private final int touchSlop = android.view.ViewConfiguration.get(MainActivity.this).getScaledTouchSlop();
-            private final int swipeThreshold = dpToPx(32);
-
-            @Override
-            public boolean onTouch(View v, MotionEvent event) {
-                if (omniboxEditText != null && omniboxEditText.hasFocus()) {
-                    return false;
-                }
-
-                switch (event.getActionMasked()) {
-                    case MotionEvent.ACTION_DOWN:
-                        downRawX = event.getRawX();
-                        downRawY = event.getRawY();
-                        downTime = System.currentTimeMillis();
-                        hasMovedPastSlop = false;
-                        return true;
-
-                    case MotionEvent.ACTION_MOVE: {
-                        float dx = event.getRawX() - downRawX;
-                        float dy = event.getRawY() - downRawY;
-                        if (Math.hypot(dx, dy) >= touchSlop) {
-                            hasMovedPastSlop = true;
-                        }
-                        return true;
+        View.OnTouchListener urlGestureListener = BrowserGestures.addressBar(
+                () -> !omniboxEditText.hasFocus(), this::browserGesturesEnabled, new BrowserGestures.Listener() {
+                    @Override public boolean onSwipe(BrowserGestures.Swipe direction) {
+                        return onBrowserBarSwipe(direction, false);
                     }
-
-                    case MotionEvent.ACTION_UP: {
-                        float dx = event.getRawX() - downRawX;
-                        float dy = event.getRawY() - downRawY;
-                        long duration = System.currentTimeMillis() - downTime;
-
-                        if (hasMovedPastSlop) {
-                            boolean isBottomOmnibox = "bottom".equalsIgnoreCase(omniboxPosition) || isOrbOrApplePieMode();
-                            boolean isTabSwitcherSwipe = isBottomOmnibox
-                                    ? (dy < -swipeThreshold && Math.abs(dy) > Math.abs(dx) * 1.15f)
-                                    : (dy > swipeThreshold && dy > Math.abs(dx) * 1.15f);
-
-                            // 1. SWIPE UP (Bottom) or SWIPE DOWN (Top) -> Open Tab Switcher UI
-                            if (isTabSwitcherSwipe) {
-                                try { v.performHapticFeedback(HapticFeedbackConstants.KEYBOARD_TAP); } catch (Throwable ignored) {}
-                                playUiFeedbackSound("tap");
-                                showTabGridView();
-                                return true;
-                            }
-                            // 2. SWIPE DOWN in Orb / Apple Pie Full Omnibox -> Dock / Minimize
-                            else if (isOrbOrApplePieMode() && dy > swipeThreshold && dy > Math.abs(dx) * 1.15f) {
-                                try { v.performHapticFeedback(HapticFeedbackConstants.KEYBOARD_TAP); } catch (Throwable ignored) {}
-                                playUiFeedbackSound("pop_button_v2");
-                                if (omniboxEditText != null && omniboxEditText.hasFocus()) {
-                                    hideKeyboard();
-                                    omniboxEditText.clearFocus();
-                                }
-                                if ("applepie".equalsIgnoreCase(omniboxScrollMode)) {
-                                    transitionToOrbState(ORB_STATE_BOTTOM_PILL, true);
-                                } else {
-                                    transitionToOrbState(ORB_STATE_FLOATING_ORB, true);
-                                }
-                                return true;
-                            }
-                            // 3. SWIPE RIGHT -> Previous Tab
-                            else if (dx > swipeThreshold && dx > Math.abs(dy) * 1.15f) {
-                                try { v.performHapticFeedback(HapticFeedbackConstants.KEYBOARD_TAP); } catch (Throwable ignored) {}
-                                playUiFeedbackSound("tap");
-                                switchToAdjacentTab(-1);
-                                return true;
-                            }
-                            // 4. SWIPE LEFT -> Next Tab
-                            else if (dx < -swipeThreshold && Math.abs(dx) > Math.abs(dy) * 1.15f) {
-                                try { v.performHapticFeedback(HapticFeedbackConstants.KEYBOARD_TAP); } catch (Throwable ignored) {}
-                                playUiFeedbackSound("tap");
-                                switchToAdjacentTab(1);
-                                return true;
-                            }
-                        }
-
-                        // 4. TAP (Within touchSlop & duration < 400ms) -> Expand URL
-                        if (!hasMovedPastSlop && duration < 400) {
-                            expandOmniboxUrl();
-                            return true;
-                        }
-                        return true;
-                    }
-
-                    case MotionEvent.ACTION_CANCEL:
-                        hasMovedPastSlop = false;
-                        return false;
-                }
-                return false;
-            }
-        };
+                    @Override public void onTap() { expandOmniboxUrl(); }
+                });
 
         omniboxEditText.setOnTouchListener(urlGestureListener);
         if (omniboxUrlContainer != null) {
@@ -10074,39 +9859,47 @@ public class MainActivity extends AppCompatActivity {
         setupOmniboxUrlGestureListener();
     }
 
-    public void switchToAdjacentTab(int direction) {
-        if (tabsList == null || tabsList.size() <= 1) return;
-        int currentIndex = -1;
-        for (int i = 0; i < tabsList.size(); i++) {
-            if (tabsList.get(i).id == activeTabId) {
-                currentIndex = i;
-                break;
+    private boolean browserGesturesEnabled() {
+        return browserPreferences == null || browserPreferences.gesturesEnabled();
+    }
+
+    private boolean onBrowserBarSwipe(BrowserGestures.Swipe swipe, boolean compact) {
+        if (swipe == BrowserGestures.Swipe.LEFT || swipe == BrowserGestures.Swipe.RIGHT) {
+            return switchToAdjacentTab(swipe == BrowserGestures.Swipe.LEFT ? 1 : -1);
+        }
+        BrowserGestures.Swipe towardPage = "bottom".equals(omniboxPosition) ? BrowserGestures.Swipe.UP : BrowserGestures.Swipe.DOWN;
+        if (swipe == towardPage) {
+            showTabGridView();
+            return true;
+        }
+        if (swipe == BrowserGestures.Swipe.DOWN && isApplePieMode()) {
+            openedUrlEditFromPill = false;
+            transitionToOrbState(compact ? ORB_STATE_FULL_TOP : ORB_STATE_BOTTOM_PILL, motionEnabled());
+            return true;
+        }
+        return false;
+    }
+
+    public boolean switchToAdjacentTab(int direction) {
+        TabItem current = getActiveOrDominantTab();
+        if (current == null || tabsList.size() <= 1) return false;
+        int index = tabsList.indexOf(current);
+        if (index < 0) return false;
+        for (int offset = 1; offset < tabsList.size(); offset++) {
+            TabItem candidate = tabsList.get(Math.floorMod(index + offset * direction, tabsList.size()));
+            if (candidate.isIncognito != current.isIncognito || !TabState.accountSpaceId(candidate.caskId)
+                    .equals(TabState.accountSpaceId(current.caskId))) continue;
+            int target = candidate.id;
+            switchToTab(target);
+            if (webViewContainer != null && motionEnabled()) {
+                webViewContainer.animate().cancel();
+                webViewContainer.setTranslationX(dpToPx(24) * direction);
+                webViewContainer.setAlpha(.7f);
+                webViewContainer.animate().translationX(0f).alpha(1f).setDuration(170).start();
             }
+            return true;
         }
-        if (currentIndex < 0) return;
-
-        int targetIndex = (currentIndex + direction + tabsList.size()) % tabsList.size();
-        TabItem targetTab = tabsList.get(targetIndex);
-
-        if (webViewContainer != null) {
-            float offset = direction > 0 ? 100f : -100f;
-            webViewContainer.animate()
-                    .translationX(-offset)
-                    .alpha(0.5f)
-                    .setDuration(90)
-                    .withEndAction(() -> {
-                        switchToTab(targetTab.id);
-                        webViewContainer.setTranslationX(offset);
-                        webViewContainer.animate()
-                                .translationX(0f)
-                                .alpha(1.0f)
-                                .setDuration(120)
-                                .start();
-                    })
-                    .start();
-        } else {
-            switchToTab(targetTab.id);
-        }
+        return false;
     }
 
     private void setupOmniboxSuggestions() {
@@ -10133,13 +9926,11 @@ public class MainActivity extends AppCompatActivity {
                 android.transition.TransitionManager.beginDelayedTransition(omniboxHeader, transition);
             }
             if (hasFocus) {
-                if (isOrbOrApplePieMode()) {
+                if (isApplePieMode()) {
                     transitionToOrbState(ORB_STATE_FULL_TOP, true);
-                } else {
-                    showToolbar(true, true);
                 }
                 if (omniboxHeaderWrapper != null) {
-                    boolean isBottom = "applepie".equalsIgnoreCase(omniboxScrollMode) || "bottom".equalsIgnoreCase(omniboxPosition);
+                    boolean isBottom = isApplePieMode() || "bottom".equalsIgnoreCase(omniboxPosition);
                     int targetGravity = isBottom ? Gravity.BOTTOM : Gravity.TOP;
                     FrameLayout.LayoutParams lp = (FrameLayout.LayoutParams) omniboxHeaderWrapper.getLayoutParams();
                     if (lp != null && lp.gravity != targetGravity) {
@@ -10216,7 +10007,7 @@ public class MainActivity extends AppCompatActivity {
                 animateViewVisibility(omniboxTabsBtn, true, true);
                 animateViewVisibility(omniboxMenuBtn, true, true);
                 if (omniboxBtnCollapseOrb != null) {
-                    animateViewVisibility(omniboxBtnCollapseOrb, isOrbOrApplePieMode(), true);
+                    animateViewVisibility(omniboxBtnCollapseOrb, isApplePieMode(), true);
                 }
 
                 animateViewVisibility(omniboxCopyBtn, false, false);
@@ -10229,7 +10020,7 @@ public class MainActivity extends AppCompatActivity {
                 if (openedUrlEditFromPill) {
                     openedUrlEditFromPill = false;
                     transitionToOrbState(ORB_STATE_BOTTOM_PILL, true);
-                } else if (isSoftKeyboardVisible && "applepie".equalsIgnoreCase(omniboxScrollMode)) {
+                } else if (isSoftKeyboardVisible && isApplePieMode()) {
                     if (omniboxHeaderWrapper != null) {
                         omniboxHeaderWrapper.animate().cancel();
                         omniboxHeaderWrapper.setVisibility(View.GONE);
@@ -10275,7 +10066,7 @@ public class MainActivity extends AppCompatActivity {
         if (omniboxFinderContainer == null) return;
 
         // 1. If in pill or orb mode (e.g. Apple Pie), expand to full omnibox
-        boolean isBottom = "applepie".equalsIgnoreCase(omniboxScrollMode) || "bottom".equalsIgnoreCase(omniboxPosition);
+        boolean isBottom = isApplePieMode() || "bottom".equalsIgnoreCase(omniboxPosition);
         if (currentOrbState != ORB_STATE_FULL_TOP) {
             transitionToOrbState(ORB_STATE_FULL_TOP, false);
         }
@@ -10340,7 +10131,7 @@ public class MainActivity extends AppCompatActivity {
         }
         hideKeyboard();
         updateOmniboxState();
-        if ("applepie".equalsIgnoreCase(omniboxScrollMode)) {
+        if (isApplePieMode()) {
             transitionToOrbState(ORB_STATE_BOTTOM_PILL, true);
         }
     }
@@ -10838,15 +10629,9 @@ public class MainActivity extends AppCompatActivity {
         } else {
             addNewTab(route.service, route.promptPayload, route.targetUrl, false, activeCask);
         }
-        if (isOrbOrApplePieMode()) {
-            if (currentTab != null) {
-                currentTab.userExplicitFullOmnibox = false;
-            }
-            if ("applepie".equalsIgnoreCase(omniboxScrollMode)) {
-                transitionToOrbState(ORB_STATE_BOTTOM_PILL, true);
-            } else if (currentTab != null && isAiChatUrl(route.targetUrl, route.service)) {
-                transitionToOrbState(ORB_STATE_FLOATING_ORB, true);
-            }
+        if (isApplePieMode()) {
+            if (currentTab != null) currentTab.userExplicitFullOmnibox = false;
+            transitionToOrbState(ORB_STATE_BOTTOM_PILL, true);
         }
     }
 
@@ -11531,7 +11316,7 @@ public class MainActivity extends AppCompatActivity {
         if (rowSettings != null) {
             rowSettings.setOnClickListener(v -> {
                 dialog.dismiss();
-                openControlSheet();
+                openBrowserSettings();
             });
         }
 
@@ -12222,8 +12007,7 @@ public class MainActivity extends AppCompatActivity {
         View tileBookmarks = tileMap.get("bookmarks");
         if (tileBookmarks != null) {
             tileBookmarks.setOnClickListener(v -> dismissWithAction.accept(() -> {
-                if (bookmarkManager == null) bookmarkManager = new BookmarkManager(this);
-                showAddBookmarkDialog(null);
+                showAddBookmarkDialog();
             }));
         }
         View tileViewBookmarks = tileMap.get("view_bookmarks");
@@ -12253,15 +12037,7 @@ public class MainActivity extends AppCompatActivity {
         if (tileShare != null) {
             tileShare.setOnClickListener(v -> dismissWithAction.accept(() -> {
                 playUiFeedbackSound("tap");
-                if (currentTab != null) {
-                    Intent shareIntent = new Intent(Intent.ACTION_SEND);
-                    shareIntent.setType("text/plain");
-                    String shareUrl = (currentTab.url != null && !currentTab.url.isEmpty()) ? currentTab.url : (currentTab.webView != null ? currentTab.webView.getUrl() : "");
-                    String shareTitle = (currentTab.title != null && !currentTab.title.isEmpty()) ? currentTab.title : "Caspian Flow";
-                    shareIntent.putExtra(Intent.EXTRA_SUBJECT, shareTitle);
-                    shareIntent.putExtra(Intent.EXTRA_TEXT, (shareUrl != null && !shareUrl.isEmpty()) ? shareUrl : shareTitle);
-                    startActivity(Intent.createChooser(shareIntent, "Share Page via"));
-                }
+                sharePage(currentTab);
             }));
         }
         View tileSplit = tileMap.get("split");
@@ -12270,7 +12046,7 @@ public class MainActivity extends AppCompatActivity {
         }
         View tileSettings = tileMap.get("settings");
         if (tileSettings != null) {
-            tileSettings.setOnClickListener(v -> dismissWithAction.accept(this::openControlSheet));
+            tileSettings.setOnClickListener(v -> dismissWithAction.accept(this::openBrowserSettings));
         }
 
         View tileNewTab = tileMap.get("new_tab");
@@ -13120,10 +12896,6 @@ public class MainActivity extends AppCompatActivity {
 
     public void updateOmniboxScrimBackground() {
         if (omniboxHeaderWrapper == null) return;
-        if ("orb".equalsIgnoreCase(omniboxScrollMode)) {
-            omniboxHeaderWrapper.setBackground(null);
-            return;
-        }
         boolean isBottom = "bottom".equalsIgnoreCase(omniboxPosition);
         TabItem currentTab = getActiveOrDominantTab();
         boolean isIncognito = currentTab != null && currentTab.isIncognito;
@@ -14206,10 +13978,10 @@ public class MainActivity extends AppCompatActivity {
         editDialog.show();
     }
 
-    public void applyOmniboxPosition(String position) {
+    private void applyOmniboxPosition(String position) {
         runOnUiThread(() -> {
             try {
-                omniboxPosition = (position != null && position.equalsIgnoreCase("bottom")) ? "bottom" : "top";
+                omniboxPosition = (isApplePieMode() || "bottom".equalsIgnoreCase(position)) ? "bottom" : "top";
                 boolean isBottom = "bottom".equalsIgnoreCase(omniboxPosition);
 
                 if (omniboxHeaderWrapper != null) {
@@ -14227,15 +13999,7 @@ public class MainActivity extends AppCompatActivity {
                     );
                 }
 
-                if (webviewsParentContainer != null) {
-                    FrameLayout.LayoutParams wpLp = (FrameLayout.LayoutParams) webviewsParentContainer.getLayoutParams();
-                    if (wpLp == null) {
-                        wpLp = new FrameLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.MATCH_PARENT);
-                    }
-                    wpLp.topMargin = 0;
-                    wpLp.bottomMargin = ("applepie".equalsIgnoreCase(omniboxScrollMode) && !isSoftKeyboardVisible) ? dpToPx(68) : 0;
-                    webviewsParentContainer.setLayoutParams(wpLp);
-                }
+                updateOmniboxViewportInsets();
 
                 if (browserProgressBar != null) {
                     FrameLayout.LayoutParams pbLp = (FrameLayout.LayoutParams) browserProgressBar.getLayoutParams();
@@ -14271,25 +14035,14 @@ public class MainActivity extends AppCompatActivity {
 
                 updateOmniboxScrimBackground();
 
-                if (isOrbOrApplePieMode()) {
-                    isToolbarInDedicatedSection = false;
-                    if (webviewsParentContainer != null) {
-                        webviewsParentContainer.setTranslationY(0f);
-                    }
-                    applyToolbarMotion(0f, 0f, false);
-                    if (omniboxBtnCollapseOrb != null) {
-                        omniboxBtnCollapseOrb.setVisibility(View.VISIBLE);
-                    }
-                } else if (isBottom) {
-                    if (omniboxBtnCollapseOrb != null) {
-                        omniboxBtnCollapseOrb.setVisibility(View.GONE);
-                    }
-                    dockToolbarAtBottom(false);
-                } else {
-                    if (omniboxBtnCollapseOrb != null) {
-                        omniboxBtnCollapseOrb.setVisibility(View.GONE);
-                    }
-                    dockToolbarAtTop(false);
+                if (omniboxBtnCollapseOrb != null) {
+                    omniboxBtnCollapseOrb.setVisibility(isApplePieMode() ? View.VISIBLE : View.GONE);
+                }
+                if (!isApplePieMode() && omniboxHeaderWrapper != null && customView == null) {
+                    omniboxHeaderWrapper.animate().cancel();
+                    omniboxHeaderWrapper.setVisibility(View.VISIBLE);
+                    omniboxHeaderWrapper.setAlpha(1f);
+                    omniboxHeaderWrapper.setTranslationY(0f);
                 }
             } catch (Throwable ignored) {}
         });
@@ -14302,464 +14055,34 @@ public class MainActivity extends AppCompatActivity {
         return dpToPx(98);
     }
 
-    private boolean isInternalPageWithoutToolbarAutohide() {
-        TabItem activeTab = getTabById(activeTabId);
-        if (activeTab == null || activeTab.url == null) return true;
-        String url = activeTab.url.toLowerCase();
-        return url.contains("launch_hub.html") || url.contains("incognito_hub.html") || "hub".equalsIgnoreCase(activeTab.service);
-    }
-
-    public boolean isAiChatUrl(String url, String service) {
-        if (url == null) url = "";
-        String lower = url.toLowerCase();
-        return lower.contains("chatgpt.com") || lower.contains("gemini.google.com") ||
-               lower.contains("claude.ai") || lower.contains("chat.deepseek.com") ||
-               "chatgpt".equalsIgnoreCase(service) || "gemini".equalsIgnoreCase(service) ||
-               "claude".equalsIgnoreCase(service);
-    }
-
-    public void dockToolbarAtTop(boolean animate) {
-        currentToolbarState = TOOLBAR_STATE_DOCKED_TOP;
-        if ("orb".equalsIgnoreCase(omniboxScrollMode)) {
-            isToolbarInDedicatedSection = false;
-            applyToolbarMotion(0f, 0f, animate);
-            return;
-        }
-        isToolbarInDedicatedSection = true;
-        currentDedicatedScrollOffset = 0f;
-        int toolbarH = getToolbarHeight();
-        applyToolbarMotion(0f, (float) toolbarH, animate);
-    }
-
-    public void dockToolbarAtBottom(boolean animate) {
-        currentToolbarState = TOOLBAR_STATE_DOCKED_BOTTOM;
-        if (isOrbOrApplePieMode()) {
-            isToolbarInDedicatedSection = false;
-            applyToolbarMotion(0f, 0f, animate);
-            return;
-        }
-        isToolbarInDedicatedSection = true;
-        currentDedicatedScrollOffset = 0f;
-        int toolbarH = getToolbarHeight();
-        applyToolbarMotion(0f, (float) -toolbarH, animate);
-    }
-
-    public void hideToolbar(boolean animate) {
-        if (isToolbarScrollLocked || isInternalPageWithoutToolbarAutohide() || "separate".equalsIgnoreCase(omniboxScrollMode) || isOrbOrApplePieMode()) return;
-        currentToolbarState = TOOLBAR_STATE_FULLSCREEN_HIDDEN;
-        isToolbarInDedicatedSection = false;
-        int toolbarH = getToolbarHeight();
-        currentDedicatedScrollOffset = (float) toolbarH;
-        boolean isBottomMode = "bottom".equalsIgnoreCase(omniboxPosition);
-        float targetToolbarY = isBottomMode ? (toolbarH + dpToPx(32)) : (-toolbarH - dpToPx(32));
-        applyToolbarMotion(targetToolbarY, 0f, animate);
-    }
-
-    public void showToolbar(boolean asOverlay, boolean animate) {
-        if (splashOverlay != null && splashOverlay.getVisibility() == View.VISIBLE) {
-            return;
-        }
-        if (isOrbOrApplePieMode()) {
-            if (currentOrbState != ORB_STATE_FULL_TOP) {
-                transitionToOrbState(ORB_STATE_FULL_TOP, animate);
-                return;
-            }
-        }
-        currentToolbarState = asOverlay ? TOOLBAR_STATE_OVERLAY_VISIBLE : TOOLBAR_STATE_DOCKED_TOP;
-        int toolbarH = getToolbarHeight();
-        boolean isBottomMode = "bottom".equalsIgnoreCase(omniboxPosition);
-        float targetWebViewY = 0f;
-        if (!asOverlay && isToolbarInDedicatedSection) {
-            targetWebViewY = isBottomMode ? -toolbarH : toolbarH;
-        }
-        applyToolbarMotion(0f, targetWebViewY, animate);
-    }
-
-    private void applyToolbarMotion(float targetToolbarY, float targetWebViewY, boolean animate) {
-        if (splashOverlay != null && splashOverlay.getVisibility() == View.VISIBLE) {
-            if (omniboxHeaderWrapper != null) omniboxHeaderWrapper.setVisibility(View.GONE);
-            return;
-        }
-        if (isOrbOrApplePieMode()) {
-            targetWebViewY = 0f;
-            if (currentOrbState != ORB_STATE_FULL_TOP) {
-                if (omniboxHeaderWrapper != null) omniboxHeaderWrapper.setVisibility(View.GONE);
-                return;
-            }
-        }
-        final float finalTargetWebViewY = targetWebViewY;
-        runOnUiThread(() -> {
-            if (omniboxHeaderWrapper == null || webviewsParentContainer == null) return;
-            long duration = animate ? 220 : 0;
-            Interpolator interpolator = new DecelerateInterpolator(1.8f);
-
-            boolean isHiding = (currentToolbarState == TOOLBAR_STATE_FULLSCREEN_HIDDEN);
-            if (!isHiding) {
-                omniboxHeaderWrapper.setVisibility(View.VISIBLE);
-                omniboxHeaderWrapper.setAlpha(1f);
-            }
-
-            if (animate) {
-                omniboxHeaderWrapper.animate().cancel();
-                omniboxHeaderWrapper.animate()
-                        .translationY(targetToolbarY)
-                        .alpha(isHiding ? 0f : 1f)
-                        .setDuration(duration)
-                        .setInterpolator(interpolator)
-                        .withEndAction(() -> {
-                            if (currentToolbarState == TOOLBAR_STATE_FULLSCREEN_HIDDEN && omniboxHeaderWrapper != null) {
-                                omniboxHeaderWrapper.setVisibility(View.GONE);
-                            }
-                        })
-                        .start();
-
-                webviewsParentContainer.animate().cancel();
-                webviewsParentContainer.animate()
-                        .translationY(finalTargetWebViewY)
-                        .setDuration(duration)
-                        .setInterpolator(interpolator)
-                        .start();
-
-                if (browserProgressBar != null) {
-                    browserProgressBar.animate().cancel();
-                    browserProgressBar.animate()
-                            .translationY(targetToolbarY)
-                            .setDuration(duration)
-                            .setInterpolator(interpolator)
-                            .start();
-                }
-            } else {
-                omniboxHeaderWrapper.animate().cancel();
-                webviewsParentContainer.animate().cancel();
-                if (browserProgressBar != null) browserProgressBar.animate().cancel();
-
-                omniboxHeaderWrapper.setTranslationY(targetToolbarY);
-                if (isHiding) {
-                    omniboxHeaderWrapper.setVisibility(View.GONE);
-                } else {
-                    omniboxHeaderWrapper.setVisibility(View.VISIBLE);
-                    omniboxHeaderWrapper.setAlpha(1f);
-                }
-                webviewsParentContainer.setTranslationY(finalTargetWebViewY);
-                if (browserProgressBar != null) {
-                    browserProgressBar.setTranslationY(targetToolbarY);
-                }
-            }
-        });
-    }
-
-    public boolean handlePreScrollDrag(CaspianWebView webView, float dragOffsetY) {
-        if (isToolbarScrollLocked || isInternalPageWithoutToolbarAutohide() || "separate".equalsIgnoreCase(omniboxScrollMode) || isOrbOrApplePieMode()) return false;
-        if (omniboxEditText != null && omniboxEditText.hasFocus()) return false;
-
-        boolean isBottomMode = "bottom".equalsIgnoreCase(omniboxPosition);
-        int toolbarH = getToolbarHeight();
-
-        if (!isBottomMode) {
-            // === TOP OMNIBOX MODE ===
-            if (isToolbarInDedicatedSection) {
-                float effectiveOffset = currentDedicatedScrollOffset + dragOffsetY;
-                if (effectiveOffset <= 0) {
-                    currentDedicatedScrollOffset = 0f;
-                    applyToolbarMotion(0f, (float) toolbarH, false);
-                    return false;
-                } else if (effectiveOffset < toolbarH) {
-                    // Moving down slowly: Omnibox and WebView move together in 1:1 lockstep!
-                    float tY = -effectiveOffset;
-                    float wY = toolbarH - effectiveOffset;
-                    applyToolbarMotion(tY, wY, false);
-                    return true;
-                } else {
-                    // Toolbar has moved completely off-screen! Switch to Overlay Mode!
-                    currentDedicatedScrollOffset = (float) toolbarH;
-                    isToolbarInDedicatedSection = false;
-                    lastToolbarDedicatedHideTime = System.currentTimeMillis();
-                    applyToolbarMotion((float) -toolbarH, 0f, false);
-                    return false;
-                }
-            }
+    private void updateOmniboxViewportInsets() {
+        if (webviewsParentContainer == null) return;
+        FrameLayout.LayoutParams layout = (FrameLayout.LayoutParams) webviewsParentContainer.getLayoutParams();
+        int top = 0;
+        int bottom = 0;
+        if (isApplePieMode()) {
+            bottom = isSoftKeyboardVisible ? 0 : dpToPx(68);
+        } else if ("bottom".equals(omniboxPosition)) {
+            bottom = getToolbarHeight();
         } else {
-            // === BOTTOM OMNIBOX MODE ===
-            if (isToolbarInDedicatedSection) {
-                float effectiveOffset = currentDedicatedScrollOffset + dragOffsetY;
-                if (effectiveOffset <= 0) {
-                    currentDedicatedScrollOffset = 0f;
-                    applyToolbarMotion(0f, (float) -toolbarH, false);
-                    return false;
-                } else if (effectiveOffset < toolbarH) {
-                    float tY = effectiveOffset;
-                    float wY = -toolbarH + effectiveOffset;
-                    applyToolbarMotion(tY, wY, false);
-                    return true;
-                } else {
-                    currentDedicatedScrollOffset = (float) toolbarH;
-                    isToolbarInDedicatedSection = false;
-                    lastToolbarDedicatedHideTime = System.currentTimeMillis();
-                    applyToolbarMotion((float) (toolbarH + dpToPx(16)), 0f, false);
-                    return false;
-                }
-            }
+            top = getToolbarHeight();
         }
-        return false;
-    }
-
-    public void handlePreScrollDragEnd(CaspianWebView webView, float dragOffsetY) {
-        if (isToolbarScrollLocked || isInternalPageWithoutToolbarAutohide() || "separate".equalsIgnoreCase(omniboxScrollMode) || isOrbOrApplePieMode()) return;
-        if (omniboxEditText != null && omniboxEditText.hasFocus()) return;
-
-        boolean isBottomMode = "bottom".equalsIgnoreCase(omniboxPosition);
-        int toolbarH = getToolbarHeight();
-
-        if (!isBottomMode) {
-            if (isToolbarInDedicatedSection) {
-                float effectiveOffset = currentDedicatedScrollOffset + dragOffsetY;
-                effectiveOffset = Math.max(0f, Math.min((float) toolbarH, effectiveOffset));
-                if (effectiveOffset >= toolbarH) {
-                    currentDedicatedScrollOffset = (float) toolbarH;
-                    isToolbarInDedicatedSection = false;
-                    lastToolbarDedicatedHideTime = System.currentTimeMillis();
-                    applyToolbarMotion((float) -toolbarH, 0f, false);
-                } else if (effectiveOffset <= 0) {
-                    currentDedicatedScrollOffset = 0f;
-                    dockToolbarAtTop(false);
-                } else {
-                    // Paused at partial position: stay exactly here like a native page component!
-                    currentDedicatedScrollOffset = effectiveOffset;
-                    applyToolbarMotion(-currentDedicatedScrollOffset, toolbarH - currentDedicatedScrollOffset, false);
-                }
-            }
-        } else {
-            if (isToolbarInDedicatedSection) {
-                float effectiveOffset = currentDedicatedScrollOffset + dragOffsetY;
-                effectiveOffset = Math.max(0f, Math.min((float) toolbarH, effectiveOffset));
-                if (effectiveOffset >= toolbarH) {
-                    currentDedicatedScrollOffset = (float) toolbarH;
-                    isToolbarInDedicatedSection = false;
-                    lastToolbarDedicatedHideTime = System.currentTimeMillis();
-                    applyToolbarMotion((float) (toolbarH + dpToPx(16)), 0f, false);
-                } else if (effectiveOffset <= 0) {
-                    currentDedicatedScrollOffset = 0f;
-                    dockToolbarAtBottom(false);
-                } else {
-                    currentDedicatedScrollOffset = effectiveOffset;
-                    applyToolbarMotion(currentDedicatedScrollOffset, -toolbarH + currentDedicatedScrollOffset, false);
-                }
-            }
+        if (layout.topMargin != top || layout.bottomMargin != bottom) {
+            layout.topMargin = top;
+            layout.bottomMargin = bottom;
+            webviewsParentContainer.setLayoutParams(layout);
         }
-    }
-
-    public void handleWebViewScroll(CaspianWebView webView, int scrollX, int scrollY, int oldScrollX, int oldScrollY) {
-        int deltaY = scrollY - oldScrollY;
-
-        if ("applepie".equalsIgnoreCase(omniboxScrollMode)) {
-            // Apple Pie: Spring auto-hide pill on scroll down, spring restore on scroll up
-            if (currentOrbState == ORB_STATE_FULL_TOP) {
-                if (deltaY > 15) {
-                    transitionToOrbState(ORB_STATE_BOTTOM_PILL, true);
-                }
-            } else if (caspianFloatingPill != null && caspianFloatingPill.getVisibility() == View.VISIBLE) {
-                if (scrollY <= dpToPx(10)) {
-                    CaspianPhysics.animateSpring(caspianFloatingPill, DynamicAnimation.TRANSLATION_Y, 0f, CaspianPhysics.DAMPING_BOUNCY, CaspianPhysics.STIFFNESS_RESPONSIVE);
-                } else if (deltaY > 14 && scrollY > dpToPx(36)) {
-                    CaspianPhysics.animateSpring(caspianFloatingPill, DynamicAnimation.TRANSLATION_Y, dpToPx(95), CaspianPhysics.DAMPING_SMOOTH, CaspianPhysics.STIFFNESS_RESPONSIVE);
-                } else if (deltaY < -14) {
-                    CaspianPhysics.animateSpring(caspianFloatingPill, DynamicAnimation.TRANSLATION_Y, 0f, CaspianPhysics.DAMPING_BOUNCY, CaspianPhysics.STIFFNESS_RESPONSIVE);
-                }
-            }
-            return;
-        }
-
-        if ("orb".equalsIgnoreCase(omniboxScrollMode)) {
-            if (currentOrbState == ORB_STATE_FLOATING_ORB) {
-                // When in edge semicircle mode, scrolling should never bring the omnibox back.
-                // User must manually tap the semicircle handle to reopen.
-                return;
-            }
-
-            if (isToolbarScrollLocked || isInternalPageWithoutToolbarAutohide()) {
-                if (currentOrbState != ORB_STATE_FULL_TOP) {
-                    transitionToOrbState(ORB_STATE_FULL_TOP, false);
-                }
-                return;
-            }
-            if (omniboxEditText != null && omniboxEditText.hasFocus()) {
-                if (currentOrbState != ORB_STATE_FULL_TOP) {
-                    transitionToOrbState(ORB_STATE_FULL_TOP, false);
-                }
-                return;
-            }
-
-            deltaY = scrollY - oldScrollY;
-            if (scrollY <= dpToPx(10)) {
-                if (currentOrbState != ORB_STATE_FULL_TOP) {
-                    transitionToOrbState(ORB_STATE_FULL_TOP, true);
-                }
-            } else if (deltaY > 12 && scrollY > dpToPx(24)) {
-                if (currentOrbState == ORB_STATE_FULL_TOP) {
-                    transitionToOrbState(ORB_STATE_BOTTOM_PILL, true);
-                }
-            } else if (deltaY < -12) {
-                if (currentOrbState == ORB_STATE_BOTTOM_PILL) {
-                    transitionToOrbState(ORB_STATE_FULL_TOP, true);
-                }
-            }
-            return;
-        }
-
-        if (isToolbarScrollLocked || isInternalPageWithoutToolbarAutohide() || "separate".equalsIgnoreCase(omniboxScrollMode)) {
-            if ("bottom".equalsIgnoreCase(omniboxPosition)) {
-                dockToolbarAtBottom(false);
-            } else {
-                dockToolbarAtTop(false);
-            }
-            return;
-        }
-        if (omniboxEditText != null && omniboxEditText.hasFocus()) {
-            showToolbar(true, false);
-            return;
-        }
-
-        deltaY = scrollY - oldScrollY;
-        boolean isBottomMode = "bottom".equalsIgnoreCase(omniboxPosition);
-        int toolbarH = getToolbarHeight();
-
-        if (!isBottomMode) {
-            // === TOP OMNIBOX MODE ===
-            if (isToolbarInDedicatedSection) {
-                if (scrollY <= 0) {
-                    currentDedicatedScrollOffset = 0f;
-                    applyToolbarMotion(0f, (float) toolbarH, false);
-                    accumulatedScrollDelta = 0;
-                } else if (scrollY >= toolbarH) {
-                    isToolbarInDedicatedSection = false;
-                    currentDedicatedScrollOffset = (float) toolbarH;
-                    lastToolbarDedicatedHideTime = System.currentTimeMillis();
-                    applyToolbarMotion((float) -toolbarH, 0f, false);
-                    accumulatedScrollDelta = 0;
-                }
-            } else {
-                // In Overlay Mode (mid-page reading)
-                // If user scrolls all the way back up to the absolute top border
-                if (scrollY <= 0) {
-                    if (deltaY < 0 && System.currentTimeMillis() - lastToolbarDedicatedHideTime > 450L) {
-                        isToolbarInDedicatedSection = true;
-                        currentDedicatedScrollOffset = 0f;
-                        dockToolbarAtTop(true);
-                    }
-                    accumulatedScrollDelta = 0;
-                    return;
-                }
-
-                // If we just transitioned off the dedicated top section, lock out overlay popup
-                if (System.currentTimeMillis() - lastToolbarDedicatedHideTime < 350L) {
-                    accumulatedScrollDelta = 0;
-                    return;
-                }
-
-                // Normal mid-page overlay behavior (WebView stays at 0, no jumping!)
-                if ((deltaY > 0 && accumulatedScrollDelta < 0) || (deltaY < 0 && accumulatedScrollDelta > 0)) {
-                    accumulatedScrollDelta = 0;
-                }
-                accumulatedScrollDelta += deltaY;
-
-                int threshold = dpToPx(18);
-                if (accumulatedScrollDelta > threshold) {
-                    // Scrolling down -> Hide toolbar off-screen (WebView stays at 0)
-                    hideToolbar(true);
-                    accumulatedScrollDelta = 0;
-                } else if (accumulatedScrollDelta < -threshold) {
-                    // Scrolling up -> Show floating overlay (WebView stays at 0)
-                    showToolbar(true, true);
-                    accumulatedScrollDelta = 0;
-                }
-            }
-        } else {
-            // === BOTTOM OMNIBOX MODE ===
-            if (isToolbarInDedicatedSection) {
-                if (webView.isAtBottom(dpToPx(8))) {
-                    currentDedicatedScrollOffset = 0f;
-                    applyToolbarMotion(0f, (float) -toolbarH, false);
-                    accumulatedScrollDelta = 0;
-                } else {
-                    isToolbarInDedicatedSection = false;
-                    currentDedicatedScrollOffset = (float) toolbarH;
-                    lastToolbarDedicatedHideTime = System.currentTimeMillis();
-                    applyToolbarMotion((float) (toolbarH + dpToPx(16)), 0f, false);
-                    accumulatedScrollDelta = 0;
-                }
-            } else {
-                if (webView.isAtBottom(dpToPx(8))) {
-                    if (deltaY > 0 && System.currentTimeMillis() - lastToolbarDedicatedHideTime > 450L) {
-                        isToolbarInDedicatedSection = true;
-                        currentDedicatedScrollOffset = 0f;
-                        dockToolbarAtBottom(true);
-                    }
-                    accumulatedScrollDelta = 0;
-                    return;
-                }
-
-                if (System.currentTimeMillis() - lastToolbarDedicatedHideTime < 350L) {
-                    accumulatedScrollDelta = 0;
-                    return;
-                }
-
-                if ((deltaY > 0 && accumulatedScrollDelta < 0) || (deltaY < 0 && accumulatedScrollDelta > 0)) {
-                    accumulatedScrollDelta = 0;
-                }
-                accumulatedScrollDelta += deltaY;
-
-                int threshold = dpToPx(18);
-                if (accumulatedScrollDelta > threshold) {
-                    hideToolbar(true);
-                    accumulatedScrollDelta = 0;
-                } else if (accumulatedScrollDelta < -threshold) {
-                    showToolbar(true, true);
-                    accumulatedScrollDelta = 0;
-                }
-            }
-        }
-    }
-
-    public void handleWebViewOverScrolled(CaspianWebView webView, int scrollX, int scrollY, boolean clampedX, boolean clampedY) {
-        if (isToolbarScrollLocked || isInternalPageWithoutToolbarAutohide() || "separate".equalsIgnoreCase(omniboxScrollMode) || isOrbOrApplePieMode()) return;
-        boolean isBottomMode = "bottom".equalsIgnoreCase(omniboxPosition);
-        if (clampedY) {
-            if (scrollY < 0 && !isBottomMode) {
-                // User deliberately pulled down into overscroll at the absolute top
-                if (!isToolbarInDedicatedSection && System.currentTimeMillis() - lastToolbarDedicatedHideTime > 450L) {
-                    isToolbarInDedicatedSection = true;
-                    currentDedicatedScrollOffset = 0f;
-                    dockToolbarAtTop(true);
-                }
-            } else if (scrollY > 50 && isBottomMode && webView.isAtBottom(dpToPx(16))) {
-                // User deliberately pulled up into overscroll at the absolute bottom
-                if (!isToolbarInDedicatedSection && System.currentTimeMillis() - lastToolbarDedicatedHideTime > 450L) {
-                    isToolbarInDedicatedSection = true;
-                    currentDedicatedScrollOffset = 0f;
-                    dockToolbarAtBottom(true);
-                }
-            }
-        }
-    }
-
-    public void handleWebViewScrollIdle(CaspianWebView webView) {
-        if (isToolbarScrollLocked || isInternalPageWithoutToolbarAutohide() || "separate".equalsIgnoreCase(omniboxScrollMode) || "orb".equalsIgnoreCase(omniboxScrollMode)) return;
-        // In dedicated section, allow user to pause anywhere like a native page component without snapping.
     }
 
     public void setOmniboxPosition(String position) {
-        this.omniboxPosition = (position != null && position.equalsIgnoreCase("bottom")) ? "bottom" : "top";
-        try {
-            getSharedPreferences(PREFS_NAME, MODE_PRIVATE)
-                    .edit()
-                    .putString("omnibox_position", this.omniboxPosition)
-                    .apply();
-        } catch (Throwable ignored) {}
-        applyOmniboxPosition(this.omniboxPosition);
+        String placement = "bottom".equalsIgnoreCase(position) ? "bottom" : "top";
+        getSharedPreferences(PREFS_NAME, MODE_PRIVATE).edit().putString("omnibox_position", placement).apply();
+        applyOmniboxPosition(placement);
+        evaluateJavascriptInControlSheet("if (window.refreshOmniboxSettings) window.refreshOmniboxSettings();");
     }
 
     public String getOmniboxPosition() {
-        return this.omniboxPosition;
+        return omniboxPosition;
     }
 
     public void setOmniboxMenuStyle(String style) {
@@ -14776,90 +14099,29 @@ public class MainActivity extends AppCompatActivity {
         return this.omniboxMenuStyle;
     }
 
-    public boolean isOrbOrApplePieMode() {
-        return "orb".equalsIgnoreCase(omniboxScrollMode) || "applepie".equalsIgnoreCase(omniboxScrollMode);
+    public boolean isApplePieMode() {
+        return "applepie".equals(omniboxScrollMode);
     }
 
-    public boolean isApplePieMode() {
-        return "applepie".equalsIgnoreCase(omniboxScrollMode);
+    private static String normalizeOmniboxScrollMode(String mode) {
+        // Preserve the layout closest to each retired mode: overlay used the configurable bar.
+        return "separate".equalsIgnoreCase(mode) || "overlay".equalsIgnoreCase(mode) ? "separate" : "applepie";
     }
 
     public void setOmniboxScrollMode(String mode) {
-        String oldMode = this.omniboxScrollMode;
-        if ("applepie".equalsIgnoreCase(mode)) {
-            this.omniboxScrollMode = "applepie";
-        } else if ("orb".equalsIgnoreCase(mode)) {
-            this.omniboxScrollMode = "orb";
-        } else if ("separate".equalsIgnoreCase(mode)) {
-            this.omniboxScrollMode = "separate";
-        } else {
-            this.omniboxScrollMode = "overlay";
-        }
-        try {
-            getSharedPreferences(PREFS_NAME, MODE_PRIVATE)
-                    .edit()
-                    .putString("omnibox_scroll_mode", this.omniboxScrollMode)
-                    .apply();
-        } catch (Throwable ignored) {}
-
-        if (isOrbOrApplePieMode()) {
-            if (!("orb".equalsIgnoreCase(oldMode) || "applepie".equalsIgnoreCase(oldMode))) {
-                preOrbOmniboxPosition = omniboxPosition;
-                try {
-                    getSharedPreferences(PREFS_NAME, MODE_PRIVATE)
-                            .edit()
-                            .putString("pre_orb_omnibox_position", preOrbOmniboxPosition)
-                            .apply();
-                } catch (Throwable ignored) {}
-            }
-            applyOmniboxPosition(isApplePieMode() ? "bottom" : "top");
-            isToolbarInDedicatedSection = false;
-            if (webviewsParentContainer != null) {
-                webviewsParentContainer.setTranslationY(0f);
-            }
-            if (omniboxHeaderWrapper != null) {
-                omniboxHeaderWrapper.setTranslationY(0f);
-                omniboxHeaderWrapper.setAlpha(1f);
-                omniboxHeaderWrapper.setBackground(null);
-            }
-            applyCaspianPillTheme();
-            if ("applepie".equalsIgnoreCase(this.omniboxScrollMode)) {
-                transitionToOrbState(ORB_STATE_BOTTOM_PILL, true);
-            } else {
-                transitionToOrbState(ORB_STATE_FULL_TOP, true);
-            }
-        } else {
-            hideCaspianOrbElements();
-            String restorePos = preOrbOmniboxPosition != null ? preOrbOmniboxPosition :
-                    getSharedPreferences(PREFS_NAME, MODE_PRIVATE).getString("pre_orb_omnibox_position", "top");
-            applyOmniboxPosition(restorePos);
-            preOrbOmniboxPosition = null;
-            try {
-                getSharedPreferences(PREFS_NAME, MODE_PRIVATE)
-                        .edit()
-                        .remove("pre_orb_omnibox_position")
-                        .apply();
-            } catch (Throwable ignored) {}
-            if (omniboxHeaderWrapper != null) {
-                omniboxHeaderWrapper.setVisibility(View.VISIBLE);
-                omniboxHeaderWrapper.setAlpha(1f);
-                omniboxHeaderWrapper.setTranslationY(0f);
-            }
-            if ("separate".equalsIgnoreCase(this.omniboxScrollMode)) {
-                isToolbarInDedicatedSection = true;
-            } else {
-                isToolbarInDedicatedSection = false;
-            }
-            if ("bottom".equalsIgnoreCase(omniboxPosition)) {
-                dockToolbarAtBottom(true);
-            } else {
-                dockToolbarAtTop(true);
-            }
-        }
+        String selectedMode = normalizeOmniboxScrollMode(mode);
+        if (selectedMode.equals(omniboxScrollMode)) return;
+        omniboxScrollMode = selectedMode;
+        SharedPreferences prefs = getSharedPreferences(PREFS_NAME, MODE_PRIVATE);
+        prefs.edit().putString("omnibox_scroll_mode", selectedMode).apply();
+        if (!isApplePieMode()) hideCaspianOrbElements();
+        applyOmniboxPosition(prefs.getString("omnibox_position", "top"));
+        if (isApplePieMode()) transitionToOrbState(ORB_STATE_BOTTOM_PILL, true);
+        evaluateJavascriptInControlSheet("if (window.refreshOmniboxSettings) window.refreshOmniboxSettings();");
     }
 
     public String getOmniboxScrollMode() {
-        return (this.omniboxScrollMode != null) ? this.omniboxScrollMode : "applepie";
+        return omniboxScrollMode;
     }
 
     public void setInterfaceDensity(String density) {
@@ -14906,2215 +14168,15 @@ public class MainActivity extends AppCompatActivity {
         Toast.makeText(this, "⚡ Dual AI Active!", Toast.LENGTH_SHORT).show();
     }
 
-    public void showBookmarksDialog() {
-        showBookmarksDialog(0);
-    }
+    public void showBookmarksDialog() { browserLibrary.showBookmarksDialog(); }
 
-    public void showBookmarksDialog(int enterDirection) {
-        playUiFeedbackSound("tap");
-        if (bookmarkManager == null) bookmarkManager = new BookmarkManager(this);
-        AlertDialog.Builder builder = new AlertDialog.Builder(this, android.R.style.Theme_Black_NoTitleBar_Fullscreen);
-        View dialogView = getLayoutInflater().inflate(R.layout.dialog_bookmarks, null);
-        builder.setView(dialogView);
-        AlertDialog dialog = builder.create();
-        if (dialog.getWindow() != null) {
-            dialog.getWindow().setBackgroundDrawable(new ColorDrawable(isDarkTheme ? 0xFF070A10 : 0xFFF8FAFC));
-            dialog.getWindow().setWindowAnimations(0);
-        }
-        dialogView.setBackgroundColor(isDarkTheme ? 0xFF070A10 : 0xFFF8FAFC);
+    public void showBookmarksDialog(int direction) { browserLibrary.showBookmarksDialog(direction); }
 
-        // Single iOS Slide Entrance Transition
-        if (enterDirection > 0) {
-            dialogView.setTranslationX(dpToPx(80));
-            dialogView.setAlpha(0.3f);
-            dialogView.animate().translationX(0f).alpha(1f).setDuration(200).setInterpolator(new DecelerateInterpolator(1.6f)).start();
-        } else if (enterDirection < 0) {
-            dialogView.setTranslationX(-dpToPx(80));
-            dialogView.setAlpha(0.3f);
-            dialogView.animate().translationX(0f).alpha(1f).setDuration(200).setInterpolator(new DecelerateInterpolator(1.6f)).start();
-        }
+    public void showHistoryDialog() { browserLibrary.showHistoryDialog(); }
 
-        // Header Views
-        View bookmarksRoot = dialogView.findViewById(R.id.bookmarks_root);
-        View headerBar = dialogView.findViewById(R.id.bookmarks_header_bar);
-        ImageButton btnBack = dialogView.findViewById(R.id.btn_bookmarks_back);
-        View capsuleCenter = dialogView.findViewById(R.id.capsule_bookmarks_center);
-        ImageView iconBookmarksHeader = dialogView.findViewById(R.id.icon_bookmarks_header);
-        TextView textBookmarksHeader = dialogView.findViewById(R.id.text_bookmarks_header);
-        TextView badgeHeaderCount = dialogView.findViewById(R.id.badge_bookmarks_header_count);
-        TextView btnGotoHistory = dialogView.findViewById(R.id.btn_bookmarks_goto_history);
-        TextView btnGotoSettings = dialogView.findViewById(R.id.btn_bookmarks_goto_settings);
+    public void showHistoryDialog(int direction) { browserLibrary.showHistoryDialog(direction); }
 
-        // Content & Toolbar Views
-        TextView textVaultTitle = dialogView.findViewById(R.id.text_vault_title);
-        TextView badgeVaultSaved = dialogView.findViewById(R.id.badge_vault_saved);
-        TextView btnBatchToggle = dialogView.findViewById(R.id.btn_bookmarks_batch_toggle);
-        TextView btnBatchDelete = dialogView.findViewById(R.id.btn_bookmarks_batch_delete);
-
-
-
-        View searchBar = dialogView.findViewById(R.id.bookmarks_search_bar);
-        ImageView iconSearch = dialogView.findViewById(R.id.icon_bookmarks_search);
-        EditText searchInput = dialogView.findViewById(R.id.bookmarks_search_input);
-        View btnSort = dialogView.findViewById(R.id.btn_bookmarks_sort);
-        TextView textSortLabel = dialogView.findViewById(R.id.text_bookmarks_sort_label);
-
-        // Filter Chips
-        TextView chipAll = dialogView.findViewById(R.id.chip_filter_all);
-        TextView chipFav = dialogView.findViewById(R.id.chip_filter_favorites);
-        LinearLayout layoutChips = dialogView.findViewById(R.id.layout_filter_chips);
-
-        LinearLayout listContainer = dialogView.findViewById(R.id.bookmarks_list_container);
-        View emptyView = dialogView.findViewById(R.id.layout_bookmarks_empty);
-        TextView textEmpty = dialogView.findViewById(R.id.text_bookmarks_empty);
-
-        // Bottom Action Dock
-        View bottomDock = dialogView.findViewById(R.id.bookmarks_bottom_dock);
-        View btnDockExport = dialogView.findViewById(R.id.btn_dock_export);
-        View btnDockAdd = dialogView.findViewById(R.id.btn_dock_add_folder);
-        View btnDockImport = dialogView.findViewById(R.id.btn_dock_import);
-        TextView textDockExport = dialogView.findViewById(R.id.text_dock_export);
-        TextView textDockImport = dialogView.findViewById(R.id.text_dock_import);
-        ImageView iconDockExport = dialogView.findViewById(R.id.icon_dock_export);
-        ImageView iconDockImport = dialogView.findViewById(R.id.icon_dock_import);
-        TextView iconDockPlus = dialogView.findViewById(R.id.icon_dock_plus);
-
-        // Apply Theme Backgrounds and Colors (Liquid Island Tokens)
-        if (bookmarksRoot != null) bookmarksRoot.setBackgroundColor(isDarkTheme ? 0xFF070A10 : 0xFFF8FAFC);
-        if (headerBar != null) headerBar.setBackgroundColor(isDarkTheme ? 0xFF070A10 : 0xFFF8FAFC);
-        if (btnBack != null) btnBack.setColorFilter(isDarkTheme ? 0xFFBAC9CC : 0xFF334155);
-
-        // Header Capsule: Liquid Glass squircle with Cyan glow
-        if (capsuleCenter != null) {
-            GradientDrawable capBg = new GradientDrawable();
-            capBg.setCornerRadius(dpToPx(16));
-            capBg.setColor(isDarkTheme ? 0xD0121826 : 0xE6FFFFFF);
-            capBg.setStroke(dpToPx(1), isDarkTheme ? 0xFF22D3EE : 0xFF0284C7);
-            capsuleCenter.setBackground(capBg);
-        }
-        if (textBookmarksHeader != null) textBookmarksHeader.setTextColor(isDarkTheme ? 0xFFFFFFFF : 0xFF0284C7);
-        if (iconBookmarksHeader != null) iconBookmarksHeader.setColorFilter(isDarkTheme ? 0xFF22D3EE : 0xFF0284C7);
-
-        if (badgeHeaderCount != null) {
-            GradientDrawable bBg = new GradientDrawable();
-            bBg.setCornerRadius(dpToPx(10));
-            bBg.setColor(isDarkTheme ? 0x3322D3EE : 0x180284C7);
-            bBg.setStroke(dpToPx(1), isDarkTheme ? 0x5522D3EE : 0x300284C7);
-            badgeHeaderCount.setBackground(bBg);
-            badgeHeaderCount.setTextColor(isDarkTheme ? 0xFF22D3EE : 0xFF0284C7);
-        }
-
-        if (btnGotoHistory != null) btnGotoHistory.setTextColor(isDarkTheme ? 0xFF64748B : 0xFF475569);
-        if (btnGotoSettings != null) btnGotoSettings.setTextColor(isDarkTheme ? 0xFF64748B : 0xFF475569);
-
-        if (textVaultTitle != null) textVaultTitle.setTextColor(isDarkTheme ? 0xFFF8FAFC : 0xFF0F172A);
-        if (badgeVaultSaved != null) {
-            GradientDrawable vBg = new GradientDrawable();
-            vBg.setCornerRadius(dpToPx(8));
-            vBg.setColor(isDarkTheme ? 0x2822D3EE : 0x180284C7);
-            vBg.setStroke(dpToPx(1), isDarkTheme ? 0x4422D3EE : 0x300284C7);
-            badgeVaultSaved.setBackground(vBg);
-            badgeVaultSaved.setTextColor(isDarkTheme ? 0xFF22D3EE : 0xFF0284C7);
-        }
-
-        if (btnBatchToggle != null) {
-            GradientDrawable btBg = new GradientDrawable();
-            btBg.setCornerRadius(dpToPx(12));
-            btBg.setColor(isDarkTheme ? 0x20FFFFFF : 0x0C0F172A);
-            btBg.setStroke(dpToPx(1), isDarkTheme ? 0x28FFFFFF : 0x140F172A);
-            btnBatchToggle.setBackground(btBg);
-            btnBatchToggle.setTextColor(isDarkTheme ? 0xFFE2E8F0 : 0xFF334155);
-        }
-
-        // Search Bar: Frosted Glass Capsule with Specular Border
-        if (searchBar != null) {
-            GradientDrawable sbBg = new GradientDrawable();
-            sbBg.setCornerRadius(dpToPx(16));
-            sbBg.setColor(isDarkTheme ? 0xD0121826 : 0xF0FFFFFF);
-            sbBg.setStroke(dpToPx(1), isDarkTheme ? 0x22FFFFFF : 0x140F172A);
-            searchBar.setBackground(sbBg);
-        }
-        if (iconSearch != null) iconSearch.setColorFilter(isDarkTheme ? 0xFF94A3B8 : 0xFF64748B);
-        if (searchInput != null) {
-            searchInput.setTextColor(isDarkTheme ? 0xFFF8FAFC : 0xFF0F172A);
-            searchInput.setHintTextColor(isDarkTheme ? 0xFF64748B : 0xFF94A3B8);
-        }
-
-        if (btnSort != null) {
-            GradientDrawable sBg = new GradientDrawable();
-            sBg.setCornerRadius(dpToPx(10));
-            sBg.setColor(isDarkTheme ? 0x20FFFFFF : 0x0C0F172A);
-            sBg.setStroke(dpToPx(1), isDarkTheme ? 0x28FFFFFF : 0x140F172A);
-            btnSort.setBackground(sBg);
-        }
-        if (textSortLabel != null) textSortLabel.setTextColor(isDarkTheme ? 0xFF22D3EE : 0xFF0284C7);
-
-        // Bottom Dock: HyperGlass Pill with Floating Cyan Glow FAB
-        if (bottomDock != null) {
-            GradientDrawable dockBg = new GradientDrawable();
-            dockBg.setCornerRadius(dpToPx(26));
-            dockBg.setColor(isDarkTheme ? 0xEE121826 : 0xF5FFFFFF);
-            dockBg.setStroke(dpToPx(1), isDarkTheme ? 0x33FFFFFF : 0x1E0F172A);
-            bottomDock.setBackground(dockBg);
-            bottomDock.setElevation(dpToPx(24));
-        }
-        if (textDockExport != null) textDockExport.setTextColor(isDarkTheme ? 0xFFF8FAFC : 0xFF0F172A);
-        if (textDockImport != null) textDockImport.setTextColor(isDarkTheme ? 0xFFF8FAFC : 0xFF0F172A);
-        if (iconDockExport != null) iconDockExport.setColorFilter(isDarkTheme ? 0xFF22D3EE : 0xFF0284C7);
-        if (iconDockImport != null) iconDockImport.setColorFilter(isDarkTheme ? 0xFF22D3EE : 0xFF0284C7);
-
-        if (btnDockAdd != null) {
-            GradientDrawable plusBg = new GradientDrawable(
-                GradientDrawable.Orientation.TL_BR,
-                new int[]{0xFF22D3EE, 0xFF06B6D4}
-            );
-            plusBg.setShape(GradientDrawable.OVAL);
-            btnDockAdd.setBackground(plusBg);
-        }
-        if (iconDockPlus != null) {
-            iconDockPlus.setTextColor(0xFF070A10);
-        }
-
-        // State variables
-        final boolean[] isSelectMode = {false};
-        final Set<String> selectedBookmarkIds = new HashSet<>();
-        final String[] activeCategory = {"all"}; // "all", "favorites", or custom folder name
-        final String[] activeSort = {"newest"}; // "newest", "oldest", "az", "za"
-
-        // References for dynamic refresh
-        final Runnable[] refreshRef = new Runnable[1];
-        final Runnable[] renderChipsRef = new Runnable[1];
-
-        // Dynamic Group Chips Renderer
-        renderChipsRef[0] = () -> {
-            if (layoutChips == null) return;
-            while (layoutChips.getChildCount() > 2) {
-                layoutChips.removeViewAt(2);
-            }
-
-            // Style static chips (All, Favorites)
-            boolean isAllAct = "all".equalsIgnoreCase(activeCategory[0]);
-            GradientDrawable allBg = new GradientDrawable();
-            allBg.setCornerRadius(dpToPx(14));
-            allBg.setColor(isAllAct ? (isDarkTheme ? 0xFF22D3EE : 0xFF0284C7) : (isDarkTheme ? 0x1CFFFFFF : 0x0C0F172A));
-            if (!isAllAct) allBg.setStroke(dpToPx(1), isDarkTheme ? 0x24FFFFFF : 0x140F172A);
-            if (chipAll != null) {
-                chipAll.setBackground(allBg);
-                chipAll.setTextColor(isAllAct ? (isDarkTheme ? 0xFF070A10 : 0xFFFFFFFF) : (isDarkTheme ? 0xFF94A3B8 : 0xFF64748B));
-            }
-
-            boolean isFavAct = "favorites".equalsIgnoreCase(activeCategory[0]);
-            GradientDrawable favBg = new GradientDrawable();
-            favBg.setCornerRadius(dpToPx(14));
-            favBg.setColor(isFavAct ? (isDarkTheme ? 0xFF22D3EE : 0xFF0284C7) : (isDarkTheme ? 0x1CFFFFFF : 0x0C0F172A));
-            if (!isFavAct) favBg.setStroke(dpToPx(1), isDarkTheme ? 0x24FFFFFF : 0x140F172A);
-            if (chipFav != null) {
-                chipFav.setBackground(favBg);
-                chipFav.setTextColor(isFavAct ? (isDarkTheme ? 0xFF070A10 : 0xFFFFFFFF) : (isDarkTheme ? 0xFF94A3B8 : 0xFF64748B));
-            }
-
-            // Dynamic Custom Groups Chips
-            List<String> folders = bookmarkManager.getFolders();
-            for (String folder : folders) {
-                if ("Favorites".equalsIgnoreCase(folder) || "All".equalsIgnoreCase(folder) || "Default".equalsIgnoreCase(folder)) {
-                    continue;
-                }
-                TextView chip = new TextView(this);
-                chip.setText(folder.toUpperCase(Locale.ROOT));
-                chip.setTextSize(TypedValue.COMPLEX_UNIT_SP, 11f);
-                chip.setTypeface(null, Typeface.BOLD);
-                chip.setGravity(Gravity.CENTER);
-                chip.setPadding(dpToPx(12), 0, dpToPx(12), 0);
-                chip.setClickable(true);
-                chip.setFocusable(true);
-
-                LinearLayout.LayoutParams lp = new LinearLayout.LayoutParams(
-                        ViewGroup.LayoutParams.WRAP_CONTENT, dpToPx(28));
-                lp.setMarginStart(dpToPx(6));
-                chip.setLayoutParams(lp);
-
-                boolean isAct = folder.equalsIgnoreCase(activeCategory[0]);
-                GradientDrawable cBg = new GradientDrawable();
-                cBg.setCornerRadius(dpToPx(14));
-                cBg.setColor(isAct ? (isDarkTheme ? 0xFF22D3EE : 0xFF0284C7) : (isDarkTheme ? 0x1CFFFFFF : 0x0C0F172A));
-                if (!isAct) cBg.setStroke(dpToPx(1), isDarkTheme ? 0x24FFFFFF : 0x140F172A);
-                chip.setBackground(cBg);
-                chip.setTextColor(isAct ? (isDarkTheme ? 0xFF070A10 : 0xFFFFFFFF) : (isDarkTheme ? 0xFF94A3B8 : 0xFF64748B));
-
-                chip.setOnClickListener(v -> {
-                    playUiFeedbackSound("tap");
-                    activeCategory[0] = folder;
-                    renderChipsRef[0].run();
-                    if (refreshRef[0] != null) refreshRef[0].run();
-                });
-
-                // Long-press: Rename or Delete Bookmark Group
-                chip.setOnLongClickListener(v -> {
-                    playUiFeedbackSound("tap");
-                    PopupMenu groupMenu = new PopupMenu(this, chip);
-                    groupMenu.getMenu().add(0, 1, 0, "✏️ Rename Group");
-                    groupMenu.getMenu().add(0, 2, 1, "🗑️ Delete Group");
-                    groupMenu.setOnMenuItemClickListener(item -> {
-                        if (item.getItemId() == 1) {
-                            showRenameGroupDialog(folder, () -> {
-                                activeCategory[0] = "all";
-                                renderChipsRef[0].run();
-                                if (refreshRef[0] != null) refreshRef[0].run();
-                            });
-                            return true;
-                        } else if (item.getItemId() == 2) {
-                            showDeleteGroupDialog(folder, () -> {
-                                activeCategory[0] = "all";
-                                renderChipsRef[0].run();
-                                if (refreshRef[0] != null) refreshRef[0].run();
-                            });
-                            return true;
-                        }
-                        return false;
-                    });
-                    groupMenu.show();
-                    return true;
-                });
-
-                layoutChips.addView(chip);
-            }
-        };
-
-        // Static chip click listeners
-        if (chipAll != null) {
-            chipAll.setOnClickListener(v -> {
-                playUiFeedbackSound("tap");
-                activeCategory[0] = "all";
-                renderChipsRef[0].run();
-                if (refreshRef[0] != null) refreshRef[0].run();
-            });
-        }
-        if (chipFav != null) {
-            chipFav.setOnClickListener(v -> {
-                playUiFeedbackSound("tap");
-                activeCategory[0] = "favorites";
-                renderChipsRef[0].run();
-                if (refreshRef[0] != null) refreshRef[0].run();
-            });
-        }
-
-        // Header Navigation Listeners with Smooth Slide Exit Animations
-        if (btnBack != null) btnBack.setOnClickListener(v -> dialog.dismiss());
-        if (btnGotoHistory != null) {
-            btnGotoHistory.setOnClickListener(v -> {
-                playUiFeedbackSound("tap");
-                dialog.dismiss();
-                showHistoryDialog(1);
-            });
-        }
-        if (btnGotoSettings != null) {
-            btnGotoSettings.setOnClickListener(v -> {
-                playUiFeedbackSound("tap");
-                dialog.dismiss();
-                openControlSheet();
-            });
-        }
-
-        // Bookmark List Refresh Logic
-        refreshRef[0] = () -> {
-            if (listContainer == null) return;
-            listContainer.removeAllViews();
-            List<BookmarkManager.BookmarkItem> bms = bookmarkManager.getAllBookmarks();
-
-            // Total count badges
-            if (badgeHeaderCount != null) badgeHeaderCount.setText(String.valueOf(bms.size()));
-            if (badgeVaultSaved != null) badgeVaultSaved.setText(bms.size() + " SAVED");
-            if (chipAll != null) chipAll.setText("ALL (" + bms.size() + ")");
-
-            // Filter
-            String query = searchInput != null ? searchInput.getText().toString().trim().toLowerCase() : "";
-            List<BookmarkManager.BookmarkItem> filtered = new ArrayList<>();
-            for (BookmarkManager.BookmarkItem b : bms) {
-                if (activeCategory[0].equalsIgnoreCase("favorites") && !b.isFavorite) continue;
-                if (!activeCategory[0].equalsIgnoreCase("all") && !activeCategory[0].equalsIgnoreCase("favorites")) {
-                    if (b.folder == null || !b.folder.equalsIgnoreCase(activeCategory[0])) continue;
-                }
-
-                if (!query.isEmpty()) {
-                    boolean match = (b.title != null && b.title.toLowerCase().contains(query))
-                            || (b.url != null && b.url.toLowerCase().contains(query))
-                            || (b.folder != null && b.folder.toLowerCase().contains(query));
-                    if (!match) continue;
-                }
-                filtered.add(b);
-            }
-
-            // Sort
-            if ("newest".equals(activeSort[0])) {
-                Collections.sort(filtered, (a, b) -> Long.compare(b.timestamp, a.timestamp));
-            } else if ("oldest".equals(activeSort[0])) {
-                Collections.sort(filtered, (a, b) -> Long.compare(a.timestamp, b.timestamp));
-            } else if ("az".equals(activeSort[0])) {
-                Collections.sort(filtered, (a, b) -> a.title.compareToIgnoreCase(b.title));
-            } else if ("za".equals(activeSort[0])) {
-                Collections.sort(filtered, (a, b) -> b.title.compareToIgnoreCase(a.title));
-            }
-
-            if (emptyView != null) emptyView.setVisibility(filtered.isEmpty() ? View.VISIBLE : View.GONE);
-
-            // Render each bookmark using item_stitch_bookmark_entry.xml
-            for (BookmarkManager.BookmarkItem item : filtered) {
-                View card = getLayoutInflater().inflate(R.layout.item_stitch_bookmark_entry, listContainer, false);
-                LinearLayout itemRoot = card.findViewById(R.id.bookmark_item_root);
-                android.widget.CheckBox itemCheck = card.findViewById(R.id.bookmark_item_checkbox);
-                FrameLayout iconFrame = card.findViewById(R.id.bookmark_item_icon_frame);
-                TextView iconEmoji = card.findViewById(R.id.bookmark_item_emoji);
-                TextView titleView = card.findViewById(R.id.bookmark_item_title);
-                TextView tagView = card.findViewById(R.id.bookmark_item_tag);
-                TextView domainView = card.findViewById(R.id.bookmark_item_domain);
-                TextView timeView = card.findViewById(R.id.bookmark_item_time);
-                ImageButton starBtn = card.findViewById(R.id.bookmark_item_star);
-                ImageButton moreBtn = card.findViewById(R.id.bookmark_item_more);
-
-                // Card Background (Liquid Island Glass)
-                if (itemRoot != null) {
-                    GradientDrawable cBg = new GradientDrawable();
-                    cBg.setCornerRadius(dpToPx(18));
-                    cBg.setColor(isDarkTheme ? 0xD0121826 : 0xF2FFFFFF);
-                    cBg.setStroke(dpToPx(1), isDarkTheme ? 0x22FFFFFF : 0x120F172A);
-                    itemRoot.setBackground(cBg);
-                }
-
-                // Batch Selection Checkbox
-                if (itemCheck != null) {
-                    itemCheck.setVisibility(isSelectMode[0] ? View.VISIBLE : View.GONE);
-                    itemCheck.setChecked(selectedBookmarkIds.contains(item.id));
-                    itemCheck.setOnCheckedChangeListener((cb, checked) -> {
-                        if (checked) selectedBookmarkIds.add(item.id);
-                        else selectedBookmarkIds.remove(item.id);
-                        if (btnBatchDelete != null) {
-                            btnBatchDelete.setVisibility(!selectedBookmarkIds.isEmpty() ? View.VISIBLE : View.GONE);
-                            btnBatchDelete.setText("Delete (" + selectedBookmarkIds.size() + ")");
-                        }
-                    });
-                }
-
-                // Title & Tag
-                if (titleView != null) {
-                    titleView.setText(item.title);
-                    titleView.setTextColor(isDarkTheme ? 0xFFF8FAFC : 0xFF0F172A);
-                }
-                if (tagView != null) {
-                    if (item.folder != null && !item.folder.isEmpty() && !"Default".equalsIgnoreCase(item.folder)) {
-                        tagView.setVisibility(View.VISIBLE);
-                        String tagShort = item.folder.contains("&") ? item.folder.split("&")[0].trim() : item.folder;
-                        if (tagShort.length() > 8) tagShort = tagShort.substring(0, 8);
-                        tagView.setText(tagShort.toUpperCase());
-                        GradientDrawable tBg = new GradientDrawable();
-                        tBg.setCornerRadius(dpToPx(6));
-                        tBg.setColor(isDarkTheme ? 0x2822D3EE : 0x180284C7);
-                        tBg.setStroke(dpToPx(1), isDarkTheme ? 0x4422D3EE : 0x300284C7);
-                        tagView.setBackground(tBg);
-                        tagView.setTextColor(isDarkTheme ? 0xFF22D3EE : 0xFF0284C7);
-                    } else {
-                        tagView.setVisibility(View.GONE);
-                    }
-                }
-
-                // Domain & Relative Time
-                if (domainView != null) {
-                    String domain = item.url;
-                    try {
-                        Uri u = Uri.parse(item.url);
-                        if (u != null && u.getHost() != null) domain = u.getHost();
-                    } catch (Exception ignored) {}
-                    domainView.setText(domain);
-                    domainView.setTextColor(isDarkTheme ? 0xFF849396 : 0xFF64748B);
-                }
-
-                if (timeView != null) {
-                    long diff = System.currentTimeMillis() - item.timestamp;
-                    String timeStr;
-                    if (diff < 60000L) timeStr = "just now";
-                    else if (diff < 3600000L) timeStr = (diff / 60000L) + "m ago";
-                    else if (diff < 86400000L) timeStr = (diff / 3600000L) + "h ago";
-                    else if (diff < 604800000L) timeStr = (diff / 86400000L) + "d ago";
-                    else if (diff < 2592000000L) timeStr = (diff / 604800000L) + "w ago";
-                    else timeStr = new java.text.SimpleDateFormat("MMM dd", java.util.Locale.US).format(new java.util.Date(item.timestamp));
-                    timeView.setText(timeStr);
-                    timeView.setTextColor(isDarkTheme ? 0xFF10B981 : 0xFF059669);
-                }
-
-                // Squircle Icon Frame
-                if (iconFrame != null && iconEmoji != null) {
-                    String u = item.url.toLowerCase();
-                    String t = item.title.toLowerCase();
-                    int squircleBg;
-                    String emoji;
-                    if (u.contains("notion") || t.contains("notion") || t.contains("spec") || t.contains("doc")) {
-                        squircleBg = isDarkTheme ? 0xFF064E3B : 0xFFD1FAE5;
-                        emoji = "📝";
-                    } else if (u.contains("arxiv") || t.contains("ai") || t.contains("llm") || t.contains("prompt")) {
-                        squircleBg = isDarkTheme ? 0xFF78350F : 0xFFFEF3C7;
-                        emoji = "📖";
-                    } else if (u.contains("figma") || t.contains("figma") || t.contains("design") || t.contains("token")) {
-                        squircleBg = isDarkTheme ? 0xFF831843 : 0xFFFCE7F3;
-                        emoji = "✏️";
-                    } else if (u.contains("tailwind") || u.contains("github") || t.contains("code") || t.contains("dev")) {
-                        squircleBg = isDarkTheme ? 0xFF164E63 : 0xFFCFFAFE;
-                        emoji = "💻";
-                    } else if (u.contains("chatgpt") || u.contains("gemini") || u.contains("claude")) {
-                        squircleBg = isDarkTheme ? 0xFF312E81 : 0xFFEDE9FE;
-                        emoji = "🤖";
-                    } else {
-                        squircleBg = isDarkTheme ? 0xFF1E293B : 0xFFF1F5F9;
-                        emoji = "🔖";
-                    }
-
-                    GradientDrawable fBg = new GradientDrawable();
-                    fBg.setCornerRadius(dpToPx(12));
-                    fBg.setColor(squircleBg);
-                    iconFrame.setBackground(fBg);
-                    iconEmoji.setText(emoji);
-                }
-
-                // Favorite Star Button
-                if (starBtn != null) {
-                    starBtn.setImageResource(R.drawable.ic_menu_bookmark);
-                    starBtn.setColorFilter(item.isFavorite ? 0xFFFBBF24 : (isDarkTheme ? 0xFF475569 : 0xFFCBD5E1));
-                    starBtn.setOnClickListener(v -> {
-                        playUiFeedbackSound("tap");
-                        bookmarkManager.toggleFavorite(item.id);
-                        refreshRef[0].run();
-                    });
-                }
-
-                // Pencil Button: Options (Move to group, Edit, Tabs, Copy, Delete)
-                if (moreBtn != null) {
-                    moreBtn.setColorFilter(isDarkTheme ? 0xFF849396 : 0xFF64748B);
-                    moreBtn.setOnClickListener(v -> {
-                        playUiFeedbackSound("tap");
-                        PopupMenu popup = new PopupMenu(this, moreBtn);
-                        popup.getMenu().add(0, 1, 0, "📁 Move to Group");
-                        popup.getMenu().add(0, 2, 1, "✏️ Edit Bookmark");
-                        popup.getMenu().add(0, 3, 2, "Open in Active Tab");
-                        popup.getMenu().add(0, 4, 3, "Open in New Tab");
-                        popup.getMenu().add(0, 5, 4, "Copy Link");
-                        popup.getMenu().add(0, 6, 5, "Delete Bookmark");
-                        popup.setOnMenuItemClickListener(mi -> {
-                            if (mi.getItemId() == 1) {
-                                showMoveBookmarkToGroupDialog(item, refreshRef[0], renderChipsRef[0]);
-                                return true;
-                            } else if (mi.getItemId() == 2) {
-                                showEditBookmarkDialog(item, refreshRef[0], renderChipsRef[0]);
-                                return true;
-                            } else if (mi.getItemId() == 3) {
-                                dialog.dismiss();
-                                TabItem active = getActiveOrDominantTab();
-                                if (active != null && active.webView != null) active.webView.loadUrl(item.url);
-                                else addNewTab("web", null, item.url, false);
-                                return true;
-                            } else if (mi.getItemId() == 4) {
-                                dialog.dismiss();
-                                addNewTab("web", null, item.url, false);
-                                return true;
-                            } else if (mi.getItemId() == 5) {
-                                ClipboardManager cm = (ClipboardManager) getSystemService(Context.CLIPBOARD_SERVICE);
-                                if (cm != null) cm.setPrimaryClip(ClipData.newPlainText("URL", item.url));
-                                Toast.makeText(this, "Link copied to clipboard", Toast.LENGTH_SHORT).show();
-                                return true;
-                            } else if (mi.getItemId() == 6) {
-                                bookmarkManager.deleteBookmark(item.id);
-                                Toast.makeText(this, "Bookmark deleted", Toast.LENGTH_SHORT).show();
-                                refreshRef[0].run();
-                                return true;
-                            }
-                            return false;
-                        });
-                        popup.show();
-                    });
-                }
-
-                // Card Click
-                card.setOnClickListener(v -> {
-                    if (isSelectMode[0]) {
-                        if (itemCheck != null) itemCheck.toggle();
-                    } else {
-                        dialog.dismiss();
-                        playUiFeedbackSound("tap");
-                        TabItem active = getActiveOrDominantTab();
-                        if (active != null && active.webView != null) active.webView.loadUrl(item.url);
-                        else addNewTab("web", null, item.url, false);
-                    }
-                });
-
-                listContainer.addView(card);
-            }
-        };
-
-        currentBookmarksRefreshRunnable = refreshRef[0];
-
-        // Batch Select Toggle Listener
-        if (btnBatchToggle != null) {
-            btnBatchToggle.setOnClickListener(v -> {
-                playUiFeedbackSound("tap");
-                isSelectMode[0] = !isSelectMode[0];
-                btnBatchToggle.setText(isSelectMode[0] ? "CANCEL" : "SELECT");
-                selectedBookmarkIds.clear();
-                if (btnBatchDelete != null) btnBatchDelete.setVisibility(View.GONE);
-                refreshRef[0].run();
-            });
-        }
-
-        // Batch Delete Listener
-        if (btnBatchDelete != null) {
-            btnBatchDelete.setOnClickListener(v -> {
-                playUiFeedbackSound("tap");
-                if (!selectedBookmarkIds.isEmpty()) {
-                    new AlertDialog.Builder(this)
-                            .setTitle("Delete Bookmarks")
-                            .setMessage("Delete " + selectedBookmarkIds.size() + " selected bookmarks?")
-                            .setPositiveButton("Delete", (d, which) -> {
-                                bookmarkManager.batchDelete(new ArrayList<>(selectedBookmarkIds));
-                                selectedBookmarkIds.clear();
-                                isSelectMode[0] = false;
-                                btnBatchToggle.setText("SELECT");
-                                btnBatchDelete.setVisibility(View.GONE);
-                                refreshRef[0].run();
-                                Toast.makeText(this, "Bookmarks deleted", Toast.LENGTH_SHORT).show();
-                            })
-                            .setNegativeButton("Cancel", null)
-                            .show();
-                }
-            });
-        }
-
-        // Sort Button Listener
-        if (btnSort != null) {
-            btnSort.setOnClickListener(v -> {
-                playUiFeedbackSound("tap");
-                PopupMenu sortMenu = new PopupMenu(this, btnSort);
-                sortMenu.getMenu().add(0, 1, 0, "Newest First");
-                sortMenu.getMenu().add(0, 2, 1, "Oldest First");
-                sortMenu.getMenu().add(0, 3, 2, "Title (A-Z)");
-                sortMenu.getMenu().add(0, 4, 3, "Title (Z-A)");
-                sortMenu.setOnMenuItemClickListener(item -> {
-                    if (item.getItemId() == 1) { activeSort[0] = "newest"; textSortLabel.setText("Newest"); }
-                    else if (item.getItemId() == 2) { activeSort[0] = "oldest"; textSortLabel.setText("Oldest"); }
-                    else if (item.getItemId() == 3) { activeSort[0] = "az"; textSortLabel.setText("A-Z"); }
-                    else if (item.getItemId() == 4) { activeSort[0] = "za"; textSortLabel.setText("Z-A"); }
-                    refreshRef[0].run();
-                    return true;
-                });
-                sortMenu.show();
-            });
-        }
-
-        // Search Input Listener
-        if (searchInput != null) {
-            searchInput.addTextChangedListener(new TextWatcher() {
-                @Override public void beforeTextChanged(CharSequence s, int start, int count, int after) {}
-                @Override public void onTextChanged(CharSequence s, int start, int before, int count) { refreshRef[0].run(); }
-                @Override public void afterTextChanged(Editable s) {}
-            });
-        }
-
-        // Bottom Dock: Export Bookmarks Button
-        if (btnDockExport != null) {
-            btnDockExport.setOnClickListener(v -> {
-                playUiFeedbackSound("tap");
-                try {
-                    Intent intent = new Intent(Intent.ACTION_OPEN_DOCUMENT_TREE);
-                    intent.addFlags(Intent.FLAG_GRANT_WRITE_URI_PERMISSION);
-                    startActivityForResult(intent, REQUEST_CODE_EXPORT_BOOKMARKS_TREE);
-                    Toast.makeText(this, "Select export destination folder", Toast.LENGTH_SHORT).show();
-                } catch (Exception e) {
-                    Toast.makeText(this, "Export unavailable: " + e.getMessage(), Toast.LENGTH_SHORT).show();
-                }
-            });
-        }
-
-        // Bottom Dock: Import Bookmarks Button
-        if (btnDockImport != null) {
-            btnDockImport.setOnClickListener(v -> {
-                playUiFeedbackSound("tap");
-                try {
-                    Intent intent = new Intent(Intent.ACTION_GET_CONTENT);
-                    intent.setType("*/*");
-                    intent.addCategory(Intent.CATEGORY_OPENABLE);
-                    startActivityForResult(Intent.createChooser(intent, "Select Bookmarks File (HTML/JSON)"), REQUEST_CODE_IMPORT_BOOKMARKS_FILE);
-                } catch (Exception e) {
-                    Toast.makeText(this, "Import unavailable: " + e.getMessage(), Toast.LENGTH_SHORT).show();
-                }
-            });
-        }
-
-        // Bottom Dock: Add Bookmark or Group Plus Button (Presents Action Menu)
-        if (btnDockAdd != null) {
-            btnDockAdd.setOnClickListener(v -> {
-                playUiFeedbackSound("tap");
-                showAddBookmarkOrGroupMenu(() -> {
-                    renderChipsRef[0].run();
-                    refreshRef[0].run();
-                });
-            });
-        }
-
-        renderChipsRef[0].run();
-        refreshRef[0].run();
-        dialog.show();
-    }
-
-    private void showAddBookmarkOrGroupMenu(Runnable onRefresh) {
-        AlertDialog.Builder builder = new AlertDialog.Builder(this);
-        LinearLayout root = new LinearLayout(this);
-        root.setOrientation(LinearLayout.VERTICAL);
-        root.setPadding(dpToPx(24), dpToPx(22), dpToPx(24), dpToPx(20));
-
-        GradientDrawable rootBg = new GradientDrawable();
-        rootBg.setCornerRadius(dpToPx(24));
-        rootBg.setColor(isDarkTheme ? 0xFF141926 : 0xFFFFFFFF);
-        rootBg.setStroke(dpToPx(1), isDarkTheme ? 0xFF1F293D : 0xFFCBD5E1);
-        root.setBackground(rootBg);
-
-        TextView title = new TextView(this);
-        title.setText("Add to Caspian Vault");
-        title.setTextSize(TypedValue.COMPLEX_UNIT_SP, 17f);
-        title.setTypeface(null, Typeface.BOLD);
-        title.setTextColor(isDarkTheme ? 0xFFFFFFFF : 0xFF0F172A);
-        root.addView(title);
-
-        TextView subtitle = new TextView(this);
-        subtitle.setText("Choose what you would like to create");
-        subtitle.setTextSize(TypedValue.COMPLEX_UNIT_SP, 12f);
-        subtitle.setTextColor(isDarkTheme ? 0xFF849396 : 0xFF64748B);
-        subtitle.setPadding(0, dpToPx(4), 0, dpToPx(18));
-        root.addView(subtitle);
-
-        AlertDialog menuDialog = builder.setView(root).create();
-        if (menuDialog.getWindow() != null) {
-            menuDialog.getWindow().setBackgroundDrawable(new ColorDrawable(Color.TRANSPARENT));
-        }
-
-        // Option 1: New Bookmark
-        LinearLayout cardBookmark = createVaultMenuOptionCard(
-                "🔖", "New Bookmark", "Save active page or enter a custom link",
-                () -> {
-                    menuDialog.dismiss();
-                    showAddBookmarkDialog(onRefresh);
-                }
-        );
-        root.addView(cardBookmark);
-
-        // Option 2: New Bookmark Group
-        LinearLayout cardGroup = createVaultMenuOptionCard(
-                "📁", "New Bookmark Group", "Create a custom category folder for bookmarks",
-                () -> {
-                    menuDialog.dismiss();
-                    showCreateBookmarkGroupDialog(onRefresh);
-                }
-        );
-        root.addView(cardGroup);
-
-        menuDialog.show();
-    }
-
-    private LinearLayout createVaultMenuOptionCard(String emoji, String titleText, String subtitleText, Runnable onClick) {
-        LinearLayout card = new LinearLayout(this);
-        card.setOrientation(LinearLayout.HORIZONTAL);
-        card.setGravity(Gravity.CENTER_VERTICAL);
-        card.setPadding(dpToPx(14), dpToPx(14), dpToPx(14), dpToPx(14));
-        card.setClickable(true);
-        card.setFocusable(true);
-
-        LinearLayout.LayoutParams lp = new LinearLayout.LayoutParams(
-                ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT);
-        lp.bottomMargin = dpToPx(10);
-        card.setLayoutParams(lp);
-
-        GradientDrawable cBg = new GradientDrawable();
-        cBg.setCornerRadius(dpToPx(16));
-        cBg.setColor(isDarkTheme ? 0xFF1B2232 : 0xFFF8FAFC);
-        cBg.setStroke(dpToPx(1), isDarkTheme ? 0xFF27334D : 0xFFE2E8F0);
-        card.setBackground(cBg);
-
-        // Emoji Frame
-        FrameLayout iconFrame = new FrameLayout(this);
-        LinearLayout.LayoutParams ifLp = new LinearLayout.LayoutParams(dpToPx(40), dpToPx(40));
-        ifLp.setMarginEnd(dpToPx(12));
-        iconFrame.setLayoutParams(ifLp);
-
-        GradientDrawable ifBg = new GradientDrawable();
-        ifBg.setCornerRadius(dpToPx(12));
-        ifBg.setColor(isDarkTheme ? 0xFF141926 : 0xFFEEF2F6);
-        iconFrame.setBackground(ifBg);
-
-        TextView tvEmoji = new TextView(this);
-        tvEmoji.setText(emoji);
-        tvEmoji.setTextSize(TypedValue.COMPLEX_UNIT_SP, 18f);
-        tvEmoji.setGravity(Gravity.CENTER);
-        iconFrame.addView(tvEmoji);
-        card.addView(iconFrame);
-
-        // Text details Column
-        LinearLayout col = new LinearLayout(this);
-        col.setOrientation(LinearLayout.VERTICAL);
-        col.setLayoutParams(new LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.WRAP_CONTENT, 1f));
-
-        TextView tvTitle = new TextView(this);
-        tvTitle.setText(titleText);
-        tvTitle.setTextSize(TypedValue.COMPLEX_UNIT_SP, 14f);
-        tvTitle.setTypeface(null, Typeface.BOLD);
-        tvTitle.setTextColor(isDarkTheme ? 0xFFF1F5F9 : 0xFF0F172A);
-        col.addView(tvTitle);
-
-        TextView tvSub = new TextView(this);
-        tvSub.setText(subtitleText);
-        tvSub.setTextSize(TypedValue.COMPLEX_UNIT_SP, 11.5f);
-        tvSub.setTextColor(isDarkTheme ? 0xFF849396 : 0xFF64748B);
-        tvSub.setPadding(0, dpToPx(2), 0, 0);
-        col.addView(tvSub);
-
-        card.addView(col);
-
-        // Right arrow
-        TextView arrow = new TextView(this);
-        arrow.setText("›");
-        arrow.setTextSize(TypedValue.COMPLEX_UNIT_SP, 20f);
-        arrow.setTextColor(isDarkTheme ? 0xFF64748B : 0xFF94A3B8);
-        card.addView(arrow);
-
-        card.setOnClickListener(v -> {
-            playUiFeedbackSound("tap");
-            if (onClick != null) onClick.run();
-        });
-
-        return card;
-    }
-
-    private void showMoveBookmarkToGroupDialog(BookmarkManager.BookmarkItem item, Runnable onRefresh, Runnable onChipsRefresh) {
-        if (item == null || bookmarkManager == null) return;
-        playUiFeedbackSound("tap");
-        AlertDialog.Builder builder = new AlertDialog.Builder(this);
-        LinearLayout root = new LinearLayout(this);
-        root.setOrientation(LinearLayout.VERTICAL);
-        root.setPadding(dpToPx(24), dpToPx(22), dpToPx(24), dpToPx(20));
-
-        GradientDrawable rBg = new GradientDrawable();
-        rBg.setCornerRadius(dpToPx(22));
-        rBg.setColor(isDarkTheme ? 0xFF141926 : 0xFFFFFFFF);
-        rBg.setStroke(dpToPx(1), isDarkTheme ? 0xFF232B3E : 0xFFCBD5E1);
-        root.setBackground(rBg);
-
-        TextView title = new TextView(this);
-        title.setText("Move to Group");
-        title.setTextSize(TypedValue.COMPLEX_UNIT_SP, 17f);
-        title.setTypeface(null, Typeface.BOLD);
-        title.setTextColor(isDarkTheme ? 0xFFFFFFFF : 0xFF0F172A);
-        root.addView(title);
-
-        TextView sub = new TextView(this);
-        sub.setText("Select destination group for: \"" + item.title + "\"");
-        sub.setTextSize(TypedValue.COMPLEX_UNIT_SP, 12f);
-        sub.setTextColor(isDarkTheme ? 0xFF849396 : 0xFF64748B);
-        sub.setPadding(0, dpToPx(4), 0, dpToPx(14));
-        root.addView(sub);
-
-        List<String> folderList = new ArrayList<>();
-        folderList.add("Default");
-        List<String> existing = bookmarkManager.getFolders();
-        for (String f : existing) {
-            if (!f.equalsIgnoreCase("Favorites") && !f.equalsIgnoreCase("All") && !f.equalsIgnoreCase("Default")) {
-                folderList.add(f);
-            }
-        }
-
-        AlertDialog moveDialog = builder.setView(root).create();
-        if (moveDialog.getWindow() != null) {
-            moveDialog.getWindow().setBackgroundDrawable(new ColorDrawable(Color.TRANSPARENT));
-        }
-
-        for (String folder : folderList) {
-            TextView opt = new TextView(this);
-            boolean isCurrent = folder.equalsIgnoreCase(item.folder);
-            opt.setText((isCurrent ? "✓ 📁 " : "📁 ") + folder + (isCurrent ? " (Current)" : ""));
-            opt.setTextSize(TypedValue.COMPLEX_UNIT_SP, 13.5f);
-            opt.setTextColor(isCurrent ? 0xFF00E5FF : (isDarkTheme ? 0xFFDFE2F0 : 0xFF0F172A));
-            opt.setPadding(dpToPx(14), dpToPx(10), dpToPx(14), dpToPx(10));
-            GradientDrawable optBg = new GradientDrawable();
-            optBg.setCornerRadius(dpToPx(10));
-            optBg.setColor(isCurrent ? (isDarkTheme ? 0xFF1B2A3D : 0xFFE0F2FE) : (isDarkTheme ? 0xFF19202E : 0xFFF1F5F9));
-            opt.setBackground(optBg);
-            LinearLayout.LayoutParams lp = new LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT);
-            lp.setMargins(0, 0, 0, dpToPx(6));
-            opt.setLayoutParams(lp);
-            opt.setOnClickListener(v -> {
-                playUiFeedbackSound("tap");
-                bookmarkManager.moveBookmarkToFolder(item.id, folder);
-                Toast.makeText(this, "Moved to " + folder + "! 📁", Toast.LENGTH_SHORT).show();
-                moveDialog.dismiss();
-                if (onRefresh != null) onRefresh.run();
-                if (onChipsRefresh != null) onChipsRefresh.run();
-            });
-            root.addView(opt);
-        }
-
-        // Add Create New Group & Move Here
-        TextView optNew = new TextView(this);
-        optNew.setText("➕ Create New Group & Move Here...");
-        optNew.setTextSize(TypedValue.COMPLEX_UNIT_SP, 13f);
-        optNew.setTypeface(null, Typeface.BOLD);
-        optNew.setTextColor(0xFF00E5FF);
-        optNew.setPadding(dpToPx(14), dpToPx(10), dpToPx(14), dpToPx(10));
-        GradientDrawable nBg = new GradientDrawable();
-        nBg.setCornerRadius(dpToPx(10));
-        nBg.setColor(isDarkTheme ? 0xFF122030 : 0xFFE0F2FE);
-        nBg.setStroke(dpToPx(1), isDarkTheme ? 0xFF00E5FF : 0xFF0284C7);
-        optNew.setBackground(nBg);
-        LinearLayout.LayoutParams nlp = new LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT);
-        nlp.setMargins(0, dpToPx(4), 0, dpToPx(12));
-        optNew.setLayoutParams(nlp);
-        optNew.setOnClickListener(v -> {
-            playUiFeedbackSound("tap");
-            moveDialog.dismiss();
-            showCreateBookmarkGroupDialog(() -> {
-                List<String> updated = bookmarkManager.getFolders();
-                if (!updated.isEmpty()) {
-                    String newest = updated.get(updated.size() - 1);
-                    bookmarkManager.moveBookmarkToFolder(item.id, newest);
-                    Toast.makeText(this, "Moved to " + newest + "! 📁", Toast.LENGTH_SHORT).show();
-                }
-                if (onRefresh != null) onRefresh.run();
-                if (onChipsRefresh != null) onChipsRefresh.run();
-            });
-        });
-        root.addView(optNew);
-
-        TextView btnCancel = new TextView(this);
-        btnCancel.setText("Cancel");
-        btnCancel.setTextSize(TypedValue.COMPLEX_UNIT_SP, 13f);
-        btnCancel.setTextColor(isDarkTheme ? 0xFF94A3B8 : 0xFF64748B);
-        btnCancel.setGravity(Gravity.CENTER);
-        btnCancel.setPadding(0, dpToPx(6), 0, 0);
-        btnCancel.setOnClickListener(v -> moveDialog.dismiss());
-        root.addView(btnCancel);
-
-        moveDialog.show();
-    }
-
-    private void showEditBookmarkDialog(BookmarkManager.BookmarkItem item, Runnable onRefresh, Runnable onChipsRefresh) {
-        if (item == null || bookmarkManager == null) return;
-        playUiFeedbackSound("tap");
-        AlertDialog.Builder builder = new AlertDialog.Builder(this);
-        LinearLayout root = new LinearLayout(this);
-        root.setOrientation(LinearLayout.VERTICAL);
-        root.setPadding(dpToPx(24), dpToPx(22), dpToPx(24), dpToPx(18));
-
-        GradientDrawable rBg = new GradientDrawable();
-        rBg.setCornerRadius(dpToPx(22));
-        rBg.setColor(isDarkTheme ? 0xFF141926 : 0xFFFFFFFF);
-        rBg.setStroke(dpToPx(1), isDarkTheme ? 0xFF232B3E : 0xFFCBD5E1);
-        root.setBackground(rBg);
-
-        TextView title = new TextView(this);
-        title.setText("Edit Bookmark");
-        title.setTextSize(TypedValue.COMPLEX_UNIT_SP, 17f);
-        title.setTypeface(null, Typeface.BOLD);
-        title.setTextColor(isDarkTheme ? 0xFFFFFFFF : 0xFF0F172A);
-        root.addView(title);
-
-        // Title Input
-        TextView lblTitle = new TextView(this);
-        lblTitle.setText("PAGE TITLE");
-        lblTitle.setTextSize(TypedValue.COMPLEX_UNIT_SP, 10.5f);
-        lblTitle.setTypeface(null, Typeface.BOLD);
-        lblTitle.setTextColor(isDarkTheme ? 0xFF849396 : 0xFF64748B);
-        lblTitle.setPadding(0, dpToPx(14), 0, dpToPx(4));
-        root.addView(lblTitle);
-
-        EditText etTitle = new EditText(this);
-        etTitle.setText(item.title);
-        etTitle.setTextColor(isDarkTheme ? 0xFFDFE2F0 : 0xFF0F172A);
-        etTitle.setHintTextColor(isDarkTheme ? 0xFF64748B : 0xFF94A3B8);
-        etTitle.setTextSize(TypedValue.COMPLEX_UNIT_SP, 13.5f);
-        root.addView(etTitle);
-
-        // URL Input
-        TextView lblUrl = new TextView(this);
-        lblUrl.setText("WEB URL");
-        lblUrl.setTextSize(TypedValue.COMPLEX_UNIT_SP, 10.5f);
-        lblUrl.setTypeface(null, Typeface.BOLD);
-        lblUrl.setTextColor(isDarkTheme ? 0xFF849396 : 0xFF64748B);
-        lblUrl.setPadding(0, dpToPx(10), 0, dpToPx(4));
-        root.addView(lblUrl);
-
-        EditText etUrl = new EditText(this);
-        etUrl.setText(item.url);
-        etUrl.setTextColor(isDarkTheme ? 0xFFDFE2F0 : 0xFF0F172A);
-        etUrl.setHintTextColor(isDarkTheme ? 0xFF64748B : 0xFF94A3B8);
-        etUrl.setTextSize(TypedValue.COMPLEX_UNIT_SP, 13.5f);
-        root.addView(etUrl);
-
-        // Group Selector
-        TextView lblGroup = new TextView(this);
-        lblGroup.setText("BOOKMARK GROUP");
-        lblGroup.setTextSize(TypedValue.COMPLEX_UNIT_SP, 10.5f);
-        lblGroup.setTypeface(null, Typeface.BOLD);
-        lblGroup.setTextColor(isDarkTheme ? 0xFF849396 : 0xFF64748B);
-        lblGroup.setPadding(0, dpToPx(10), 0, dpToPx(4));
-        root.addView(lblGroup);
-
-        List<String> folderList = new ArrayList<>();
-        folderList.add("Default");
-        List<String> existing = bookmarkManager.getFolders();
-        for (String f : existing) {
-            if (!f.equalsIgnoreCase("Favorites") && !f.equalsIgnoreCase("All") && !f.equalsIgnoreCase("Default")) {
-                folderList.add(f);
-            }
-        }
-        final String[] selectedFolder = { (item.folder != null && !item.folder.isEmpty()) ? item.folder : "Default" };
-
-        TextView btnGroupPicker = new TextView(this);
-        btnGroupPicker.setText("📁 " + selectedFolder[0]);
-        btnGroupPicker.setTextSize(TypedValue.COMPLEX_UNIT_SP, 13f);
-        btnGroupPicker.setTextColor(isDarkTheme ? 0xFF00E5FF : 0xFF0284C7);
-        btnGroupPicker.setPadding(dpToPx(12), dpToPx(8), dpToPx(12), dpToPx(8));
-
-        GradientDrawable gpBg = new GradientDrawable();
-        gpBg.setCornerRadius(dpToPx(10));
-        gpBg.setColor(isDarkTheme ? 0xFF1E2838 : 0xFFE0F2FE);
-        gpBg.setStroke(dpToPx(1), isDarkTheme ? 0xFF2B3A50 : 0xFFBAE6FD);
-        btnGroupPicker.setBackground(gpBg);
-        btnGroupPicker.setClickable(true);
-        btnGroupPicker.setFocusable(true);
-        btnGroupPicker.setOnClickListener(v -> {
-            playUiFeedbackSound("tap");
-            PopupMenu pm = new PopupMenu(this, btnGroupPicker);
-            for (int i = 0; i < folderList.size(); i++) {
-                pm.getMenu().add(0, i, i, "📁 " + folderList.get(i));
-            }
-            pm.getMenu().add(0, folderList.size(), folderList.size(), "➕ New Group...");
-            pm.setOnMenuItemClickListener(mi -> {
-                int id = mi.getItemId();
-                if (id >= 0 && id < folderList.size()) {
-                    selectedFolder[0] = folderList.get(id);
-                    btnGroupPicker.setText("📁 " + selectedFolder[0]);
-                } else if (id == folderList.size()) {
-                    showCreateBookmarkGroupDialog(() -> {
-                        List<String> up = bookmarkManager.getFolders();
-                        if (!up.isEmpty()) {
-                            selectedFolder[0] = up.get(up.size() - 1);
-                            btnGroupPicker.setText("📁 " + selectedFolder[0]);
-                        }
-                    });
-                }
-                return true;
-            });
-            pm.show();
-        });
-        root.addView(btnGroupPicker);
-
-        AlertDialog editDialog = builder.setView(root).create();
-        if (editDialog.getWindow() != null) {
-            editDialog.getWindow().setBackgroundDrawable(new ColorDrawable(Color.TRANSPARENT));
-        }
-
-        LinearLayout btnRow = new LinearLayout(this);
-        btnRow.setOrientation(LinearLayout.HORIZONTAL);
-        btnRow.setGravity(Gravity.END);
-        btnRow.setPadding(0, dpToPx(20), 0, 0);
-
-        TextView btnCancel = new TextView(this);
-        btnCancel.setText("Cancel");
-        btnCancel.setTextSize(TypedValue.COMPLEX_UNIT_SP, 13f);
-        btnCancel.setTextColor(isDarkTheme ? 0xFF94A3B8 : 0xFF64748B);
-        btnCancel.setPadding(dpToPx(14), dpToPx(8), dpToPx(14), dpToPx(8));
-        btnCancel.setOnClickListener(v -> editDialog.dismiss());
-        btnRow.addView(btnCancel);
-
-        TextView btnSave = new TextView(this);
-        btnSave.setText("Save Changes");
-        btnSave.setTextSize(TypedValue.COMPLEX_UNIT_SP, 13f);
-        btnSave.setTypeface(null, Typeface.BOLD);
-        btnSave.setTextColor(0xFF000000);
-        btnSave.setPadding(dpToPx(16), dpToPx(8), dpToPx(16), dpToPx(8));
-        GradientDrawable svBg = new GradientDrawable();
-        svBg.setCornerRadius(dpToPx(10));
-        svBg.setColor(0xFF00E5FF);
-        btnSave.setBackground(svBg);
-        btnSave.setOnClickListener(v -> {
-            playUiFeedbackSound("tap");
-            String t = etTitle.getText().toString().trim();
-            String u = etUrl.getText().toString().trim();
-            if (!u.isEmpty()) {
-                if (!u.startsWith("http://") && !u.startsWith("https://")) u = "https://" + u;
-                if (t.isEmpty()) t = u;
-                bookmarkManager.updateBookmark(item.id, t, u, selectedFolder[0]);
-                Toast.makeText(this, "Bookmark updated! ✨", Toast.LENGTH_SHORT).show();
-                editDialog.dismiss();
-                if (onRefresh != null) onRefresh.run();
-                if (onChipsRefresh != null) onChipsRefresh.run();
-            }
-        });
-        btnRow.addView(btnSave);
-        root.addView(btnRow);
-
-        editDialog.show();
-    }
-
-    public void showAddBookmarkDialog() {
-        showAddBookmarkDialog(null);
-    }
-
-    private void showAddBookmarkDialog(Runnable onRefresh) {
-        AlertDialog.Builder builder = new AlertDialog.Builder(this);
-        LinearLayout root = new LinearLayout(this);
-        root.setOrientation(LinearLayout.VERTICAL);
-        root.setPadding(dpToPx(24), dpToPx(22), dpToPx(24), dpToPx(18));
-
-        GradientDrawable rootBg = new GradientDrawable();
-        rootBg.setCornerRadius(dpToPx(22));
-        rootBg.setColor(isDarkTheme ? 0xFF141926 : 0xFFFFFFFF);
-        rootBg.setStroke(dpToPx(1), isDarkTheme ? 0xFF1F293D : 0xFFCBD5E1);
-        root.setBackground(rootBg);
-
-        TextView title = new TextView(this);
-        title.setText("Add Bookmark");
-        title.setTextSize(TypedValue.COMPLEX_UNIT_SP, 17f);
-        title.setTypeface(null, Typeface.BOLD);
-        title.setTextColor(isDarkTheme ? 0xFFFFFFFF : 0xFF0F172A);
-        root.addView(title);
-
-        TabItem activeTab = getActiveOrDominantTab();
-
-        // Title Input
-        TextView lblTitle = new TextView(this);
-        lblTitle.setText("PAGE TITLE");
-        lblTitle.setTextSize(TypedValue.COMPLEX_UNIT_SP, 10.5f);
-        lblTitle.setTypeface(null, Typeface.BOLD);
-        lblTitle.setTextColor(isDarkTheme ? 0xFF849396 : 0xFF64748B);
-        lblTitle.setPadding(0, dpToPx(14), 0, dpToPx(4));
-        root.addView(lblTitle);
-
-        EditText etTitle = new EditText(this);
-        etTitle.setHint("Bookmark Title");
-        if (activeTab != null && activeTab.title != null) etTitle.setText(activeTab.title);
-        etTitle.setTextColor(isDarkTheme ? 0xFFDFE2F0 : 0xFF0F172A);
-        etTitle.setHintTextColor(isDarkTheme ? 0xFF64748B : 0xFF94A3B8);
-        etTitle.setTextSize(TypedValue.COMPLEX_UNIT_SP, 13.5f);
-        root.addView(etTitle);
-
-        // URL Input
-        TextView lblUrl = new TextView(this);
-        lblUrl.setText("WEB URL");
-        lblUrl.setTextSize(TypedValue.COMPLEX_UNIT_SP, 10.5f);
-        lblUrl.setTypeface(null, Typeface.BOLD);
-        lblUrl.setTextColor(isDarkTheme ? 0xFF849396 : 0xFF64748B);
-        lblUrl.setPadding(0, dpToPx(10), 0, dpToPx(4));
-        root.addView(lblUrl);
-
-        EditText etUrl = new EditText(this);
-        etUrl.setHint("https://...");
-        if (activeTab != null && activeTab.url != null) etUrl.setText(activeTab.url);
-        etUrl.setTextColor(isDarkTheme ? 0xFFDFE2F0 : 0xFF0F172A);
-        etUrl.setHintTextColor(isDarkTheme ? 0xFF64748B : 0xFF94A3B8);
-        etUrl.setTextSize(TypedValue.COMPLEX_UNIT_SP, 13.5f);
-        root.addView(etUrl);
-
-        // Group Selector
-        TextView lblGroup = new TextView(this);
-        lblGroup.setText("BOOKMARK GROUP");
-        lblGroup.setTextSize(TypedValue.COMPLEX_UNIT_SP, 10.5f);
-        lblGroup.setTypeface(null, Typeface.BOLD);
-        lblGroup.setTextColor(isDarkTheme ? 0xFF849396 : 0xFF64748B);
-        lblGroup.setPadding(0, dpToPx(10), 0, dpToPx(4));
-        root.addView(lblGroup);
-
-        List<String> folderList = new ArrayList<>();
-        folderList.add("Default");
-        List<String> existing = bookmarkManager.getFolders();
-        for (String f : existing) {
-            if (!f.equalsIgnoreCase("Favorites") && !f.equalsIgnoreCase("All") && !f.equalsIgnoreCase("Default")) {
-                folderList.add(f);
-            }
-        }
-        final String[] selectedFolder = {folderList.get(0)};
-
-        TextView btnGroupPicker = new TextView(this);
-        btnGroupPicker.setText("📁 " + selectedFolder[0]);
-        btnGroupPicker.setTextSize(TypedValue.COMPLEX_UNIT_SP, 13f);
-        btnGroupPicker.setTextColor(isDarkTheme ? 0xFF00E5FF : 0xFF0284C7);
-        btnGroupPicker.setPadding(dpToPx(12), dpToPx(8), dpToPx(12), dpToPx(8));
-
-        GradientDrawable gpBg = new GradientDrawable();
-        gpBg.setCornerRadius(dpToPx(10));
-        gpBg.setColor(isDarkTheme ? 0xFF1E2838 : 0xFFE0F2FE);
-        gpBg.setStroke(dpToPx(1), isDarkTheme ? 0xFF2B3A50 : 0xFFBAE6FD);
-        btnGroupPicker.setBackground(gpBg);
-        btnGroupPicker.setClickable(true);
-        btnGroupPicker.setFocusable(true);
-        btnGroupPicker.setOnClickListener(v -> {
-            playUiFeedbackSound("tap");
-            PopupMenu pm = new PopupMenu(this, btnGroupPicker);
-            for (int i = 0; i < folderList.size(); i++) {
-                pm.getMenu().add(0, i, i, "📁 " + folderList.get(i));
-            }
-            pm.getMenu().add(0, folderList.size(), folderList.size(), "➕ New Group...");
-            pm.setOnMenuItemClickListener(item -> {
-                int id = item.getItemId();
-                if (id >= 0 && id < folderList.size()) {
-                    selectedFolder[0] = folderList.get(id);
-                    btnGroupPicker.setText("📁 " + selectedFolder[0]);
-                } else if (id == folderList.size()) {
-                    showCreateBookmarkGroupDialog(() -> {
-                        List<String> up = bookmarkManager.getFolders();
-                        if (!up.isEmpty()) {
-                            selectedFolder[0] = up.get(up.size() - 1);
-                            btnGroupPicker.setText("📁 " + selectedFolder[0]);
-                        }
-                    });
-                }
-                return true;
-            });
-            pm.show();
-        });
-        root.addView(btnGroupPicker);
-
-        AlertDialog addDialog = builder.setView(root).create();
-        if (addDialog.getWindow() != null) {
-            addDialog.getWindow().setBackgroundDrawable(new ColorDrawable(Color.TRANSPARENT));
-        }
-
-        // Action Buttons Row
-        LinearLayout btnRow = new LinearLayout(this);
-        btnRow.setOrientation(LinearLayout.HORIZONTAL);
-        btnRow.setGravity(Gravity.END);
-        btnRow.setPadding(0, dpToPx(20), 0, 0);
-
-        TextView btnCancel = new TextView(this);
-        btnCancel.setText("Cancel");
-        btnCancel.setTextSize(TypedValue.COMPLEX_UNIT_SP, 13f);
-        btnCancel.setTextColor(isDarkTheme ? 0xFF94A3B8 : 0xFF64748B);
-        btnCancel.setPadding(dpToPx(14), dpToPx(8), dpToPx(14), dpToPx(8));
-        btnCancel.setOnClickListener(v -> addDialog.dismiss());
-        btnRow.addView(btnCancel);
-
-        TextView btnSave = new TextView(this);
-        btnSave.setText("Save Bookmark");
-        btnSave.setTextSize(TypedValue.COMPLEX_UNIT_SP, 13f);
-        btnSave.setTypeface(null, Typeface.BOLD);
-        btnSave.setTextColor(0xFF000000);
-        btnSave.setPadding(dpToPx(16), dpToPx(8), dpToPx(16), dpToPx(8));
-
-        GradientDrawable svBg = new GradientDrawable();
-        svBg.setCornerRadius(dpToPx(10));
-        svBg.setColor(0xFF00E5FF);
-        btnSave.setBackground(svBg);
-        btnSave.setOnClickListener(v -> {
-            playUiFeedbackSound("tap");
-            String t = etTitle.getText().toString().trim();
-            String u = etUrl.getText().toString().trim();
-            if (!u.isEmpty()) {
-                if (!u.startsWith("http://") && !u.startsWith("https://")) u = "https://" + u;
-                if (t.isEmpty()) t = u;
-                bookmarkManager.addBookmark(t, u, selectedFolder[0], "");
-                Toast.makeText(this, "Bookmark saved to " + selectedFolder[0] + "! ✨", Toast.LENGTH_SHORT).show();
-                addDialog.dismiss();
-                if (onRefresh != null) onRefresh.run();
-            }
-        });
-        btnRow.addView(btnSave);
-        root.addView(btnRow);
-
-        addDialog.show();
-    }
-
-    private void showCreateBookmarkGroupDialog(Runnable onRefresh) {
-        AlertDialog.Builder builder = new AlertDialog.Builder(this);
-        LinearLayout root = new LinearLayout(this);
-        root.setOrientation(LinearLayout.VERTICAL);
-        root.setPadding(dpToPx(24), dpToPx(22), dpToPx(24), dpToPx(18));
-
-        GradientDrawable rootBg = new GradientDrawable();
-        rootBg.setCornerRadius(dpToPx(22));
-        rootBg.setColor(isDarkTheme ? 0xFF141926 : 0xFFFFFFFF);
-        rootBg.setStroke(dpToPx(1), isDarkTheme ? 0xFF1F293D : 0xFFCBD5E1);
-        root.setBackground(rootBg);
-
-        TextView title = new TextView(this);
-        title.setText("New Bookmark Group");
-        title.setTextSize(TypedValue.COMPLEX_UNIT_SP, 17f);
-        title.setTypeface(null, Typeface.BOLD);
-        title.setTextColor(isDarkTheme ? 0xFFFFFFFF : 0xFF0F172A);
-        root.addView(title);
-
-        TextView lblName = new TextView(this);
-        lblName.setText("GROUP NAME");
-        lblName.setTextSize(TypedValue.COMPLEX_UNIT_SP, 10.5f);
-        lblName.setTypeface(null, Typeface.BOLD);
-        lblName.setTextColor(isDarkTheme ? 0xFF849396 : 0xFF64748B);
-        lblName.setPadding(0, dpToPx(14), 0, dpToPx(4));
-        root.addView(lblName);
-
-        EditText etName = new EditText(this);
-        etName.setHint("e.g. Research, Work, AI Prompts");
-        etName.setTextColor(isDarkTheme ? 0xFFDFE2F0 : 0xFF0F172A);
-        etName.setHintTextColor(isDarkTheme ? 0xFF64748B : 0xFF94A3B8);
-        etName.setTextSize(TypedValue.COMPLEX_UNIT_SP, 13.5f);
-        root.addView(etName);
-
-        AlertDialog groupDialog = builder.setView(root).create();
-        if (groupDialog.getWindow() != null) {
-            groupDialog.getWindow().setBackgroundDrawable(new ColorDrawable(Color.TRANSPARENT));
-        }
-
-        LinearLayout btnRow = new LinearLayout(this);
-        btnRow.setOrientation(LinearLayout.HORIZONTAL);
-        btnRow.setGravity(Gravity.END);
-        btnRow.setPadding(0, dpToPx(20), 0, 0);
-
-        TextView btnCancel = new TextView(this);
-        btnCancel.setText("Cancel");
-        btnCancel.setTextSize(TypedValue.COMPLEX_UNIT_SP, 13f);
-        btnCancel.setTextColor(isDarkTheme ? 0xFF94A3B8 : 0xFF64748B);
-        btnCancel.setPadding(dpToPx(14), dpToPx(8), dpToPx(14), dpToPx(8));
-        btnCancel.setOnClickListener(v -> groupDialog.dismiss());
-        btnRow.addView(btnCancel);
-
-        TextView btnCreate = new TextView(this);
-        btnCreate.setText("Create Group");
-        btnCreate.setTextSize(TypedValue.COMPLEX_UNIT_SP, 13f);
-        btnCreate.setTypeface(null, Typeface.BOLD);
-        btnCreate.setTextColor(0xFF000000);
-        btnCreate.setPadding(dpToPx(16), dpToPx(8), dpToPx(16), dpToPx(8));
-
-        GradientDrawable crBg = new GradientDrawable();
-        crBg.setCornerRadius(dpToPx(10));
-        crBg.setColor(0xFF00E5FF);
-        btnCreate.setBackground(crBg);
-        btnCreate.setOnClickListener(v -> {
-            playUiFeedbackSound("tap");
-            String gName = etName.getText().toString().trim();
-            if (!gName.isEmpty()) {
-                bookmarkManager.createFolder(gName);
-                Toast.makeText(this, "Group \"" + gName + "\" created! 📁", Toast.LENGTH_SHORT).show();
-                groupDialog.dismiss();
-                if (onRefresh != null) onRefresh.run();
-            }
-        });
-        btnRow.addView(btnCreate);
-        root.addView(btnRow);
-
-        groupDialog.show();
-    }
-
-    private void showRenameGroupDialog(String oldName, Runnable onComplete) {
-        AlertDialog.Builder b = new AlertDialog.Builder(this);
-        LinearLayout l = new LinearLayout(this);
-        l.setOrientation(LinearLayout.VERTICAL);
-        l.setPadding(dpToPx(24), dpToPx(20), dpToPx(24), dpToPx(16));
-
-        GradientDrawable rBg = new GradientDrawable();
-        rBg.setCornerRadius(dpToPx(20));
-        rBg.setColor(isDarkTheme ? 0xFF141926 : 0xFFFFFFFF);
-        rBg.setStroke(dpToPx(1), isDarkTheme ? 0xFF1F293D : 0xFFCBD5E1);
-        l.setBackground(rBg);
-
-        TextView tv = new TextView(this);
-        tv.setText("Rename Bookmark Group");
-        tv.setTextSize(TypedValue.COMPLEX_UNIT_SP, 16f);
-        tv.setTypeface(null, Typeface.BOLD);
-        tv.setTextColor(isDarkTheme ? 0xFFF1F5F9 : 0xFF0F172A);
-        l.addView(tv);
-
-        EditText et = new EditText(this);
-        et.setText(oldName);
-        et.setSelection(oldName.length());
-        et.setTextColor(isDarkTheme ? 0xFFDFE2F0 : 0xFF0F172A);
-        et.setHintTextColor(isDarkTheme ? 0xFF64748B : 0xFF94A3B8);
-        et.setTextSize(TypedValue.COMPLEX_UNIT_SP, 13.5f);
-        l.addView(et);
-
-        AlertDialog renameDialog = b.setView(l).create();
-        if (renameDialog.getWindow() != null) {
-            renameDialog.getWindow().setBackgroundDrawable(new ColorDrawable(Color.TRANSPARENT));
-        }
-
-        LinearLayout btnRow = new LinearLayout(this);
-        btnRow.setOrientation(LinearLayout.HORIZONTAL);
-        btnRow.setGravity(Gravity.END);
-        btnRow.setPadding(0, dpToPx(18), 0, 0);
-
-        TextView btnCancel = new TextView(this);
-        btnCancel.setText("Cancel");
-        btnCancel.setTextSize(TypedValue.COMPLEX_UNIT_SP, 13f);
-        btnCancel.setTextColor(isDarkTheme ? 0xFF94A3B8 : 0xFF64748B);
-        btnCancel.setPadding(dpToPx(14), dpToPx(8), dpToPx(14), dpToPx(8));
-        btnCancel.setOnClickListener(v -> renameDialog.dismiss());
-        btnRow.addView(btnCancel);
-
-        TextView btnRename = new TextView(this);
-        btnRename.setText("Rename");
-        btnRename.setTextSize(TypedValue.COMPLEX_UNIT_SP, 13f);
-        btnRename.setTypeface(null, Typeface.BOLD);
-        btnRename.setTextColor(0xFF000000);
-        btnRename.setPadding(dpToPx(16), dpToPx(8), dpToPx(16), dpToPx(8));
-
-        GradientDrawable rnBg = new GradientDrawable();
-        rnBg.setCornerRadius(dpToPx(10));
-        rnBg.setColor(0xFF00E5FF);
-        btnRename.setBackground(rnBg);
-        btnRename.setOnClickListener(v -> {
-            playUiFeedbackSound("tap");
-            String newName = et.getText().toString().trim();
-            if (!newName.isEmpty() && !newName.equalsIgnoreCase(oldName)) {
-                bookmarkManager.renameFolder(oldName, newName);
-                Toast.makeText(this, "Renamed to \"" + newName + "\"", Toast.LENGTH_SHORT).show();
-                renameDialog.dismiss();
-                if (onComplete != null) onComplete.run();
-            }
-        });
-        btnRow.addView(btnRename);
-        l.addView(btnRow);
-
-        renameDialog.show();
-    }
-
-    private void showDeleteGroupDialog(String folderName, Runnable onComplete) {
-        new AlertDialog.Builder(this)
-                .setTitle("Delete Group")
-                .setMessage("Delete bookmark group \"" + folderName + "\"? Bookmarks inside this group will be moved to Default.")
-                .setPositiveButton("Delete", (d, w) -> {
-                    bookmarkManager.deleteFolder(folderName);
-                    Toast.makeText(this, "Group \"" + folderName + "\" deleted", Toast.LENGTH_SHORT).show();
-                    if (onComplete != null) onComplete.run();
-                })
-                .setNegativeButton("Cancel", null)
-                .show();
-    }
-
-    private void handleExportBookmarksToFolder(Uri treeUri) {
-        if (treeUri == null || bookmarkManager == null) return;
-        try {
-            androidx.documentfile.provider.DocumentFile pickedDir = androidx.documentfile.provider.DocumentFile.fromTreeUri(this, treeUri);
-            if (pickedDir != null && pickedDir.canWrite()) {
-                androidx.documentfile.provider.DocumentFile newFile = pickedDir.createFile("text/html", "caspian_bookmarks_" + System.currentTimeMillis() + ".html");
-                if (newFile != null) {
-                    try (java.io.OutputStream os = getContentResolver().openOutputStream(newFile.getUri())) {
-                        if (os != null) {
-                            bookmarkManager.exportNetscapeHtml(os);
-                            Toast.makeText(this, "Bookmarks exported successfully!", Toast.LENGTH_SHORT).show();
-                        }
-                    }
-                }
-            }
-        } catch (Exception e) {
-            Toast.makeText(this, "Export failed: " + e.getMessage(), Toast.LENGTH_SHORT).show();
-        }
-    }
-
-    private void handleImportBookmarksFromFile(Uri fileUri) {
-        if (fileUri == null || bookmarkManager == null) return;
-        try (java.io.InputStream is = getContentResolver().openInputStream(fileUri)) {
-            if (is != null) {
-                int count = bookmarkManager.importFromHtml(is);
-                Toast.makeText(this, "Imported " + count + " bookmarks!", Toast.LENGTH_SHORT).show();
-                if (currentBookmarksRefreshRunnable != null) currentBookmarksRefreshRunnable.run();
-            }
-        } catch (Exception e) {
-            Toast.makeText(this, "Import failed: " + e.getMessage(), Toast.LENGTH_SHORT).show();
-        }
-    }
-
-    public void showHistoryDialog() {
-        showHistoryDialog(0);
-    }
-
-    public void showHistoryDialog(int enterDirection) {
-        playUiFeedbackSound("tap");
-        AlertDialog.Builder builder = new AlertDialog.Builder(this, android.R.style.Theme_Black_NoTitleBar_Fullscreen);
-        View dialogView = getLayoutInflater().inflate(R.layout.dialog_history, null);
-        builder.setView(dialogView);
-        AlertDialog dialog = builder.create();
-        if (dialog.getWindow() != null) {
-            dialog.getWindow().setBackgroundDrawable(new ColorDrawable(isDarkTheme ? 0xFF070A10 : 0xFFF8FAFC));
-            dialog.getWindow().setWindowAnimations(0);
-        }
-        dialogView.setBackgroundColor(isDarkTheme ? 0xFF070A10 : 0xFFF8FAFC);
-
-        // Single iOS Slide Entrance Transition
-        if (enterDirection > 0) {
-            dialogView.setTranslationX(dpToPx(80));
-            dialogView.setAlpha(0.3f);
-            dialogView.animate().translationX(0f).alpha(1f).setDuration(200).setInterpolator(new DecelerateInterpolator(1.6f)).start();
-        } else if (enterDirection < 0) {
-            dialogView.setTranslationX(-dpToPx(80));
-            dialogView.setAlpha(0.3f);
-            dialogView.animate().translationX(0f).alpha(1f).setDuration(200).setInterpolator(new DecelerateInterpolator(1.6f)).start();
-        }
-
-        View historyRoot = dialogView.findViewById(R.id.history_root);
-        View historyHeaderSection = dialogView.findViewById(R.id.history_header_section);
-        View historyTabCapsule = dialogView.findViewById(R.id.history_tab_capsule);
-        TextView historyTabCapsuleText = dialogView.findViewById(R.id.history_tab_capsule_text);
-        TextView badgeCount = dialogView.findViewById(R.id.badge_history_count);
-        TextView tabBookmarks = dialogView.findViewById(R.id.tab_header_bookmarks);
-        TextView tabSettings = dialogView.findViewById(R.id.tab_header_settings);
-        View historySearchCapsule = dialogView.findViewById(R.id.history_search_capsule);
-        ImageView historySearchIcon = dialogView.findViewById(R.id.history_search_icon);
-        EditText searchInput = dialogView.findViewById(R.id.history_search_input);
-        View historySearchDivider = dialogView.findViewById(R.id.history_search_divider);
-        TextView btnSelect = dialogView.findViewById(R.id.btn_history_select);
-        ImageView btnOptions = dialogView.findViewById(R.id.btn_history_options);
-        ImageView closeBtn = dialogView.findViewById(R.id.history_close_btn);
-
-        if (historyRoot != null) {
-            historyRoot.setBackgroundColor(isDarkTheme ? 0xFF070A10 : 0xFFF8FAFC);
-        }
-        if (historyHeaderSection != null) {
-            GradientDrawable hSecBg = new GradientDrawable();
-            hSecBg.setColor(isDarkTheme ? 0xFF070A10 : 0xFFFFFFFF);
-            hSecBg.setStroke(dpToPx(1), isDarkTheme ? 0x1FFFFFFF : 0x120F172A);
-            historyHeaderSection.setBackground(hSecBg);
-        }
-        if (historyTabCapsule != null) {
-            GradientDrawable capBg = new GradientDrawable();
-            capBg.setCornerRadius(dpToPx(16));
-            capBg.setColor(isDarkTheme ? 0xD0121826 : 0xE6FFFFFF);
-            capBg.setStroke(dpToPx(1), isDarkTheme ? 0xFF22D3EE : 0xFF0284C7);
-            historyTabCapsule.setBackground(capBg);
-        }
-        if (historyTabCapsuleText != null) {
-            historyTabCapsuleText.setTextColor(isDarkTheme ? 0xFFFFFFFF : 0xFF0284C7);
-        }
-        if (badgeCount != null) {
-            GradientDrawable bcBg = new GradientDrawable();
-            bcBg.setCornerRadius(dpToPx(10));
-            bcBg.setColor(isDarkTheme ? 0x3322D3EE : 0x180284C7);
-            bcBg.setStroke(dpToPx(1), isDarkTheme ? 0x5522D3EE : 0x300284C7);
-            badgeCount.setBackground(bcBg);
-            badgeCount.setTextColor(isDarkTheme ? 0xFF22D3EE : 0xFF0284C7);
-        }
-        if (tabBookmarks != null) {
-            tabBookmarks.setTextColor(isDarkTheme ? 0xFF64748B : 0xFF475569);
-        }
-        if (tabSettings != null) {
-            tabSettings.setTextColor(isDarkTheme ? 0xFF64748B : 0xFF475569);
-        }
-
-        if (historySearchCapsule != null) {
-            GradientDrawable sBg = new GradientDrawable();
-            sBg.setCornerRadius(dpToPx(16));
-            sBg.setColor(isDarkTheme ? 0xD0121826 : 0xF0FFFFFF);
-            sBg.setStroke(dpToPx(1), isDarkTheme ? 0x22FFFFFF : 0x140F172A);
-            historySearchCapsule.setBackground(sBg);
-        }
-        if (historySearchIcon != null) {
-            historySearchIcon.setColorFilter(isDarkTheme ? 0xFF94A3B8 : 0xFF64748B);
-        }
-        if (historySearchDivider != null) {
-            historySearchDivider.setBackgroundColor(isDarkTheme ? 0x24FFFFFF : 0x140F172A);
-        }
-        if (searchInput != null) {
-            searchInput.setTextColor(isDarkTheme ? 0xFFF8FAFC : 0xFF0F172A);
-            searchInput.setHintTextColor(isDarkTheme ? 0xFF64748B : 0xFF94A3B8);
-        }
-        if (btnSelect != null) {
-            GradientDrawable selBg = new GradientDrawable();
-            selBg.setCornerRadius(dpToPx(8));
-            selBg.setColor(isDarkTheme ? 0x2822D3EE : 0x180284C7);
-            selBg.setStroke(dpToPx(1), isDarkTheme ? 0x4422D3EE : 0x300284C7);
-            btnSelect.setBackground(selBg);
-            btnSelect.setTextColor(isDarkTheme ? 0xFF22D3EE : 0xFF0284C7);
-        }
-        if (btnOptions != null) {
-            GradientDrawable optBg = new GradientDrawable();
-            optBg.setCornerRadius(dpToPx(8));
-            optBg.setColor(isDarkTheme ? 0x1CFFFFFF : 0x0C0F172A);
-            optBg.setStroke(dpToPx(1), isDarkTheme ? 0x24FFFFFF : 0x140F172A);
-            btnOptions.setBackground(optBg);
-            btnOptions.setColorFilter(isDarkTheme ? 0xFF94A3B8 : 0xFF475569);
-        }
-        if (closeBtn != null) {
-            GradientDrawable clsBg = new GradientDrawable();
-            clsBg.setCornerRadius(dpToPx(8));
-            clsBg.setColor(isDarkTheme ? 0x1CFFFFFF : 0x0C0F172A);
-            clsBg.setStroke(dpToPx(1), isDarkTheme ? 0x24FFFFFF : 0x140F172A);
-            closeBtn.setBackground(clsBg);
-            closeBtn.setColorFilter(isDarkTheme ? 0xFF94A3B8 : 0xFF475569);
-        }
-
-        TextView chipAll = dialogView.findViewById(R.id.chip_filter_all);
-        TextView chip1h = dialogView.findViewById(R.id.chip_filter_1h);
-        TextView chip24h = dialogView.findViewById(R.id.chip_filter_24h);
-        TextView chip1w = dialogView.findViewById(R.id.chip_filter_1w);
-
-        LinearLayout listContainer = dialogView.findViewById(R.id.history_list_container);
-        TextView emptyView = dialogView.findViewById(R.id.history_empty_view);
-
-        View historyBottomToolbar = dialogView.findViewById(R.id.history_bottom_toolbar);
-        if (historyBottomToolbar != null) {
-            historyBottomToolbar.setBackgroundColor(isDarkTheme ? 0xFF070A10 : 0xFFF8FAFC);
-        }
-        View historyBottomBarCard = dialogView.findViewById(R.id.history_bottom_bar_card);
-        View bottomNormalBar = dialogView.findViewById(R.id.bottom_normal_bar);
-        View bottomSelectBar = dialogView.findViewById(R.id.bottom_select_bar);
-        View timeRangeSelector = dialogView.findViewById(R.id.layout_time_range_selector);
-        View pillTimeRangeDropdown = dialogView.findViewById(R.id.pill_time_range_dropdown);
-        ImageView iconTimeRangeClock = dialogView.findViewById(R.id.icon_time_range_clock);
-        TextView labelTimeRange = dialogView.findViewById(R.id.label_time_range);
-        ImageView iconTimeRangeChevron = dialogView.findViewById(R.id.icon_time_range_chevron);
-        TextView textSelectedTimeRange = dialogView.findViewById(R.id.text_selected_time_range);
-
-        View btnClearCookies = dialogView.findViewById(R.id.btn_clear_cookies);
-        ImageView iconClearCookies = dialogView.findViewById(R.id.icon_clear_cookies);
-        TextView textClearCookies = dialogView.findViewById(R.id.text_clear_cookies);
-
-        View btnClearData = dialogView.findViewById(R.id.btn_clear_data);
-        ImageView iconClearData = dialogView.findViewById(R.id.icon_clear_data);
-        TextView textClearData = dialogView.findViewById(R.id.text_clear_data);
-
-        View btnClearBoth = dialogView.findViewById(R.id.btn_clear_both);
-        ImageView iconClearBoth = dialogView.findViewById(R.id.icon_clear_both);
-        TextView textClearBoth = dialogView.findViewById(R.id.text_clear_both);
-
-        if (historyBottomBarCard != null) {
-            GradientDrawable bcBg = new GradientDrawable();
-            bcBg.setCornerRadius(dpToPx(18));
-            bcBg.setColor(isDarkTheme ? 0xEE121826 : 0xF5FFFFFF);
-            bcBg.setStroke(dpToPx(1), isDarkTheme ? 0x33FFFFFF : 0x1E0F172A);
-            historyBottomBarCard.setBackground(bcBg);
-        }
-        if (bottomNormalBar != null) {
-            bottomNormalBar.setBackground(null);
-        }
-        if (bottomSelectBar != null) {
-            bottomSelectBar.setBackground(null);
-        }
-        if (pillTimeRangeDropdown != null) {
-            GradientDrawable pillBg = new GradientDrawable();
-            pillBg.setCornerRadius(dpToPx(12));
-            pillBg.setColor(isDarkTheme ? 0x20FFFFFF : 0x0C0F172A);
-            pillBg.setStroke(dpToPx(1), isDarkTheme ? 0x26FFFFFF : 0x140F172A);
-            pillTimeRangeDropdown.setBackground(pillBg);
-        }
-        if (iconTimeRangeClock != null) iconTimeRangeClock.setColorFilter(isDarkTheme ? 0xFF94A3B8 : 0xFF64748B);
-        if (labelTimeRange != null) labelTimeRange.setTextColor(isDarkTheme ? 0xFF94A3B8 : 0xFF64748B);
-        if (iconTimeRangeChevron != null) iconTimeRangeChevron.setColorFilter(isDarkTheme ? 0xFF94A3B8 : 0xFF64748B);
-        if (textSelectedTimeRange != null) textSelectedTimeRange.setTextColor(isDarkTheme ? 0xFFF8FAFC : 0xFF0F172A);
-
-        if (btnClearCookies != null) {
-            GradientDrawable cBg = new GradientDrawable();
-            cBg.setCornerRadius(dpToPx(10));
-            cBg.setColor(isDarkTheme ? 0x20FFFFFF : 0x0C0F172A);
-            cBg.setStroke(dpToPx(1), isDarkTheme ? 0x26FFFFFF : 0x140F172A);
-            btnClearCookies.setBackground(cBg);
-        }
-        if (iconClearCookies != null) iconClearCookies.setColorFilter(isDarkTheme ? 0xFF94A3B8 : 0xFF0284C7);
-        if (textClearCookies != null) textClearCookies.setTextColor(isDarkTheme ? 0xFFF8FAFC : 0xFF0F172A);
-
-        if (btnClearData != null) {
-            GradientDrawable dBg = new GradientDrawable();
-            dBg.setCornerRadius(dpToPx(10));
-            dBg.setColor(isDarkTheme ? 0x2822D3EE : 0x180284C7);
-            dBg.setStroke(dpToPx(1), isDarkTheme ? 0x4422D3EE : 0x300284C7);
-            btnClearData.setBackground(dBg);
-        }
-        if (iconClearData != null) iconClearData.setColorFilter(isDarkTheme ? 0xFF22D3EE : 0xFF0284C7);
-        if (textClearData != null) textClearData.setTextColor(isDarkTheme ? 0xFF22D3EE : 0xFF0284C7);
-
-        if (btnClearBoth != null) {
-            GradientDrawable bBg = new GradientDrawable();
-            bBg.setCornerRadius(dpToPx(10));
-            bBg.setColor(isDarkTheme ? 0x261217 : 0xFFFEF2F2);
-            bBg.setStroke(dpToPx(1), isDarkTheme ? 0xFF4D1720 : 0xFFFECACA);
-            btnClearBoth.setBackground(bBg);
-        }
-        if (iconClearBoth != null) iconClearBoth.setColorFilter(isDarkTheme ? 0xFFEF4444 : 0xFFEF4444);
-        if (textClearBoth != null) textClearBoth.setTextColor(isDarkTheme ? 0xFFFCA5A5 : 0xFFDC2626);
-
-        TextView textSelectedCount = dialogView.findViewById(R.id.text_selected_count);
-        TextView btnSelectAllToggle = dialogView.findViewById(R.id.btn_select_all_toggle);
-        TextView btnDeleteSelected = dialogView.findViewById(R.id.btn_delete_selected);
-        TextView btnCancelSelect = dialogView.findViewById(R.id.btn_cancel_select);
-
-        final boolean[] isSelectMode = new boolean[]{false};
-        final Set<Long> selectedIds = new HashSet<>();
-        final String[] activeFilter = new String[]{"all"};
-        final String[] selectedTimeRange = new String[]{"24h"};
-        final List<HistoryManager.HistoryEntry> currentVisibleEntries = new ArrayList<>();
-
-        java.text.SimpleDateFormat timeSdf = new java.text.SimpleDateFormat("HH:mm", java.util.Locale.getDefault());
-        java.text.SimpleDateFormat dayFormat = new java.text.SimpleDateFormat("MMM dd", java.util.Locale.getDefault());
-
-        Runnable updateChipsVisuals = () -> {
-            TextView[] chips = new TextView[]{chipAll, chip1h, chip24h, chip1w};
-            String[] filterVals = new String[]{"all", "1h", "24h", "1w"};
-            for (int ci = 0; ci < chips.length; ci++) {
-                TextView cp = chips[ci];
-                if (cp == null) continue;
-                boolean act = filterVals[ci].equals(activeFilter[0]);
-                GradientDrawable cBg = new GradientDrawable();
-                cBg.setCornerRadius(dpToPx(14));
-                if (act) {
-                    cBg.setColor(isDarkTheme ? 0xFF22D3EE : 0xFF0284C7);
-                    cBg.setStroke(dpToPx(1), isDarkTheme ? 0xFF22D3EE : 0xFF0284C7);
-                    cp.setTextColor(isDarkTheme ? 0xFF070A10 : 0xFFFFFFFF);
-                } else {
-                    cBg.setColor(isDarkTheme ? 0x1CFFFFFF : 0x0C0F172A);
-                    cBg.setStroke(dpToPx(1), isDarkTheme ? 0x24FFFFFF : 0x140F172A);
-                    cp.setTextColor(isDarkTheme ? 0xFF94A3B8 : 0xFF64748B);
-                }
-                cp.setBackground(cBg);
-            }
-        };
-        updateChipsVisuals.run();
-
-        final Runnable[] refreshList = new Runnable[1];
-        refreshList[0] = () -> {
-            listContainer.removeAllViews();
-            currentVisibleEntries.clear();
-            String query = searchInput != null ? searchInput.getText().toString() : "";
-            List<HistoryManager.HistoryEntry> rawEntries = HistoryManager.getInstance(this).getHistory(query);
-
-            int totalCount = HistoryManager.getInstance(this).getTotalHistoryCount();
-            if (badgeCount != null) badgeCount.setText(String.valueOf(totalCount));
-
-            long now = System.currentTimeMillis();
-            for (HistoryManager.HistoryEntry e : rawEntries) {
-                if ("1h".equals(activeFilter[0])) {
-                    if (e.timestamp < now - (3600L * 1000L)) continue;
-                } else if ("24h".equals(activeFilter[0])) {
-                    if (e.timestamp < now - (24L * 3600L * 1000L)) continue;
-                } else if ("1w".equals(activeFilter[0])) {
-                    if (e.timestamp < now - (7L * 24L * 3600L * 1000L)) continue;
-                }
-                currentVisibleEntries.add(e);
-            }
-
-            if (currentVisibleEntries.isEmpty()) {
-                if (emptyView != null) emptyView.setVisibility(View.VISIBLE);
-            } else {
-                if (emptyView != null) emptyView.setVisibility(View.GONE);
-
-                java.util.Calendar calNow = java.util.Calendar.getInstance();
-                int curYear = calNow.get(java.util.Calendar.YEAR);
-                int curDay = calNow.get(java.util.Calendar.DAY_OF_YEAR);
-
-                // Group entries by date
-                java.util.LinkedHashMap<String, List<HistoryManager.HistoryEntry>> groups = new java.util.LinkedHashMap<>();
-                for (HistoryManager.HistoryEntry entry : currentVisibleEntries) {
-                    java.util.Calendar calEntry = java.util.Calendar.getInstance();
-                    calEntry.setTimeInMillis(entry.timestamp);
-                    int entryYear = calEntry.get(java.util.Calendar.YEAR);
-                    int entryDay = calEntry.get(java.util.Calendar.DAY_OF_YEAR);
-
-                    String groupKey;
-                    if (curYear == entryYear && curDay == entryDay) {
-                        groupKey = "TODAY • " + dayFormat.format(new Date(entry.timestamp)).toUpperCase(Locale.ROOT);
-                    } else if (curYear == entryYear && curDay - 1 == entryDay) {
-                        groupKey = "YESTERDAY • " + dayFormat.format(new Date(entry.timestamp)).toUpperCase(Locale.ROOT);
-                    } else {
-                        groupKey = dayFormat.format(new Date(entry.timestamp)).toUpperCase(Locale.ROOT);
-                    }
-
-                    if (!groups.containsKey(groupKey)) {
-                        groups.put(groupKey, new ArrayList<>());
-                    }
-                    groups.get(groupKey).add(entry);
-                }
-
-                for (Map.Entry<String, List<HistoryManager.HistoryEntry>> group : groups.entrySet()) {
-                    String dateKey = group.getKey();
-                    List<HistoryManager.HistoryEntry> dayEntries = group.getValue();
-
-                    // Section Header
-                    LinearLayout secHeader = new LinearLayout(this);
-                    secHeader.setOrientation(LinearLayout.HORIZONTAL);
-                    secHeader.setGravity(Gravity.CENTER_VERTICAL);
-                    secHeader.setPadding(dpToPx(2), dpToPx(8), dpToPx(2), dpToPx(4));
-
-                    TextView secTitle = new TextView(this);
-                    secTitle.setLayoutParams(new LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.WRAP_CONTENT, 1f));
-                    secTitle.setText(dateKey);
-                    secTitle.setTextColor(isDarkTheme ? 0xFF94A3B8 : 0xFF475569);
-                    secTitle.setTextSize(TypedValue.COMPLEX_UNIT_SP, 11f);
-                    secTitle.setTypeface(Typeface.MONOSPACE, Typeface.BOLD);
-                    secHeader.addView(secTitle);
-
-                    TextView secDelete = new TextView(this);
-                    secDelete.setText(dateKey.startsWith("TODAY") ? "Delete Today" : (dateKey.startsWith("YESTERDAY") ? "Delete Yesterday" : "Delete Day"));
-                    secDelete.setTextColor(isDarkTheme ? 0xFF64748B : 0xFF94A3B8);
-                    secDelete.setTextSize(TypedValue.COMPLEX_UNIT_SP, 10.5f);
-                    secDelete.setClickable(true);
-                    secDelete.setFocusable(true);
-                    secDelete.setOnClickListener(v -> {
-                        playUiFeedbackSound("tap");
-                        List<Long> idsToDelete = new ArrayList<>();
-                        for (HistoryManager.HistoryEntry e : dayEntries) idsToDelete.add(e.id);
-                        HistoryManager.getInstance(this).deleteEntries(idsToDelete);
-                        refreshList[0].run();
-                        Toast.makeText(this, "Cleared " + dateKey, Toast.LENGTH_SHORT).show();
-                    });
-                    secHeader.addView(secDelete);
-                    listContainer.addView(secHeader);
-
-                    // Group Items
-                    for (HistoryManager.HistoryEntry entry : dayEntries) {
-                        LinearLayout card = new LinearLayout(this);
-                        card.setOrientation(LinearLayout.HORIZONTAL);
-                        card.setGravity(Gravity.CENTER_VERTICAL);
-                        card.setPadding(dpToPx(12), dpToPx(10), dpToPx(10), dpToPx(10));
-
-                        GradientDrawable cardBg = new GradientDrawable();
-                        cardBg.setCornerRadius(dpToPx(18));
-                        cardBg.setColor(isDarkTheme ? 0xD0121826 : 0xF2FFFFFF);
-                        cardBg.setStroke(dpToPx(1), isDarkTheme ? 0x22FFFFFF : 0x120F172A);
-                        card.setBackground(cardBg);
-
-                        LinearLayout.LayoutParams cardLp = new LinearLayout.LayoutParams(
-                                ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT);
-                        cardLp.bottomMargin = dpToPx(7);
-                        card.setLayoutParams(cardLp);
-
-                        // Checkbox for Select Mode
-                        if (isSelectMode[0]) {
-                            TextView checkIcon = new TextView(this);
-                            boolean isChecked = selectedIds.contains(entry.id);
-                            checkIcon.setText(isChecked ? "✓" : "○");
-                            checkIcon.setTextColor(isChecked ? 0xFF22D3EE : 0xFF64748B);
-                            checkIcon.setTextSize(TypedValue.COMPLEX_UNIT_SP, 14f);
-                            checkIcon.setTypeface(null, Typeface.BOLD);
-                            checkIcon.setPadding(0, 0, dpToPx(10), 0);
-                            card.addView(checkIcon);
-                        }
-
-                        // Squircle Icon Container (32dp x 32dp)
-                        FrameLayout iconBox = new FrameLayout(this);
-                        LinearLayout.LayoutParams ibLp = new LinearLayout.LayoutParams(dpToPx(32), dpToPx(32));
-                        ibLp.setMarginEnd(dpToPx(10));
-                        iconBox.setLayoutParams(ibLp);
-
-                        GradientDrawable ibGd = new GradientDrawable();
-                        ibGd.setColor(isDarkTheme ? 0x1AFFFFFF : 0x0A0F172A);
-                        ibGd.setCornerRadius(dpToPx(10));
-                        ibGd.setStroke(dpToPx(1), isDarkTheme ? 0x24FFFFFF : 0x100F172A);
-                        iconBox.setBackground(ibGd);
-
-                        ImageView iv = new ImageView(this);
-                        FrameLayout.LayoutParams ivLp = new FrameLayout.LayoutParams(dpToPx(16), dpToPx(16));
-                        ivLp.gravity = Gravity.CENTER;
-                        iv.setLayoutParams(ivLp);
-                        if (entry.url.contains("google.")) {
-                            iv.setImageResource(R.drawable.ic_stitch_google);
-                        } else {
-                            iv.setImageResource(R.drawable.ic_stitch_globe);
-                            iv.setColorFilter(0xFF38BDF8);
-                        }
-                        iconBox.addView(iv);
-                        card.addView(iconBox);
-
-                        // Text Details Column
-                        LinearLayout textCol = new LinearLayout(this);
-                        textCol.setOrientation(LinearLayout.VERTICAL);
-                        LinearLayout.LayoutParams tcLp = new LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.WRAP_CONTENT, 1f);
-                        textCol.setLayoutParams(tcLp);
-
-                        TextView titleTv = new TextView(this);
-                        titleTv.setText(entry.title != null && !entry.title.isEmpty() ? entry.title : entry.url);
-                        titleTv.setTextColor(isDarkTheme ? 0xFFF8FAFC : 0xFF0F172A);
-                        titleTv.setTextSize(TypedValue.COMPLEX_UNIT_SP, 12.5f);
-                        titleTv.setTypeface(null, Typeface.BOLD);
-                        titleTv.setSingleLine(true);
-                        titleTv.setEllipsize(android.text.TextUtils.TruncateAt.END);
-
-                        TextView urlTv = new TextView(this);
-                        urlTv.setText(cleanDisplayUrl(entry.url));
-                        urlTv.setTextColor(isDarkTheme ? 0xFF94A3B8 : 0xFF64748B);
-                        urlTv.setTextSize(TypedValue.COMPLEX_UNIT_SP, 11f);
-                        urlTv.setSingleLine(true);
-                        urlTv.setEllipsize(android.text.TextUtils.TruncateAt.END);
-
-                        textCol.addView(titleTv);
-                        textCol.addView(urlTv);
-                        card.addView(textCol);
-
-                        // Right Column: Time + 3-dots Menu
-                        LinearLayout rightCol = new LinearLayout(this);
-                        rightCol.setOrientation(LinearLayout.HORIZONTAL);
-                        rightCol.setGravity(Gravity.CENTER_VERTICAL);
-                        rightCol.setPadding(dpToPx(6), 0, 0, 0);
-
-                        TextView timeTv = new TextView(this);
-                        timeTv.setText(timeSdf.format(new Date(entry.timestamp)));
-                        timeTv.setTextColor(isDarkTheme ? 0xFF64748B : 0xFF94A3B8);
-                        timeTv.setTextSize(TypedValue.COMPLEX_UNIT_SP, 10.5f);
-                        timeTv.setTypeface(Typeface.MONOSPACE);
-                        rightCol.addView(timeTv);
-
-                        ImageView moreBtn = new ImageView(this);
-                        LinearLayout.LayoutParams mbLp = new LinearLayout.LayoutParams(dpToPx(24), dpToPx(24));
-                        mbLp.setMarginStart(dpToPx(4));
-                        moreBtn.setLayoutParams(mbLp);
-                        moreBtn.setImageResource(R.drawable.ic_stitch_more_vert);
-                        moreBtn.setColorFilter(isDarkTheme ? 0xFF94A3B8 : 0xFF64748B);
-                        GradientDrawable mbBg = new GradientDrawable();
-                        mbBg.setShape(GradientDrawable.OVAL);
-                        mbBg.setColor(isDarkTheme ? 0xFF161B22 : 0xFFF1F5F9);
-                        mbBg.setStroke(dpToPx(1), isDarkTheme ? 0xFF21262D : 0xFFE2E8F0);
-                        moreBtn.setBackground(mbBg);
-                        moreBtn.setClickable(true);
-                        moreBtn.setFocusable(true);
-                        moreBtn.setOnClickListener(v -> {
-                            playUiFeedbackSound("tap");
-                            PopupMenu popup = new PopupMenu(this, moreBtn);
-                            popup.getMenu().add("Open in New Tab");
-                            popup.getMenu().add("Copy URL");
-                            popup.getMenu().add("Delete Entry");
-                            popup.setOnMenuItemClickListener(item -> {
-                                if ("Open in New Tab".equals(item.getTitle())) {
-                                    dialog.dismiss();
-                                    addNewTab("web", null, entry.url, false);
-                                } else if ("Copy URL".equals(item.getTitle())) {
-                                    android.content.ClipboardManager cm = (android.content.ClipboardManager) getSystemService(Context.CLIPBOARD_SERVICE);
-                                    cm.setPrimaryClip(android.content.ClipData.newPlainText("URL", entry.url));
-                                    Toast.makeText(this, "Copied URL to clipboard", Toast.LENGTH_SHORT).show();
-                                } else if ("Delete Entry".equals(item.getTitle())) {
-                                    HistoryManager.getInstance(this).deleteEntry(entry.id);
-                                    refreshList[0].run();
-                                }
-                                return true;
-                            });
-                            popup.show();
-                        });
-                        rightCol.addView(moreBtn);
-                        card.addView(rightCol);
-
-                        card.setOnClickListener(v -> {
-                            playUiFeedbackSound("tap");
-                            if (isSelectMode[0]) {
-                                if (selectedIds.contains(entry.id)) {
-                                    selectedIds.remove(entry.id);
-                                } else {
-                                    selectedIds.add(entry.id);
-                                }
-                                if (textSelectedCount != null) {
-                                    textSelectedCount.setText(selectedIds.size() + " selected");
-                                }
-                                refreshList[0].run();
-                            } else {
-                                dialog.dismiss();
-                                TabItem active = getActiveOrDominantTab();
-                                if (active != null) {
-                                    active.webView.loadUrl(entry.url);
-                                } else {
-                                    addNewTab("web", null, entry.url, false);
-                                }
-                            }
-                        });
-
-                        listContainer.addView(card);
-                    }
-                }
-            }
-        };
-
-        refreshList[0].run();
-
-        // Search Input Listener
-        if (searchInput != null) {
-            searchInput.addTextChangedListener(new TextWatcher() {
-                @Override public void beforeTextChanged(CharSequence s, int start, int count, int after) {}
-                @Override public void onTextChanged(CharSequence s, int start, int before, int count) { refreshList[0].run(); }
-                @Override public void afterTextChanged(Editable s) {}
-            });
-        }
-
-        // Close Button
-        if (closeBtn != null) {
-            closeBtn.setOnClickListener(v -> dialog.dismiss());
-        }
-
-        // Header Bookmarks & Settings Navigation
-        if (tabBookmarks != null) {
-            tabBookmarks.setOnClickListener(v -> {
-                playUiFeedbackSound("tap");
-                dialog.dismiss();
-                showBookmarksDialog(-1);
-            });
-        }
-        if (tabSettings != null) {
-            tabSettings.setOnClickListener(v -> {
-                playUiFeedbackSound("tap");
-                dialog.dismiss();
-                openControlSheet();
-            });
-        }
-
-        // Filter Chips Click Listeners
-        View.OnClickListener chipListener = v -> {
-            playUiFeedbackSound("tap");
-            if (v == chipAll) {
-                activeFilter[0] = "all";
-                selectedTimeRange[0] = "all";
-                if (textSelectedTimeRange != null) textSelectedTimeRange.setText("All Entries");
-            } else if (v == chip1h) {
-                activeFilter[0] = "1h";
-                selectedTimeRange[0] = "1h";
-                if (textSelectedTimeRange != null) textSelectedTimeRange.setText("Last 1 Hour");
-            } else if (v == chip24h) {
-                activeFilter[0] = "24h";
-                selectedTimeRange[0] = "24h";
-                if (textSelectedTimeRange != null) textSelectedTimeRange.setText("Last 24 Hours");
-            } else if (v == chip1w) {
-                activeFilter[0] = "1w";
-                selectedTimeRange[0] = "1w";
-                if (textSelectedTimeRange != null) textSelectedTimeRange.setText("Last 1 Week");
-            }
-            updateChipsVisuals.run();
-            refreshList[0].run();
-        };
-        if (chipAll != null) chipAll.setOnClickListener(chipListener);
-        if (chip1h != null) chip1h.setOnClickListener(chipListener);
-        if (chip24h != null) chip24h.setOnClickListener(chipListener);
-        if (chip1w != null) chip1w.setOnClickListener(chipListener);
-
-        // Select Mode Toggle
-        if (btnSelect != null) {
-            btnSelect.setOnClickListener(v -> {
-                playUiFeedbackSound("tap");
-                isSelectMode[0] = !isSelectMode[0];
-                if (isSelectMode[0]) {
-                    btnSelect.setText("Done");
-                    if (bottomNormalBar != null) bottomNormalBar.setVisibility(View.GONE);
-                    if (bottomSelectBar != null) bottomSelectBar.setVisibility(View.VISIBLE);
-                } else {
-                    selectedIds.clear();
-                    btnSelect.setText("Select");
-                    if (bottomNormalBar != null) bottomNormalBar.setVisibility(View.VISIBLE);
-                    if (bottomSelectBar != null) bottomSelectBar.setVisibility(View.GONE);
-                }
-                refreshList[0].run();
-            });
-        }
-
-        // Options 3-dots Menu
-        if (btnOptions != null) {
-            btnOptions.setOnClickListener(v -> {
-                playUiFeedbackSound("tap");
-                PopupMenu popup = new PopupMenu(this, btnOptions);
-                popup.getMenu().add("Select Multiple");
-                popup.getMenu().add("Select All");
-                popup.getMenu().add("Clear Entire History");
-                popup.setOnMenuItemClickListener(item -> {
-                    if ("Select Multiple".equals(item.getTitle())) {
-                        isSelectMode[0] = true;
-                        if (btnSelect != null) btnSelect.setText("Done");
-                        if (bottomNormalBar != null) bottomNormalBar.setVisibility(View.GONE);
-                        if (bottomSelectBar != null) bottomSelectBar.setVisibility(View.VISIBLE);
-                        refreshList[0].run();
-                    } else if ("Select All".equals(item.getTitle())) {
-                        isSelectMode[0] = true;
-                        if (btnSelect != null) btnSelect.setText("Done");
-                        if (bottomNormalBar != null) bottomNormalBar.setVisibility(View.GONE);
-                        if (bottomSelectBar != null) bottomSelectBar.setVisibility(View.VISIBLE);
-                        selectedIds.clear();
-                        for (HistoryManager.HistoryEntry e : currentVisibleEntries) selectedIds.add(e.id);
-                        if (textSelectedCount != null) textSelectedCount.setText(selectedIds.size() + " selected");
-                        if (btnSelectAllToggle != null) btnSelectAllToggle.setText("Deselect All");
-                        refreshList[0].run();
-                    } else if ("Clear Entire History".equals(item.getTitle())) {
-                        new AlertDialog.Builder(this)
-                                .setTitle("Clear History")
-                                .setMessage("Are you sure you want to delete all browsing history?")
-                                .setPositiveButton("Clear All", (d, w) -> {
-                                    HistoryManager.getInstance(this).clearAllHistory();
-                                    refreshList[0].run();
-                                    Toast.makeText(this, "🗑️ All browsing history cleared", Toast.LENGTH_SHORT).show();
-                                })
-                                .setNegativeButton("Cancel", null)
-                                .show();
-                    }
-                    return true;
-                });
-                popup.show();
-            });
-        }
-
-        // Bottom Time Range Dropdown Selector (Custom Stitch Obsidian UI)
-        View.OnClickListener timeRangePicker = v -> {
-            playUiFeedbackSound("tap");
-            com.google.android.material.bottomsheet.BottomSheetDialog pickerDialog =
-                    new com.google.android.material.bottomsheet.BottomSheetDialog(this);
-            View pickerView = LayoutInflater.from(this).inflate(R.layout.dialog_stitch_time_range_picker, null);
-            GradientDrawable pickerBg = new GradientDrawable();
-            pickerBg.setCornerRadii(new float[]{dpToPx(20), dpToPx(20), dpToPx(20), dpToPx(20), 0, 0, 0, 0});
-            pickerBg.setColor(isDarkTheme ? 0xFF0A0E17 : 0xFFFFFFFF);
-            pickerBg.setStroke(dpToPx(1), isDarkTheme ? 0xFF1E2433 : 0xFFE2E8F0);
-            pickerView.setBackground(pickerBg);
-
-            if (!isDarkTheme) {
-                int[] optIds = new int[]{R.id.range_opt_1h, R.id.range_opt_24h, R.id.range_opt_1w, R.id.range_opt_all};
-                for (int optId : optIds) {
-                    View row = pickerView.findViewById(optId);
-                    if (row instanceof ViewGroup) {
-                        ViewGroup vg = (ViewGroup) row;
-                        for (int c = 0; c < vg.getChildCount(); c++) {
-                            View child = vg.getChildAt(c);
-                            if (child instanceof ViewGroup) {
-                                ViewGroup childVg = (ViewGroup) child;
-                                for (int gc = 0; gc < childVg.getChildCount(); gc++) {
-                                    View gChild = childVg.getChildAt(gc);
-                                    if (gChild instanceof TextView) {
-                                        TextView tv = (TextView) gChild;
-                                        if (tv.getTextSize() > dpToPx(12)) {
-                                            tv.setTextColor(0xFF0F172A);
-                                        } else {
-                                            tv.setTextColor(0xFF64748B);
-                                        }
-                                    }
-                                }
-                            }
-                        }
-                    }
-                }
-            }
-
-            pickerDialog.setContentView(pickerView);
-            if (pickerDialog.getWindow() != null) {
-                View bs = pickerDialog.getWindow().findViewById(com.google.android.material.R.id.design_bottom_sheet);
-                if (bs != null) bs.setBackgroundResource(android.R.color.transparent);
-            }
-
-            View check1h = pickerView.findViewById(R.id.check_range_1h);
-            View check24h = pickerView.findViewById(R.id.check_range_24h);
-            View check1w = pickerView.findViewById(R.id.check_range_1w);
-            View checkAll = pickerView.findViewById(R.id.check_range_all);
-
-            String cur = activeFilter[0];
-            if (check1h != null) check1h.setVisibility("1h".equals(cur) ? View.VISIBLE : View.GONE);
-            if (check24h != null) check24h.setVisibility("24h".equals(cur) ? View.VISIBLE : View.GONE);
-            if (check1w != null) check1w.setVisibility("1w".equals(cur) ? View.VISIBLE : View.GONE);
-            if (checkAll != null) checkAll.setVisibility("all".equals(cur) ? View.VISIBLE : View.GONE);
-
-            View opt1h = pickerView.findViewById(R.id.range_opt_1h);
-            View opt24h = pickerView.findViewById(R.id.range_opt_24h);
-            View opt1w = pickerView.findViewById(R.id.range_opt_1w);
-            View optAll = pickerView.findViewById(R.id.range_opt_all);
-
-            View.OnClickListener optClick = optV -> {
-                playUiFeedbackSound("tap");
-                if (optV == opt1h) {
-                    activeFilter[0] = "1h";
-                    selectedTimeRange[0] = "1h";
-                    if (textSelectedTimeRange != null) textSelectedTimeRange.setText("Last 1 Hour");
-                } else if (optV == opt24h) {
-                    activeFilter[0] = "24h";
-                    selectedTimeRange[0] = "24h";
-                    if (textSelectedTimeRange != null) textSelectedTimeRange.setText("Last 24 Hours");
-                } else if (optV == opt1w) {
-                    activeFilter[0] = "1w";
-                    selectedTimeRange[0] = "1w";
-                    if (textSelectedTimeRange != null) textSelectedTimeRange.setText("Last 1 Week");
-                } else {
-                    activeFilter[0] = "all";
-                    selectedTimeRange[0] = "all";
-                    if (textSelectedTimeRange != null) textSelectedTimeRange.setText("All Entries");
-                }
-                updateChipsVisuals.run();
-                refreshList[0].run();
-                pickerDialog.dismiss();
-            };
-
-            if (opt1h != null) opt1h.setOnClickListener(optClick);
-            if (opt24h != null) opt24h.setOnClickListener(optClick);
-            if (opt1w != null) opt1w.setOnClickListener(optClick);
-            if (optAll != null) optAll.setOnClickListener(optClick);
-
-            pickerDialog.show();
-        };
-        if (timeRangeSelector != null) timeRangeSelector.setOnClickListener(timeRangePicker);
-
-        // Clear Buttons
-        if (btnClearCookies != null) {
-            btnClearCookies.setOnClickListener(v -> {
-                playUiFeedbackSound("tap");
-                HistoryManager.clearCookies();
-                Toast.makeText(this, "🍪 Cookies cleared", Toast.LENGTH_SHORT).show();
-            });
-        }
-        if (btnClearData != null) {
-            btnClearData.setOnClickListener(v -> {
-                playUiFeedbackSound("tap");
-                HistoryManager.clearWebData();
-                Toast.makeText(this, "🧹 Browsing cache & data cleared", Toast.LENGTH_SHORT).show();
-            });
-        }
-        if (btnClearBoth != null) {
-            btnClearBoth.setOnClickListener(v -> {
-                playUiFeedbackSound("tap");
-                long cutoff = 0;
-                if ("1h".equals(selectedTimeRange[0])) cutoff = System.currentTimeMillis() - 3600_000L;
-                else if ("24h".equals(selectedTimeRange[0])) cutoff = System.currentTimeMillis() - 86400_000L;
-                else if ("1w".equals(selectedTimeRange[0])) cutoff = System.currentTimeMillis() - 7 * 86400_000L;
-
-                if (cutoff > 0) {
-                    HistoryManager.getInstance(this).clearHistorySince(cutoff);
-                } else {
-                    HistoryManager.getInstance(this).clearAllHistory();
-                }
-                HistoryManager.clearCookiesAndCache();
-                refreshList[0].run();
-                Toast.makeText(this, "✨ History, cookies & cache cleared", Toast.LENGTH_SHORT).show();
-            });
-        }
-
-        // Selection Action Bar Controls
-        if (btnSelectAllToggle != null) {
-            btnSelectAllToggle.setOnClickListener(v -> {
-                playUiFeedbackSound("tap");
-                if (selectedIds.size() >= currentVisibleEntries.size() && !currentVisibleEntries.isEmpty()) {
-                    selectedIds.clear();
-                    btnSelectAllToggle.setText("Select All");
-                } else {
-                    for (HistoryManager.HistoryEntry e : currentVisibleEntries) {
-                        selectedIds.add(e.id);
-                    }
-                    btnSelectAllToggle.setText("Deselect All");
-                }
-                if (textSelectedCount != null) textSelectedCount.setText(selectedIds.size() + " selected");
-                refreshList[0].run();
-            });
-        }
-
-        if (btnDeleteSelected != null) {
-            btnDeleteSelected.setOnClickListener(v -> {
-                playUiFeedbackSound("tap");
-                if (selectedIds.isEmpty()) return;
-                int count = selectedIds.size();
-                HistoryManager.getInstance(this).deleteEntries(selectedIds);
-                selectedIds.clear();
-                isSelectMode[0] = false;
-                if (btnSelect != null) btnSelect.setText("Select");
-                if (bottomNormalBar != null) bottomNormalBar.setVisibility(View.VISIBLE);
-                if (bottomSelectBar != null) bottomSelectBar.setVisibility(View.GONE);
-                refreshList[0].run();
-                Toast.makeText(this, "🗑️ Deleted " + count + " items", Toast.LENGTH_SHORT).show();
-            });
-        }
-
-        if (btnCancelSelect != null) {
-            btnCancelSelect.setOnClickListener(v -> {
-                playUiFeedbackSound("tap");
-                selectedIds.clear();
-                isSelectMode[0] = false;
-                if (btnSelect != null) btnSelect.setText("Select");
-                if (bottomNormalBar != null) bottomNormalBar.setVisibility(View.VISIBLE);
-                if (bottomSelectBar != null) bottomSelectBar.setVisibility(View.GONE);
-                refreshList[0].run();
-            });
-        }
-
-        dialog.show();
-        if (dialog.getWindow() != null) {
-            dialog.getWindow().setLayout(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.MATCH_PARENT);
-        }
-    }
+    public void showAddBookmarkDialog() { browserLibrary.showAddBookmarkDialog(); }
 
     public void showPageZoomDialog() {
         int[] zoomLevels = {50, 75, 90, 100, 110, 125, 150, 175, 200};
@@ -17152,81 +14214,11 @@ public class MainActivity extends AppCompatActivity {
     }
 
     public void openDownloadsManagerModal() {
-        runOnUiThread(() -> {
-            isDownloadsModalOpen = true;
-            sheetOverlayContainer.setVisibility(View.VISIBLE);
-            sheetOverlayContainer.setClickable(true);
-            sheetOverlayContainer.setFocusable(true);
-
-            if (ytFloatingRemoteContainer != null) ytFloatingRemoteContainer.setVisibility(View.GONE);
-            if (searchNavContainer != null) searchNavContainer.setVisibility(View.GONE);
-            if (chatgptDockContainer != null) chatgptDockContainer.setVisibility(View.GONE);
-
-            // Instantly activate standalone downloads mode in controlWebView so bottom sheet never flashes
-            evaluateJavascriptInControlSheet("if (typeof window.openDownloadsModalStandalone === 'function') window.openDownloadsModalStandalone();");
-
-            sheetBackdrop.animate().cancel();
-            sheetBackdrop.setAlpha(0f);
-            sheetBackdrop.animate().alpha(1f).setDuration(180).start();
-
-            if (controlWebView != null) {
-                if (!isSheetOpen) {
-                    controlWebView.animate().cancel();
-                    controlWebView.setPivotX(controlWebView.getWidth() / 2f);
-                    controlWebView.setPivotY(controlWebView.getHeight() / 2f);
-                    controlWebView.setScaleX(0.95f);
-                    controlWebView.setScaleY(0.95f);
-                    controlWebView.setAlpha(0f);
-                    controlWebView.setTranslationY(0f);
-
-                    controlWebView.animate()
-                            .scaleX(1f)
-                            .scaleY(1f)
-                            .alpha(1f)
-                            .setDuration(180)
-                            .setInterpolator(new DecelerateInterpolator(1.6f))
-                            .start();
-                }
-            }
-        });
+        openBrowserPanel(BrowserPanels.Destination.DOWNLOADS, null);
     }
 
     public void hideDownloadsManagerModal() {
-        runOnUiThread(() -> {
-            isDownloadsModalOpen = false;
-            if (isSheetOpen) {
-                evaluateJavascriptInControlSheet("if (typeof window.onDownloadsStandaloneClosed === 'function') window.onDownloadsStandaloneClosed();");
-                return;
-            }
-
-            sheetBackdrop.animate().cancel();
-            sheetBackdrop.animate().alpha(0f).setDuration(150).start();
-
-            if (controlWebView != null) {
-                controlWebView.animate().cancel();
-                controlWebView.animate()
-                        .scaleX(0.92f)
-                        .scaleY(0.92f)
-                        .alpha(0f)
-                        .setDuration(150)
-                        .setInterpolator(new AccelerateInterpolator(1.6f))
-                        .withEndAction(() -> {
-                            sheetOverlayContainer.setVisibility(View.INVISIBLE);
-                            sheetOverlayContainer.setClickable(false);
-                            sheetOverlayContainer.setFocusable(false);
-                            controlWebView.setScaleX(1f);
-                            controlWebView.setScaleY(1f);
-                            controlWebView.setAlpha(1f);
-                            controlWebView.setTranslationY(0f);
-                            evaluateJavascriptInControlSheet("if (typeof window.onDownloadsStandaloneClosed === 'function') window.onDownloadsStandaloneClosed();");
-                        })
-                        .start();
-            } else {
-                sheetOverlayContainer.setVisibility(View.INVISIBLE);
-                sheetOverlayContainer.setClickable(false);
-                sheetOverlayContainer.setFocusable(false);
-            }
-        });
+        backFromBrowserPanel();
     }
 
     private void openDownloadsFolder() {
@@ -17253,16 +14245,14 @@ public class MainActivity extends AppCompatActivity {
         } else {
             currentSearchEngine = AICommandRouter.SearchEngine.GOOGLE;
         }
+        setDefaultSearchEngine(currentSearchEngine.name);
         Toast.makeText(this, "Search Engine: " + currentSearchEngine.name, Toast.LENGTH_SHORT).show();
     }
 
     public void setDefaultSearchEngine(String name) {
-        for (AICommandRouter.SearchEngine engine : AICommandRouter.SearchEngine.values()) {
-            if (engine.name.equalsIgnoreCase(name)) {
-                currentSearchEngine = engine;
-                break;
-            }
-        }
+        currentSearchEngine = BrowserPreferences.searchEngine(name);
+        getSharedPreferences(PREFS_NAME, MODE_PRIVATE).edit()
+                .putString("default_search_engine", currentSearchEngine.name).apply();
     }
 
     private void clearBrowserData() {
@@ -19188,8 +16178,9 @@ public class MainActivity extends AppCompatActivity {
     }
 
     public void transitionToOrbState(int targetState, boolean animate) {
-        if (!isOrbOrApplePieMode()) return;
-        if ("applepie".equalsIgnoreCase(omniboxScrollMode) && targetState == ORB_STATE_FLOATING_ORB) {
+        if (!isApplePieMode()) return;
+        final boolean animateTransition = animate && motionEnabled();
+        if (isApplePieMode() && targetState == ORB_STATE_FLOATING_ORB) {
             targetState = ORB_STATE_BOTTOM_PILL;
         }
         if (targetState == ORB_STATE_FLOATING_ORB) {
@@ -19212,12 +16203,6 @@ public class MainActivity extends AppCompatActivity {
             if (omniboxHeaderWrapper != null) omniboxHeaderWrapper.setVisibility(View.GONE);
             return;
         }
-        if (splashOverlay != null && splashOverlay.getVisibility() == View.VISIBLE) {
-            if (caspianFloatingPill != null) caspianFloatingPill.setVisibility(View.GONE);
-            if (caspianFloatingOrb != null) caspianFloatingOrb.setVisibility(View.GONE);
-            if (omniboxHeaderWrapper != null) omniboxHeaderWrapper.setVisibility(View.GONE);
-            return;
-        }
         if (tabGridOverlay != null && tabGridOverlay.getVisibility() == View.VISIBLE) {
             if (caspianFloatingPill != null) caspianFloatingPill.setVisibility(View.GONE);
             if (caspianFloatingOrb != null) caspianFloatingOrb.setVisibility(View.GONE);
@@ -19227,13 +16212,13 @@ public class MainActivity extends AppCompatActivity {
         runOnUiThread(() -> {
             applyCaspianPillTheme();
             int toolbarH = getToolbarHeight();
-            long duration = animate ? 240 : 0;
+            long duration = animateTransition ? 240 : 0;
             Interpolator springDecel = new OvershootInterpolator(1.15f);
 
             switch (finalState) {
                 case ORB_STATE_FULL_TOP:
                     if (omniboxHeaderWrapper != null) {
-                        boolean isBottomMode = "applepie".equalsIgnoreCase(omniboxScrollMode) || "bottom".equalsIgnoreCase(omniboxPosition);
+                        boolean isBottomMode = isApplePieMode() || "bottom".equalsIgnoreCase(omniboxPosition);
                         int targetGravity = isBottomMode ? Gravity.BOTTOM : Gravity.TOP;
                         FrameLayout.LayoutParams lp = (FrameLayout.LayoutParams) omniboxHeaderWrapper.getLayoutParams();
                         if (lp != null && lp.gravity != targetGravity) {
@@ -19253,7 +16238,7 @@ public class MainActivity extends AppCompatActivity {
                         } else {
                             omniboxHeaderWrapper.setVisibility(View.VISIBLE);
                             omniboxHeaderWrapper.bringToFront();
-                            if (animate) {
+                            if (animateTransition) {
                                 omniboxHeaderWrapper.animate().cancel();
                                 omniboxHeaderWrapper.animate()
                                         .translationY(0f)
@@ -19268,7 +16253,7 @@ public class MainActivity extends AppCompatActivity {
                         }
                     }
                     if (caspianFloatingPill != null) {
-                        if (animate && caspianFloatingPill.getVisibility() == View.VISIBLE) {
+                        if (animateTransition && caspianFloatingPill.getVisibility() == View.VISIBLE) {
                             caspianFloatingPill.animate().cancel();
                             caspianFloatingPill.animate()
                                     .translationY(dpToPx(80))
@@ -19283,7 +16268,7 @@ public class MainActivity extends AppCompatActivity {
                         }
                     }
                     if (caspianFloatingOrb != null) {
-                        if (animate && caspianFloatingOrb.getVisibility() == View.VISIBLE) {
+                        if (animateTransition && caspianFloatingOrb.getVisibility() == View.VISIBLE) {
                             caspianFloatingOrb.animate().cancel();
                             caspianFloatingOrb.animate()
                                     .translationX(dpToPx(35))
@@ -19303,9 +16288,9 @@ public class MainActivity extends AppCompatActivity {
                     updateCaspianPillData();
                     boolean comingFromOrb = (caspianFloatingOrb != null && caspianFloatingOrb.getVisibility() == View.VISIBLE);
                     if (omniboxHeaderWrapper != null) {
-                        boolean isBottomMode = "applepie".equalsIgnoreCase(omniboxScrollMode) || "bottom".equalsIgnoreCase(omniboxPosition);
+                        boolean isBottomMode = isApplePieMode() || "bottom".equalsIgnoreCase(omniboxPosition);
                         float hideY = isBottomMode ? (float) toolbarH : (float) -toolbarH;
-                        if (animate) {
+                        if (animateTransition) {
                             omniboxHeaderWrapper.animate().cancel();
                             omniboxHeaderWrapper.animate()
                                     .translationY(hideY)
@@ -19324,7 +16309,7 @@ public class MainActivity extends AppCompatActivity {
                         } else {
                             caspianFloatingPill.setVisibility(View.VISIBLE);
                             caspianFloatingPill.bringToFront();
-                            if (animate) {
+                            if (animateTransition) {
                                 caspianFloatingPill.animate().cancel();
                                 if (comingFromOrb) {
                                     caspianFloatingPill.setTranslationY(0f);
@@ -19365,7 +16350,7 @@ public class MainActivity extends AppCompatActivity {
                         }
                     }
                     if (caspianFloatingOrb != null) {
-                        if (animate && caspianFloatingOrb.getVisibility() == View.VISIBLE) {
+                        if (animateTransition && caspianFloatingOrb.getVisibility() == View.VISIBLE) {
                             caspianFloatingOrb.animate().cancel();
                             caspianFloatingOrb.animate()
                                     .translationX(dpToPx(35))
@@ -19384,7 +16369,7 @@ public class MainActivity extends AppCompatActivity {
                         omniboxHeaderWrapper.setVisibility(View.GONE);
                     }
                     if (caspianFloatingPill != null) {
-                        if (animate && caspianFloatingPill.getVisibility() == View.VISIBLE) {
+                        if (animateTransition && caspianFloatingPill.getVisibility() == View.VISIBLE) {
                             caspianFloatingPill.animate().cancel();
                             caspianFloatingPill.animate()
                                     .translationX(dpToPx(130))
@@ -19401,7 +16386,7 @@ public class MainActivity extends AppCompatActivity {
                     if (caspianFloatingOrb != null) {
                         updateEdgeHandleOrientation(true);
                         caspianFloatingOrb.setVisibility(View.VISIBLE);
-                        if (animate) {
+                        if (animateTransition) {
                             caspianFloatingOrb.animate().cancel();
                             caspianFloatingOrb.setTranslationX(dpToPx(35));
                             caspianFloatingOrb.setScaleX(0.6f);
@@ -19460,7 +16445,7 @@ public class MainActivity extends AppCompatActivity {
             if (caspianPillTabCount != null) {
                 caspianPillTabCount.setText(String.valueOf(tabsList.size()));
             }
-            if (caspianFloatingPill != null && isOrbOrApplePieMode()) {
+            if (caspianFloatingPill != null && isApplePieMode()) {
                 FrameLayout.LayoutParams lp = (FrameLayout.LayoutParams) caspianFloatingPill.getLayoutParams();
                 if (lp == null) {
                     lp = new FrameLayout.LayoutParams(ViewGroup.LayoutParams.WRAP_CONTENT, dpToPx(48));
@@ -19471,6 +16456,20 @@ public class MainActivity extends AppCompatActivity {
                 caspianFloatingPill.setLayoutParams(lp);
             }
         });
+    }
+
+    private void updateCaskIndicator(TabItem tab) {
+        TextView pill = findViewById(R.id.caspian_pill_cask_label);
+        TextView omnibox = findViewById(R.id.omnibox_cask_label);
+        if (pill == null || omnibox == null) return;
+        String name = tab != null && tab.caskName != null ? tab.caskName : "Caspian Cask";
+        if (tab != null && tab.isIncognito) name = "Private tab";
+        pill.setText(name);
+        omnibox.setText(name);
+        omnibox.setContentDescription("Account space: " + name);
+        boolean showInFullOmnibox = tab != null && (tab.isIncognito
+                || !CaskManager.DEFAULT_CASK_ID.equals(TabState.accountSpaceId(tab.caskId)));
+        omnibox.setVisibility(showInFullOmnibox && !isSoftKeyboardVisible ? View.VISIBLE : View.GONE);
     }
 
     private boolean isSoftKeyboardVisible = false;
@@ -19494,17 +16493,28 @@ public class MainActivity extends AppCompatActivity {
 
     private void onSoftKeyboardVisibilityChanged(boolean isVisible) {
         runOnUiThread(() -> {
-            if (!isOrbOrApplePieMode()) return;
-            if ("applepie".equalsIgnoreCase(omniboxScrollMode) && webviewsParentContainer != null) {
-                FrameLayout.LayoutParams wpLp = (FrameLayout.LayoutParams) webviewsParentContainer.getLayoutParams();
-                if (wpLp != null) {
-                    wpLp.bottomMargin = isVisible ? 0 : dpToPx(68);
-                    webviewsParentContainer.setLayoutParams(wpLp);
+            if (isVisible) {
+                closeContextualPod(false);
+                if (podGestures != null) podGestures.cancel();
+            }
+            if (floatingCaspianCard != null) {
+                if (isVisible && floatingCaspianCard.isShown()) {
+                    floatingCaspianCard.setVisibility(View.INVISIBLE);
+                    podHiddenForKeyboard = true;
+                } else if (!isVisible && podHiddenForKeyboard) {
+                    podHiddenForKeyboard = false;
+                    if (customView == null && !isInPictureInPictureMode()
+                            && (tabGridOverlay == null || !tabGridOverlay.isShown())) {
+                        floatingCaspianCard.setVisibility(View.VISIBLE);
+                    }
                 }
             }
+            updateCaskIndicator(getActiveOrDominantTab());
+            if (!isApplePieMode()) return;
+            updateOmniboxViewportInsets();
             boolean isEditingOmnibox = (omniboxEditText != null && omniboxEditText.hasFocus()) || openedUrlEditFromPill;
 
-            if ("applepie".equalsIgnoreCase(omniboxScrollMode)) {
+            if (isApplePieMode()) {
                 if (currentOrbState == ORB_STATE_FULL_TOP) {
                     if (isVisible) {
                         if (!isEditingOmnibox && omniboxHeaderWrapper != null) {
@@ -19512,7 +16522,6 @@ public class MainActivity extends AppCompatActivity {
                             omniboxHeaderWrapper.setVisibility(View.GONE);
                         }
                     } else {
-                        if (splashOverlay != null && splashOverlay.getVisibility() == View.VISIBLE) return;
                         if (tabGridOverlay != null && tabGridOverlay.getVisibility() == View.VISIBLE) return;
                         if (omniboxHeaderWrapper != null) {
                             omniboxHeaderWrapper.setVisibility(View.VISIBLE);
@@ -19538,7 +16547,6 @@ public class MainActivity extends AppCompatActivity {
                             })
                             .start();
                 } else {
-                    if (splashOverlay != null && splashOverlay.getVisibility() == View.VISIBLE) return;
                     if (tabGridOverlay != null && tabGridOverlay.getVisibility() == View.VISIBLE) return;
                     caspianFloatingPill.setVisibility(View.VISIBLE);
                     caspianFloatingPill.bringToFront();
@@ -19568,15 +16576,14 @@ public class MainActivity extends AppCompatActivity {
     }
 
     public void applyCaspianPillTheme() {
-        boolean isDark = isDarkTheme;
+        BrowserChrome chrome = new BrowserChrome(isDarkTheme);
         if (caspianFloatingPill != null) {
-            caspianFloatingPill.setBackgroundResource(isDark ? R.drawable.bg_caspian_floating_pill : R.drawable.bg_caspian_floating_pill_light);
+            caspianFloatingPill.setBackground(chrome.panel(this, 24));
         }
         if (caspianPillHost != null) {
-            caspianPillHost.setTextColor(isDark ? 0xFFFFFFFF : 0xFF0F172A);
+            caspianPillHost.setTextColor(chrome.text);
         }
-        int accentTint = isDark ? 0xFF00E5FF : 0xFF0284C7;
-        int iconTint = isDark ? 0xFFCBD5E1 : 0xFF475569;
+        int iconTint = chrome.muted;
         boolean isApplePie = isApplePieMode();
         if (caspianPillBtnReload != null) {
             caspianPillBtnReload.setVisibility(View.VISIBLE);
@@ -19600,14 +16607,14 @@ public class MainActivity extends AppCompatActivity {
             caspianPillLock.setVisibility(View.GONE);
         }
         if (caspianPillTabCount != null) {
-            caspianPillTabCount.setTextColor(isDark ? 0xFFDFE2F0 : 0xFF0F172A);
+            caspianPillTabCount.setTextColor(chrome.text);
         }
         if (caspianPillTabBtn != null) {
             GradientDrawable tabBadgeBg = new GradientDrawable();
             tabBadgeBg.setShape(GradientDrawable.RECTANGLE);
             tabBadgeBg.setCornerRadius(dpToPx(7));
-            tabBadgeBg.setColor(isDark ? 0x22FFFFFF : 0x1A000000);
-            tabBadgeBg.setStroke(dpToPx(1.2f), isDark ? 0x38FFFFFF : 0x22000000);
+            tabBadgeBg.setColor(chrome.raised);
+            tabBadgeBg.setStroke(dpToPx(1.2f), chrome.outline);
             caspianPillTabBtn.setBackground(tabBadgeBg);
         }
         updateEdgeHandleOrientation(true);
@@ -19720,6 +16727,7 @@ public class MainActivity extends AppCompatActivity {
                 playUiFeedbackSound("tap");
                 showTabGridView();
             });
+            caspianPillTabBtn.setOnLongClickListener(v -> switchToLastUsedTab());
         }
 
         if (caspianPillBtnMenu != null) {
@@ -19729,100 +16737,18 @@ public class MainActivity extends AppCompatActivity {
             });
         }
 
-        View.OnTouchListener pillTouchListener = new View.OnTouchListener() {
-            private float downX = 0f;
-            private float downY = 0f;
-            private long downTime = 0L;
-            private boolean isSwiping = false;
-
-            @Override
-            public boolean onTouch(View v, MotionEvent event) {
-                switch (event.getActionMasked()) {
-                    case MotionEvent.ACTION_DOWN:
-                        downX = event.getRawX();
-                        downY = event.getRawY();
-                        downTime = System.currentTimeMillis();
-                        isSwiping = false;
-                        return true;
-
-                    case MotionEvent.ACTION_MOVE:
-                        float mdx = event.getRawX() - downX;
-                        float mdy = event.getRawY() - downY;
-                        if (Math.hypot(mdx, mdy) > dpToPx(12)) {
-                            isSwiping = true;
-                            if (Math.abs(mdx) > Math.abs(mdy)) {
-                                if (caspianFloatingPill != null) {
-                                    caspianFloatingPill.setTranslationX(mdx * 0.35f);
-                                }
-                            }
-                        }
-                        return true;
-
-                    case MotionEvent.ACTION_UP:
-                    case MotionEvent.ACTION_CANCEL:
-                        if (caspianFloatingPill != null) {
-                            caspianFloatingPill.animate().translationX(0f).setDuration(160).start();
-                        }
-                        float udx = event.getRawX() - downX;
-                        float udy = event.getRawY() - downY;
-                        float absDx = Math.abs(udx);
-                        float absDy = Math.abs(udy);
-                        int threshold = dpToPx(24);
-                        long duration = System.currentTimeMillis() - downTime;
-
-                        if (isSwiping || absDx > threshold || absDy > threshold) {
-                            if (absDy > absDx && absDy > threshold) {
-                                if (udy < 0) {
-                                    // Swipe UP -> Tab Switcher
-                                    try { v.performHapticFeedback(HapticFeedbackConstants.KEYBOARD_TAP); } catch (Throwable ignored) {}
-                                    playUiFeedbackSound("tap");
-                                    showTabGridView();
-                                    return true;
-                                } else {
-                                    // Swipe DOWN
-                                    try { v.performHapticFeedback(HapticFeedbackConstants.KEYBOARD_TAP); } catch (Throwable ignored) {}
-                                    playUiFeedbackSound("tap");
-                                    if ("applepie".equalsIgnoreCase(omniboxScrollMode)) {
-                                        openedUrlEditFromPill = false;
-                                        transitionToOrbState(ORB_STATE_FULL_TOP, true);
-                                    } else {
-                                        transitionToOrbState(ORB_STATE_FLOATING_ORB, true);
-                                    }
-                                    return true;
-                                }
-                            } else if (absDx > absDy && absDx > threshold) {
-                                if (udx < 0) {
-                                    // Swipe LEFT -> Next Tab
-                                    try { v.performHapticFeedback(HapticFeedbackConstants.KEYBOARD_TAP); } catch (Throwable ignored) {}
-                                    switchToNextTab();
-                                    return true;
-                                } else {
-                                    // Swipe RIGHT -> Previous Tab
-                                    try { v.performHapticFeedback(HapticFeedbackConstants.KEYBOARD_TAP); } catch (Throwable ignored) {}
-                                    switchToPreviousTab();
-                                    return true;
-                                }
-                            }
-                        }
-
-                        // Single tap (duration < 380ms & not swiped) -> Open full URL mode in Apple Pie, full top in Orb
-                        if (!isSwiping && duration < 380) {
-                            playUiFeedbackSound("tap");
-                            try { v.performHapticFeedback(HapticFeedbackConstants.KEYBOARD_TAP); } catch (Throwable ignored) {}
-                            if ("applepie".equalsIgnoreCase(omniboxScrollMode)) {
-                                openedUrlEditFromPill = true;
-                                transitionToOrbState(ORB_STATE_FULL_TOP, true);
-                                expandOmniboxUrl();
-                            } else {
-                                transitionToOrbState(ORB_STATE_FULL_TOP, true);
-                            }
-                            return true;
-                        }
-                        return true;
-                }
-                return false;
-            }
-        };
+        View.OnTouchListener pillTouchListener = BrowserGestures.addressBar(() -> true,
+                this::browserGesturesEnabled, new BrowserGestures.Listener() {
+                    @Override public boolean onSwipe(BrowserGestures.Swipe direction) {
+                        return onBrowserBarSwipe(direction, true);
+                    }
+                    @Override public void onTap() {
+                        playUiFeedbackSound("tap");
+                        openedUrlEditFromPill = true;
+                        transitionToOrbState(ORB_STATE_FULL_TOP, motionEnabled());
+                        expandOmniboxUrl();
+                    }
+                });
 
         if (caspianFloatingPill != null) {
             caspianFloatingPill.setOnTouchListener(pillTouchListener);
@@ -20465,7 +17391,7 @@ public class MainActivity extends AppCompatActivity {
     public void openCaspianUpdateMenu() {
         runOnUiThread(() -> {
             try {
-                openControlSheet();
+                openBrowserSettings();
                 new Handler(Looper.getMainLooper()).postDelayed(() -> {
                     evaluateJavascriptInControlSheet(
                             "try {" +
@@ -22604,6 +19530,11 @@ public class MainActivity extends AppCompatActivity {
                             }
 
                             @Override
+                            public void onSearchWeb(String query) {
+                                runOnUiThread(() -> navigateUrl(currentSearchEngine.searchUrl + Uri.encode(query)));
+                            }
+
+                            @Override
                             public void onSwitchService(String service) {
                                 runOnUiThread(() -> {
                                     if (service != null && !service.isEmpty()) {
@@ -22650,6 +19581,31 @@ public class MainActivity extends AppCompatActivity {
                                     cm.switchCask(caskId, () -> changeTabCask(tabItem.id, caskId));
                                 });
                             }
+
+                            @Override
+                            public String onGetRecentTabs() {
+                                TabItem hub = getTabById(tabItem.id);
+                                return hub != null && hub.webView == webView && !hub.isIncognito
+                                        ? getHubRecentTabs(hub) : null;
+                            }
+
+                            @Override
+                            public void onResumeTab(int tabId) {
+                                TabItem hub = getTabById(tabItem.id);
+                                TabItem target = getTabById(tabId);
+                                if (hub != null && hub.webView == webView && !hub.isIncognito
+                                        && getActiveOrDominantTab() == hub && isHubResumeCandidate(hub, target)) {
+                                    switchToTab(tabId);
+                                }
+                            }
+
+                            @Override
+                            public void onShowCaskSwitcher() {
+                                TabItem hub = getActiveOrDominantTab();
+                                if (hub != null && hub.webView == webView && !hub.isIncognito) {
+                                    showCaskSwitcherDialog(hub);
+                                }
+                            }
                         })
                 );
             }
@@ -22668,44 +19624,6 @@ public class MainActivity extends AppCompatActivity {
                 } else if (delta < -20 && searchNavBall.getVisibility() == View.VISIBLE) {
                     searchNavBall.setVisibility(View.GONE);
                     searchDockScroll.setVisibility(View.VISIBLE);
-                }
-            }
-        });
-
-        webView.setScrollStateListener(new CaspianWebView.OnScrollStateListener() {
-            @Override
-            public void onScrollChanged(CaspianWebView targetWebView, int scrollX, int scrollY, int oldScrollX, int oldScrollY) {
-                if (tabItem.id == activeTabId) {
-                    handleWebViewScroll(targetWebView, scrollX, scrollY, oldScrollX, oldScrollY);
-                }
-            }
-
-            @Override
-            public void onOverScrolled(CaspianWebView targetWebView, int scrollX, int scrollY, boolean clampedX, boolean clampedY) {
-                if (tabItem.id == activeTabId) {
-                    handleWebViewOverScrolled(targetWebView, scrollX, scrollY, clampedX, clampedY);
-                }
-            }
-
-            @Override
-            public void onScrollIdle(CaspianWebView targetWebView) {
-                if (tabItem.id == activeTabId) {
-                    handleWebViewScrollIdle(targetWebView);
-                }
-            }
-
-            @Override
-            public boolean onPreScrollDrag(CaspianWebView targetWebView, float dragOffsetY) {
-                if (tabItem.id == activeTabId) {
-                    return handlePreScrollDrag(targetWebView, dragOffsetY);
-                }
-                return false;
-            }
-
-            @Override
-            public void onPreScrollDragEnd(CaspianWebView targetWebView, float dragOffsetY) {
-                if (tabItem.id == activeTabId) {
-                    handlePreScrollDragEnd(targetWebView, dragOffsetY);
                 }
             }
         });
@@ -22914,6 +19832,7 @@ public class MainActivity extends AppCompatActivity {
 
             @Override
             public void onPageStarted(WebView view, String pageUrl, Bitmap favicon) {
+                if (tabItem == getActiveOrDominantTab()) closeContextualPod(false);
                 tabItem.isLoading = true;
                 if (pageUrl != null && pageUrl.contains("lastfm-callback")) {
                     try {
@@ -22957,14 +19876,6 @@ public class MainActivity extends AppCompatActivity {
                     browserProgressBar.setProgress(15);
                     updateReloadButtonState(true);
                     updateOmniboxState();
-                    accumulatedScrollDelta = 0;
-                    if (isOrbOrApplePieMode()) {
-                        // In orb or applepie mode, do not force showToolbar or dockToolbarAtTop
-                    } else if ("bottom".equalsIgnoreCase(omniboxPosition)) {
-                        showToolbar(false, false);
-                    } else {
-                        dockToolbarAtTop(false);
-                    }
                 }
                 updateOmniboxTabStrip();
             }
@@ -22989,14 +19900,8 @@ public class MainActivity extends AppCompatActivity {
                     browserProgressBar.setVisibility(View.GONE);
                     updateReloadButtonState(false);
                     updateOmniboxState();
-                    if ("orb".equalsIgnoreCase(omniboxScrollMode) && isAiChatUrl(pageUrl, tabItem.service)) {
-                        if (!tabItem.userExplicitFullOmnibox) {
-                            transitionToOrbState(ORB_STATE_FLOATING_ORB, true);
-                        }
-                    } else if ("applepie".equalsIgnoreCase(omniboxScrollMode)) {
-                        if (!tabItem.userExplicitFullOmnibox) {
-                            transitionToOrbState(ORB_STATE_BOTTOM_PILL, false);
-                        }
+                    if (isApplePieMode() && !tabItem.userExplicitFullOmnibox) {
+                        transitionToOrbState(ORB_STATE_BOTTOM_PILL, false);
                     }
                 }
                 updateOmniboxTabStrip();
@@ -23020,10 +19925,19 @@ public class MainActivity extends AppCompatActivity {
                             "})();", null);
                 }
 
-                captureTabSnapshot(tabItem);
+                if (view.isShown()) {
+                    view.postVisualStateCallback(tabItem.id, new WebView.VisualStateCallback() {
+                        @Override
+                        public void onComplete(long requestId) {
+                            if (tabItem.webView == view && java.util.Objects.equals(pageUrl, tabItem.url)) {
+                                captureTabSnapshot(tabItem);
+                            }
+                        }
+                    });
+                }
 
                 if (pageUrl != null && !pageUrl.startsWith("file://") && !pageUrl.startsWith("caspian://") && !pageUrl.startsWith("about:")) {
-                    HistoryManager.getInstance(MainActivity.this).addEntry(tabItem.title, pageUrl);
+                    if (!tabItem.isIncognito) HistoryManager.getInstance(MainActivity.this).addEntry(tabItem.title, pageUrl);
 
                     // Auto-detect high-res 64x64 or touch icons from HTML header
                     view.evaluateJavascript("(function(){ try { var l = document.querySelector('link[rel*=\"icon\"][sizes*=\"64\"], link[rel=\"apple-touch-icon\"][sizes*=\"64\"], link[rel=\"apple-touch-icon\"]'); return l ? l.href : ''; } catch(e) { return ''; } })();", iconVal -> {
@@ -23546,7 +20460,7 @@ public class MainActivity extends AppCompatActivity {
         }
         if (switchTo || activeTabId == -1 || getTabById(activeTabId) == null) {
             openedUrlEditFromPill = false;
-            if ("applepie".equalsIgnoreCase(omniboxScrollMode)) {
+            if (isApplePieMode()) {
                 currentOrbState = ORB_STATE_BOTTOM_PILL;
             }
             switchToTab(id);
@@ -23562,7 +20476,7 @@ public class MainActivity extends AppCompatActivity {
                         .setInterpolator(new DecelerateInterpolator(2.0f))
                         .start();
             }
-            if (isOrbOrApplePieMode()) {
+            if (isApplePieMode()) {
                 transitionToOrbState(ORB_STATE_BOTTOM_PILL, true);
             }
         } else {
@@ -23644,16 +20558,20 @@ public class MainActivity extends AppCompatActivity {
     }
 
     public void switchToTab(int tabId, boolean closeSheet) {
-        tabController.switchToTab(tabId);
-        if (customView != null && tabId != activeTabId) {
-            exitFullscreenCustomView();
-        }
-        TabItem previousTab = getTabById(activeTabId);
-        if (previousTab != null) captureTabSnapshot(previousTab);
-
         TabItem tab = getTabById(tabId);
         if (tab == null) return;
+        TabItem previousTab = getTabById(activeTabId);
+        if (customView != null && previousTab != tab) {
+            exitFullscreenCustomView();
+        }
+        if (previousTab != null && previousTab != tab) {
+            closeContextualPod(false);
+            captureTabSnapshot(previousTab);
+            if (previousTab.lastActivatedAt == 0) recordTabActivation(previousTab);
+        }
+        recordTabActivation(tab);
         tab.isRestoredFromSavedState = false;
+        tabController.switchToTab(tabId);
 
         // Flush cookies on tab switch to ensure persistent session state
         CaskManager.flushCookies(tab.caskId);
@@ -23703,9 +20621,8 @@ public class MainActivity extends AppCompatActivity {
         if (browserProgressBar != null) {
             browserProgressBar.setVisibility(tab.isLoading ? View.VISIBLE : View.GONE);
         }
-        accumulatedScrollDelta = 0;
         TabItem curSwitchedTab = getTabById(tabId);
-        if ("applepie".equalsIgnoreCase(omniboxScrollMode)) {
+        if (isApplePieMode()) {
             if (curSwitchedTab != null && curSwitchedTab.userExplicitFullOmnibox) {
                 transitionToOrbState(ORB_STATE_FULL_TOP, false);
                 if (openedUrlEditFromPill) {
@@ -23714,28 +20631,6 @@ public class MainActivity extends AppCompatActivity {
             } else {
                 transitionToOrbState(ORB_STATE_BOTTOM_PILL, false);
             }
-        } else if ("orb".equalsIgnoreCase(omniboxScrollMode)) {
-            if (curSwitchedTab != null && isAiChatUrl(curSwitchedTab.url, curSwitchedTab.service)) {
-                if (curSwitchedTab.userExplicitFullOmnibox) {
-                    transitionToOrbState(ORB_STATE_FULL_TOP, false);
-                } else {
-                    transitionToOrbState(ORB_STATE_FLOATING_ORB, false);
-                }
-            } else {
-                if (curSwitchedTab != null && curSwitchedTab.userExplicitFullOmnibox) {
-                    transitionToOrbState(ORB_STATE_FULL_TOP, false);
-                } else {
-                    transitionToOrbState(currentOrbState, false);
-                }
-            }
-        } else if (curSwitchedTab != null && (isInternalPageWithoutToolbarAutohide() || curSwitchedTab.webView == null || (curSwitchedTab.webView.getScrollY() <= 0 && isToolbarInDedicatedSection))) {
-            if ("bottom".equalsIgnoreCase(omniboxPosition)) {
-                dockToolbarAtBottom(false);
-            } else {
-                dockToolbarAtTop(false);
-            }
-        } else {
-            showToolbar(true, false);
         }
         if (!hasAnyYouTubeTab()) {
             hasYouTubePlaybackStarted = false;
@@ -23744,12 +20639,23 @@ public class MainActivity extends AppCompatActivity {
         if (closeSheet) {
             hideControlSheet(false);
         }
+        if (!tab.isIncognito && tab.webView != null
+                && com.caspian.betac.security.OriginVerifier.LAUNCH_HUB_URL.equals(tab.url)) {
+            tab.webView.evaluateJavascript("if (typeof loadRecentTabs === 'function') loadRecentTabs();", null);
+        }
+        updatePreviousTabButton();
         playUiFeedbackSound("tm_tabs");
         saveOpenTabsState();
     }
 
+    private void recordTabActivation(TabItem tab) {
+        tab.lastActivatedAt = ++tabActivationSequence;
+        tab.state.lastActivatedAt = tab.lastActivatedAt;
+    }
+
     public void notifyUndoStateChanged() {
         boolean hasUndo = hasClosedTabsToUndo();
+        if (!hasUndo && browserTabUndo != null) browserTabUndo.dismiss();
         evaluateJavascriptInControlSheet("if(typeof updateUndoButtonState === 'function') updateUndoButtonState(" + hasUndo + ");");
         runOnUiThread(() -> {
             updateTabGridUndoButton();
@@ -23842,7 +20748,7 @@ public class MainActivity extends AppCompatActivity {
             tabController.closeTab(tabId, recordHistory);
 
             if (activeTabId != -1 && getTabById(activeTabId) != null) {
-                switchToTab(activeTabId, !isSheetOpen);
+                switchToTab(activeTabId, !isBrowserPanelOpen());
             }
         }
         if (!hasAnyYouTubeTab()) {
@@ -23980,10 +20886,15 @@ public class MainActivity extends AppCompatActivity {
         CaskManager.CaskItem cask = cm.getCaskById(newCaskId);
         if (cask == null) return;
 
+        tab.snapshotBitmap = null;
+        pendingTabPreviews.remove(tab);
+        File oldPreview = getTabSnapshotFile(tab.id);
+        tabSnapshotExecutor.execute(() -> new android.util.AtomicFile(oldPreview).delete());
         tab.caskId = newCaskId;
         tab.caskName = cask.name;
         tab.caskIcon = cask.icon;
         tab.caskColor = cask.color;
+        tab.syncToState();
 
         if (tab.webView != null) {
             String currentUrl = (tab.url != null && !tab.url.isEmpty()) ? tab.url : tab.webView.getUrl();
@@ -24009,6 +20920,7 @@ public class MainActivity extends AppCompatActivity {
                 tab.webView.loadUrl(currentUrl);
             }
         }
+        if (tabId == activeTabId) updateOmniboxState();
         saveOpenTabsState();
     }
 
@@ -24105,7 +21017,7 @@ public class MainActivity extends AppCompatActivity {
             if (getTabById(activeTabId) == null) {
                 tabController.switchToTab(tabsList.get(0).id);
             }
-            switchToTab(activeTabId, !isSheetOpen);
+            switchToTab(activeTabId, !isBrowserPanelOpen());
         }
         updateOmniboxState();
         saveOpenTabsState();
@@ -24292,6 +21204,7 @@ public class MainActivity extends AppCompatActivity {
             dismissMediaNotification();
         }
         TabItem currentTab = getActiveOrDominantTab();
+        updateCaskIndicator(currentTab);
         int themeAccent = Color.parseColor(podStartColor);
 
         if (currentTab != null) {
@@ -24437,20 +21350,12 @@ public class MainActivity extends AppCompatActivity {
             caspianPillTabCount.setText(String.valueOf(tabsList.size()));
         }
         updateCaspianPillData();
-        if ("orb".equalsIgnoreCase(omniboxScrollMode) && currentTab != null) {
-            String u = currentTab.url != null ? currentTab.url : "";
-            if (isAiChatUrl(u, currentTab.service)) {
-                if (!currentTab.userExplicitFullOmnibox && currentOrbState != ORB_STATE_FLOATING_ORB) {
-                    transitionToOrbState(ORB_STATE_FLOATING_ORB, false);
-                }
-            }
-        } else if ("applepie".equalsIgnoreCase(omniboxScrollMode) && currentTab != null) {
-            if (!currentTab.userExplicitFullOmnibox && currentOrbState != ORB_STATE_BOTTOM_PILL) {
-                transitionToOrbState(ORB_STATE_BOTTOM_PILL, false);
-            }
+        if (isApplePieMode() && currentTab != null && !currentTab.userExplicitFullOmnibox
+                && currentOrbState != ORB_STATE_BOTTOM_PILL) {
+            transitionToOrbState(ORB_STATE_BOTTOM_PILL, false);
         }
         if (omniboxBtnCollapseOrb != null) {
-            omniboxBtnCollapseOrb.setVisibility(isOrbOrApplePieMode() ? View.VISIBLE : View.GONE);
+            omniboxBtnCollapseOrb.setVisibility(isApplePieMode() ? View.VISIBLE : View.GONE);
         }
 
         if (omniboxShieldIcon != null) {
@@ -26001,6 +22906,42 @@ public class MainActivity extends AppCompatActivity {
         return url;
     }
 
+    private boolean isHubResumeCandidate(TabItem hub, TabItem tab) {
+        if (tab == null || tab == hub || tab.isIncognito || tab.url == null) return false;
+        if (!TabState.accountSpaceId(hub.caskId).equals(TabState.accountSpaceId(tab.caskId))) return false;
+        Uri uri = Uri.parse(tab.url);
+        return ("https".equalsIgnoreCase(uri.getScheme()) || "http".equalsIgnoreCase(uri.getScheme()))
+                && uri.getHost() != null;
+    }
+
+    private String getHubRecentTabs(TabItem hub) {
+        JSONObject result = new JSONObject();
+        try {
+            result.put("type", "recentTabs");
+            result.put("caskName", hub.caskName != null ? hub.caskName : "Caspian Cask");
+            result.put("caskIcon", hub.caskIcon != null ? hub.caskIcon : "🌊");
+            List<TabItem> recent = new ArrayList<>();
+            for (int i = tabsList.size() - 1; i >= 0; i--) {
+                TabItem tab = tabsList.get(i);
+                if (isHubResumeCandidate(hub, tab)) recent.add(tab);
+            }
+            recent.sort((left, right) -> Long.compare(right.lastActivatedAt, left.lastActivatedAt));
+            JSONArray entries = new JSONArray();
+            for (int i = 0; i < Math.min(5, recent.size()); i++) {
+                TabItem tab = recent.get(i);
+                JSONObject entry = new JSONObject();
+                entry.put("id", tab.id);
+                entry.put("title", tab.nickname != null && !tab.nickname.trim().isEmpty() ? tab.nickname : tab.title);
+                entry.put("host", Uri.parse(tab.url).getHost());
+                entries.put(entry);
+            }
+            result.put("tabs", entries);
+        } catch (org.json.JSONException e) {
+            Log.w(TAG, "Unable to build Hub recents", e);
+        }
+        return result.toString();
+    }
+
     public String getOpenTabsJson() {
         JSONArray array = new JSONArray();
         for (TabItem tab : tabsList) {
@@ -26043,208 +22984,223 @@ public class MainActivity extends AppCompatActivity {
     private void setupFloatingPod() {
         if (floatingCaspianCard == null) return;
 
-        floatingCaspianCard.setOnTouchListener((view, event) -> {
-            switch (event.getActionMasked()) {
-                case MotionEvent.ACTION_DOWN:
-                    if (isRecordingSpeechMode) {
-                        stopSpeechToText();
-                        return true;
-                    }
-
-                    if (cabVelocityTracker == null) {
-                        cabVelocityTracker = VelocityTracker.obtain();
-                    } else {
-                        cabVelocityTracker.clear();
-                    }
-                    cabVelocityTracker.addMovement(event);
-
-                    dX = view.getX() - event.getRawX();
-                    dY = view.getY() - event.getRawY();
-                    startRawX = event.getRawX();
-                    startRawY = event.getRawY();
-                    isDragging = false;
-                    isLongPressed = false;
-                    isLongPressedInThisGesture = false;
-
-                    CaspianPhysics.applyPressSquish(view);
-
-                    longPressRunnable = () -> {
-                        if (!isDragging) {
-                            isLongPressed = true;
-                            isLongPressedInThisGesture = true;
-                            CaspianPhysics.applyReleasePop(view);
-                            view.performHapticFeedback(HapticFeedbackConstants.LONG_PRESS);
-                            playAssetSound("sfx/pop_button_v2.mp3");
-
-                            // Reveal CAB Radial Dial centered at CAB
-                            float cx = view.getX() + (view.getWidth() / 2f);
-                            float cy = view.getY() + (view.getHeight() / 2f);
-                            cabRadialMenu = new CabRadialMenuView(MainActivity.this);
-                            cabRadialMenu.setShortcuts(loadRadialShortcuts());
-                            cabRadialMenu.showAt(cx, cy, rootContainer);
-                        }
-                    };
-                    longPressHandler.postDelayed(longPressRunnable, 400);
-                    return true;
-
-                case MotionEvent.ACTION_MOVE:
-                    if (cabVelocityTracker != null) {
-                        cabVelocityTracker.addMovement(event);
-                    }
-
-                    if (isLongPressed && cabRadialMenu != null) {
-                        cabRadialMenu.updateTouch(event.getRawX(), event.getRawY());
-                        return true;
-                    }
-
-                    float deltaX = Math.abs(event.getRawX() - startRawX);
-                    float deltaY = Math.abs(event.getRawY() - startRawY);
-                    if (deltaX > 10 || deltaY > 10) {
-                        if (!isDragging) {
-                            isDragging = true;
-                            CaspianPhysics.applyReleasePop(view);
-                        }
-                        if (longPressRunnable != null) longPressHandler.removeCallbacks(longPressRunnable);
-
-                        view.setX(event.getRawX() + dX);
-                        view.setY(event.getRawY() + dY);
-
-                        if (cabVelocityTracker != null) {
-                            cabVelocityTracker.computeCurrentVelocity(1000);
-                            float vx = cabVelocityTracker.getXVelocity();
-                            CaspianPhysics.applyDragTilt(view, vx, 14f);
-                        }
-                    }
-                    return true;
-
-                case MotionEvent.ACTION_UP:
-                    if (longPressRunnable != null) longPressHandler.removeCallbacks(longPressRunnable);
-
-                    if (cabVelocityTracker != null) {
-                        cabVelocityTracker.addMovement(event);
-                        cabVelocityTracker.computeCurrentVelocity(1000);
-                    }
-
-                    if (isLongPressed && cabRadialMenu != null) {
-                        cabRadialMenu.finishGesture(new CabRadialMenuView.OnRadialActionSelectedListener() {
-                            @Override
-                            public void onActionSelected(int action) {
-                                if (action == CabRadialMenuView.ACTION_BACK) {
-                                    TabItem tab = getTabById(activeTabId);
-                                    if (tab != null && tab.webView != null && tab.webView.canGoBack()) {
-                                        tab.webView.goBack();
-                                    } else {
-                                        Toast.makeText(MainActivity.this, "No previous page", Toast.LENGTH_SHORT).show();
-                                    }
-                                } else if (action == CabRadialMenuView.ACTION_FORWARD) {
-                                    TabItem tab = getTabById(activeTabId);
-                                    if (tab != null && tab.webView != null && tab.webView.canGoForward()) {
-                                        tab.webView.goForward();
-                                    } else {
-                                        Toast.makeText(MainActivity.this, "No forward page", Toast.LENGTH_SHORT).show();
-                                    }
-                                } else if (action == CabRadialMenuView.ACTION_WHIRLPOOL) {
-                                    startCaspianWhirlpool();
-                                } else if (action == CabRadialMenuView.ACTION_DRIFT) {
-                                    isUniversalVoiceActive = true;
-                                    startSpeechToText();
-                                } else if (action == CabRadialMenuView.ACTION_NEW_TAB) {
-                                    addNewTab("hub", null);
-                                } else if (action == CabRadialMenuView.ACTION_CLOSE_TAB) {
-                                    closeTab(activeTabId);
-                                } else if (action == CabRadialMenuView.ACTION_SEARCH) {
-                                    focusOmniboxSearch();
-                                } else if (action == CabRadialMenuView.ACTION_RELOAD) {
-                                    TabItem tab = getTabById(activeTabId);
-                                    if (tab != null && tab.webView != null) tab.webView.reload();
-                                } else if (action == CabRadialMenuView.ACTION_TABS_OVERVIEW) {
-                                    openControlSheet();
-                                    evaluateJavascriptInControlSheet("if (typeof window.switchTab === 'function') window.switchTab('tabs');");
-                                } else if (action == CabRadialMenuView.ACTION_CONFIGURE_ORBIT) {
-                                    showConfigureDialOrbitDialog();
-                                }
-                            }
-
-                            @Override
-                            public void onShortcutSelected(String title, String url) {
-                                if (url != null && !url.trim().isEmpty()) {
-                                    addNewTab("web", null, url, false);
-                                }
-                            }
-
-                            @Override
-                            public void onCancelled() {
-                                // User cancelled in center deadzone
-                            }
-                        });
-                        cabRadialMenu = null;
-                        isLongPressed = false;
-                        isLongPressedInThisGesture = false;
-                        if (cabVelocityTracker != null) {
-                            cabVelocityTracker.recycle();
-                            cabVelocityTracker = null;
-                        }
-                        return true;
-                    }
-
-                    if (isLongPressedInThisGesture) {
-                        isLongPressedInThisGesture = false;
-                        if (cabVelocityTracker != null) {
-                            cabVelocityTracker.recycle();
-                            cabVelocityTracker = null;
-                        }
-                        return true;
-                    }
-
-                    if (!isDragging && !isLongPressed) {
-                        CaspianPhysics.applyReleasePop(view);
-                        CaspianPhysics.resetDragTilt(view);
-                        view.performHapticFeedback(HapticFeedbackConstants.KEYBOARD_TAP);
-
-                        if (currentWhirlpoolOverlay != null) {
-                            currentWhirlpoolOverlay.dismiss();
-                            currentWhirlpoolOverlay = null;
-                            if (cabVelocityTracker != null) {
-                                cabVelocityTracker.recycle();
-                                cabVelocityTracker = null;
-                            }
-                            return true;
-                        }
-                        actionButtonClickCount++;
-                        SharedPreferences appPrefs = getSharedPreferences(PREFS_NAME, MODE_PRIVATE);
-                        appPrefs.edit().putInt("action_btn_click_count", actionButtonClickCount).apply();
-
-                        toggleControlSheet();
-                    } else if (isDragging) {
-                        DisplayMetrics dm = getResources().getDisplayMetrics();
-                        float minX = dpToPx(8);
-                        float maxX = dm.widthPixels - view.getWidth() - dpToPx(8);
-                        float minY = dpToPx(24);
-                        float maxY = dm.heightPixels - view.getHeight() - dpToPx(24);
-                        float velX = cabVelocityTracker != null ? cabVelocityTracker.getXVelocity() : 0f;
-                        float velY = cabVelocityTracker != null ? cabVelocityTracker.getYVelocity() : 0f;
-
-                        CaspianPhysics.flingToRestWithSpring(view, velX, velY, minX, maxX, minY, maxY);
-                    }
-
-                    if (cabVelocityTracker != null) {
-                        cabVelocityTracker.recycle();
-                        cabVelocityTracker = null;
-                    }
-                    return true;
-
-                case MotionEvent.ACTION_CANCEL:
-                    if (longPressRunnable != null) longPressHandler.removeCallbacks(longPressRunnable);
-                    if (cabRadialMenu != null) {
-                        cabRadialMenu.dismiss();
-                        cabRadialMenu = null;
-                    }
-                    isLongPressed = false;
-                    isLongPressedInThisGesture = false;
-                    return true;
+        floatingCaspianCard.setContentDescription("Page tools");
+        if (floatingCaspianIcon != null) {
+            floatingCaspianIcon.setImportantForAccessibility(View.IMPORTANT_FOR_ACCESSIBILITY_NO);
+        }
+        floatingCaspianCard.setOnClickListener(view -> {
+            view.performHapticFeedback(HapticFeedbackConstants.KEYBOARD_TAP);
+            if (currentWhirlpoolOverlay != null) {
+                currentWhirlpoolOverlay.dismiss();
+                currentWhirlpoolOverlay = null;
+                return;
             }
-            return false;
+            actionButtonClickCount++;
+            getSharedPreferences(PREFS_NAME, MODE_PRIVATE).edit()
+                    .putInt("action_btn_click_count", actionButtonClickCount).apply();
+            if (isBrowserPanelOpen()) hideControlSheet();
+            else toggleContextualPod();
         });
+        podGestures = new PodGestures(rootContainer, floatingCaspianCard, this::motionEnabled,
+                () -> {
+                    if (!isRecordingSpeechMode) return false;
+                    stopSpeechToText();
+                    return true;
+                }, () -> closeContextualPod(false), () -> new BrowserChrome(isDarkTheme),
+                this::loadRadialShortcuts, new CabRadialMenuView.OnRadialActionSelectedListener() {
+                    @Override public void onActionSelected(int action) { runPodShortcut(action); }
+                    @Override public void onCancelled() {}
+                    @Override public void onShortcutSelected(String title, String url) {
+                        if (url != null && !url.trim().isEmpty()) addNewTab("web", null, url, false);
+                    }
+                });
+        floatingCaspianCard.setOnTouchListener(podGestures);
+    }
+
+    private void runPodShortcut(int action) {
+        TabItem tab = getActiveOrDominantTab();
+        switch (action) {
+            case CabRadialMenuView.ACTION_BACK:
+                if (tab != null && tab.webView != null && tab.webView.canGoBack()) tab.webView.goBack();
+                else Toast.makeText(this, "No previous page", Toast.LENGTH_SHORT).show();
+                break;
+            case CabRadialMenuView.ACTION_FORWARD:
+                if (tab != null && tab.webView != null && tab.webView.canGoForward()) tab.webView.goForward();
+                else Toast.makeText(this, "No forward page", Toast.LENGTH_SHORT).show();
+                break;
+            case CabRadialMenuView.ACTION_WHIRLPOOL: startCaspianWhirlpool(); break;
+            case CabRadialMenuView.ACTION_DRIFT:
+                isUniversalVoiceActive = true;
+                startSpeechToText();
+                break;
+            case CabRadialMenuView.ACTION_NEW_TAB: addNewTab("hub", null); break;
+            case CabRadialMenuView.ACTION_CLOSE_TAB: closeTab(activeTabId); break;
+            case CabRadialMenuView.ACTION_SEARCH: focusOmniboxSearch(); break;
+            case CabRadialMenuView.ACTION_RELOAD:
+                if (tab != null && tab.webView != null) tab.webView.reload();
+                break;
+            case CabRadialMenuView.ACTION_TABS_OVERVIEW: showTabGridView(); break;
+            case CabRadialMenuView.ACTION_CONFIGURE_ORBIT: showConfigureDialOrbitDialog(); break;
+        }
+    }
+
+    private PodMenu contextualPod;
+
+    private boolean isContextualPodOpen() {
+        return contextualPod != null && contextualPod.isOpen();
+    }
+
+    private boolean contextualPodPending;
+    private int contextualPodRequest;
+    private boolean podHiddenForKeyboard;
+
+    private static final String FIND_PAGE_VIDEO = "(function(){"
+            + "if(window.__CaspianYouTube && typeof window.__CaspianYouTube.getVideo==='function'){"
+            + "var yt=window.__CaspianYouTube.getVideo(); if(yt) return yt;"
+            + "} var videos=Array.from(document.querySelectorAll('video'));"
+            + "return videos.find(v=>!v.paused&&!v.ended)"
+            + "||videos.find(v=>v.readyState>=2&&v.getBoundingClientRect().height>=100);"
+            + "})()";
+
+    private boolean motionEnabled() {
+        if (browserPreferences != null && browserPreferences.reduceMotion()) return false;
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) return ValueAnimator.areAnimatorsEnabled();
+        return android.provider.Settings.Global.getFloat(
+                getContentResolver(), android.provider.Settings.Global.ANIMATOR_DURATION_SCALE, 1f) != 0f;
+    }
+
+    private void toggleContextualPod() {
+        if (isContextualPodOpen() || contextualPodPending) {
+            closeContextualPod(true);
+            return;
+        }
+        if (isSoftKeyboardVisible || rootContainer == null || rootContainer.getWidth() == 0) return;
+        TabItem tab = getActiveOrDominantTab();
+        Uri uri = Uri.parse(tab != null && tab.url != null ? tab.url : "");
+        boolean chat = isChatToolsHost(uri.getHost());
+        boolean webPage = "https".equalsIgnoreCase(uri.getScheme()) || "http".equalsIgnoreCase(uri.getScheme());
+        boolean youtube = tab != null && isYouTubePlaybackPage(tab);
+        if (tab != null && tab.webView != null && webPage && !chat && !youtube) {
+            int request = ++contextualPodRequest;
+            contextualPodPending = true;
+            WebView webView = tab.webView;
+            webView.evaluateJavascript("Boolean(" + FIND_PAGE_VIDEO + ")",
+                    result -> finishContextualPodProbe(tab, request, "true".equals(result)));
+            rootContainer.postDelayed(() -> finishContextualPodProbe(tab, request, false), 100);
+            return;
+        }
+        showContextualPod(tab, chat, webPage, youtube, youtube);
+    }
+
+    private void finishContextualPodProbe(TabItem tab, int request, boolean video) {
+        if (!contextualPodPending || contextualPodRequest != request) return;
+        contextualPodPending = false;
+        if (tab == getActiveOrDominantTab() && !isSoftKeyboardVisible && floatingCaspianCard.isShown()) {
+            showContextualPod(tab, false, true, video, false);
+        }
+    }
+
+    private void showContextualPod(TabItem tab, boolean chat, boolean webPage, boolean video, boolean youtube) {
+        if (contextualPod == null) contextualPod = new PodMenu(rootContainer, floatingCaspianCard);
+        contextualPod.reset(new BrowserChrome(isDarkTheme), motionEnabled());
+
+        if (tab != null && tab.webView != null) {
+            String url = tab.url != null ? tab.url : "";
+            if (chat) {
+                addPodAction("Jump to latest", R.drawable.ic_pod_arrow_down,
+                        () -> jumpToLatestMessage(tab));
+                addPodAction("Find on page", R.drawable.ic_pod_search, this::showOmniboxFinder);
+                addPodAction("Export", R.drawable.ic_menu_pdf, () -> showPrintAndExportDialog(tab));
+            } else if (video) {
+                addPodAction("Play / pause", tab.isPlayingAudio ? R.drawable.ic_pod_pause : R.drawable.ic_pod_play,
+                        () -> runPodVideoAction(tab, "if(v.paused) v.play().catch(()=>{}); else v.pause();"));
+                addPodAction("Playback speed", R.drawable.ic_stitch_clock, () ->
+                        showVideoSpeedPopup(floatingCaspianCard, speed -> {
+                            if (tab != getActiveOrDominantTab()) return;
+                            if (youtube && tab.id == activeTabId) setYouTubeSpeed(speed);
+                            else runPodVideoAction(tab, "v.playbackRate=" + speed + ";");
+                        }));
+                if (youtube && tab.id == activeTabId && Build.VERSION.SDK_INT >= Build.VERSION_CODES.O
+                        && getPackageManager().hasSystemFeature(PackageManager.FEATURE_PICTURE_IN_PICTURE)) {
+                    addPodAction("Picture-in-picture", R.drawable.ic_pod_pip, this::enterYouTubePiP);
+                }
+            } else if (webPage) {
+                addPodAction("Find on page", R.drawable.ic_pod_search, this::showOmniboxFinder);
+                addPodAction("Save bookmark", R.drawable.ic_menu_bookmark, this::showAddBookmarkDialog);
+                addPodAction("Share page", R.drawable.ic_menu_share, () -> sharePage(tab));
+            }
+            if (!tab.isIncognito && com.caspian.betac.security.OriginVerifier.LAUNCH_HUB_URL.equals(url)) {
+                addPodAction("Switch account space", R.drawable.ic_browser_lock, () -> showCaskSwitcherDialog(tab));
+            }
+        }
+        addPodAction("Engine", R.drawable.ic_launcher_wave, () -> openControlSheet("engine"));
+        addPodAction("Tabs", R.drawable.ic_browser_tabs, () -> openControlSheet("sites"));
+        addPodAction("Settings", R.drawable.ic_pod_settings, this::openBrowserSettings);
+        if (webPage) addPodAction("Open in Firefox engine", R.drawable.ic_tab_globe, this::openFirefoxBrowser);
+
+        contextualPod.open(rootContainer);
+    }
+
+    private void runPodVideoAction(TabItem tab, String action) {
+        if (tab != getActiveOrDominantTab() || tab.webView == null) return;
+        tab.webView.evaluateJavascript("(function(){var v=" + FIND_PAGE_VIDEO + ";if(v){" + action + "}})()", null);
+    }
+
+    private boolean isYouTubePlaybackPage(TabItem tab) {
+        if (tab.url == null) return false;
+        Uri uri = Uri.parse(tab.url);
+        String host = uri.getHost();
+        if (host == null) return false;
+        host = host.toLowerCase(java.util.Locale.ROOT);
+        if (!host.equals("youtube.com") && !host.endsWith(".youtube.com") && !host.equals("youtu.be")) return false;
+        String path = uri.getPath();
+        return tab.isPlayingAudio || host.equals("youtu.be")
+                || (path != null && (path.equals("/watch") || path.startsWith("/shorts/") || path.startsWith("/live/")));
+    }
+
+    private boolean isChatToolsHost(String host) {
+        if (host == null) return false;
+        switch (host.toLowerCase(java.util.Locale.ROOT)) {
+            case "chatgpt.com":
+            case "www.chatgpt.com":
+            case "chat.openai.com":
+            case "gemini.google.com":
+            case "claude.ai":
+            case "chat.deepseek.com":
+                return true;
+            default:
+                return false;
+        }
+    }
+
+    private void addPodAction(String label, int icon, Runnable action) {
+        contextualPod.addAction(label, icon, action);
+    }
+
+    private boolean closeContextualPod(boolean animate) {
+        boolean wasPending = contextualPodPending;
+        contextualPodPending = false;
+        return (contextualPod != null && contextualPod.close(animate)) || wasPending;
+    }
+
+    private void jumpToLatestMessage(TabItem tab) {
+        tab.webView.evaluateJavascript("(function(){"
+                + "if (typeof window.__CASPIAN_PRUNER_JUMP === 'function') { window.__CASPIAN_PRUNER_JUMP('bottom'); return; }"
+                + "var messages = document.querySelectorAll('main article, main [data-message-author-role], main .conversation-container');"
+                + "if(messages.length) messages[messages.length-1].scrollIntoView({block:'end'});"
+                + "else window.scrollTo(0, document.documentElement.scrollHeight);"
+                + "})();", null);
+    }
+
+    private void sharePage(TabItem tab) {
+        if (tab == null) return;
+        String title = tab.title != null && !tab.title.isEmpty() ? tab.title : "Caspian Flow";
+        String url = tab.url != null && !tab.url.isEmpty() ? tab.url
+                : tab.webView != null ? tab.webView.getUrl() : null;
+        Intent shareIntent = new Intent(Intent.ACTION_SEND).setType("text/plain")
+                .putExtra(Intent.EXTRA_SUBJECT, title)
+                .putExtra(Intent.EXTRA_TEXT, url != null ? url : title);
+        startActivity(Intent.createChooser(shareIntent, "Share page"));
     }
 
     public int getActionButtonClickCount() {
@@ -26252,71 +23208,85 @@ public class MainActivity extends AppCompatActivity {
     }
 
     public void toggleControlSheet() {
-        if (isSheetOpen) {
-            hideControlSheet();
-        } else {
-            openControlSheet();
+        if (!backFromBrowserPanel()) openControlSheet();
+    }
+
+    private void setupControlSheet() {
+        browserPanels = new BrowserPanels(findViewById(R.id.sheet_overlay_container),
+                findViewById(R.id.sheet_backdrop), controlWebView, new CaspianBridge(this),
+                this::motionEnabled, () -> isDarkTheme, this::prepareBrowserPanel, this::restoreFloatingWidgetsOnClose);
+        new Thread(() -> GitHubUpdateManager.cleanOldApks(this), "old-apk-cleanup").start();
+        new Handler(Looper.getMainLooper()).postDelayed(() -> {
+            if (isDestroyed()) return;
+            new GitHubUpdateManager(this).checkForUpdates(false, new GitHubUpdateManager.UpdateCheckCallback() {
+                @Override public void onResult(GitHubUpdateManager.UpdateInfo info) {
+                    if (info.hasUpdate) {
+                        evaluateJavascriptInControlSheet("if(window.onUpdateCheckResult) window.onUpdateCheckResult(" + info.toJson() + ");");
+                    }
+                }
+                @Override public void onError(String message) {}
+            });
+        }, 3000);
+    }
+
+    private void prepareBrowserPanel(BrowserPanels.Destination destination) {
+        closeContextualPod(false);
+        if (destination == BrowserPanels.Destination.SHEET) {
+            restorePodAfterBrowserPage();
+        } else if (floatingCaspianCard != null && floatingCaspianCard.getVisibility() == View.VISIBLE) {
+            if (podGestures != null) podGestures.cancel();
+            podHiddenForBrowserPage = true;
+            floatingCaspianCard.setVisibility(View.INVISIBLE);
+        }
+        if (ytFloatingRemoteContainer != null) ytFloatingRemoteContainer.setVisibility(View.GONE);
+        if (searchNavContainer != null) searchNavContainer.setVisibility(View.GONE);
+        if (chatgptDockContainer != null) chatgptDockContainer.setVisibility(View.GONE);
+        if (geminiDockContainer != null) geminiDockContainer.setVisibility(View.GONE);
+    }
+
+    private void restorePodAfterBrowserPage() {
+        if (!podHiddenForBrowserPage || floatingCaspianCard == null) return;
+        podHiddenForBrowserPage = false;
+        if (isSoftKeyboardVisible) {
+            podHiddenForKeyboard = true;
+        } else if (customView == null && !isInPictureInPictureMode()
+                && (tabGridOverlay == null || !tabGridOverlay.isShown())) {
+            floatingCaspianCard.setVisibility(View.VISIBLE);
         }
     }
 
-    @SuppressLint("SetJavaScriptEnabled")
-    private void setupControlSheet() {
-        try {
-            WebSettings settings = controlWebView.getSettings();
-            settings.setJavaScriptEnabled(true);
-            settings.setDomStorageEnabled(true);
-            settings.setAllowFileAccess(true);
+    private boolean isBrowserPanelOpen() {
+        return browserPanels != null && browserPanels.isOpen();
+    }
 
-            controlWebView.setLayerType(View.LAYER_TYPE_HARDWARE, null);
-            controlWebView.setBackgroundColor(0x00000000);
-            controlWebView.setOverScrollMode(View.OVER_SCROLL_NEVER);
-            controlWebView.setVerticalScrollBarEnabled(false);
-            controlWebView.setHorizontalScrollBarEnabled(false);
-            settings.setCacheMode(WebSettings.LOAD_DEFAULT);
-            controlWebView.setWebViewClient(new WebViewClient() {
-                @Override
-                public boolean shouldOverrideUrlLoading(WebView view, android.webkit.WebResourceRequest request) {
-                    if (request != null && request.getUrl() != null) {
-                        String targetUrl = request.getUrl().toString();
-                        if (!com.caspian.betac.security.OriginVerifier.isLocalAsset(targetUrl)) {
-                            Log.w(TAG, "BLOCKED controlWebView navigation attempt to non-asset URL: " + targetUrl);
-                            return true;
-                        }
-                    }
-                    return false;
-                }
-            });
-            controlWebView.addJavascriptInterface(new CaspianBridge(this), "CaspianBridge");
-            controlWebView.loadUrl("file:///android_asset/browser_control.html");
+    public boolean backFromBrowserPanel() {
+        return browserPanels != null && browserPanels.back();
+    }
 
-            sheetBackdrop.setOnClickListener(v -> {
-                if (isSheetOpen) {
-                    hideControlSheet();
-                } else if (isDownloadsModalOpen) {
-                    hideDownloadsManagerModal();
-                }
-            });
+    public BrowserPreferences browserPreferences() {
+        return browserPreferences;
+    }
 
-            // Clean up any old downloaded APK files left in cache from previous updates
-            new Thread(() -> GitHubUpdateManager.cleanOldApks(MainActivity.this)).start();
+    public void openBrowserSettings() {
+        openBrowserPanel(BrowserPanels.Destination.SETTINGS, null);
+    }
 
-            // Check for updates in background (auto-throttled to 4+ hours)
-            new Handler(Looper.getMainLooper()).postDelayed(() -> {
-                new GitHubUpdateManager(this).checkForUpdates(false, new GitHubUpdateManager.UpdateCheckCallback() {
-                    @Override
-                    public void onResult(GitHubUpdateManager.UpdateInfo info) {
-                        if (info.hasUpdate) {
-                            evaluateJavascriptInControlSheet("if(window.onUpdateCheckResult) window.onUpdateCheckResult(" + info.toJson().toString() + ");");
-                        }
-                    }
+    public void openFirefoxBrowser() {
+        TabItem current = getActiveOrDominantTab();
+        startActivity(FirefoxBrowserActivity.intent(this, current != null ? current.url : null,
+                current != null && current.isIncognito, isDarkTheme));
+    }
 
-                    @Override
-                    public void onError(String message) {}
-                });
-            }, 3000);
-        } catch (Exception e) {
-            Log.e(TAG, "setupControlSheet error: " + e.getMessage());
-        }
+    public void openBrowserTool(String tool) {
+        if ("waveguard".equals(tool) || "chat".equals(tool)) openControlSheet(tool);
+    }
+
+    private void openBrowserPanel(BrowserPanels.Destination destination, String tab) {
+        runOnUiThread(() -> {
+            if (browserPanels == null) return;
+            browserPanels.open(destination, tab);
+            playUiFeedbackSound("ta");
+        });
     }
 
     public void evaluateJavascriptInControlSheet(String js) {
@@ -26387,112 +23357,11 @@ public class MainActivity extends AppCompatActivity {
     }
 
     public void openControlSheet() {
-        isSheetOpen = true;
+        openControlSheet(null);
+    }
 
-        if (isDownloadsModalOpen) {
-            evaluateJavascriptInControlSheet("if (typeof window.revealCaspianMenu === 'function') window.revealCaspianMenu();");
-            playUiFeedbackSound("ta");
-            return;
-        }
-
-        sheetOverlayContainer.setVisibility(View.VISIBLE);
-        sheetOverlayContainer.setClickable(true);
-        sheetOverlayContainer.setFocusable(true);
-
-        if (floatingCaspianCard != null) {
-            floatingCaspianCard.bringToFront();
-            float topElevation = TypedValue.applyDimension(TypedValue.COMPLEX_UNIT_DIP, 600, getResources().getDisplayMetrics());
-            floatingCaspianCard.setElevation(topElevation);
-            floatingCaspianCard.setCardElevation(topElevation);
-        }
-
-        if (ytFloatingRemoteContainer != null) ytFloatingRemoteContainer.setVisibility(View.GONE);
-        if (searchNavContainer != null) searchNavContainer.setVisibility(View.GONE);
-        if (chatgptDockContainer != null) chatgptDockContainer.setVisibility(View.GONE);
-
-        SharedPreferences prefs = getSharedPreferences(PREFS_NAME, MODE_PRIVATE);
-        int openDuration = 180;
-        try {
-            String openDurStr = prefs.getString("sheetOpenDuration", "180");
-            openDuration = Integer.parseInt(openDurStr);
-        } catch (Exception ignored) {}
-        String animStyle = prefs.getString("sheetAnimationStyle", "genie");
-
-        // 1. Smooth In-Place Backdrop Fade
-        sheetBackdrop.animate().cancel();
-        sheetBackdrop.animate()
-                .alpha(1f)
-                .setDuration(openDuration)
-                .start();
-
-        if (browserContentLayout != null) {
-            browserContentLayout.animate().cancel();
-            browserContentLayout.animate()
-                    .scaleX(0.94f)
-                    .scaleY(0.94f)
-                    .translationY(dpToPx(14))
-                    .setDuration(openDuration)
-                    .setInterpolator(new DecelerateInterpolator(1.8f))
-                    .start();
-        }
-
-        Runnable onOpenComplete = () -> {
-            String density = getInterfaceDensity();
-            controlWebView.evaluateJavascript("if (typeof renderOpenTabs === 'function') renderOpenTabs(); if (typeof syncAppVersion === 'function') syncAppVersion(); if (typeof restoreSavedSettings === 'function') restoreSavedSettings(); if (typeof updateDevHudCounters === 'function') updateDevHudCounters(); if (typeof applyInterfaceDensity === 'function') applyInterfaceDensity('" + density + "');", null);
-        };
-
-        // 2. Animate Control WebView independently
-        controlWebView.animate().cancel();
-        if ("none".equalsIgnoreCase(animStyle) || openDuration <= 0) {
-            sheetBackdrop.setAlpha(1f);
-            controlWebView.setScaleX(1f);
-            controlWebView.setScaleY(1f);
-            controlWebView.setAlpha(1f);
-            controlWebView.setTranslationY(0f);
-            onOpenComplete.run();
-        } else if ("genie".equalsIgnoreCase(animStyle)) {
-            float buttonCenterX = floatingCaspianCard.getX() + floatingCaspianCard.getWidth() / 2f;
-            float buttonCenterY = floatingCaspianCard.getY() + floatingCaspianCard.getHeight() / 2f;
-
-            controlWebView.setPivotX(buttonCenterX);
-            controlWebView.setPivotY(buttonCenterY);
-
-            // Only initialize to tiny scale if starting from fully closed state
-            if (controlWebView.getScaleX() <= 0.06f || controlWebView.getAlpha() <= 0.05f) {
-                controlWebView.setScaleX(0.05f);
-                controlWebView.setScaleY(0.05f);
-                controlWebView.setAlpha(0f);
-            }
-            controlWebView.setTranslationY(0f);
-
-            controlWebView.animate()
-                    .scaleX(1f)
-                    .scaleY(1f)
-                    .alpha(1f)
-                    .setDuration(openDuration)
-                    .setInterpolator(new DecelerateInterpolator(1.8f))
-                    .withEndAction(onOpenComplete)
-                    .start();
-        } else {
-            int height = sheetOverlayContainer.getHeight();
-            if (height <= 0) height = getResources().getDisplayMetrics().heightPixels;
-
-            if (controlWebView.getTranslationY() <= 0f || controlWebView.getTranslationY() >= height) {
-                controlWebView.setTranslationY(height);
-            }
-            controlWebView.setScaleX(1f);
-            controlWebView.setScaleY(1f);
-            controlWebView.setAlpha(1f);
-
-            controlWebView.animate()
-                    .translationY(0)
-                    .setDuration(openDuration)
-                    .setInterpolator(new PathInterpolator(0.2f, 0f, 0f, 1f))
-                    .withEndAction(onOpenComplete)
-                    .start();
-        }
-
-        playUiFeedbackSound("ta");
+    private void openControlSheet(String tab) {
+        openBrowserPanel(BrowserPanels.Destination.SHEET, tab);
     }
 
     public void showSoftKeyboardForCurrentTab() {
@@ -26511,95 +23380,13 @@ public class MainActivity extends AppCompatActivity {
     }
 
     public void hideControlSheet(boolean playSound) {
-        isSheetOpen = false;
-
-        if (isDownloadsModalOpen) {
-            evaluateJavascriptInControlSheet("if (typeof window.unrevealCaspianMenu === 'function') window.unrevealCaspianMenu();");
-            if (playSound) playUiFeedbackSound("close");
-            return;
-        }
-
-        SharedPreferences prefs = getSharedPreferences(PREFS_NAME, MODE_PRIVATE);
-        int closeDuration = 160;
-        try {
-            String closeDurStr = prefs.getString("sheetCloseDuration", "160");
-            closeDuration = Integer.parseInt(closeDurStr);
-        } catch (Exception ignored) {}
-        String animStyle = prefs.getString("sheetAnimationStyle", "genie");
-
-        // 1. Smooth In-Place Backdrop Fade Out
-        sheetBackdrop.animate().cancel();
-        sheetBackdrop.animate()
-                .alpha(0f)
-                .setDuration(closeDuration)
-                .start();
-
-        if (browserContentLayout != null) {
-            browserContentLayout.animate().cancel();
-            browserContentLayout.animate()
-                    .scaleX(1.0f)
-                    .scaleY(1.0f)
-                    .translationY(0f)
-                    .setDuration(closeDuration)
-                    .setInterpolator(new OvershootInterpolator(1.08f))
-                    .start();
-        }
-
-        // 2. Animate Control WebView independently
-        controlWebView.animate().cancel();
-        if ("none".equalsIgnoreCase(animStyle) || closeDuration <= 0) {
-            sheetBackdrop.setAlpha(0f);
-            sheetOverlayContainer.setVisibility(View.INVISIBLE);
-            sheetOverlayContainer.setClickable(false);
-            sheetOverlayContainer.setFocusable(false);
-            restoreFloatingWidgetsOnClose();
-        } else if ("genie".equalsIgnoreCase(animStyle)) {
-            float buttonCenterX = floatingCaspianCard.getX() + floatingCaspianCard.getWidth() / 2f;
-            float buttonCenterY = floatingCaspianCard.getY() + floatingCaspianCard.getHeight() / 2f;
-
-            controlWebView.setPivotX(buttonCenterX);
-            controlWebView.setPivotY(buttonCenterY);
-
-            controlWebView.animate()
-                    .scaleX(0.05f)
-                    .scaleY(0.05f)
-                    .alpha(0f)
-                    .setDuration(closeDuration)
-                    .setInterpolator(new PathInterpolator(0.3f, 0f, 0.8f, 0.15f))
-                    .withEndAction(() -> {
-                        if (!isSheetOpen) {
-                            sheetOverlayContainer.setVisibility(View.INVISIBLE);
-                            sheetOverlayContainer.setClickable(false);
-                            sheetOverlayContainer.setFocusable(false);
-                            restoreFloatingWidgetsOnClose();
-                        }
-                    })
-                    .start();
-        } else {
-            int height = sheetOverlayContainer.getHeight();
-            if (height <= 0) height = getResources().getDisplayMetrics().heightPixels;
-
-            controlWebView.animate()
-                    .translationY(height)
-                    .setDuration(closeDuration)
-                    .setInterpolator(new PathInterpolator(0.3f, 0f, 0.8f, 0.15f))
-                    .withEndAction(() -> {
-                        if (!isSheetOpen) {
-                            sheetOverlayContainer.setVisibility(View.INVISIBLE);
-                            sheetOverlayContainer.setClickable(false);
-                            sheetOverlayContainer.setFocusable(false);
-                            restoreFloatingWidgetsOnClose();
-                        }
-                    })
-                    .start();
-        }
-
-        if (playSound) {
-            playUiFeedbackSound("ta");
-        }
+        if (!isBrowserPanelOpen()) return;
+        browserPanels.close();
+        if (playSound) playUiFeedbackSound("ta");
     }
 
     private void restoreFloatingWidgetsOnClose() {
+        restorePodAfterBrowserPage();
         TabItem curTab = getActiveOrDominantTab();
         String curUrl = (curTab != null && curTab.url != null) ? curTab.url.toLowerCase() : "";
         boolean isYtMusic = curUrl.contains("music.youtube.com") || (curTab != null && "youtubemusic".equalsIgnoreCase(curTab.service));
@@ -26619,6 +23406,10 @@ public class MainActivity extends AppCompatActivity {
             boolean isGpt = curTab != null && (curUrl.contains("chatgpt.com") || "chatgpt".equalsIgnoreCase(curTab.service));
             if (isGpt && !isChatgptDockExplicitlyHidden) chatgptDockContainer.setVisibility(View.VISIBLE);
         }
+        if (geminiDockContainer != null && !isGeminiDockExplicitlyHidden && curTab != null
+                && (curUrl.contains("gemini.google.com") || "gemini".equalsIgnoreCase(curTab.service))) {
+            geminiDockContainer.setVisibility(View.VISIBLE);
+        }
     }
 
     private void hideKeyboard() {
@@ -26631,6 +23422,7 @@ public class MainActivity extends AppCompatActivity {
 
     @Override
     public void onBackPressed() {
+        if ((isContextualPodOpen() || contextualPodPending) && closeContextualPod(true)) return;
         if (omniboxFinderContainer != null && omniboxFinderContainer.getVisibility() == View.VISIBLE) {
             hideOmniboxFinder();
             return;
@@ -26661,14 +23453,7 @@ public class MainActivity extends AppCompatActivity {
             exitFullscreenCustomView();
             return;
         }
-        if (isSheetOpen) {
-            hideControlSheet();
-            return;
-        }
-        if (isDownloadsModalOpen) {
-            hideDownloadsManagerModal();
-            return;
-        }
+        if (backFromBrowserPanel()) return;
         TabItem currentTab = getTabById(activeTabId);
         if (currentTab != null && currentTab.webView.canGoBack()) {
             currentTab.webView.goBack();
@@ -27482,6 +24267,10 @@ public class MainActivity extends AppCompatActivity {
 
     @Override
     protected void onDestroy() {
+        if (podGestures != null) podGestures.cancel();
+        tabSnapshotExecutor.shutdown();
+        pendingTabPreviews.clear();
+        visibleTabPreviews.clear();
         super.onDestroy();
         if (pipActionReceiver != null) {
             try {
@@ -27509,13 +24298,14 @@ public class MainActivity extends AppCompatActivity {
     @Override
     public boolean dispatchTouchEvent(MotionEvent ev) {
         if (ev.getActionMasked() == MotionEvent.ACTION_DOWN) {
+            if ((isContextualPodOpen() || contextualPodPending)
+                    && !PodMenu.contains(contextualPod, ev) && !PodMenu.contains(floatingCaspianCard, ev)) {
+                closeContextualPod(false);
+            }
             TabItem curTab = getTabById(activeTabId);
             if (curTab != null && curTab.isRestoredFromSavedState) {
                 curTab.isRestoredFromSavedState = false;
             }
-            omniDownX = ev.getRawX();
-            omniDownY = ev.getRawY();
-            omniTouchStartedInHeader = false;
             if (omniboxHeaderWrapper != null && omniboxHeaderWrapper.getVisibility() == View.VISIBLE) {
                 Rect outRect = new Rect();
                 omniboxHeaderWrapper.getGlobalVisibleRect(outRect);
@@ -27527,7 +24317,6 @@ public class MainActivity extends AppCompatActivity {
                         inStrip = stripRect.contains((int) ev.getRawX(), (int) ev.getRawY());
                     }
                     if (!inStrip) {
-                        omniTouchStartedInHeader = true;
                     }
                 }
             }
@@ -27572,30 +24361,6 @@ public class MainActivity extends AppCompatActivity {
                     hideKeyboard();
                 }
             }
-        } else if (ev.getActionMasked() == MotionEvent.ACTION_UP || ev.getActionMasked() == MotionEvent.ACTION_CANCEL) {
-            if (omniTouchStartedInHeader && ev.getActionMasked() == MotionEvent.ACTION_UP) {
-                float dx = ev.getRawX() - omniDownX;
-                float dy = ev.getRawY() - omniDownY;
-                int swipeThreshold = dpToPx(28);
-                if (dy > swipeThreshold && dy > Math.abs(dx) * 1.15f) {
-                    if (isOrbOrApplePieMode()) {
-                        try { omniboxHeaderWrapper.performHapticFeedback(HapticFeedbackConstants.KEYBOARD_TAP); } catch (Throwable ignored) {}
-                        playUiFeedbackSound("pop_button_v2");
-                        if (omniboxEditText != null && omniboxEditText.hasFocus()) {
-                            hideKeyboard();
-                            omniboxEditText.clearFocus();
-                        }
-                        if ("applepie".equalsIgnoreCase(omniboxScrollMode)) {
-                            transitionToOrbState(ORB_STATE_BOTTOM_PILL, true);
-                        } else {
-                            transitionToOrbState(ORB_STATE_FLOATING_ORB, true);
-                        }
-                        omniTouchStartedInHeader = false;
-                        return true;
-                    }
-                }
-            }
-            omniTouchStartedInHeader = false;
         }
         return super.dispatchTouchEvent(ev);
     }

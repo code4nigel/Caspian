@@ -12,6 +12,8 @@ android {
         targetSdk = 34
         versionCode = 248
         versionName = "1.2.48"
+        providers.gradleProperty("caspianVersionCode").orNull?.let { versionCode = it.toInt() }
+        providers.gradleProperty("caspianVersionName").orNull?.let { versionName = it }
     }
 
     buildTypes {

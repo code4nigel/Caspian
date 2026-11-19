@@ -35,6 +35,9 @@ jobs:
       - name: Setup Android SDK
         uses: android-actions/setup-android@v3
 
+      - name: Install Flow's Android platform
+        run: sdkmanager 'platforms;android-37.2' 'build-tools;36.0.0'
+
       - name: Build Caspian Flow APK from Source
         run: |
           if [ -d "betaC" ]; then

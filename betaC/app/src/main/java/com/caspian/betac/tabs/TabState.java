@@ -8,6 +8,7 @@ import org.json.JSONObject;
  * making it 100% testable on standard JVM unit tests.
  */
 public class TabState {
+    public static final String DEFAULT_CASK_ID = "cask_caspian";
     public int id;
     public String title;
     public String nickname;
@@ -21,13 +22,20 @@ public class TabState {
     public String splitRole = "";
     public int splitOrientation = 1;
     public String splitName = "";
-    public String caskId = "default";
+    public String caskId = DEFAULT_CASK_ID;
     public String caskName = "Caspian Cask";
     public String caskIcon = "🌊";
     public String caskColor = "#1B4264";
+    public long lastActivatedAt;
     public boolean isRestoredFromSavedState = false;
 
     public TabState() {}
+
+    public static String accountSpaceId(String caskId) {
+        // Preserve existing WebView profile IDs while recognizing the legacy label for the default Cask.
+        if (caskId == null || caskId.isEmpty() || "default".equals(caskId)) return DEFAULT_CASK_ID;
+        return caskId;
+    }
 
     public TabState(int id, String title, String url, String service, boolean isIncognito) {
         this.id = id;
@@ -57,10 +65,11 @@ public class TabState {
             obj.put("splitRole", splitRole != null ? splitRole : "");
             obj.put("splitOrientation", splitOrientation);
             obj.put("splitName", splitName != null ? splitName : "");
-            obj.put("caskId", caskId != null ? caskId : "default");
+            obj.put("caskId", caskId != null ? caskId : DEFAULT_CASK_ID);
             obj.put("caskName", caskName != null ? caskName : "Caspian Cask");
             obj.put("caskIcon", caskIcon != null ? caskIcon : "🌊");
             obj.put("caskColor", caskColor != null ? caskColor : "#1B4264");
+            obj.put("lastActivatedAt", lastActivatedAt);
             return obj;
         } catch (Exception e) {
             return null;
@@ -83,10 +92,11 @@ public class TabState {
         state.splitRole = obj.optString("splitRole", "");
         state.splitOrientation = obj.optInt("splitOrientation", 0);
         state.splitName = obj.optString("splitName", "");
-        state.caskId = obj.optString("caskId", "default");
+        state.caskId = obj.optString("caskId", DEFAULT_CASK_ID);
         state.caskName = obj.optString("caskName", "Caspian Cask");
         state.caskIcon = obj.optString("caskIcon", "🌊");
         state.caskColor = obj.optString("caskColor", "#1B4264");
+        state.lastActivatedAt = obj.optLong("lastActivatedAt", 0L);
         state.isRestoredFromSavedState = true;
         return state;
     }

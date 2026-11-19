@@ -2,7 +2,6 @@ package com.caspian.betac;
 
 import android.content.Context;
 import android.util.AttributeSet;
-import android.view.MotionEvent;
 import android.view.View;
 import android.webkit.WebView;
 
@@ -85,24 +84,11 @@ public class CaspianWebView extends WebView {
         super.onWindowFocusChanged(hasWindowFocus);
     }
 
-    public interface OnScrollStateListener {
-        void onScrollChanged(CaspianWebView webView, int scrollX, int scrollY, int oldScrollX, int oldScrollY);
-        void onOverScrolled(CaspianWebView webView, int scrollX, int scrollY, boolean clampedX, boolean clampedY);
-        void onScrollIdle(CaspianWebView webView);
-        boolean onPreScrollDrag(CaspianWebView webView, float dragOffsetY);
-        void onPreScrollDragEnd(CaspianWebView webView, float dragOffsetY);
-    }
-
     public interface OnLinkLongPressListener {
         boolean onLinkLongPressed(CaspianWebView webView, String url, String extra);
     }
 
-    private OnScrollStateListener scrollStateListener;
     private OnLinkLongPressListener linkLongPressListener;
-
-    public void setScrollStateListener(OnScrollStateListener listener) {
-        this.scrollStateListener = listener;
-    }
 
     public void setOnLinkLongPressListener(OnLinkLongPressListener listener) {
         this.linkLongPressListener = listener;
@@ -123,110 +109,6 @@ public class CaspianWebView extends WebView {
         } else {
             setOnLongClickListener(null);
         }
-    }
-
-    public boolean isAtTop() {
-        return computeVerticalScrollOffset() <= 0;
-    }
-
-    public boolean isAtBottom(int thresholdPx) {
-        int offset = computeVerticalScrollOffset();
-        int range = computeVerticalScrollRange();
-        int extent = computeVerticalScrollExtent();
-        return (offset + extent) >= (range - Math.max(0, thresholdPx));
-    }
-
-    @Override
-    protected void onScrollChanged(int l, int t, int oldl, int oldt) {
-        super.onScrollChanged(l, t, oldl, oldt);
-        if (scrollStateListener != null) {
-            scrollStateListener.onScrollChanged(this, l, t, oldl, oldt);
-        }
-    }
-
-    @Override
-    protected void onOverScrolled(int scrollX, int scrollY, boolean clampedX, boolean clampedY) {
-        super.onOverScrolled(scrollX, scrollY, clampedX, clampedY);
-        if (scrollStateListener != null) {
-            scrollStateListener.onOverScrolled(this, scrollX, scrollY, clampedX, clampedY);
-        }
-    }
-
-    private float touchDownRawY = 0f;
-    private boolean isTouchDownAtTop = false;
-    private boolean isTouchDownAtBottom = false;
-    private boolean isHandlingPreScroll = false;
-
-    @Override
-    public boolean onTouchEvent(MotionEvent event) {
-        if (scrollStateListener != null) {
-            switch (event.getActionMasked()) {
-                case MotionEvent.ACTION_DOWN:
-                    touchDownRawY = event.getRawY();
-                    isTouchDownAtTop = (computeVerticalScrollOffset() <= 0);
-                    isTouchDownAtBottom = isAtBottom(30);
-                    isHandlingPreScroll = false;
-                    break;
-
-                case MotionEvent.ACTION_MOVE:
-                    float dragOffsetY = touchDownRawY - event.getRawY();
-
-                    if (isHandlingPreScroll) {
-                        boolean consumed = scrollStateListener.onPreScrollDrag(this, dragOffsetY);
-                        if (consumed) {
-                            scrollTo(getScrollX(), 0);
-                            return true;
-                        } else {
-                            isHandlingPreScroll = false;
-                        }
-                    } else if (isTouchDownAtTop) {
-                        float touchSlop = android.view.ViewConfiguration.get(getContext()).getScaledTouchSlop();
-                        if (Math.abs(dragOffsetY) >= touchSlop) {
-                            boolean consumed = scrollStateListener.onPreScrollDrag(this, dragOffsetY);
-                            if (consumed) {
-                                isHandlingPreScroll = true;
-                                MotionEvent cancelEv = MotionEvent.obtain(event);
-                                cancelEv.setAction(MotionEvent.ACTION_CANCEL);
-                                super.onTouchEvent(cancelEv);
-                                cancelEv.recycle();
-                                scrollTo(getScrollX(), 0);
-                                return true;
-                            } else {
-                                // If not consumed (e.g. Orb/Apple Pie mode or regular scrolling),
-                                // do NOT inject fake ACTION_DOWN! Simply let the touch stream continue naturally.
-                                isTouchDownAtTop = false;
-                            }
-                        }
-                    }
-
-                    if (isTouchDownAtTop && computeVerticalScrollOffset() <= 0) {
-                        float dy = event.getRawY() - touchDownRawY;
-                        if (dy > 45) {
-                            scrollStateListener.onOverScrolled(this, 0, -100, false, true);
-                        }
-                    } else if (isTouchDownAtBottom && isAtBottom(30)) {
-                        float dy = event.getRawY() - touchDownRawY;
-                        if (dy < -45) {
-                            scrollStateListener.onOverScrolled(this, 0, 100, false, true);
-                        }
-                    }
-                    break;
-
-                case MotionEvent.ACTION_UP:
-                case MotionEvent.ACTION_CANCEL:
-                    if (isHandlingPreScroll) {
-                        isHandlingPreScroll = false;
-                        float endDragY = touchDownRawY - event.getRawY();
-                        scrollStateListener.onPreScrollDragEnd(this, endDragY);
-                        return true;
-                    }
-                    isTouchDownAtTop = false;
-                    isTouchDownAtBottom = false;
-                    scrollStateListener.onScrollIdle(this);
-                    break;
-            }
-        }
-        return super.onTouchEvent(event);
     }
 
     @Override
