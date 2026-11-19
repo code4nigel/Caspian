@@ -93,12 +93,19 @@
   }
 
   function applyYouTubeOptimizations() {
-    injectStyles();
-
     chrome.storage.local.get(['yt_feed_limit_enabled', 'yt_feed_limit', 'yt_not_interested_enabled'], (data) => {
-      const feedEnabled = data.yt_feed_limit_enabled ?? true;
+      const feedEnabled = data.yt_feed_limit_enabled ?? false;
       const feedLimit = data.yt_feed_limit ?? 12;
-      const notInterestedEnabled = data.yt_not_interested_enabled ?? true;
+      const notInterestedEnabled = data.yt_not_interested_enabled ?? false;
+
+      if (!feedEnabled && !notInterestedEnabled) {
+        document.querySelectorAll('ytd-rich-item-renderer, ytd-rich-section-renderer').forEach(item => item.style.removeProperty('display'));
+        document.querySelectorAll('.caspian-yt-not-interested-btn').forEach(btn => btn.remove());
+        document.getElementById('caspian-yt-styles')?.remove();
+        return;
+      }
+
+      injectStyles();
 
       const path = (window.location.pathname || '').toLowerCase();
       const isHomePage = path === '/' || path === '' || path === '/feed/you' || path === '/feed/explore';
@@ -283,30 +290,54 @@
     });
   }
 
-  // Run on load and observe DOM changes
-  if (document.readyState === 'complete' || document.readyState === 'interactive') {
-    applyYouTubeOptimizations();
-  } else {
-    window.addEventListener('DOMContentLoaded', applyYouTubeOptimizations);
-  }
+  let observer = null;
+  let engineRunning = false;
+  let workQueued = false;
 
-  const observer = new MutationObserver(() => {
-    applyYouTubeOptimizations();
-  });
-
-  if (document.body) {
-    observer.observe(document.body, { childList: true, subtree: true });
-  } else {
-    window.addEventListener('DOMContentLoaded', () => {
-      observer.observe(document.body, { childList: true, subtree: true });
+  function queueApply() {
+    if (!engineRunning || workQueued) return;
+    workQueued = true;
+    requestAnimationFrame(() => {
+      workQueued = false;
+      applyYouTubeOptimizations();
     });
   }
 
-  setInterval(applyYouTubeOptimizations, 800);
+  function stopEngine() {
+    engineRunning = false;
+    observer?.disconnect();
+    observer = null;
+    applyYouTubeOptimizations(); // Restores cards and removes Caspian UI.
+  }
+
+  function startEngine() {
+    if (engineRunning) {
+      queueApply();
+      return;
+    }
+    engineRunning = true;
+    applyYouTubeOptimizations();
+    observer = new MutationObserver(queueApply);
+    observer.observe(document.body || document.documentElement, { childList: true, subtree: true });
+  }
+
+  function refreshEngineState() {
+    chrome.storage.local.get(['yt_feed_limit_enabled', 'yt_not_interested_enabled'], (data) => {
+      const enabled = (data.yt_feed_limit_enabled ?? false) || (data.yt_not_interested_enabled ?? false);
+      if (enabled) startEngine();
+      else stopEngine();
+    });
+  }
+
+  if (document.readyState === 'loading') {
+    window.addEventListener('DOMContentLoaded', refreshEngineState, { once: true });
+  } else {
+    refreshEngineState();
+  }
 
   chrome.storage.onChanged.addListener((changes, area) => {
     if (area === 'local' && (changes.yt_feed_limit_enabled || changes.yt_feed_limit || changes.yt_not_interested_enabled)) {
-      applyYouTubeOptimizations();
+      refreshEngineState();
     }
   });
 })();

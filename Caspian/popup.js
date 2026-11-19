@@ -4,22 +4,24 @@ const DEFAULTS = {
   secondary: '#1B4264',
   customBgColor: '',
   ui_zoom: 95,
-  font_scale: 100,
+  font_scale: 120,
+  popup_motion: 'on',
   limit: 5,
   pruningEnabled: true,
   vaultEnabled: true,
   chat_pruning_mode: 'sliding_window',
-  yt_feed_limit_enabled: true,
+  yt_feed_limit_enabled: false,
   yt_feed_limit: 12,
-  yt_not_interested_enabled: true,
+  yt_not_interested_enabled: false,
   flow_speed_enabled: true,
   flow_speed_val: 1.0,
   flow_speed_cycle_list: '1, 1.25, 1.5, 1.75, 2, 2.5, 3',
   flow_speed_shortcut_reset: 'alt+s',
-  flow_speed_shortcut_cycle: 'alt+d',
+  flow_speed_shortcut_cycle: caspianSpeedKeys.cycleDefault,
   flow_speed_shortcut_up: ']',
   flow_speed_shortcut_down: '[',
   flow_speed_show_hud: true,
+  flow_speed_hud_position: 'top-left',
   flow_speed_badge_enabled: true,
   flow_speed_card_collapsed: false,
   rf_enabled: true,
@@ -39,6 +41,10 @@ const DEFAULT_PRESETS = [
   { id: 'crimson', name: 'Crimson', accent: '#e11d48', secondary: '#881337' },
   { id: 'azure', name: 'Azure', accent: '#38bdf8', secondary: '#0284c7' }
 ];
+
+function normalizeHudPosition(value) {
+  return /^(top|bottom)-(left|center|right)$/.test(value) ? value : DEFAULTS.flow_speed_hud_position;
+}
 
 const DEV_FACTS = [
   "Legend has it Nigel spent his time building Caspian instead of studying for his End-Sem exams or preparing for company placement interviews tomorrow... Absolute madman! 💀",
@@ -211,33 +217,6 @@ function parseMarkdownAndLaTeX(mdText) {
   return text;
 }
 
-function hexToRgba(hex, alpha = 0.35) {
-  let c = hex.replace('#', '');
-  if (c.length === 3) {
-    c = c.split('').map(x => x + x).join('');
-  }
-  const num = parseInt(c, 16);
-  if (isNaN(num)) return `rgba(162, 169, 169, ${alpha})`;
-  return `rgba(${(num >> 16) & 255}, ${(num >> 8) & 255}, ${num & 255}, ${alpha})`;
-}
-
-function getElevatedToneColor(hexOrRgb, opacity = 0.94) {
-  if (!hexOrRgb) return '';
-  let hex = hexOrRgb.replace('#', '');
-  if (hex.length === 3) hex = hex.split('').map(x => x + x).join('');
-  if (hex.length !== 6) return '';
-
-  let r = parseInt(hex.substring(0, 2), 16);
-  let g = parseInt(hex.substring(2, 4), 16);
-  let b = parseInt(hex.substring(4, 6), 16);
-
-  r = Math.min(255, r + 14);
-  g = Math.min(255, g + 16);
-  b = Math.min(255, b + 22);
-
-  return `rgba(${r}, ${g}, ${b}, ${opacity})`;
-}
-
 function updateThemeMode(mode) {
   const activeMode = mode || 'light';
   document.documentElement.setAttribute('data-theme', activeMode);
@@ -252,35 +231,6 @@ function updateThemeMode(mode) {
   document.querySelectorAll('.mode-opt').forEach(opt => {
     opt.classList.toggle('active', opt.dataset.mode === activeMode);
   });
-}
-
-function updateThemeColors(theme) {
-  const accent = theme.accent || DEFAULTS.accent;
-  const secondary = theme.secondary || DEFAULTS.secondary;
-  const mode = theme.mode || DEFAULTS.mode;
-
-  document.documentElement.style.setProperty('--accent', accent);
-  document.documentElement.style.setProperty('--secondary', secondary);
-  document.documentElement.style.setProperty('--accent-glow', hexToRgba(accent, 0.35));
-
-  if (mode === 'dark') {
-    if (theme.customBgColor) {
-      document.documentElement.style.setProperty('--bg-deep', theme.customBgColor);
-      document.body.style.background = theme.customBgColor;
-      const dockElevated = getElevatedToneColor(theme.customBgColor, 0.94);
-      if (dockElevated) {
-        document.documentElement.style.setProperty('--dock-bg', dockElevated);
-      }
-    } else {
-      document.documentElement.style.removeProperty('--bg-deep');
-      document.documentElement.style.setProperty('--dock-bg', 'rgba(14, 19, 32, 0.94)');
-      document.body.style.background = '';
-    }
-  } else {
-    document.documentElement.style.removeProperty('--bg-deep');
-    document.documentElement.style.setProperty('--dock-bg', 'rgba(255, 255, 255, 0.96)');
-    document.body.style.background = '';
-  }
 }
 
 function renderPresets(pinnedList = []) {
@@ -1462,6 +1412,36 @@ function exportStyledPdfDocument(data) {
 }
 
 // Interactive Card & Mode Toggle Handlers
+function renderSpeedSelection(speed) {
+  const slider = document.getElementById('flow-speed-slider');
+  const progress = ((Number(slider.value) - Number(slider.min)) /
+    (Number(slider.max) - Number(slider.min))) * 100;
+  slider.style.setProperty('--speed-progress', `${progress}%`);
+  const label = `${Number(speed.toFixed(2))}×`;
+  slider.setAttribute('aria-valuetext', label);
+  document.getElementById('flow-speed-val-display').textContent = label;
+  document.getElementById('flow-speed-active-badge').textContent = label;
+  document.querySelectorAll('.speed-pill, .flow-cycle-chip').forEach(button => {
+    const selected = Math.abs(Number(button.dataset.speed) - speed) < 0.02;
+    button.classList.toggle('active', selected);
+    button.setAttribute('aria-pressed', String(selected));
+  });
+}
+
+function renderCycleChips(listStr) {
+  const ribbon = document.getElementById('flow-cycle-chips-ribbon');
+  const speeds = (listStr || DEFAULTS.flow_speed_cycle_list).split(',')
+    .map(value => parseFloat(value.trim())).filter(speed => Number.isFinite(speed) && speed > 0);
+  ribbon.replaceChildren(...speeds.map(speed => {
+    const button = document.createElement('button');
+    button.type = 'button';
+    button.className = 'flow-cycle-chip';
+    button.dataset.speed = speed;
+    button.textContent = `${speed}×`;
+    return button;
+  }));
+}
+
 function setupCardToggleHandlers() {
   const toggleLimitBtn = document.getElementById('toggle-chat-limit-btn');
   const limitHeader = document.getElementById('chat-limit-header');
@@ -1496,7 +1476,7 @@ function setupCardToggleHandlers() {
         chrome.storage.local.get(['pruningEnabled', 'enabled'], (data) => {
           const isEnabled = data.pruningEnabled ?? (data.enabled ?? true);
           if (isEnabled) {
-            statusSub.textContent = nextVisible ? 'Limits message count to improve performance & prevent lag. Tap to collapse.' : 'Limits message count to improve performance & prevent lag. Tap to expand.';
+            statusSub.textContent = 'Keeps long chats responsive by showing the messages around you.';
           }
         });
       }
@@ -1553,7 +1533,7 @@ function setupCardToggleHandlers() {
       aesBody.style.display = nextVisible ? 'flex' : 'none';
       chrome.storage.local.set({ aesthetics_card_collapsed: !nextVisible });
       if (aesSub) {
-        aesSub.textContent = nextVisible ? 'Customize colors, gradients & background tones. Tap to collapse.' : 'Customize colors, gradients & background tones. Tap to expand.';
+        aesSub.textContent = 'Customize colors, gradients, background tones, and developer themes.';
       }
     });
   }
@@ -1570,7 +1550,7 @@ function setupCardToggleHandlers() {
       displayBody.style.display = nextVisible ? 'flex' : 'none';
       chrome.storage.local.set({ display_card_collapsed: !nextVisible });
       if (displaySub) {
-        displaySub.textContent = nextVisible ? 'Adjust UI window size and font scale independently. Tap to collapse.' : 'Adjust UI window size and font scale independently. Tap to expand.';
+        displaySub.textContent = 'Adjust popup and type scale independently.';
       }
     });
   }
@@ -1605,7 +1585,7 @@ function setupCardToggleHandlers() {
       ytBody.style.display = nextVisible ? 'flex' : 'none';
       chrome.storage.local.set({ yt_card_collapsed: !nextVisible });
       if (ytSub) {
-        ytSub.textContent = nextVisible ? 'Feed video limits & quick Not-Interested button. Tap to collapse.' : 'Feed video limits & quick Not-Interested button. Tap to expand.';
+        ytSub.textContent = 'A quieter home feed with a faster way to dismiss recommendations.';
       }
     });
   }
@@ -1635,7 +1615,7 @@ function setupCardToggleHandlers() {
   const toggleFlowSpeedBtn = document.getElementById('toggle-flow-speed-btn');
   const flowSpeedHeader = document.getElementById('flow-speed-header');
   const flowSpeedBody = document.getElementById('flow-speed-body');
-  const flowSpeedSub = document.getElementById('flow-speed-status-sub-text');
+  const flowSpeedDisclosure = document.getElementById('flow-speed-disclosure');
   const toggleFlowSpeedHudBtn = document.getElementById('toggle-flow-speed-hud-btn');
   const flowSpeedSlider = document.getElementById('flow-speed-slider');
   const speedDownBtn = document.getElementById('speed-down-btn');
@@ -1647,59 +1627,24 @@ function setupCardToggleHandlers() {
   const toggleCycleEditBtn = document.getElementById('toggle-cycle-edit-btn');
   const flowCycleEditTray = document.getElementById('flow-cycle-edit-tray');
 
-  function updateSliderTrack(slider) {
-    if (!slider) return;
-    const min = parseFloat(slider.min) || 0.25;
-    const max = parseFloat(slider.max) || 5.0;
-    const val = parseFloat(slider.value) || 1.0;
-    const pct = Math.max(0, Math.min(100, ((val - min) / (max - min)) * 100));
-    slider.style.background = `linear-gradient(to right, var(--accent) 0%, var(--accent) ${pct}%, var(--border-glass) ${pct}%, var(--border-glass) 100%)`;
-  }
-
-  function renderCycleChips(listStr, activeSpeed) {
-    const ribbon = document.getElementById('flow-cycle-chips-ribbon');
-    if (!ribbon) return;
-    ribbon.innerHTML = '';
-    const speeds = (listStr || '1, 1.25, 1.5, 1.75, 2, 2.5, 3')
-      .split(',')
-      .map(s => parseFloat(s.trim()))
-      .filter(s => !isNaN(s) && s > 0);
-
-    speeds.forEach(speed => {
-      const chip = document.createElement('button');
-      chip.type = 'button';
-      chip.className = 'flow-cycle-chip';
-      const isAct = Math.abs(speed - activeSpeed) < 0.02;
-      if (isAct) chip.classList.add('active');
-      chip.textContent = `${speed.toFixed(speed % 1 === 0 ? 1 : 2)}x`;
-      chip.title = `Jump directly to ${speed}x playback`;
-      chip.addEventListener('click', (e) => {
-        e.stopPropagation();
-        applyFlowSpeed(speed, true);
-      });
-      ribbon.appendChild(chip);
-    });
-  }
-
-  function applyFlowSpeed(val, updateSlider = true) {
+  let speedAttached = false;
+  function applyFlowSpeed(val) {
     const speed = Math.max(0.25, Math.min(5.0, parseFloat(val.toFixed(2))));
-    const slider = document.getElementById('flow-speed-slider');
-    const display = document.getElementById('flow-speed-val-display');
-    const badge = document.getElementById('flow-speed-active-badge');
-    if (updateSlider && slider) slider.value = speed;
-    if (slider) updateSliderTrack(slider);
-    if (display) display.textContent = `${speed.toFixed(2)}x`;
-    if (badge) badge.textContent = `${speed.toFixed(2)}x`;
-
-    chrome.storage.local.set({ flow_speed_val: speed });
-
-    document.querySelectorAll('.speed-pill').forEach(p => {
-      p.classList.toggle('active', Math.abs(parseFloat(p.dataset.speed) - speed) < 0.02);
+    flowSpeedSlider.value = speed;
+    renderSpeedSelection(speed);
+    chrome.storage.local.set({ flow_speed_val: speed }, () => {
+      if (speedAttached) return;
+      speedAttached = true;
+      chrome.runtime.sendMessage({ action: 'attach_flow_speed' }, attached => {
+        if (chrome.runtime.lastError || !attached) speedAttached = false;
+      });
     });
-
-    const cycleInput = document.getElementById('flow-speed-cycle-input');
-    renderCycleChips(cycleInput?.value || '1, 1.25, 1.5, 1.75, 2, 2.5, 3', speed);
   }
+
+  document.getElementById('flow-cycle-chips-ribbon').addEventListener('click', event => {
+    const button = event.target.closest('.flow-cycle-chip');
+    if (button) applyFlowSpeed(Number(button.dataset.speed));
+  });
 
   if (toggleFlowSpeedBtn) {
     toggleFlowSpeedBtn.addEventListener('click', (e) => {
@@ -1717,20 +1662,14 @@ function setupCardToggleHandlers() {
       const isVisible = flowSpeedBody.style.display !== 'none';
       const nextVisible = !isVisible;
       flowSpeedBody.style.display = nextVisible ? 'flex' : 'none';
+      flowSpeedDisclosure.setAttribute('aria-expanded', String(nextVisible));
       chrome.storage.local.set({ flow_speed_card_collapsed: !nextVisible });
-      if (flowSpeedSub) {
-        flowSpeedSub.textContent = nextVisible ? 'Universal video & audio speed engine. Tap to collapse.' : 'Universal video & audio speed engine. Tap to expand.';
-      }
     });
   }
 
   if (flowSpeedSlider) {
-    flowSpeedSlider.addEventListener('input', (e) => {
-      const val = parseFloat(e.target.value);
-      if (!isNaN(val)) {
-        applyFlowSpeed(val, false);
-      }
-    });
+    flowSpeedSlider.addEventListener('input', () => renderSpeedSelection(Number(flowSpeedSlider.value)));
+    flowSpeedSlider.addEventListener('change', () => applyFlowSpeed(Number(flowSpeedSlider.value)));
   }
 
   if (speedDownBtn && flowSpeedSlider) {
@@ -1738,7 +1677,7 @@ function setupCardToggleHandlers() {
       e.stopPropagation();
       const current = parseFloat(flowSpeedSlider.value) || 1.0;
       const next = Math.max(0.25, parseFloat((current - 0.25).toFixed(2)));
-      applyFlowSpeed(next, true);
+      applyFlowSpeed(next);
     });
   }
 
@@ -1747,32 +1686,23 @@ function setupCardToggleHandlers() {
       e.stopPropagation();
       const current = parseFloat(flowSpeedSlider.value) || 1.0;
       const next = Math.min(5.0, parseFloat((current + 0.25).toFixed(2)));
-      applyFlowSpeed(next, true);
+      applyFlowSpeed(next);
     });
   }
 
   if (speedResetBtn) {
     speedResetBtn.addEventListener('click', (e) => {
       e.stopPropagation();
-      applyFlowSpeed(1.0, true);
+      applyFlowSpeed(1.0);
     });
   }
-
-  // Slider scale points
-  document.querySelectorAll('.scale-point').forEach(pt => {
-    pt.addEventListener('click', (e) => {
-      e.stopPropagation();
-      const sp = parseFloat(pt.dataset.speed);
-      if (!isNaN(sp)) applyFlowSpeed(sp, true);
-    });
-  });
 
   document.querySelectorAll('.speed-pill').forEach(pill => {
     pill.addEventListener('click', (e) => {
       e.stopPropagation();
       const speed = parseFloat(pill.dataset.speed);
       if (!isNaN(speed)) {
-        applyFlowSpeed(speed, true);
+        applyFlowSpeed(speed);
       }
     });
   });
@@ -1803,25 +1733,47 @@ function setupCardToggleHandlers() {
       const val = e.target.value.trim();
       chrome.storage.local.set({ flow_speed_cycle_list: val });
       const currentSpeed = parseFloat(flowSpeedSlider?.value) || 1.0;
-      renderCycleChips(val, currentSpeed);
+      renderCycleChips(val);
+      renderSpeedSelection(currentSpeed);
     });
     flowSpeedCycleInput.addEventListener('input', (e) => {
       const currentSpeed = parseFloat(flowSpeedSlider?.value) || 1.0;
-      renderCycleChips(e.target.value.trim(), currentSpeed);
+      renderCycleChips(e.target.value.trim());
+      renderSpeedSelection(currentSpeed);
     });
   }
 
-  if (shortcutResetInput) {
-    shortcutResetInput.addEventListener('input', (e) => {
-      const val = e.target.value.trim().toLowerCase();
-      if (val) chrome.storage.local.set({ flow_speed_shortcut_reset: val });
-    });
-  }
-
-  if (shortcutCycleInput) {
-    shortcutCycleInput.addEventListener('input', (e) => {
-      const val = e.target.value.trim().toLowerCase();
-      if (val) chrome.storage.local.set({ flow_speed_shortcut_cycle: val });
+  const shortcutFeedback = document.getElementById('speed-shortcut-feedback');
+  const showShortcutFeedback = text => {
+    shortcutFeedback.textContent = text;
+    shortcutFeedback.hidden = !text;
+  };
+  for (const [input, setting, other] of [
+    [shortcutResetInput, 'flow_speed_shortcut_reset', shortcutCycleInput],
+    [shortcutCycleInput, 'flow_speed_shortcut_cycle', shortcutResetInput]
+  ]) {
+    input.addEventListener('focus', () => showShortcutFeedback('Press the shortcut you want to use. Esc cancels.'));
+    input.addEventListener('blur', () => showShortcutFeedback(''));
+    input.addEventListener('keydown', event => {
+      if (event.key === 'Tab') return;
+      event.preventDefault();
+      if (event.key === 'Escape') {
+        input.blur();
+        return;
+      }
+      const shortcut = caspianSpeedKeys.fromEvent(event);
+      if (!shortcut || event.repeat) return;
+      if (shortcut === 'alt+d') {
+        showShortcutFeedback('Alt+D opens the address bar. Try Alt+Shift+D.');
+        return;
+      }
+      if (shortcut === other.value.toLowerCase()) {
+        showShortcutFeedback('That shortcut is already assigned to the other action.');
+        return;
+      }
+      input.value = shortcut.toUpperCase();
+      chrome.storage.local.set({ [setting]: shortcut });
+      input.blur();
     });
   }
 
@@ -1834,6 +1786,9 @@ function setupCardToggleHandlers() {
       });
     });
   }
+  document.getElementById('flow-speed-hud-position').addEventListener('change', event => {
+    chrome.storage.local.set({ flow_speed_hud_position: event.target.value });
+  });
 
   const toggleFlowSpeedBadgeBtn = document.getElementById('toggle-flow-speed-badge-btn');
   const toggleSettingsSpeedBadgeBtn = document.getElementById('toggle-settings-speed-badge-btn');
@@ -1852,7 +1807,6 @@ function setupCardToggleHandlers() {
   // RippleFrame Card Handlers
   const rfHeader = document.getElementById('rippleframe-header');
   const rfBody = document.getElementById('rippleframe-body');
-  const rfSub = document.getElementById('rf-status-sub-text');
   const toggleRfBtn = document.getElementById('toggle-rippleframe-btn');
   const btnRfCaptureMain = document.getElementById('btn-rf-capture-main');
   const btnRfOpenStudio = document.getElementById('btn-rf-open-studio');
@@ -1875,20 +1829,14 @@ function setupCardToggleHandlers() {
       const isCurrentlyHidden = rfBody.style.display === 'none';
       const nextState = isCurrentlyHidden ? 'flex' : 'none';
       rfBody.style.display = nextState;
-      if (rfSub) {
-        rfSub.textContent = nextState === 'none' 
-          ? 'Long screenshot & studio editor. Tap to expand.' 
-          : 'Long screenshot & studio editor. Tap to collapse.';
-      }
       chrome.storage.local.set({ rf_card_collapsed: nextState === 'none' });
     });
   }
 
-  // Scope pills
-  document.querySelectorAll('.rf-scope-pill').forEach(pill => {
-    pill.addEventListener('click', (e) => {
+  document.querySelectorAll('.rf-mode-btn[data-scope]').forEach(button => {
+    button.addEventListener('click', (e) => {
       e.stopPropagation();
-      const scope = pill.dataset.scope;
+      const scope = button.dataset.scope;
       chrome.storage.local.set({ rf_capture_scope: scope }, loadSettings);
     });
   });
@@ -1897,7 +1845,7 @@ function setupCardToggleHandlers() {
   if (rfDelaySlider) {
     rfDelaySlider.addEventListener('input', (e) => {
       const val = parseInt(e.target.value);
-      if (rfDelayVal) rfDelayVal.textContent = `${val}ms`;
+      if (rfDelayVal) rfDelayVal.textContent = `${val} ms`;
       chrome.storage.local.set({ rf_scroll_delay: val });
     });
   }
@@ -1936,7 +1884,7 @@ function setupCardToggleHandlers() {
   if (btnRfOpenStudio) {
     btnRfOpenStudio.addEventListener('click', (e) => {
       e.stopPropagation();
-      chrome.tabs.create({ url: chrome.runtime.getURL('rippleframe.html') });
+      chrome.tabs.create({ url: `${chrome.runtime.getURL('rippleframe.html')}?blank=1` });
       window.close();
     });
   }
@@ -1977,13 +1925,14 @@ function setupDevExclusiveThemes() {
   });
 }
 
-function loadSettings() {
-  chrome.storage.local.get(['pruningEnabled', 'vaultEnabled', 'enabled', 'limit', 'mode', 'accent', 'secondary', 'customBgColor', 'ui_zoom', 'font_scale', 'pinnedPresets', 'disabledSites', 'chat_pruning_mode', 'limit_card_collapsed', 'aesthetics_card_collapsed', 'display_card_collapsed', 'yt_feed_limit_enabled', 'yt_feed_limit', 'yt_not_interested_enabled', 'yt_card_collapsed', 'flow_speed_enabled', 'flow_speed_badge_enabled', 'flow_speed_val', 'flow_speed_cycle_list', 'flow_speed_shortcut_reset', 'flow_speed_shortcut_cycle', 'flow_speed_shortcut_up', 'flow_speed_shortcut_down', 'flow_speed_show_hud', 'flow_speed_card_collapsed', 'rf_enabled', 'rf_capture_scope', 'rf_scroll_delay', 'rf_card_collapsed'], (data) => {
+function loadSettings(onReady) {
+  chrome.storage.local.get(['pruningEnabled', 'vaultEnabled', 'enabled', 'limit', 'mode', 'accent', 'secondary', 'customBgColor', 'ui_zoom', 'font_scale', 'popup_motion', 'pinnedPresets', 'disabledSites', 'chat_pruning_mode', 'limit_card_collapsed', 'aesthetics_card_collapsed', 'display_card_collapsed', 'yt_feed_limit_enabled', 'yt_feed_limit', 'yt_not_interested_enabled', 'yt_card_collapsed', 'flow_speed_enabled', 'flow_speed_badge_enabled', 'flow_speed_val', 'flow_speed_cycle_list', 'flow_speed_shortcut_reset', 'flow_speed_shortcut_cycle', 'flow_speed_shortcut_up', 'flow_speed_shortcut_down', 'flow_speed_show_hud', 'flow_speed_hud_position', 'flow_speed_card_collapsed', 'rf_enabled', 'rf_capture_scope', 'rf_scroll_delay', 'rf_card_collapsed'], (data) => {
     const currentMode = data.mode || DEFAULTS.mode;
     updateThemeMode(currentMode);
-    updateThemeColors(data);
+    applyCaspianPalette(data);
     applyUiZoom(data.ui_zoom ?? DEFAULTS.ui_zoom);
     applyFontScale(data.font_scale ?? DEFAULTS.font_scale);
+    applyPopupMotion(data.popup_motion);
 
     renderPresets(data.pinnedPresets || []);
 
@@ -2002,13 +1951,14 @@ function loadSettings() {
 
     // Background Canvas State Sync
     const customBg = data.customBgColor || '';
+    const defaultDarkTone = '#141110';
     document.querySelectorAll('.bg-tone-btn').forEach(btn => {
-      btn.classList.toggle('active', (btn.dataset.bg || '').toLowerCase() === customBg.toLowerCase());
+      btn.classList.toggle('active', btn.dataset.bg === (customBg || defaultDarkTone).toLowerCase());
     });
     const customBgHexInput = document.getElementById('custom-bg-hex');
     const customBgPicker = document.getElementById('custom-bg-picker');
     if (customBgHexInput) customBgHexInput.value = customBg ? customBg.toUpperCase() : '';
-    if (customBgPicker) customBgPicker.value = customBg && customBg.length === 7 ? customBg : '#0a1128';
+    if (customBgPicker) customBgPicker.value = customBg && customBg.length === 7 ? customBg : defaultDarkTone;
 
     // Aesthetics Card Collapsible State
     const isAesCollapsed = data.aesthetics_card_collapsed ?? false;
@@ -2016,7 +1966,7 @@ function loadSettings() {
     const aesSub = document.getElementById('aesthetics-sub-text');
     if (aesBody) aesBody.style.display = isAesCollapsed ? 'none' : 'flex';
     if (aesSub) {
-      aesSub.textContent = isAesCollapsed ? 'Customize colors, gradients & background tones. Tap to expand.' : 'Customize colors, gradients & background tones. Tap to collapse.';
+      aesSub.textContent = 'Customize colors, gradients, background tones, and developer themes.';
     }
 
     // Display Card Collapsible State
@@ -2025,7 +1975,7 @@ function loadSettings() {
     const displaySub = document.getElementById('display-sub-text');
     if (displayBody) displayBody.style.display = isDisplayCollapsed ? 'none' : 'flex';
     if (displaySub) {
-      displaySub.textContent = isDisplayCollapsed ? 'Adjust UI window size and font scale independently. Tap to expand.' : 'Adjust UI window size and font scale independently. Tap to collapse.';
+      displaySub.textContent = 'Adjust popup and type scale independently.';
     }
 
     // YouTube Home Card State
@@ -2035,15 +1985,13 @@ function loadSettings() {
     const isYtCollapsed = data.yt_card_collapsed ?? false;
 
     const ytCard = document.getElementById('card-youtube-home');
-    const ytStatusTitle = document.getElementById('yt-status-title');
     const ytActiveBadge = document.getElementById('yt-active-limit-badge');
     const ytFeedBtn = document.getElementById('toggle-yt-feed-btn');
     const ytNotInterestedBtn = document.getElementById('toggle-yt-not-interested-btn');
     const ytBody = document.getElementById('youtube-home-body');
 
     if (ytBody) ytBody.style.display = isYtCollapsed ? 'none' : 'flex';
-    if (ytCard) ytCard.classList.toggle('is-disabled', !ytFeedEnabled);
-    if (ytStatusTitle) ytStatusTitle.textContent = ytFeedEnabled ? 'YouTube Home Feed: ON' : 'YouTube Home Feed: OFF';
+    if (ytCard) ytCard.classList.toggle('is-disabled', !ytFeedEnabled && !ytNotInterestedEnabled);
     if (ytActiveBadge) ytActiveBadge.textContent = ytLimit >= 9999 ? '∞ All' : `${ytLimit} Videos`;
     if (ytFeedBtn) {
       ytFeedBtn.textContent = ytFeedEnabled ? 'ON' : 'OFF';
@@ -2068,9 +2016,6 @@ function loadSettings() {
     const isFlowSpeedCollapsed = data.flow_speed_card_collapsed ?? false;
 
     const flowSpeedCard = document.getElementById('card-flow-speed');
-    const flowSpeedStatusTitle = document.getElementById('flow-speed-status-title');
-    const flowSpeedActiveBadge = document.getElementById('flow-speed-active-badge');
-    const flowSpeedValDisplay = document.getElementById('flow-speed-val-display');
     const flowSpeedBtn = document.getElementById('toggle-flow-speed-btn');
     const flowSpeedHudBtn = document.getElementById('toggle-flow-speed-hud-btn');
     const flowSpeedBody = document.getElementById('flow-speed-body');
@@ -2081,29 +2026,28 @@ function loadSettings() {
 
     if (flowSpeedBody) flowSpeedBody.style.display = isFlowSpeedCollapsed ? 'none' : 'flex';
     if (flowSpeedCard) flowSpeedCard.classList.toggle('is-disabled', !flowSpeedEnabled);
-    if (flowSpeedStatusTitle) flowSpeedStatusTitle.textContent = flowSpeedEnabled ? 'Flow Speed: ON' : 'Flow Speed: OFF';
-    if (flowSpeedActiveBadge) flowSpeedActiveBadge.textContent = `${flowSpeedVal.toFixed(2)}x`;
-    if (flowSpeedValDisplay) flowSpeedValDisplay.textContent = `${flowSpeedVal.toFixed(2)}x`;
-    if (flowSpeedSlider) {
-      flowSpeedSlider.value = flowSpeedVal;
-      if (typeof updateSliderTrack === 'function') updateSliderTrack(flowSpeedSlider);
-    }
+    document.getElementById('flow-speed-disclosure').setAttribute('aria-expanded', String(!isFlowSpeedCollapsed));
+    flowSpeedBody.inert = !flowSpeedEnabled;
+    flowSpeedSlider.value = flowSpeedVal;
     if (flowSpeedCycleInput) flowSpeedCycleInput.value = flowSpeedCycleList;
-    if (shortcutResetInput) shortcutResetInput.value = shortcutReset.toUpperCase();
-    if (shortcutCycleInput) shortcutCycleInput.value = shortcutCycle.toUpperCase();
+    shortcutResetInput.value = caspianSpeedKeys.normalize(shortcutReset, DEFAULTS.flow_speed_shortcut_reset).toUpperCase();
+    shortcutCycleInput.value = caspianSpeedKeys.normalize(shortcutCycle, DEFAULTS.flow_speed_shortcut_cycle).toUpperCase();
 
-    if (typeof renderCycleChips === 'function') {
-      renderCycleChips(flowSpeedCycleList, flowSpeedVal);
-    }
+    renderCycleChips(flowSpeedCycleList);
+    renderSpeedSelection(flowSpeedVal);
 
     if (flowSpeedBtn) {
       flowSpeedBtn.textContent = flowSpeedEnabled ? 'ON' : 'OFF';
       flowSpeedBtn.classList.toggle('active', flowSpeedEnabled);
+      flowSpeedBtn.setAttribute('aria-pressed', String(flowSpeedEnabled));
     }
     if (flowSpeedHudBtn) {
       flowSpeedHudBtn.textContent = flowSpeedShowHud ? 'ON' : 'OFF';
       flowSpeedHudBtn.classList.toggle('active', flowSpeedShowHud);
     }
+    const hudPosition = document.getElementById('flow-speed-hud-position');
+    hudPosition.value = normalizeHudPosition(data.flow_speed_hud_position);
+    hudPosition.disabled = !flowSpeedShowHud;
 
     const flowSpeedBadgeEnabled = data.flow_speed_badge_enabled ?? DEFAULTS.flow_speed_badge_enabled;
     const flowSpeedBadgeBtn = document.getElementById('toggle-flow-speed-badge-btn');
@@ -2118,10 +2062,6 @@ function loadSettings() {
       settingsBadgeBtn.classList.toggle('active', flowSpeedBadgeEnabled);
     }
 
-    document.querySelectorAll('.speed-pill').forEach(p => {
-      p.classList.toggle('active', Math.abs(parseFloat(p.dataset.speed) - flowSpeedVal) < 0.02);
-    });
-
     // RippleFrame Card State & Sync
     const rfEnabled = data.rf_enabled ?? DEFAULTS.rf_enabled;
     const rfScope = data.rf_capture_scope || DEFAULTS.rf_capture_scope;
@@ -2129,38 +2069,31 @@ function loadSettings() {
     const isRfCollapsed = data.rf_card_collapsed ?? false;
 
     const rfCard = document.getElementById('card-rippleframe');
-    const rfStatusTitle = document.getElementById('rf-status-title');
     const toggleRfBtn = document.getElementById('toggle-rippleframe-btn');
     const rfBody = document.getElementById('rippleframe-body');
-    const rfSub = document.getElementById('rf-status-sub-text');
-    const rfScopeHint = document.getElementById('rf-scope-hint');
+    const rfDelayRow = document.getElementById('rf-delay-row');
     const rfDelaySlider = document.getElementById('rf-delay-slider');
     const rfDelayVal = document.getElementById('rf-delay-val');
     const btnRfCaptureMain = document.getElementById('btn-rf-capture-main');
 
-    if (rfBody) rfBody.style.display = isRfCollapsed ? 'none' : 'flex';
+    if (rfBody) {
+      rfBody.style.display = isRfCollapsed ? 'none' : 'flex';
+      rfBody.inert = !rfEnabled;
+    }
     if (rfCard) rfCard.classList.toggle('is-disabled', !rfEnabled);
-    if (rfStatusTitle) rfStatusTitle.textContent = rfEnabled ? 'RippleFrame: ON' : 'RippleFrame: OFF';
     if (toggleRfBtn) {
       toggleRfBtn.textContent = rfEnabled ? 'ON' : 'OFF';
       toggleRfBtn.classList.toggle('active', rfEnabled);
     }
-    if (btnRfCaptureMain) {
-      btnRfCaptureMain.disabled = !rfEnabled;
-      btnRfCaptureMain.style.opacity = rfEnabled ? '1' : '0.5';
-      btnRfCaptureMain.style.pointerEvents = rfEnabled ? 'auto' : 'none';
-    }
-    if (rfSub) {
-      rfSub.textContent = isRfCollapsed 
-        ? 'Long screenshot & studio editor. Tap to expand.' 
-        : 'Long screenshot & studio editor. Tap to collapse.';
-    }
-    if (rfScopeHint) rfScopeHint.textContent = rfScope === 'full' ? 'Full Page' : 'Viewport';
+    if (btnRfCaptureMain) btnRfCaptureMain.disabled = !rfEnabled;
+    if (rfDelayRow) rfDelayRow.hidden = rfScope !== 'full';
     if (rfDelaySlider) rfDelaySlider.value = rfDelay;
-    if (rfDelayVal) rfDelayVal.textContent = `${rfDelay}ms`;
+    if (rfDelayVal) rfDelayVal.textContent = `${rfDelay} ms`;
 
-    document.querySelectorAll('.rf-scope-pill').forEach(pill => {
-      pill.classList.toggle('active', pill.dataset.scope === rfScope);
+    document.querySelectorAll('.rf-mode-btn[data-scope]').forEach(button => {
+      const selected = button.dataset.scope === rfScope;
+      button.classList.toggle('active', selected);
+      button.setAttribute('aria-pressed', String(selected));
     });
 
     // Chat Message Limit Card State & Collapsible Accordion
@@ -2180,13 +2113,13 @@ function loadSettings() {
       statusDot.classList.toggle('inactive', !pruningEnabled);
     }
     if (statusText) {
-      statusText.textContent = pruningEnabled ? 'Chat Message Limit: ON' : 'Chat Message Limit: OFF';
+      statusText.textContent = 'Chat Message Limit';
     }
     if (statusSub) {
       if (!pruningEnabled) {
         statusSub.textContent = 'Click to activate Chat Message Limit.';
       } else {
-        statusSub.textContent = isCollapsed ? 'Limits message count to improve performance & prevent lag. Tap to expand.' : 'Limits message count to improve performance & prevent lag. Tap to collapse.';
+        statusSub.textContent = 'Keeps long chats responsive by showing the messages around you.';
       }
     }
     if (toggleLimitBtn) {
@@ -2232,7 +2165,7 @@ function loadSettings() {
     }
 
     // Master Power Ring State (Consolidated across all Caspian engines)
-    const isMasterOn = Boolean(pruningEnabled || vaultEnabled || ytFeedEnabled || flowSpeedEnabled || rfEnabled);
+    const isMasterOn = Boolean(pruningEnabled || vaultEnabled || ytFeedEnabled || ytNotInterestedEnabled || flowSpeedEnabled || rfEnabled);
     const powerToggle = document.getElementById('power-toggle');
     if (powerToggle) powerToggle.classList.toggle('active', isMasterOn);
 
@@ -2243,47 +2176,170 @@ function loadSettings() {
       limitBadge.textContent = limit >= 9999 ? '∞ All' : `${limit} ${limit === 1 ? 'Message' : 'Messages'}`;
     }
 
-    document.querySelectorAll('.pill').forEach(p => {
+    document.querySelectorAll('#chat-limit-body [data-val]').forEach(p => {
       p.classList.toggle('active', parseInt(p.dataset.val) === limit);
     });
 
     setupSiteToggles(data.disabledSites || []);
+    if (typeof onReady === 'function') onReady();
   });
 }
 
-// Floating Dock Slider & Navigation Handler (3 Tabs with Persistent Active Tab Memory)
-function updateDockIndicator(targetTab) {
-  const activeBtn = document.querySelector(`.dock-tab-btn[data-target="${targetTab}"]`);
-  const indicator = document.getElementById('dock-indicator');
+// Floating dock navigation with persistent tab selection
+const dock = document.querySelector('.floating-dock');
+const dockTabs = [...dock.querySelectorAll('.dock-tab-btn')];
+const dockIndicator = dock.querySelector('.nav-indicator');
+const popupScroller = document.querySelector('.content-area');
+const SCROLL_MEMORY_KEY = 'caspian-popup-scroll';
+const popupScrollPositions = Object.create(null);
+let dockMorph;
+let paneMotion;
+let navigationReady = false;
 
-  if (activeBtn && indicator) {
-    indicator.style.left = `${activeBtn.offsetLeft}px`;
-    indicator.style.width = `${activeBtn.offsetWidth}px`;
+function savePopupScroll() {
+  if (!navigationReady) return;
+  const active = dock.querySelector('.dock-tab-btn.active')?.dataset.target;
+  if (!active) return;
+  popupScrollPositions[active] = popupScroller.scrollTop;
+  try {
+    localStorage.setItem(SCROLL_MEMORY_KEY, JSON.stringify({ at: Date.now(), positions: popupScrollPositions }));
+  } catch {}
+}
+
+function restorePopupScroll() {
+  try {
+    const saved = JSON.parse(localStorage.getItem(SCROLL_MEMORY_KEY));
+    if (saved && Date.now() - saved.at < 60_000) {
+      for (const button of dockTabs) {
+        const tab = button.dataset.target;
+        if (Number.isFinite(saved.positions?.[tab])) popupScrollPositions[tab] = saved.positions[tab];
+      }
+    }
+  } catch {}
+}
+
+let lastScrollSave = 0;
+popupScroller.addEventListener('scroll', () => {
+  const now = Date.now();
+  if (now - lastScrollSave > 100) {
+    lastScrollSave = now;
+    savePopupScroll();
+  }
+}, { passive: true });
+window.addEventListener('pagehide', savePopupScroll);
+document.addEventListener('visibilitychange', () => {
+  if (document.hidden) savePopupScroll();
+});
+
+function applyPopupMotion(value) {
+  const mode = ['on', 'system', 'off'].includes(value) ? value : DEFAULTS.popup_motion;
+  document.documentElement.dataset.popupMotion = mode;
+  document.getElementById('popup-motion').value = mode;
+  if (!popupMotionEnabled()) {
+    dockMorph?.cancel();
+    paneMotion?.cancel();
   }
 }
 
-function switchTab(targetTab) {
-  document.querySelectorAll('.dock-tab-btn').forEach(btn => {
-    btn.classList.toggle('active', btn.dataset.target === targetTab);
+function popupMotionEnabled() {
+  const mode = document.documentElement.dataset.popupMotion;
+  return mode === 'on' || (mode === 'system' && !matchMedia('(prefers-reduced-motion: reduce)').matches);
+}
+
+document.getElementById('popup-motion').addEventListener('change', event => {
+  applyPopupMotion(event.target.value);
+  chrome.storage.local.set({ popup_motion: event.target.value });
+});
+
+function switchTab(targetTab, initial = false) {
+  const previous = dockTabs.findIndex(button => button.classList.contains('active'));
+  const next = Math.max(0, dockTabs.findIndex(button => button.dataset.target === targetTab));
+  targetTab = dockTabs[next].dataset.target;
+  if (!initial && previous === next) return;
+  if (!initial) savePopupScroll();
+
+  dockTabs.forEach((button, index) => {
+    button.classList.toggle('active', index === next);
+    if (index === next) button.setAttribute('aria-current', 'true');
+    else button.removeAttribute('aria-current');
   });
 
   document.querySelectorAll('.tab-pane').forEach(pane => {
     pane.classList.toggle('active', pane.id === `tab-${targetTab}`);
   });
+  popupScroller.scrollTop = popupScrollPositions[targetTab] ?? 0;
 
-  updateDockIndicator(targetTab);
+  if (!initial && previous !== next && popupMotionEnabled()) {
+    dockMorph?.cancel();
+    dockMorph = dockIndicator.animate([
+      { scale: '1 1' },
+      { scale: '1.18 0.87', offset: 0.31 },
+      { scale: '0.96 1.05', offset: 0.76 },
+      { scale: '1 1' }
+    ], { duration: 420, easing: 'ease-out' });
+    const pane = document.getElementById(`tab-${targetTab}`);
+    const direction = next > previous ? 1 : -1;
+    paneMotion?.cancel();
+    paneMotion = pane.animate([
+      { opacity: 0.18, transform: `translateX(${direction * 20}px)` },
+      { opacity: 1, transform: 'translateX(0)' }
+    ], { duration: 360, easing: 'cubic-bezier(.21,.72,.3,1)' });
+  }
 
   // Save active tab preference so it reopens in the same tab
-  try {
-    chrome.storage.local.set({ active_popup_tab: targetTab });
-  } catch(e) {}
+  if (!initial) chrome.storage.local.set({ active_popup_tab: targetTab });
 }
 
-document.querySelectorAll('.dock-tab-btn').forEach(btn => {
+dockTabs.forEach(btn => {
   btn.addEventListener('click', () => {
     switchTab(btn.dataset.target);
   });
 });
+
+let swipeStart;
+popupScroller.addEventListener('touchstart', event => {
+  if (event.touches.length !== 1 || event.target.closest('input, select, textarea, button, a, summary, [draggable]')) {
+    swipeStart = null;
+    return;
+  }
+  const { clientX, clientY } = event.touches[0];
+  swipeStart = { clientX, clientY };
+}, { passive: true });
+popupScroller.addEventListener('touchend', event => {
+  if (!swipeStart) return;
+  const touch = event.changedTouches[0];
+  const travel = swipeStart.clientX - touch.clientX;
+  const drift = Math.abs(swipeStart.clientY - touch.clientY);
+  swipeStart = null;
+  if (Math.abs(travel) < 45 || Math.abs(travel) < drift * 1.5) return;
+  const index = dockTabs.findIndex(button => button.classList.contains('active'));
+  const target = dockTabs[index + Math.sign(travel)];
+  if (target) switchTab(target.dataset.target);
+}, { passive: true });
+popupScroller.addEventListener('touchcancel', () => { swipeStart = null; }, { passive: true });
+
+let dockWheelDistance = 0;
+let dockWheelAt = 0;
+let lastDockMove = -Infinity;
+dock.addEventListener('wheel', event => {
+  const delta = Math.abs(event.deltaX) > Math.abs(event.deltaY) ? event.deltaX : event.deltaY;
+  if (!delta || event.ctrlKey) return;
+  event.preventDefault();
+  const now = performance.now();
+  if (now - lastDockMove < 350) return;
+  if (now - dockWheelAt > 160 || Math.sign(dockWheelDistance) !== Math.sign(delta)) dockWheelDistance = 0;
+  dockWheelAt = now;
+  dockWheelDistance += event.deltaMode === WheelEvent.DOM_DELTA_PIXEL ? delta : delta * 40;
+  if (Math.abs(dockWheelDistance) < 28) return;
+
+  const index = dockTabs.findIndex(button => button.classList.contains('active'));
+  const target = dockTabs[index + Math.sign(dockWheelDistance)];
+  dockWheelDistance = 0;
+  if (target) {
+    lastDockMove = now;
+    switchTab(target.dataset.target);
+  }
+}, { passive: false });
 
 // Light/Dark Mode Toggle
 const modeToggleHeaderBtn = document.getElementById('mode-toggle-btn');
@@ -2378,7 +2434,7 @@ if (paletteImportInput) {
 }
 
 // Message Limit Pills Selection
-document.querySelectorAll('.pill').forEach(p => {
+document.querySelectorAll('#chat-limit-body [data-val]').forEach(p => {
   p.addEventListener('click', () => {
     chrome.storage.local.set({ limit: parseInt(p.dataset.val) }, loadSettings);
   });
@@ -2388,10 +2444,11 @@ document.querySelectorAll('.pill').forEach(p => {
 const powerToggleBtn = document.getElementById('power-toggle');
 if (powerToggleBtn) {
   powerToggleBtn.addEventListener('click', () => {
-    chrome.storage.local.get(['pruningEnabled', 'vaultEnabled', 'enabled', 'yt_feed_limit_enabled', 'flow_speed_enabled', 'rf_enabled'], (data) => {
+    chrome.storage.local.get(['pruningEnabled', 'vaultEnabled', 'enabled', 'yt_feed_limit_enabled', 'yt_not_interested_enabled', 'flow_speed_enabled', 'rf_enabled'], (data) => {
       const isCurrentlyOn = (data.pruningEnabled ?? true) || 
                             (data.vaultEnabled ?? true) || 
                             (data.yt_feed_limit_enabled ?? DEFAULTS.yt_feed_limit_enabled) || 
+                            (data.yt_not_interested_enabled ?? DEFAULTS.yt_not_interested_enabled) ||
                             (data.flow_speed_enabled ?? DEFAULTS.flow_speed_enabled) || 
                             (data.rf_enabled ?? DEFAULTS.rf_enabled);
       const nextState = !isCurrentlyOn;
@@ -2400,6 +2457,7 @@ if (powerToggleBtn) {
         vaultEnabled: nextState,
         enabled: nextState,
         yt_feed_limit_enabled: nextState,
+        yt_not_interested_enabled: nextState,
         flow_speed_enabled: nextState,
         rf_enabled: nextState
       }, loadSettings);
@@ -2468,30 +2526,37 @@ function setupBackgroundOptions() {
 }
 
 // UI Zoom Scale Controller
-function applyUiZoom(zoomPercent = 100) {
-  const pct = parseInt(zoomPercent) || 100;
+function scaleOffset(percent, baseline) {
+  const offset = percent - baseline;
+  return offset > 0 ? `+${offset}` : String(offset);
+}
+
+function applyUiZoom(zoomPercent = DEFAULTS.ui_zoom) {
+  const pct = parseInt(zoomPercent) || DEFAULTS.ui_zoom;
   const factor = pct / 100;
   document.documentElement.style.setProperty('--ui-scale', factor);
   const badge = document.getElementById('ui-zoom-badge');
-  if (badge) badge.textContent = `${pct}%`;
+  if (badge) badge.textContent = scaleOffset(pct, DEFAULTS.ui_zoom);
   const slider = document.getElementById('ui-zoom-slider');
-  if (slider) slider.value = pct;
+  if (slider) {
+    slider.value = pct;
+    slider.setAttribute('aria-valuetext', `${scaleOffset(pct, DEFAULTS.ui_zoom)} (${pct}% display scale)`);
+  }
 
-  // Re-align dock indicator seamlessly
-  chrome.storage.local.get('active_popup_tab', (data) => {
-    updateDockIndicator(data.active_popup_tab || 'engine');
-  });
 }
 
 // Typography Font Scale Controller
-function applyFontScale(fontPercent = 100) {
-  const pct = parseInt(fontPercent) || 100;
+function applyFontScale(fontPercent = DEFAULTS.font_scale) {
+  const pct = parseInt(fontPercent) || DEFAULTS.font_scale;
   const factor = pct / 100;
   document.documentElement.style.setProperty('--font-scale', factor);
   const badge = document.getElementById('font-scale-badge');
-  if (badge) badge.textContent = `${pct}%`;
+  if (badge) badge.textContent = scaleOffset(pct, DEFAULTS.font_scale);
   const slider = document.getElementById('font-size-slider');
-  if (slider) slider.value = pct;
+  if (slider) {
+    slider.value = pct;
+    slider.setAttribute('aria-valuetext', `${scaleOffset(pct, DEFAULTS.font_scale)} (${pct}% text scale)`);
+  }
 }
 
 function setupZoomAndFontControls() {
@@ -2545,7 +2610,7 @@ function setupZoomAndFontControls() {
     fontIn.addEventListener('click', () => {
       const slider = document.getElementById('font-size-slider');
       const current = parseInt(slider?.value || 100);
-      const next = Math.min(125, current + 5);
+      const next = Math.min(Number(slider.max), current + 5);
       applyFontScale(next);
       chrome.storage.local.set({ font_scale: next });
     });
@@ -2705,7 +2770,10 @@ function setupSettingsBackupSync() {
             settingsToRestore.ui_zoom = Math.max(70, Math.min(130, parseInt(incoming.ui_zoom, 10) || 95));
           }
           if (incoming.font_scale !== undefined) {
-            settingsToRestore.font_scale = Math.max(70, Math.min(130, parseInt(incoming.font_scale, 10) || 100));
+            settingsToRestore.font_scale = Math.max(70, Math.min(150, parseInt(incoming.font_scale, 10) || DEFAULTS.font_scale));
+          }
+          if (['on', 'system', 'off'].includes(incoming.popup_motion)) {
+            settingsToRestore.popup_motion = incoming.popup_motion;
           }
 
           // 3. AI Pruner & Vault
@@ -2762,6 +2830,9 @@ function setupSettingsBackupSync() {
           }
           if (incoming.flow_speed_show_hud !== undefined) {
             settingsToRestore.flow_speed_show_hud = Boolean(incoming.flow_speed_show_hud);
+          }
+          if (incoming.flow_speed_hud_position !== undefined) {
+            settingsToRestore.flow_speed_hud_position = normalizeHudPosition(incoming.flow_speed_hud_position);
           }
           if (incoming.flow_speed_badge_enabled !== undefined) {
             settingsToRestore.flow_speed_badge_enabled = Boolean(incoming.flow_speed_badge_enabled);
@@ -2843,9 +2914,18 @@ function setupSiteBookmarks() {
 }
 
 // Engine Tab: Card Move / Drag-and-Drop Reordering Controller
-function initCardReordering() {
+function initCardReordering(onReady) {
   const container = document.getElementById('tab-engine');
-  if (!container) return;
+  if (!container) return onReady();
+
+  const defaultOrder = ['card-flow-speed', 'card-rippleframe', 'temp-vault-card', 'card-chat-limit', 'card-youtube-home'];
+  function placeCards(order) {
+    for (const id of order) {
+      const card = document.getElementById(id);
+      if (card?.parentNode === container) container.appendChild(card);
+    }
+  }
+  placeCards(defaultOrder);
 
   function saveCardsOrder() {
     const cards = Array.from(container.querySelectorAll(':scope > .glass-card'));
@@ -2857,13 +2937,9 @@ function initCardReordering() {
   chrome.storage.local.get('engine_cards_order', (data) => {
     const savedOrder = data.engine_cards_order;
     if (Array.isArray(savedOrder) && savedOrder.length) {
-      savedOrder.forEach(id => {
-        const card = document.getElementById(id);
-        if (card && card.parentNode === container) {
-          container.appendChild(card);
-        }
-      });
+      placeCards([...new Set([...savedOrder, ...defaultOrder])]);
     }
+    onReady();
   });
 
   // Drag and Drop Card Reordering
@@ -2937,11 +3013,11 @@ if (document.readyState === 'complete' || document.readyState === 'interactive')
 }
 
 // Initialize Position, Settings & Temp Vault with Tab Memory
-window.addEventListener('DOMContentLoaded', () => {
+window.addEventListener('DOMContentLoaded', async () => {
   syncVersionTag();
-  loadSettings();
+  const settingsReady = new Promise(loadSettings);
+  const cardsReady = new Promise(initCardReordering);
   initTempChatVault();
-  initCardReordering();
   setupCardToggleHandlers();
   setupSiteBookmarks();
   setupDevExclusiveThemes();
@@ -2949,9 +3025,8 @@ window.addEventListener('DOMContentLoaded', () => {
   setupZoomAndFontControls();
   setupSettingsBackupSync();
 
-  // Restore previously opened tab
-  chrome.storage.local.get('active_popup_tab', (data) => {
-    const tab = data.active_popup_tab || 'engine';
-    switchTab(tab);
-  });
+  const [data] = await Promise.all([chrome.storage.local.get('active_popup_tab'), settingsReady, cardsReady]);
+  restorePopupScroll();
+  switchTab(data.active_popup_tab || 'engine', true);
+  navigationReady = true;
 });

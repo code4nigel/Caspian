@@ -85,7 +85,7 @@ def main():
     # 2. Build APK
     flow_apk_name = f"Caspian-Flow-v{new_vn}.apk"
     beta_apk_dest = os.path.join(beta_dir, "versions", flow_apk_name)
-    root_apk_dest = os.path.join(repo_root, "versions", flow_apk_name)
+    root_apk_dest = os.path.join(repo_root, "versions", "android", "flow", flow_apk_name)
 
     if not args.skip_build:
         print("==> Building APK...")

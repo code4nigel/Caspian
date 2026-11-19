@@ -31,8 +31,8 @@ COMMIT_MSG=$(git log -1 --pretty=%B || echo "Automated release")
 # 1. Publish Caspian Flow (Beta C) under BOTH Caspian-Flow-v* and v* tags
 FLOW_TAG="Caspian-Flow-v${FLOW_VER}"
 FLOW_TITLE="[Beta C] Caspian Flow v${FLOW_VER}"
-FLOW_ASSET="versions/Caspian-Flow-v${FLOW_VER}.apk"
-FLOW_ALT_ASSET="versions/app-v${FLOW_VER}.apk"
+FLOW_ASSET="versions/android/flow/Caspian-Flow-v${FLOW_VER}.apk"
+FLOW_ALT_ASSET="versions/android/flow/app-v${FLOW_VER}.apk"
 FLOW_NOTES="### 📱 Caspian Flow (Beta C)
 
 ${COMMIT_MSG}
@@ -68,7 +68,7 @@ publish_flow_release "v${FLOW_VER}" "v${FLOW_VER} - Caspian Flow"
 # 2. Publish Caspian Mobile
 MOBILE_TAG="Caspian-Mobile-v1.2.40"
 MOBILE_TITLE="[Mobile] Caspian Mobile v1.2.40"
-MOBILE_ASSET="versions/Caspian-Mobile-v1.2.40.apk"
+MOBILE_ASSET="versions/android/mobile/Caspian-Mobile-v1.2.40.apk"
 MOBILE_NOTES="### 📱 Caspian Mobile
 
 Official stable Android mobile application for ChatGPT, Gemini, YouTube and Web pruning.
@@ -90,7 +90,7 @@ fi
 # 3. Publish Caspian Beta A
 BETA_A_TAG="Caspian-Beta-A-v1.2.48"
 BETA_A_TITLE="[Beta A] Caspian Beta A v1.2.48"
-BETA_A_ASSET="versions/Caspian-Beta-A-v1.2.48.apk"
+BETA_A_ASSET="versions/android/Caspian-Beta-A-v1.2.48.apk"
 BETA_A_NOTES="### 📱 Caspian Beta A
 
 Experimental build featuring rich Gemini HTML formatter, custom SFX mapping and full-height launch.
@@ -112,7 +112,7 @@ fi
 # 4. Publish Caspian Beta B
 BETA_B_TAG="Caspian-Beta-B-v1.0.5"
 BETA_B_TITLE="[Beta B] Caspian Beta B v1.0.5"
-BETA_B_ASSET="versions/Caspian-Beta-B-v1.0.5.apk"
+BETA_B_ASSET="versions/android/Caspian-Beta-B-v1.0.5.apk"
 BETA_B_NOTES="### 📱 Caspian Beta B
 
 Compact lightweight build for rapid AI browsing and split window testing.
@@ -134,8 +134,7 @@ fi
 # 5. Publish Caspian Extension
 EXT_TAG="Caspian-Extension-v${EXT_VER}"
 EXT_TITLE="[Extension] Caspian Extension v${EXT_VER}"
-EXT_ASSET="versions/Extension Versions/Caspian-Extension-v${EXT_VER}.zip"
-[ ! -f "$EXT_ASSET" ] && EXT_ASSET="versions/Caspian-Extension-v${EXT_VER}.zip"
+EXT_ASSET="versions/chromium/Caspian-Extension-v${EXT_VER}.zip"
 EXT_NOTES="### 🧩 Caspian Extension
 
 Official Chromium Desktop Browser Extension for ChatGPT/Gemini DOM optimization, universal Flow Speed playback controller, YouTube feed limits & multi-format document exporter.
@@ -157,8 +156,7 @@ fi
 # 6. Publish Caspian Firefox Extension
 FOX_TAG="Caspian-Fox-Extension-v${FOX_VER}"
 FOX_TITLE="[Firefox Extension] Caspian Firefox Extension v${FOX_VER}"
-FOX_ASSET="versions/Extension Versions/Caspian-Fox-Extension-v${FOX_VER}.zip"
-[ ! -f "$FOX_ASSET" ] && FOX_ASSET="versions/Caspian-Fox-Extension-v${FOX_VER}.zip"
+FOX_ASSET="versions/firefox/Caspian-Fox-Extension-v${FOX_VER}.zip"
 FOX_NOTES="### 🦊 Caspian for Firefox (Mozilla Firefox Extension)
 
 Official Mozilla Firefox Desktop Browser Extension (Manifest V3) for ChatGPT/Gemini DOM optimization, universal Flow Speed playback controller, YouTube feed limits, Temporary Chat Vault with session authentication, and RippleFrame full-page screenshot studio.

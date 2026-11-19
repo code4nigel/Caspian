@@ -1,0 +1,35 @@
+:root {
+  color-scheme: light;
+  --accent: #A2A9A9;
+  --secondary: #1B4264;
+  --accent-glow: color-mix(in srgb, var(--accent) 35%, transparent);
+  --accent-light: color-mix(in srgb, var(--accent) 14%, transparent);
+  --accent-gradient: linear-gradient(135deg, var(--accent), var(--secondary));
+  --accent-ink: color-mix(in srgb, var(--accent) 32%, var(--text-main));
+  --bg-deep: #f8fafc;
+  --bg-card: #ffffff;
+  --bg-glass: rgb(255 255 255 / 85%);
+  --border-glass: rgb(0 0 0 / 8%);
+  --text-main: #0f172a;
+  --text-muted: #475569;
+  --input-bg: rgb(0 0 0 / 4%);
+  --dock-bg: rgb(255 255 255 / 95%);
+  --dock-btn-text: #475569;
+  --glow-opacity: 0.32;
+  --card-tint: 8%;
+}
+
+:root[data-theme="dark"] {
+  color-scheme: dark;
+  --bg-deep: #141110;
+  --bg-card: color-mix(in srgb, var(--bg-deep) 92%, white);
+  --bg-glass: color-mix(in srgb, var(--bg-card) 94%, transparent);
+  --border-glass: rgb(255 255 255 / 8%);
+  --text-main: #f8fafc;
+  --text-muted: #94a3b8;
+  --input-bg: rgb(0 0 0 / 25%);
+  --dock-bg: color-mix(in srgb, var(--bg-card) 96%, transparent);
+  --dock-btn-text: #94a3b8;
+  --glow-opacity: 0.5;
+  --card-tint: 0%;
+}

@@ -1,31 +1,28 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="en" data-theme="light">
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>RippleFrame Studio - Caspian</title>
   <link rel="icon" type="image/png" href="icon48.png">
-  <link rel="preconnect" href="https://fonts.googleapis.com">
-  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;700&family=Outfit:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="theme.css">
   <link rel="stylesheet" href="rippleframe.css">
 </head>
-<body class="theme-dark">
+<body>
 
   <!-- Main Studio Header -->
   <header class="studio-header">
     <div class="header-left">
       <div class="brand-group">
         <div class="brand-badge-icon">
-          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#38bdf8" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
             <path d="M5 8 C6 9 7 9.5 9 9.5 C12 9.5 12 7.5 15 7.5 C17 7.5 18 8 19 9"></path>
             <path d="M5 12 C6 13 7 13.5 9 13.5 C12 13.5 12 11.5 15 11.5 C17 11.5 18 12 19 13"></path>
             <path d="M5 16 C6 17 7 17.5 9 17.5 C12 17.5 12 15.5 15 15.5 C17 15.5 18 16 19 17"></path>
           </svg>
         </div>
         <div class="brand-info">
-          <span class="brand-title">RIPPLEFRAME</span>
-          <span class="brand-sub">STUDIO EDITOR</span>
+          <h1 class="brand-title">RippleFrame</h1>
         </div>
       </div>
 
@@ -47,23 +44,12 @@
       <span class="dimensions-badge" id="image-dimensions-badge">0 × 0 px</span>
     </div>
 
-    <!-- Center Zoom Controls -->
-    <div class="header-center">
-      <div class="zoom-pill-group">
-        <button class="zoom-btn" id="btn-zoom-out" title="Zoom Out (-)">-</button>
-        <span class="zoom-display" id="zoom-percentage-display">100%</span>
-        <button class="zoom-btn" id="btn-zoom-in" title="Zoom In (+)">+</button>
-        <button class="zoom-action-btn" id="btn-zoom-fit" title="Fit to Screen">Fit</button>
-        <button class="zoom-action-btn" id="btn-zoom-100" title="Actual Size (100%)">100%</button>
-      </div>
-    </div>
-
     <!-- Right Action & Export Buttons with Renaming Input -->
     <div class="header-right">
       <!-- Filename Input positioned next to Export -->
       <div class="filename-container">
         <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>
-        <input type="text" id="studio-filename-input" value="Caspian_Capture" title="Click to rename capture">
+        <input type="text" id="studio-filename-input" value="Caspian_Capture" aria-label="Capture name" data-select-name>
       </div>
 
       <!-- Quick Export Buttons -->
@@ -90,7 +76,7 @@
 
       <button class="export-launch-btn" id="btn-open-export-modal" title="Custom Export Options (JPG, PNG, PDF, Quality)">
         <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
-        <span>Export ▾</span>
+        <span>Export…</span>
       </button>
     </div>
   </header>
@@ -207,68 +193,68 @@
       </div>
     </section>
 
+    <div class="zoom-pill-group workspace-zoom" role="group" aria-label="Canvas zoom">
+      <button class="zoom-btn" id="btn-zoom-out" title="Zoom out">−</button>
+      <span class="zoom-display" id="zoom-percentage-display">100%</span>
+      <button class="zoom-btn" id="btn-zoom-in" title="Zoom in">+</button>
+      <button class="zoom-action-btn" id="btn-zoom-fit" title="Fit capture to workspace">Fit</button>
+      <button class="zoom-action-btn" id="btn-zoom-100" title="Actual size">100%</button>
+    </div>
+
   </main>
 
-  <!-- Export Modal Dialog (Elevated Premium UI) -->
-  <div class="export-modal-backdrop" id="export-modal" style="display: none;">
-    <div class="export-modal-card">
+  <dialog class="export-modal-card" id="export-modal" aria-labelledby="export-title">
       <div class="modal-header">
         <div class="modal-header-left">
           <div class="modal-header-icon">
-            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#38bdf8" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
               <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path>
               <polyline points="7 10 12 15 17 10"></polyline>
               <line x1="12" y1="15" x2="12" y2="3"></line>
             </svg>
           </div>
           <div class="modal-title-group">
-            <span class="modal-title">Export RippleFrame Capture</span>
-            <span class="modal-sub">Configure document format, file naming, and quality output</span>
+            <h2 class="modal-title" id="export-title" tabindex="-1" autofocus>Export capture</h2>
           </div>
         </div>
-        <button class="modal-close-btn" id="btn-close-export-modal" title="Close modal">&times;</button>
+        <button class="modal-close-btn" id="btn-close-export-modal" aria-label="Close export dialog">&times;</button>
       </div>
 
       <div class="modal-body">
         <!-- Filename Field -->
         <div class="form-group">
-          <div class="form-label-row">
-            <label class="form-label">FILE NAME</label>
-            <span class="filename-format-badge" id="export-ext-badge">.png</span>
-          </div>
+          <label class="form-label" for="export-filename-field">File name</label>
           <div class="filename-input-box">
             <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>
-            <input type="text" id="export-filename-field" class="form-input" value="Caspian_Capture" placeholder="Enter file name...">
+            <input type="text" id="export-filename-field" class="form-input" value="Caspian_Capture" placeholder="Enter file name..." data-select-name>
+            <span class="filename-format-badge" id="export-ext-badge" aria-hidden="true">.png</span>
           </div>
         </div>
 
         <!-- Format Cards Grid -->
         <div class="form-group">
-          <label class="form-label">EXPORT FORMAT</label>
-          <div class="format-card-grid">
-            <button class="format-card active" data-format="png">
+          <span class="form-label" id="export-format-label">Format</span>
+          <div class="format-card-grid" role="group" aria-labelledby="export-format-label">
+            <button class="format-card active" data-format="png" aria-pressed="true">
               <div class="format-card-top">
-                <span class="format-icon">🖼️</span>
                 <span class="format-title">PNG</span>
-                <span class="format-check-badge">✓</span>
+                <span class="format-check-badge" aria-hidden="true">✓</span>
               </div>
-              <span class="format-desc">Lossless 100% crisp pixel fidelity</span>
+              <span class="format-desc">Lossless image</span>
             </button>
-            <button class="format-card" data-format="jpg">
+            <button class="format-card" data-format="jpg" aria-pressed="false">
               <div class="format-card-top">
-                <span class="format-icon">📸</span>
                 <span class="format-title">JPG</span>
-                <span class="format-check-badge">✓</span>
+                <span class="format-check-badge" aria-hidden="true">✓</span>
               </div>
-              <span class="format-desc">Compact photo compression</span>
+              <span class="format-desc">Adjustable compression</span>
             </button>
-            <button class="format-card" data-format="pdf">
+            <button class="format-card" data-format="pdf" aria-pressed="false">
               <div class="format-card-top">
-                <span class="format-icon">📄</span>
                 <span class="format-title">PDF</span>
-                <span class="format-check-badge">✓</span>
+                <span class="format-check-badge" aria-hidden="true">✓</span>
               </div>
-              <span class="format-desc">Document vector specification</span>
+              <span class="format-desc">Image in a PDF document</span>
             </button>
           </div>
         </div>
@@ -276,7 +262,7 @@
         <!-- Quality Slider (Visible for JPG) -->
         <div class="form-group" id="jpg-quality-group" style="display: none;">
           <div class="form-label-row">
-            <label class="form-label">JPEG QUALITY PRESET</label>
+            <label class="form-label" for="jpg-quality-slider">JPEG quality</label>
             <span class="form-hint" id="quality-val-display">92%</span>
           </div>
           <input type="range" id="jpg-quality-slider" min="30" max="100" value="92" class="custom-studio-slider">
@@ -292,16 +278,14 @@
         <div class="export-stats-row">
           <div class="stat-col">
             <div class="stat-header">
-              <span class="stat-icon">📐</span>
-              <span class="stat-label">Canvas Dimensions</span>
+              <span class="stat-label">Dimensions</span>
             </div>
             <span class="stat-val" id="export-res-display">1920 × 1080 px</span>
           </div>
           <div class="stat-divider"></div>
           <div class="stat-col">
             <div class="stat-header">
-              <span class="stat-icon">💾</span>
-              <span class="stat-label">Estimated Output</span>
+              <span class="stat-label">Estimated file size</span>
             </div>
             <span class="stat-val" id="export-est-display">~2.4 MB</span>
           </div>
@@ -312,12 +296,12 @@
         <button class="modal-cancel-btn" id="btn-cancel-export">Cancel</button>
         <button class="modal-download-btn" id="btn-confirm-download">
           <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
-          <span>Save / Download</span>
+          <span id="export-download-label">Download PNG</span>
         </button>
       </div>
-    </div>
-  </div>
+  </dialog>
 
+  <script src="theme.js"></script>
   <script src="rippleframe.js"></script>
 </body>
 </html>

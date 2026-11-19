@@ -24,6 +24,7 @@
   const transformLayer = document.getElementById('canvas-transform-layer');
   const canvas = document.getElementById('main-editor-canvas');
   const ctx = canvas.getContext('2d');
+  const blankStudio = new URLSearchParams(location.search).get('blank') === '1';
 
   let baseImage = null;
   let canvasWidth = 0;
@@ -118,11 +119,20 @@
   }
 
   async function initStudio() {
-    let captureData = await loadCaptureFromDB();
+    document.querySelectorAll('[data-select-name]').forEach(input => {
+      let enteredByPointer = false;
+      input.addEventListener('focus', () => input.select());
+      input.addEventListener('pointerdown', () => {
+        enteredByPointer = document.activeElement !== input;
+      });
+      // The browser may place the caret after focus on the first pointer click.
+      input.addEventListener('click', () => {
+        if (enteredByPointer) input.select();
+        enteredByPointer = false;
+      });
+    });
 
-    if (!captureData) {
-      captureData = await getLatestStorageCapture();
-    }
+    const captureData = blankStudio ? null : await loadCaptureFromDB() || await getLatestStorageCapture();
 
     if (captureData && captureData.slices && captureData.slices.length > 0) {
       try {
@@ -185,12 +195,18 @@
       canvasHeight = 720;
       canvas.width = canvasWidth;
       canvas.height = canvasHeight;
-      ctx.fillStyle = '#1e293b';
+      ctx.fillStyle = blankStudio ? '#ffffff' : '#1e293b';
       ctx.fillRect(0, 0, canvasWidth, canvasHeight);
-      ctx.fillStyle = '#94a3b8';
-      ctx.font = '24px Outfit, sans-serif';
-      ctx.textAlign = 'center';
-      ctx.fillText('No capture loaded. Trigger RippleFrame from popup to edit screenshots.', canvasWidth / 2, canvasHeight / 2);
+      if (blankStudio) {
+        document.getElementById('studio-filename-input').value = 'RippleFrame_Blank_Canvas';
+        saveHistoryState();
+      } else {
+        ctx.fillStyle = '#94a3b8';
+        ctx.font = '24px system-ui, sans-serif';
+        ctx.textAlign = 'center';
+        ctx.fillText('No capture loaded. Trigger RippleFrame from popup to edit screenshots.', canvasWidth / 2, canvasHeight / 2);
+      }
+      updateDimensionsBadge();
       fitToScreen();
     }
 
@@ -305,9 +321,10 @@
 
   function fitToScreen() {
     const rect = viewport.getBoundingClientRect();
-    const padding = 40;
-    const availWidth = rect.width - padding;
-    const availHeight = rect.height - padding;
+    const leftInset = 82;
+    const topInset = 22;
+    const availWidth = rect.width - leftInset - 22;
+    const availHeight = rect.height - topInset - 58;
 
     if (canvasWidth > 0 && canvasHeight > 0) {
       const scaleX = availWidth / canvasWidth;
@@ -315,8 +332,8 @@
       scale = Math.min(scaleX, scaleY, 1.0); // Don't zoom above 100% on initial fit
       scale = Math.max(0.05, scale);
 
-      panX = (rect.width - canvasWidth * scale) / 2;
-      panY = (rect.height - canvasHeight * scale) / 2;
+      panX = leftInset + (availWidth - canvasWidth * scale) / 2;
+      panY = topInset + (availHeight - canvasHeight * scale) / 2;
     }
     updateTransform();
   }
@@ -801,8 +818,12 @@
 
 
     // Zoom buttons
-    document.getElementById('btn-zoom-in')?.addEventListener('click', () => zoomAtPoint(1.2, viewport.clientWidth / 2, viewport.clientHeight / 2));
-    document.getElementById('btn-zoom-out')?.addEventListener('click', () => zoomAtPoint(0.8, viewport.clientWidth / 2, viewport.clientHeight / 2));
+    function zoomFromCenter(factor) {
+      const rect = viewport.getBoundingClientRect();
+      zoomAtPoint(factor, rect.left + rect.width / 2, rect.top + rect.height / 2);
+    }
+    document.getElementById('btn-zoom-in')?.addEventListener('click', () => zoomFromCenter(1.2));
+    document.getElementById('btn-zoom-out')?.addEventListener('click', () => zoomFromCenter(1 / 1.2));
     document.getElementById('btn-zoom-fit')?.addEventListener('click', fitToScreen);
     document.getElementById('btn-zoom-100')?.addEventListener('click', zoom100);
 
@@ -1113,7 +1134,7 @@
   }
 
   function onKeyDown(e) {
-    if (e.target.tagName === 'INPUT') return;
+    if (e.target.tagName === 'INPUT' || document.getElementById('export-modal').open) return;
 
     if (e.ctrlKey && e.key.toLowerCase() === 'z') {
       e.preventDefault();
@@ -1144,6 +1165,7 @@
   // --------------------------------------------------------------------------
 
   async function clearStoredCaptures() {
+    if (blankStudio) return;
     try {
       const db = await openDatabase();
       const tx = db.transaction('captures', 'readwrite');
@@ -1191,6 +1213,8 @@
     const cancelBtn = document.getElementById('btn-cancel-export');
     const downloadBtn = document.getElementById('btn-confirm-download');
     const extBadge = document.getElementById('export-ext-badge');
+    const downloadLabel = document.getElementById('export-download-label');
+    const formatCards = modal.querySelectorAll('.format-card');
 
     let selectedFormat = 'png';
     let jpegQuality = 0.92;
@@ -1198,11 +1222,11 @@
     const openModal = () => {
       document.getElementById('export-filename-field').value = document.getElementById('studio-filename-input').value;
       updateEstimatedOutputSize(selectedFormat, jpegQuality);
-      modal.style.display = 'flex';
+      if (!modal.open) modal.showModal();
     };
 
     const closeModal = () => {
-      modal.style.display = 'none';
+      modal.close();
     };
 
     // Quick 1-Click Export Buttons
@@ -1231,18 +1255,21 @@
     const deleteBtn = document.getElementById('btn-delete-capture');
     if (deleteBtn) {
       deleteBtn.addEventListener('click', () => {
-        if (confirm('Clear current screenshot from canvas and wipe temporary storage?')) {
+        const message = blankStudio ? 'Clear this canvas and remove all annotations?' :
+          'Clear current screenshot from canvas and wipe temporary storage?';
+        if (confirm(message)) {
           ctx.clearRect(0, 0, canvasWidth, canvasHeight);
           baseImage = null;
           canvasWidth = 1280;
           canvasHeight = 720;
           canvas.width = canvasWidth;
           canvas.height = canvasHeight;
-          ctx.fillStyle = '#1e293b';
+          ctx.fillStyle = blankStudio ? '#ffffff' : '#1e293b';
           ctx.fillRect(0, 0, canvasWidth, canvasHeight);
           historyStack = [];
           redoStack = [];
-          updateHistoryButtons();
+          if (blankStudio) saveHistoryState();
+          else updateHistoryButtons();
           updateDimensionsBadge();
           fitToScreen();
           clearStoredCaptures();
@@ -1255,15 +1282,19 @@
     cancelBtn?.addEventListener('click', closeModal);
 
     // Format selection cards
-    document.querySelectorAll('.format-card').forEach(card => {
+    formatCards.forEach(card => {
       card.addEventListener('click', () => {
-        document.querySelectorAll('.format-card').forEach(c => c.classList.remove('active'));
-        card.classList.add('active');
         selectedFormat = card.dataset.format;
+        formatCards.forEach(option => {
+          const selected = option === card;
+          option.classList.toggle('active', selected);
+          option.setAttribute('aria-pressed', String(selected));
+        });
 
         if (extBadge) {
           extBadge.textContent = `.${selectedFormat}`;
         }
+        downloadLabel.textContent = `Download ${selectedFormat.toUpperCase()}`;
 
         const qualityGroup = document.getElementById('jpg-quality-group');
         if (qualityGroup) {
@@ -1342,6 +1373,10 @@
   }
 
   function triggerFileDownload(blob, fullFilename) {
+    if (!blob) {
+      alert('RippleFrame could not encode this capture.');
+      return;
+    }
     const url = URL.createObjectURL(blob);
     if (chrome && chrome.downloads && chrome.downloads.download) {
       chrome.downloads.download({
@@ -1450,6 +1485,16 @@
       alert('❌ Failed to generate PDF document: ' + err.message);
     }
   }
+
+  // Synchronize the editor chrome with Caspian's saved appearance.
+  const themeKeys = ['mode', 'accent', 'secondary', 'customBgColor'];
+  function loadStudioTheme() {
+    globalThis.chrome?.storage?.local.get(themeKeys, applyCaspianPalette);
+  }
+  globalThis.chrome?.storage?.onChanged.addListener((changes, area) => {
+    if (area === 'local' && themeKeys.some(key => key in changes)) loadStudioTheme();
+  });
+  loadStudioTheme();
 
   // Boot Studio
   if (document.readyState === 'loading') {

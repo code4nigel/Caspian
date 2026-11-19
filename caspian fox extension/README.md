@@ -12,7 +12,7 @@
 > **Now live on Firefox Add-ons!** You can install Caspian directly from the official store:  
 > 👉 **[addons.mozilla.org/en-US/firefox/addon/caspian-fox-extension/](https://addons.mozilla.org/en-US/firefox/addon/caspian-fox-extension/)**
 
-Caspian is a lightweight, privacy-focused productivity suite built specifically for Mozilla Firefox (Manifest V3) with support for both Firefox Desktop and Firefox for Android.
+Caspian v6.4.7 is a Manifest V3 productivity suite for Firefox 128 or newer on desktop and Android. The development build in this folder can be loaded temporarily in desktop Firefox.
 
 It eliminates typing lag in long AI conversations via real-time DOM pruning, provides universal playback speed control across all media sites (including Reddit, YouTube, and Shadow DOM players), cleans up your YouTube homepage with feed limits and 1-click "Not interested" actions, converts temporary chats to permanent history, and provides the RippleFrame full-page scrolling screenshot and annotation studio.
 
@@ -33,18 +33,19 @@ It eliminates typing lag in long AI conversations via real-time DOM pruning, pro
 ### 3. Flow Speed: Universal Media Playback Controller
 - **System-Wide Controller**: Controls `<video>` and `<audio>` playback across all websites (YouTube, Twitch, Netflix, Coursera, Vimeo, etc.).
 - **Smart A/B Toggle (<kbd>Alt</kbd> + <kbd>S</kbd>)**: Instantly toggle between `1.0x` and your last customized speed.
-- **Speed Cycle (<kbd>Alt</kbd> + <kbd>D</kbd>)**: Cycle through your preset playback rates.
+- **Speed Cycle (<kbd>Alt</kbd> + <kbd>Shift</kbd> + <kbd>D</kbd>)**: Cycle through your preset playback rates. Click either shortcut field in Playback options and press the keys together to change it.
 - **Fine Adjustment (<kbd>]</kbd> / <kbd>[</kbd>)**: Increment or decrement speed by `0.25x`.
-- **Dynamic Icon Badge & On-Screen HUD**: Live playback speed indicator on the toolbar icon and left-side HUD.
+- **Dynamic Icon Badge & On-Screen HUD**: A toolbar speed badge and a themed on-page indicator with six positions.
 
-### 4. YouTube Home Feed Cleaner & Instant Feedback
+### 4. YouTube Customisation
+- **Off by default**: Enable the feed limit or quick dismissal button independently in the Engine tab.
 - **Feed Limit Control**: Limit home recommendations to clean multiples of 3 (`3`, `6`, `9`, `12`, `15`, `18`, `21`, `24`, `30`, or `∞ All`).
 - **1-Click "Not Interested"**: Fast floating button on video cards that automatically triggers YouTube's native dismissal menu without extra navigation.
 
 ### 5. RippleFrame: Full-Page Screenshot & Annotation Studio
 - **Full-Page & Viewport Capture**: High-fidelity scrolling screenshot engine that suppresses scrollbars and freezes fixed navigation bars.
 - **Interactive Annotation Studio**: Includes Crop, Privacy Blur, Blackout Boxes, Vector Arrows, Rectangles, Circles, Freehand Pen, Highlighter, and Text Labels.
-- **Export Formats**: Download as **PNG**, **JPG** (with compression quality slider), or **High-Resolution Vector PDF (1.4)**.
+- **Export Formats**: Download as **PNG**, **JPG** with quality control, or **PDF** containing the annotated image.
 
 ---
 
@@ -67,14 +68,15 @@ Install directly with 1-click and automatic background updates:
 5. Select the `manifest.json` file and click **Open**.
 6. The Caspian extension icon will now appear in your Firefox toolbar!
 
-### Option 3: Build a Zip / XPI Archive
+## Package and update the Firefox listing
 
-You can package the extension directory into a `.zip` or `.xpi` file for distribution or signing on addons.mozilla.org (AMO):
+Run `python scripts/package_extensions.py` from the repository root. It creates the [Firefox upload ZIP](../versions/firefox/Caspian-Fox-Extension-v6.4.7.zip), with `manifest.json` at the root and the extension's readable JavaScript, HTML, and CSS.
 
-Using PowerShell:
-```powershell
-Compress-Archive -Path "d:\Projects\Chatgpt Pruner\caspian fox extension\*" -DestinationPath "d:\Projects\Chatgpt Pruner\versions\Extension Versions\Caspian-Fox-Extension-v6.4.0.zip" -Force
-```
+1. Sign in to the [Firefox Add-ons Developer Hub](https://addons.mozilla.org/developers/addons) and open the existing Caspian listing.
+2. Go to **Manage Status & Versions → Upload a New Version** and select the Firefox ZIP. Keep the existing Gecko ID. Review Mozilla's validation results, add release notes and reviewer instructions, then submit the version.
+3. Under **Edit Product Page**, replace screenshots 1–5 with the PNGs in [Images/AMO_Showcase](../Images/AMO_Showcase). Keep their numbered order and update the captions. Save the listing.
+
+See [Mozilla's submission guide](https://extensionworkshop.com/documentation/publish/submitting-an-add-on/) and the [v6.4.7 screenshot gallery](../README.md#caspian-v647-screenshots).
 
 ---
 

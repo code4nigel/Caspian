@@ -18,6 +18,7 @@ let currentStepTurnIndex = -1;
 let lastKnownTurnsCount = 0;
 let isPruningScheduled = false;
 let mutationDebounceTimer = null;
+let prunerRuntimeEnabled = false;
 
 function ensurePrunerStyles() {
   if (document.getElementById('caspian-pruner-styles')) return;
@@ -182,7 +183,7 @@ function schedulePruning(immediate) {
 
 // Scroll listener for sliding window adjustment
 window.addEventListener('scroll', () => {
-  if (isTyping) return;
+  if (!prunerRuntimeEnabled || isTyping) return;
   isScrolling = true;
   if (scrollDebounceTimer) clearTimeout(scrollDebounceTimer);
 
@@ -207,7 +208,7 @@ window.addEventListener('scroll', () => {
 
 // DOM MutationObserver with debouncing
 const domObserver = new MutationObserver(() => {
-  if (isTyping || isScrolling) return;
+  if (!prunerRuntimeEnabled || isTyping || isScrolling) return;
   if (!mutationDebounceTimer) {
     mutationDebounceTimer = setTimeout(() => {
       mutationDebounceTimer = null;
@@ -216,13 +217,29 @@ const domObserver = new MutationObserver(() => {
   }
 });
 
-const targetObserverNode = document.body || document.documentElement;
-if (targetObserverNode) {
-  domObserver.observe(targetObserverNode, { childList: true, subtree: true });
+function startPrunerRuntime() {
+  if (prunerRuntimeEnabled) return;
+  prunerRuntimeEnabled = true;
+  const targetObserverNode = document.body || document.documentElement;
+  if (targetObserverNode) {
+    domObserver.observe(targetObserverNode, { childList: true, subtree: true });
+  }
+  schedulePruning(true);
+}
+
+function stopPrunerRuntime() {
+  prunerRuntimeEnabled = false;
+  domObserver.disconnect();
+  if (scrollDebounceTimer) clearTimeout(scrollDebounceTimer);
+  if (mutationDebounceTimer) clearTimeout(mutationDebounceTimer);
+  scrollDebounceTimer = null;
+  mutationDebounceTimer = null;
+  clearAllPruning(getTopLevelTurns());
 }
 
 // Typing detection so input focus never stutters
 document.addEventListener('focusin', (e) => {
+  if (!prunerRuntimeEnabled) return;
   const tag = e.target && e.target.tagName ? e.target.tagName.toLowerCase() : '';
   if (tag === 'textarea' || tag === 'input' || (e.target && e.target.isContentEditable)) {
     isTyping = true;
@@ -230,12 +247,29 @@ document.addEventListener('focusin', (e) => {
 });
 
 document.addEventListener('focusout', () => {
+  if (!prunerRuntimeEnabled) return;
   isTyping = false;
   setTimeout(() => schedulePruning(false), 300);
 });
 
-chrome.storage.onChanged.addListener(applyTurbo);
-applyTurbo();
+function refreshPrunerRuntime() {
+  chrome.storage.local.get(['globalActive', 'pruningEnabled', 'enabled', 'disabledSites'], (data) => {
+    const enabled = (data.globalActive ?? true) &&
+      (data.pruningEnabled ?? (data.enabled ?? true)) &&
+      !isSiteDisabled(data.disabledSites || []);
+    if (enabled) startPrunerRuntime();
+    else stopPrunerRuntime();
+  });
+}
+
+chrome.storage.onChanged.addListener((changes, area) => {
+  if (area !== 'local') return;
+  if (changes.globalActive || changes.pruningEnabled || changes.enabled || changes.disabledSites) {
+    refreshPrunerRuntime();
+  }
+  if (prunerRuntimeEnabled) applyTurbo();
+});
+refreshPrunerRuntime();
 
 // ------------------------------------------
 // 2. KEYBOARD SHORTCUT & AESTHETIC FLOATING TOAST
@@ -324,8 +358,8 @@ function extractConversationData() {
 
   // LAYER A: React Fiber State Tree Inspection (Instantaneous 0ms Memory Extract)
   try {
-    const rawEl = document.querySelector('main') || document.body;
-    const mainEl = (rawEl && rawEl.wrappedJSObject) ? rawEl.wrappedJSObject : rawEl;
+    const rootElement = document.querySelector('main') || document.body;
+    const mainEl = rootElement?.wrappedJSObject || rootElement;
     const fiberKey = Object.keys(mainEl).find(k => k.startsWith('__reactFiber$') || k.startsWith('__reactProps$'));
     if (fiberKey && mainEl[fiberKey]) {
       let curr = mainEl[fiberKey];

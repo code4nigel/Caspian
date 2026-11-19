@@ -43,46 +43,15 @@ jobs:
             cd betaC
             chmod +x gradlew
             ./gradlew assembleDebug --no-daemon
-            mkdir -p ../versions versions
-            cp app/build/outputs/apk/debug/app-debug.apk "../versions/Caspian-Flow-v${FLOW_VER}.apk"
+            mkdir -p ../versions/android/flow versions
+            cp app/build/outputs/apk/debug/app-debug.apk "../versions/android/flow/Caspian-Flow-v${FLOW_VER}.apk"
             cp app/build/outputs/apk/debug/app-debug.apk "versions/Caspian-Flow-v${FLOW_VER}.apk"
             cd ..
             echo "✓ Successfully compiled and verified Caspian-Flow-v${FLOW_VER}.apk"
           fi
 
-      - name: Prepare Extension & Standardize Assets
-        run: |
-          mkdir -p "versions/Extension Versions"
-          
-          # Dynamically detect Caspian Extension version from manifest.json
-          if [ -d "Caspian" ]; then
-            EXT_VER=$(node -p "try { require('./Caspian/manifest.json').version } catch(e) { '6.3.0' }")
-            echo "Packaging Caspian Extension v${EXT_VER}..."
-            cd Caspian
-            zip -r "../versions/Extension Versions/Caspian-Extension-v${EXT_VER}.zip" ./* -x "*.git*"
-            cd ..
-            cp "versions/Extension Versions/Caspian-Extension-v${EXT_VER}.zip" "versions/Caspian-Extension-v${EXT_VER}.zip"
-          fi
-
-          # Dynamically detect and package Caspian Firefox Extension from manifest.json
-          if [ -d "caspian fox extension" ]; then
-            FOX_VER=$(node -p "try { require('./caspian fox extension/manifest.json').version } catch(e) { '6.3.0' }")
-            echo "Packaging Caspian Firefox Extension v${FOX_VER}..."
-            cd "caspian fox extension"
-            zip -r "../versions/Extension Versions/Caspian-Fox-Extension-v${FOX_VER}.zip" ./* -x "*.git*"
-            cd ..
-            cp "versions/Extension Versions/Caspian-Fox-Extension-v${FOX_VER}.zip" "versions/Caspian-Fox-Extension-v${FOX_VER}.zip"
-          fi
-
-          # Standardize mobile naming for collision-free clarity
-          if [ -f "versions/Caspian-v1.2.40.apk" ] && [ ! -f "versions/Caspian-Mobile-v1.2.40.apk" ]; then
-            cp "versions/Caspian-v1.2.40.apk" "versions/Caspian-Mobile-v1.2.40.apk"
-          fi
-
-          # Ensure Flow APKs in betaC/versions are synchronized to versions/
-          if [ -d "betaC/versions" ]; then
-            cp -f betaC/versions/*.apk versions/ 2>/dev/null || true
-          fi
+      - name: Package Browser Extensions
+        run: python3 scripts/package_extensions.py
 
       - name: Publish Unified & Individual Releases via GitHub CLI
         env:

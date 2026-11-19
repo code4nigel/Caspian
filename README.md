@@ -12,7 +12,7 @@
   </a>
 </p>
 
-Caspian is a lightweight, privacy-focused productivity tool available on **[Mozilla Firefox Add-ons (AMO)](https://addons.mozilla.org/en-US/firefox/addon/caspian-fox-extension/)**, unpackaged for Chromium browsers, and as native Android companion applications (Caspian Flow & Caspian Mobile).
+Caspian is a lightweight, privacy-focused productivity tool available on **[Mozilla Firefox Add-ons (AMO)](https://addons.mozilla.org/en-US/firefox/addon/caspian-fox-extension/)**, available as an unpacked extension for Chromium browsers, and as native Android companion applications (Caspian Flow & Caspian Mobile).
 
 It addresses everyday web performance and workflow friction: eliminating typing lag in long AI conversations via real-time DOM pruning, providing universal playback speed control across all media sites, cleaning up your YouTube homepage with quick feed limits and 1-click "Not interested" actions, converting temporary chats to permanent history, and exporting conversation transcripts to clean, publication-ready formats.
 
@@ -23,13 +23,13 @@ It addresses everyday web performance and workflow friction: eliminating typing 
 ### 🖥️ Desktop Platforms
 | Platform | Track & Version | Quick Installation Link | Highlights & Capabilities |
 | :--- | :--- | :--- | :--- |
-| **Google Chrome & Chromium** <br><sub>Edge, Brave, Opera, Vivaldi, Arc</sub> | **v6.3.0** <br>Local Unpacked / GitHub ZIP | 📖 **[Chromium Installation Guide](#for-chromium-browsers-chrome-edge-brave-etc)** | Real-time DOM Pruner, Universal Flow Speed Engine, RippleFrame Screenshot Studio, Multi-Format Exporters, YouTube Minimalist Feed |
-| **Mozilla Firefox** <br><sub>Standard, Developer Edition, Nightly, Zen</sub> | **v6.3.1 (MV3)** <br>Official Add-on (AMO) & GitHub | 🦊 **[Install on Firefox Add-ons (AMO)](https://addons.mozilla.org/en-US/firefox/addon/caspian-fox-extension/)** <br><sub>or [Firefox Sideload Guide](#for-mozilla-firefox)</sub> | Native Firefox Manifest V3, automatic background store updates, full chat DOM virtualization, universal media rate controller |
+| **Google Chrome & Chromium** <br><sub>Edge, Brave, Opera, Vivaldi, Arc</sub> | **v6.4.7** <br>Local Unpacked / GitHub ZIP | 📖 **[Chromium Installation Guide](#for-chromium-browsers-chrome-edge-brave-etc)** | Real-time DOM Pruner, Universal Flow Speed Engine, RippleFrame Screenshot Studio, Multi-Format Exporters, YouTube Minimalist Feed |
+| **Mozilla Firefox** <br><sub>Standard, Developer Edition, Nightly, Zen</sub> | **v6.4.7 (GitHub)** <br>Signed builds on AMO | 🦊 **[Install on Firefox Add-ons (AMO)](https://addons.mozilla.org/en-US/firefox/addon/caspian-fox-extension/)** <br><sub>or [Firefox Sideload Guide](#for-mozilla-firefox)</sub> | Native Firefox Manifest V3, automatic background store updates, full chat DOM virtualization, universal media rate controller |
 
 ### 📱 Android Platforms
 | App Track | Track & Version | Quick Installation Link | Highlights & Architecture |
 | :--- | :--- | :--- | :--- |
-| **Caspian Flow (Main)** <br><sub>Latest Active Development</sub> | **v1.1.91 Beta C** <br>GitHub Releases & Obtainium | 📥 **[Download Latest APK](#apk-installation--setup)** <br><sub>or [In-App & Obtainium Updates](#how-to-update-caspian-android)</sub> | **Browser-First Architecture**: Omnibox multi-tab browser, draggable floating action pod, AI quick docks (ChatGPT & Gemini), video remote, and session vaults (Casks) |
+| **Caspian Flow (Main)** <br><sub>Latest Active Development</sub> | **v1.3.50 Beta C** <br>GitHub Releases & Obtainium | 📥 **[Download Latest APK](#apk-installation--setup)** <br><sub>or [In-App & Obtainium Updates](#how-to-update-caspian-android)</sub> | **Browser-First Architecture**: Omnibox multi-tab browser, draggable floating action pod, AI quick docks (ChatGPT & Gemini), video remote, and session vaults (Casks) |
 | **Caspian Mobile (Legacy)** <br><sub>Maintenance Milestone</sub> | **v1.2.40 Stable** <br>GitHub Releases | 📦 **[View Legacy APKs](#apk-installation--setup)** | Dedicated standalone AI webview hub with bottom-sheet controls. *(Active feature development has transitioned to Caspian Flow)* |
 
 ---
@@ -44,35 +44,37 @@ Caspian is now officially published and available on **[Mozilla Firefox Add-ons 
   </a>
 </p>
 
-### Visual Feature Demonstration
+### Caspian v6.4.7 screenshots
+
+These screenshots show the Firefox build. The Chromium extension uses the same controls, layout, and themes.
 
 <p align="center">
   <a href="https://addons.mozilla.org/en-US/firefox/addon/caspian-fox-extension/">
-    <img src="Images/AMO_Showcase/1_ai_chat_pruner.png" width="95%" alt="Zero Typing Lag on AI Chats (ChatGPT & Gemini)" />
+    <img src="Images/AMO_Showcase/1_ai_chat_pruner.png" width="95%" alt="Chat Message Limit controls and per-site pruning switches for ChatGPT and Gemini" />
   </a>
 </p>
 
 <p align="center">
   <a href="https://addons.mozilla.org/en-US/firefox/addon/caspian-fox-extension/">
-    <img src="Images/AMO_Showcase/2_universal_flow_speed.png" width="95%" alt="Universal Flow Speed Engine on YouTube, Reddit & All Media" />
+    <img src="Images/AMO_Showcase/2_universal_flow_speed.png" width="95%" alt="Flow Speed presets, keyboard shortcuts, and on-screen indicator settings" />
   </a>
 </p>
 
 <p align="center">
   <a href="https://addons.mozilla.org/en-US/firefox/addon/caspian-fox-extension/">
-    <img src="Images/AMO_Showcase/3_youtube_feed_cleaner.png" width="95%" alt="YouTube Minimalist Feed & Distraction Blocker" />
+    <img src="Images/AMO_Showcase/3_youtube_feed_cleaner.png" width="95%" alt="YouTube Customisation off by default and enabled with a 12-video limit" />
   </a>
 </p>
 
 <p align="center">
   <a href="https://addons.mozilla.org/en-US/firefox/addon/caspian-fox-extension/">
-    <img src="Images/AMO_Showcase/4_rippleframe_and_vault.png" width="95%" alt="RippleFrame Full-Page Screenshot & Chat Vault Studio" />
+    <img src="Images/AMO_Showcase/4_rippleframe_and_vault.png" width="95%" alt="RippleFrame editor showing an annotated capture alongside PNG, JPG, and PDF export options" />
   </a>
 </p>
 
 <p align="center">
   <a href="https://addons.mozilla.org/en-US/firefox/addon/caspian-fox-extension/">
-    <img src="Images/AMO_Showcase/5_modern_adaptive_ui.png" width="95%" alt="Glassmorphic Dark and Light Themes" />
+    <img src="Images/AMO_Showcase/5_modern_adaptive_ui.png" width="95%" alt="Caspian Settings with custom accents in Light and OLED dark themes" />
   </a>
 </p>
 
@@ -93,21 +95,7 @@ Caspian is now officially published and available on **[Mozilla Firefox Add-ons 
 
 ---
 
-## Caspian Desktop Extension Showcase
-
-<p align="center">
-  <img src="Caspian/images/caspian_mainUI.png" width="45%" alt="Caspian Extension Engine UI" />
-  <img src="Caspian/images/Caspian_darkUI.png" width="45%" alt="Caspian Dark Mode UI" />
-</p>
-<p align="center">
-  <img src="Caspian/images/caspian_exportOptions.png" width="30%" alt="Caspian Export Options" />
-  <img src="Caspian/images/caspian_siteUI.png" width="30%" alt="Caspian Active Site Options" />
-  <img src="Caspian/images/caspian_settingsUI.png" width="30%" alt="Caspian Settings & Themes" />
-</p>
-
----
-
-## Desktop Extension Highlights (V6.3.0)
+## Desktop Extension Highlights
 
 ### 1. RippleFrame: Full-Page Scrolling Screenshot & Annotation Studio
 Capture seamless full-length screenshots of any webpage and open them in an interactive editing studio tab:
@@ -127,11 +115,13 @@ A clean, system-wide media rate controller that works on `<video>` and `<audio>`
 - **Smart A/B Toggle (<kbd>Alt</kbd> + <kbd>S</kbd>)**: Switches between `1.00x` and your last active custom speed (e.g. `1.75x`) with a single keypress.
 - **Speed Cycle (<kbd>Alt</kbd> + <kbd>D</kbd>)**: Rotates through a customizable comma-separated list of speeds (e.g. `1, 1.25, 1.5, 1.75, 2, 2.5, 3`).
 - **Fine Adjustment (<kbd>]</kbd> / <kbd>[</kbd>)**: Step up or down by `0.25x`.
-- **Left-Side Speed HUD**: A floating glassmorphic badge with a wave indicator appears on screen when shortcuts are pressed.
+- **On-screen speed indicator** appears when you use a playback shortcut. In Playback options, choose from six positions and record your own keyboard shortcuts.
 - **Toolbar Icon Speed Badge**: Live speed badge on the extension icon with an ON/OFF toggle in settings.
 - **Input Protection**: Automatically disables shortcuts when typing inside search inputs, comment boxes, or editors.
 
-### 4. YouTube Home Feed Cleaner & Instant Feedback
+### 4. YouTube Customisation
+YouTube controls are off by default. Turn them on in Engine to use them.
+
 - **Feed Limit Control**: Limit the number of videos displayed on your YouTube homepage (in neat multiples of 3: `3`, `6`, `9`, `12`, `15`, `18`, `21`, `24`, `30`, or `∞ All`).
 - **1-Click "Not Interested" Button**: Hovering over any video thumbnail reveals an instant "Not interested" button at the top-left, automatically triggering YouTube's native feedback menu without requiring extra clicks.
 
@@ -155,7 +145,7 @@ Easily backup all your theme accents, chat limits, YouTube preferences, and Flow
 
 ### Supported Browsers
 - **Chromium Browsers**: Google Chrome, Microsoft Edge, Brave, Opera, Vivaldi, Arc, and other Chromium-based browsers.
-- **Mozilla Firefox**: Firefox Desktop (Standard, Developer Edition, Nightly, Floorp, Zen).
+- **Mozilla Firefox**: Firefox 128 or later for the v6.4.7 development build.
 
 ---
 
@@ -165,7 +155,7 @@ Easily backup all your theme accents, chat limits, YouTube preferences, and Flow
 Chromium extensions run unpackaged Manifest V3 directly from source code with zero build steps required:
 
 1. **Download the Extension**:
-   - Download the latest `Caspian-Extension-v6.3.0.zip` from the **[GitHub Releases Page](https://github.com/code4nigel/Caspian/releases)**, or use the local [`Caspian`](file:///d:/Projects/Caspian/Caspian) directory from this repository.
+   - Download the [Chromium v6.4.7 ZIP](versions/chromium/Caspian-Extension-v6.4.7.zip) or use the [Caspian source folder](Caspian).
 2. **Extract Files**:
    - If using the ZIP archive, extract it to a permanent folder on your computer.
 3. **Open Extensions Manager**:
@@ -211,14 +201,23 @@ Install Caspian with automatic background updates directly from the official Moz
 Get immediate access to cutting-edge releases ahead of Mozilla's store review queue:
 
 1. **Download the Package**:
-   - Download the latest `Caspian-Fox-Extension-v6.3.1.zip` from **[GitHub Releases](https://github.com/code4nigel/Caspian/releases)** (or use the [`caspian fox extension`](file:///d:/Projects/Caspian/caspian%20fox%20extension) directory in this repository).
+   - Download the [Firefox v6.4.7 ZIP](versions/firefox/Caspian-Fox-Extension-v6.4.7.zip) or use the [Firefox source folder](caspian%20fox%20extension).
 2. **Open Firefox Add-on Debugging**:
    - Enter `about:debugging#/runtime/this-firefox` into your Firefox address bar.
 3. **Load Temporary Add-on**:
    - Click the **"Load Temporary Add-on..."** button.
-   - Browse to your downloaded ZIP archive (`Caspian-Fox-Extension-v6.3.1.zip`) or select the `manifest.json` file inside the `caspian fox extension` folder.
+   - Browse to your downloaded ZIP archive (`Caspian-Fox-Extension-v6.4.7.zip`) or select the `manifest.json` file inside the `caspian fox extension` folder.
 4. **Instant Reloading**:
    - The extension will activate immediately. You can click **"Reload"** on the debugging page at any time to test modifications.
+
+---
+
+## Version archives
+
+- [Chromium ZIPs](versions/chromium)
+- [Firefox ZIPs](versions/firefox)
+- [Caspian Flow APKs](versions/android/flow)
+- [Caspian Mobile APKs](versions/android/mobile)
 
 ---
 
@@ -254,7 +253,7 @@ Caspian Android brings Caspian's signature lag-free AI chat virtualization, univ
 
 1. **Download the APK**:
    Visit the **[Caspian GitHub Releases Page](https://github.com/code4nigel/Caspian/releases)** and download your preferred track:
-   - 🌟 **Caspian Flow (Beta C — Main / Recommended)**: `Caspian-Flow-v1.1.91-BetaC.apk` *(Latest active features, browser-first engine)*
+   - 🌟 **Caspian Flow (Beta C — Main / Recommended)**: `Caspian-Flow-v1.3.50-BetaC.apk` *(Latest active features, browser-first engine)*
    - 📦 **Caspian Mobile (Legacy Stable Milestone)**: `Caspian-Mobile-v1.2.40.apk` *(Classic fixed-portal hub)*
    - 🧪 **Caspian Beta A (Experimental Track)**: `Caspian-Beta-A-v1.2.48.apk`
 2. **Install on Your Device**:

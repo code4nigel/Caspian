@@ -7,16 +7,23 @@
 (function () {
   'use strict';
 
+  if (globalThis.caspianFlowSpeedLoaded) return;
+  globalThis.caspianFlowSpeedLoaded = true;
+  const { cycleDefault, fromEvent, normalize } = globalThis.caspianSpeedKeys;
+
   let config = {
-    enabled: true,
+    enabled: false,
     speed: 1.0,
     cycleList: [1.0, 1.25, 1.5, 1.75, 2.0, 2.5, 3.0],
     shortcutReset: 'alt+s',
-    shortcutCycle: 'alt+d',
+    shortcutCycle: cycleDefault,
     shortcutUp: ']',
     shortcutDown: '[',
-    showHud: true
+    showHud: true,
+    hudPosition: 'top-left'
   };
+  const hudThemeKeys = ['mode', 'accent', 'secondary', 'customBgColor'];
+  const hudTheme = {};
 
   // Parse comma-separated cycle string into numeric array
   function parseCycleList(str) {
@@ -38,17 +45,21 @@
       'flow_speed_shortcut_cycle',
       'flow_speed_shortcut_up',
       'flow_speed_shortcut_down',
-      'flow_speed_show_hud'
+      'flow_speed_show_hud',
+      'flow_speed_hud_position',
+      ...hudThemeKeys
     ], (data) => {
       config.enabled = data.flow_speed_enabled ?? true;
       config.speed = parseFloat(data.flow_speed_val) || 1.0;
       lastCustomSpeed = parseFloat(data.flow_speed_last_custom) || (Math.abs(config.speed - 1.0) > 0.01 ? config.speed : 1.5);
       config.cycleList = parseCycleList(data.flow_speed_cycle_list);
-      config.shortcutReset = (data.flow_speed_shortcut_reset || 'alt+s').toLowerCase();
-      config.shortcutCycle = (data.flow_speed_shortcut_cycle || 'alt+d').toLowerCase();
-      config.shortcutUp = (data.flow_speed_shortcut_up || ']').toLowerCase();
-      config.shortcutDown = (data.flow_speed_shortcut_down || '[').toLowerCase();
+      config.shortcutReset = normalize(data.flow_speed_shortcut_reset, 'alt+s');
+      config.shortcutCycle = normalize(data.flow_speed_shortcut_cycle, cycleDefault);
+      config.shortcutUp = normalize(data.flow_speed_shortcut_up, ']');
+      config.shortcutDown = normalize(data.flow_speed_shortcut_down, '[');
       config.showHud = data.flow_speed_show_hud ?? true;
+      config.hudPosition = data.flow_speed_hud_position;
+      for (const key of hudThemeKeys) hudTheme[key] = data[key];
       if (callback) callback();
     });
   }
@@ -58,7 +69,7 @@
     if (area === 'local') {
       let shouldApply = false;
       if (changes.flow_speed_enabled !== undefined) {
-        config.enabled = changes.flow_speed_enabled.newValue;
+        config.enabled = changes.flow_speed_enabled.newValue ?? true;
         shouldApply = true;
       }
       if (changes.flow_speed_val !== undefined) {
@@ -69,62 +80,110 @@
         config.cycleList = parseCycleList(changes.flow_speed_cycle_list.newValue);
       }
       if (changes.flow_speed_shortcut_reset !== undefined) {
-        config.shortcutReset = (changes.flow_speed_shortcut_reset.newValue || 'alt+s').toLowerCase();
+        config.shortcutReset = normalize(changes.flow_speed_shortcut_reset.newValue, 'alt+s');
       }
       if (changes.flow_speed_shortcut_cycle !== undefined) {
-        config.shortcutCycle = (changes.flow_speed_shortcut_cycle.newValue || 'alt+d').toLowerCase();
+        config.shortcutCycle = normalize(changes.flow_speed_shortcut_cycle.newValue, cycleDefault);
       }
       if (changes.flow_speed_shortcut_up !== undefined) {
-        config.shortcutUp = (changes.flow_speed_shortcut_up.newValue || ']').toLowerCase();
+        config.shortcutUp = normalize(changes.flow_speed_shortcut_up.newValue, ']');
       }
       if (changes.flow_speed_shortcut_down !== undefined) {
-        config.shortcutDown = (changes.flow_speed_shortcut_down.newValue || '[').toLowerCase();
+        config.shortcutDown = normalize(changes.flow_speed_shortcut_down.newValue, '[');
       }
       if (changes.flow_speed_show_hud !== undefined) {
-        config.showHud = changes.flow_speed_show_hud.newValue;
+        config.showHud = changes.flow_speed_show_hud.newValue ?? true;
+        if (!config.showHud) clearSpeedHud();
+      }
+      if (changes.flow_speed_hud_position) config.hudPosition = changes.flow_speed_hud_position.newValue;
+      for (const key of hudThemeKeys) {
+        if (key in changes) hudTheme[key] = changes[key].newValue;
       }
 
       if (shouldApply) {
-        applySpeedToAllMedia(config.enabled ? config.speed : 1.0);
+        if (config.enabled) {
+          if (engineRunning) applySpeedToAllMedia(config.speed);
+          else startEngine();
+        } else if (engineRunning) {
+          stopEngine();
+        }
       }
     }
   });
 
-  // Inject HUD styles (positioned on the left side with wave aesthetic)
+  // Install the HUD stylesheet only the first time it is needed in this frame.
   function injectHudStyles() {
     if (document.getElementById('caspian-flow-speed-styles')) return;
     const style = document.createElement('style');
     style.id = 'caspian-flow-speed-styles';
     style.textContent = `
       .caspian-speed-hud {
+        --hud-gutter: clamp(12px, 3vw, 26px);
+        --hud-x: 0%;
+        --hud-entry: -10px;
         position: fixed !important;
-        top: 24px !important;
-        left: 24px !important;
-        right: auto !important;
+        inset: auto !important;
+        width: max-content !important;
+        height: auto !important;
+        margin: 0 !important;
+        box-sizing: border-box !important;
         z-index: 2147483647 !important;
-        background: rgba(15, 23, 42, 0.90) !important;
-        backdrop-filter: blur(16px) !important;
-        -webkit-backdrop-filter: blur(16px) !important;
-        border: 1.5px solid rgba(56, 189, 248, 0.45) !important;
-        color: #ffffff !important;
-        font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif !important;
-        font-size: 15.5px !important;
-        font-weight: 700 !important;
-        letter-spacing: 0.5px !important;
-        padding: 8px 18px !important;
-        border-radius: 9999px !important;
-        box-shadow: 0 10px 30px rgba(0, 0, 0, 0.6), 0 0 20px rgba(56, 189, 248, 0.35) !important;
+        background: linear-gradient(145deg, color-mix(in srgb, var(--hud-accent) 18%, var(--hud-panel)), var(--hud-panel) 70%) !important;
+        border: 1px solid color-mix(in srgb, var(--hud-accent) 65%, transparent) !important;
+        color: var(--hud-ink) !important;
+        font: 600 11px/1.1 system-ui, sans-serif !important;
+        padding: 7px 8px !important;
+        border-radius: 16px !important;
+        box-shadow: 0 7px 24px rgb(0 0 0 / 26%), 0 0 16px color-mix(in srgb, var(--hud-accent) 32%, transparent) !important;
         pointer-events: none !important;
         display: flex !important;
         align-items: center !important;
-        gap: 9px !important;
-        animation: caspianSpeedHudAnim 1.4s cubic-bezier(0.16, 1, 0.3, 1) forwards !important;
+        gap: 8px !important;
+        transform: translateX(var(--hud-x)) !important;
+        animation: caspianSpeedHudAnim 1.7s cubic-bezier(.18,.82,.22,1) forwards;
       }
+      .caspian-speed-hud[data-position^="top"] { top: var(--hud-gutter) !important; }
+      .caspian-speed-hud[data-position^="bottom"] {
+        bottom: var(--hud-gutter) !important;
+        --hud-entry: 10px;
+      }
+      .caspian-speed-hud[data-position$="left"] { left: var(--hud-gutter) !important; }
+      .caspian-speed-hud[data-position$="right"] { right: var(--hud-gutter) !important; }
+      .caspian-speed-hud[data-position$="center"] {
+        left: 50% !important;
+        --hud-x: -50%;
+      }
+      .caspian-speed-hud .caspian-hud-icon {
+        display: grid;
+        place-items: center;
+        width: 33px;
+        height: 33px;
+        border-radius: 11px;
+        background: linear-gradient(135deg, var(--hud-accent), var(--hud-secondary));
+        color: white;
+      }
+      .caspian-speed-hud .caspian-hud-reading { display: grid; gap: 2px; }
+      .caspian-speed-hud strong { font: 750 20px/1 system-ui, sans-serif; font-variant-numeric: tabular-nums; }
+      .caspian-speed-hud .caspian-hud-beats { display: flex; gap: 2px; align-items: end; padding: 0 3px; }
+      .caspian-speed-hud .caspian-hud-beats i {
+        width: 3px;
+        height: 13px;
+        border-radius: 2px;
+        background: var(--hud-secondary);
+        transform-origin: bottom;
+        animation: caspianHudBeat 440ms ease-in-out 3 alternate;
+      }
+      .caspian-speed-hud .caspian-hud-beats i:first-child { height: 7px; animation-delay: 70ms; }
+      .caspian-speed-hud .caspian-hud-beats i:last-child { height: 9px; animation-delay: 130ms; }
+      @keyframes caspianHudBeat { from { scale: 1 .45; } to { scale: 1 1; } }
       @keyframes caspianSpeedHudAnim {
-        0% { opacity: 0; transform: translateX(-12px) scale(0.9); }
-        15% { opacity: 1; transform: translateX(0) scale(1); }
-        75% { opacity: 1; transform: translateX(0) scale(1); }
-        100% { opacity: 0; transform: translateX(-8px) scale(0.95); }
+        0% { opacity: 0; translate: 0 var(--hud-entry); scale: .9; }
+        17% { opacity: 1; translate: 0 0; scale: 1.04; }
+        27%, 80% { opacity: 1; translate: 0 0; scale: 1; }
+        100% { opacity: 0; translate: 0 calc(var(--hud-entry) / 2); scale: .97; }
+      }
+      @media (prefers-reduced-motion: reduce) {
+        .caspian-speed-hud, .caspian-speed-hud .caspian-hud-beats i { animation: none !important; }
       }
     `;
     (document.head || document.documentElement).appendChild(style);
@@ -132,38 +191,61 @@
 
   // Display On-Screen Speed HUD with Caspian wave icon
   let currentHudTimer = null;
+  let currentHud = null;
+  function clearSpeedHud() {
+    clearTimeout(currentHudTimer);
+    currentHudTimer = null;
+    currentHud?.remove();
+    currentHud = null;
+  }
   function showSpeedHud(speedVal) {
     if (!config.showHud) return;
     injectHudStyles();
 
-    const existingHud = document.querySelector('.caspian-speed-hud');
-    if (existingHud) existingHud.remove();
+    clearSpeedHud();
 
     const hud = document.createElement('div');
     hud.className = 'caspian-speed-hud';
+    hud.setAttribute('role', 'status');
+    hud.dataset.position = /^(top|bottom)-(left|center|right)$/.test(config.hudPosition) ? config.hudPosition : 'top-left';
+    const safeColor = (value, fallback) => /^#(?:[\da-f]{3}|[\da-f]{6})$/i.test(value) ? value : fallback;
+    const dark = hudTheme.mode === 'dark';
+    hud.style.setProperty('--hud-accent', safeColor(hudTheme.accent, '#a2a9a9'));
+    hud.style.setProperty('--hud-secondary', safeColor(hudTheme.secondary, '#1b4264'));
+    hud.style.setProperty('--hud-panel', dark ? safeColor(hudTheme.customBgColor, '#141110') : '#ffffff');
+    hud.style.setProperty('--hud-ink', dark ? '#f8fafc' : '#0f172a');
     hud.innerHTML = `
-      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#38bdf8" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+      <span class="caspian-hud-icon" aria-hidden="true"><svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round">
         <path d="M5 8 C6 9 7 9.5 9 9.5 C12 9.5 12 7.5 15 7.5 C17 7.5 18 8 19 9"></path>
         <path d="M5 12 C6 13 7 13.5 9 13.5 C12 13.5 12 11.5 15 11.5 C17 11.5 18 12 19 13"></path>
         <path d="M5 16 C6 17 7 17.5 9 17.5 C12 17.5 12 15.5 15 15.5 C17 15.5 18 16 19 17"></path>
-      </svg>
-      <span>${speedVal.toFixed(2)}x</span>
+      </svg></span>
+      <span class="caspian-hud-reading"><span>Flow Speed</span><strong>${speedVal}×</strong></span>
+      <span class="caspian-hud-beats" aria-hidden="true"><i></i><i></i><i></i></span>
     `;
 
-    document.documentElement.appendChild(hud);
-
-    if (currentHudTimer) clearTimeout(currentHudTimer);
-    currentHudTimer = setTimeout(() => {
-      if (hud && hud.parentNode) hud.parentNode.removeChild(hud);
-    }, 1400);
+    const fullscreen = document.fullscreenElement;
+    (fullscreen && fullscreen.tagName !== 'VIDEO' ? fullscreen : document.documentElement).appendChild(hud);
+    if (hud.showPopover) {
+      hud.setAttribute('popover', 'manual');
+      hud.showPopover();
+    }
+    currentHud = hud;
+    currentHudTimer = setTimeout(clearSpeedHud, 1700);
   }
 
   // ==========================================================
   // SHADOW DOM PIERCING MEDIA DISCOVERY ENGINE
   // ==========================================================
-  const trackedMedia = new WeakSet();
+  const mediaEvents = ['play', 'playing', 'loadedmetadata', 'canplay', 'ratechange', 'seeked'];
+  let trackedMedia = new WeakSet();
   const activeMediaList = new Set();
   const rateEnforcingElements = new WeakSet();
+  let engineRunning = false;
+  let watchdogId = null;
+  let observedRoots = new WeakSet();
+  let engineController;
+  const rootObservers = new Set();
 
   // Recursively search DOM and all open Shadow Roots for video/audio elements
   function findAllMediaElements(root = document, seenRoots = new Set()) {
@@ -201,13 +283,13 @@
   function enforceRate(media, targetRate) {
     if (!media) return;
     const rate = targetRate !== undefined ? targetRate : (config.enabled ? config.speed : 1.0);
-    if (Math.abs(media.playbackRate - rate) < 0.01) return;
+    if (Math.abs(media.playbackRate - rate) < 0.01 && Math.abs(media.defaultPlaybackRate - rate) < 0.01) return;
     if (rateEnforcingElements.has(media)) return;
 
     try {
       rateEnforcingElements.add(media);
       media.playbackRate = rate;
-      if (media.defaultPlaybackRate !== undefined && config.enabled) {
+      if (media.defaultPlaybackRate !== undefined) {
         media.defaultPlaybackRate = rate;
       }
     } catch (e) {
@@ -218,6 +300,7 @@
 
   // Register and bind listeners to a discovered media element
   function registerAndEnforceMedia(media, targetRate) {
+    if (!config.enabled) return;
     if (!media || !(media.tagName === 'VIDEO' || media.tagName === 'AUDIO')) return;
     activeMediaList.add(media);
 
@@ -230,16 +313,9 @@
         }
       };
 
-      media.addEventListener('play', onEnforce, { passive: true });
-      media.addEventListener('playing', onEnforce, { passive: true });
-      media.addEventListener('loadedmetadata', onEnforce, { passive: true });
-      media.addEventListener('canplay', onEnforce, { passive: true });
-      media.addEventListener('seeked', onEnforce, { passive: true });
-      media.addEventListener('ratechange', () => {
-        if (config.enabled && Math.abs(media.playbackRate - config.speed) > 0.01) {
-          enforceRate(media, config.speed);
-        }
-      });
+      for (const event of mediaEvents) {
+        media.addEventListener(event, onEnforce, { passive: true, signal: engineController.signal });
+      }
     }
 
     enforceRate(media, targetRate);
@@ -297,35 +373,20 @@
     if (!target) return false;
     const tag = (target.tagName || '').toLowerCase();
     if (tag === 'input' || tag === 'textarea' || tag === 'select') return true;
-    if (target.isContentEditable || target.getAttribute('contenteditable') === 'true') return true;
+    if (target.isContentEditable || target.getAttribute?.('contenteditable') === 'true') return true;
     if (target.closest && target.closest('input, textarea, [contenteditable="true"]')) return true;
     return false;
   }
 
-  // Helper to match keyboard shortcut string against keyboard event
-  function matchShortcut(e, shortcutStr) {
-    if (!shortcutStr) return false;
-    const parts = shortcutStr.toLowerCase().split('+').map(s => s.trim());
-    const key = parts[parts.length - 1];
-    const requiresAlt = parts.includes('alt');
-    const requiresCtrl = parts.includes('ctrl') || parts.includes('control');
-    const requiresShift = parts.includes('shift');
-
-    if (requiresAlt !== e.altKey) return false;
-    if (requiresCtrl !== (e.ctrlKey || e.metaKey)) return false;
-    if (requiresShift !== e.shiftKey) return false;
-
-    return e.key.toLowerCase() === key;
-  }
-
-  // Global Keyboard Shortcuts Listener
-  window.addEventListener('keydown', (e) => {
-    if (!config.enabled) return;
-    if (isEditingText(e.target)) return;
+  function onShortcut(e) {
+    if (isEditingText(e.composedPath()[0])) return;
+    const shortcut = fromEvent(e);
+    if (![config.shortcutReset, config.shortcutCycle, config.shortcutUp, config.shortcutDown].includes(shortcut)) return;
+    e.preventDefault();
+    e.stopPropagation();
 
     // 1. Toggle between 1.0x and previous speed (Default Alt+S)
-    if (matchShortcut(e, config.shortcutReset)) {
-      e.preventDefault();
+    if (shortcut === config.shortcutReset) {
       if (Math.abs(config.speed - 1.0) < 0.01) {
         // Currently at 1.0x -> Restore last custom speed
         const restoreSpeed = (lastCustomSpeed && Math.abs(lastCustomSpeed - 1.0) > 0.01) ? lastCustomSpeed : 1.5;
@@ -339,45 +400,36 @@
       return;
     }
 
-    // 2. Cycle Speeds (Default Alt+D)
-    if (matchShortcut(e, config.shortcutCycle)) {
-      e.preventDefault();
+    // 2. Cycle speeds
+    if (shortcut === config.shortcutCycle) {
       cycleToNextSpeed();
       return;
     }
 
     // 3. Step Up (+0.25x)
-    if (matchShortcut(e, config.shortcutUp)) {
-      e.preventDefault();
+    if (shortcut === config.shortcutUp) {
       setSpeed(config.speed + 0.25, true);
       return;
     }
 
     // 4. Step Down (-0.25x)
-    if (matchShortcut(e, config.shortcutDown)) {
-      e.preventDefault();
+    if (shortcut === config.shortcutDown) {
       setSpeed(config.speed - 0.25, true);
       return;
     }
-  }, true);
+  }
 
   // ==========================================================
   // CAPTURE-PHASE EVENT LISTENER (PIERCES ANY SHADOW ROOT)
   // When ANY video plays anywhere on the page, catch it immediately
   // ==========================================================
-  ['play', 'playing', 'loadedmetadata', 'canplay', 'ratechange', 'seeked'].forEach(evt => {
-    window.addEventListener(evt, (e) => {
-      const target = (e.composedPath && e.composedPath()[0]) || e.target;
-      if (target && (target.tagName === 'VIDEO' || target.tagName === 'AUDIO')) {
-        registerAndEnforceMedia(target);
-      }
-    }, true);
-  });
+  function onMediaEvent(event) {
+    registerAndEnforceMedia(event.composedPath()[0]);
+  }
 
   // Observe a DOM node or ShadowRoot for dynamic media insertions
-  const observedRoots = new WeakSet();
   function observeRoot(root) {
-    if (!root || observedRoots.has(root)) return;
+    if (!engineRunning || !root || observedRoots.has(root)) return;
     observedRoots.add(root);
 
     try {
@@ -392,7 +444,7 @@
               }
               if (node.shadowRoot) {
                 observeRoot(node.shadowRoot);
-                findAllMediaElements(node.shadowRoot).forEach(registerAndEnforceMedia);
+                findAllMediaElements(node.shadowRoot).forEach(media => registerAndEnforceMedia(media));
               }
               if (node.querySelectorAll) {
                 const nested = node.querySelectorAll('video, audio');
@@ -403,7 +455,7 @@
                 for (let k = 0; k < potentialHosts.length; k++) {
                   if (potentialHosts[k].shadowRoot) {
                     observeRoot(potentialHosts[k].shadowRoot);
-                    findAllMediaElements(potentialHosts[k].shadowRoot).forEach(registerAndEnforceMedia);
+                    findAllMediaElements(potentialHosts[k].shadowRoot).forEach(media => registerAndEnforceMedia(media));
                   }
                 }
               }
@@ -413,36 +465,61 @@
       });
 
       observer.observe(root, { childList: true, subtree: true });
+      rootObservers.add(observer);
     } catch (e) {}
   }
 
-  // Regular periodic watchdog to keep playing videos locked to speed (handles Reddit virtual feeds)
-  setInterval(() => {
-    if (!config.enabled) return;
-    for (const media of activeMediaList) {
-      if (!media.isConnected) {
-        activeMediaList.delete(media);
-        continue;
+  // Keep only a lightweight watchdog while the feature is actually enabled.
+  function startWatchdog() {
+    if (watchdogId) return;
+    watchdogId = window.setInterval(() => {
+      if (!engineRunning || !config.enabled) return;
+      for (const media of activeMediaList) {
+        if (!media.isConnected) {
+          activeMediaList.delete(media);
+          continue;
+        }
+        if (!media.paused && Math.abs(media.playbackRate - config.speed) > 0.01) {
+          enforceRate(media, config.speed);
+        }
       }
-      if (!media.paused && Math.abs(media.playbackRate - config.speed) > 0.01) {
-        enforceRate(media, config.speed);
-      }
+    }, 1200);
+  }
+
+  function stopEngine() {
+    engineRunning = false;
+    engineController.abort();
+    clearSpeedHud();
+    document.getElementById('caspian-flow-speed-styles')?.remove();
+    if (watchdogId) {
+      clearInterval(watchdogId);
+      watchdogId = null;
     }
-  }, 1200);
+    rootObservers.forEach(observer => observer.disconnect());
+    rootObservers.clear();
+    observedRoots = new WeakSet();
+    for (const media of activeMediaList) {
+      rateEnforcingElements.delete(media);
+      if (media.isConnected) enforceRate(media, 1);
+    }
+    activeMediaList.clear();
+    trackedMedia = new WeakSet();
+  }
 
   // Monitor DOM for dynamically added video/audio elements
   function startEngine() {
-    applySpeedToAllMedia(config.enabled ? config.speed : 1.0);
-    observeRoot(document.body || document.documentElement);
+    if (!config.enabled || engineRunning) return;
+    engineRunning = true;
+    engineController = new AbortController();
+    const options = { capture: true, signal: engineController.signal };
+    window.addEventListener('keydown', onShortcut, options);
+    for (const event of mediaEvents) window.addEventListener(event, onMediaEvent, options);
+    applySpeedToAllMedia(config.speed);
+    observeRoot(document);
+    startWatchdog();
   }
 
   // Initialize
-  loadConfig(() => {
-    if (document.readyState === 'complete' || document.readyState === 'interactive') {
-      startEngine();
-    } else {
-      window.addEventListener('DOMContentLoaded', startEngine);
-    }
-  });
+  loadConfig(startEngine);
 
 })();
